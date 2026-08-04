@@ -3,19 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>APDU Helper — Otaman</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>OTAMan</title>
+<link rel="stylesheet" href="style.css">
+<script src="des-bundle.js"></script>
 </head>
 <body class="bg-neutral-50 text-gray-800">
 
 <div class="max-w-4xl mx-auto px-6 py-10">
 
-	<h1 class="text-2xl font-bold text-heading mb-6">APDU Helper</h1>
+	<h1 class="text-2xl font-bold text-heading mb-6">OTAMan</h1>
 
 	<div class="flex gap-1 mb-4 border-b border-gray-300">
 		<button class="tab-btn active px-4 py-2 text-sm rounded-t bg-blue-600 text-white" data-tab="sim">SIM</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="usim">USIM</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="ram">RAM</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="sp">Secured Packet</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="convert">Конвертация</button>
 	</div>
 
@@ -438,6 +440,145 @@
 		</div>
 		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
 		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+	</div>
+
+	<div id="tab-sp" class="tab-content hidden">
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">SPI1 (Security Parameter Indicator)</label>
+			<div class="flex gap-2 items-center">
+				<select id="sp-spi1" onchange="updateSp()" class="flex-1 border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="00">00 — No security</option>
+					<option value="01">01 — RC only</option>
+					<option value="02">02 — CC/MAC only</option>
+					<option value="06" selected>06 — CC/MAC + Ciphering</option>
+					<option value="12">12 — CC/MAC + Counter (available)</option>
+					<option value="16">16 — CC/MAC + Ciphering + Counter (available)</option>
+					<option value="22">22 — CC/MAC + Counter (check higher)</option>
+					<option value="26">26 — CC/MAC + Ciphering + Counter (check higher)</option>
+					<option value="32">32 — CC/MAC + Counter (check +1)</option>
+					<option value="36">36 — CC/MAC + Ciphering + Counter (check +1)</option>
+				</select>
+				<input id="sp-spi1-hex" readonly class="w-16 font-mono border border-gray-300 text-xs rounded px-2 py-2 bg-gray-100 text-center" value="06">
+			</div>
+		</div>
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">SPI2 (PoR settings)</label>
+			<div class="flex gap-2 items-center">
+				<select id="sp-spi2" onchange="updateSp()" class="flex-1 border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="00" selected>00 — No PoR</option>
+					<option value="40">40 — PoR required, no security</option>
+					<option value="50">50 — PoR required, RC</option>
+					<option value="60">60 — PoR required, CC</option>
+					<option value="70">70 — PoR required, DS</option>
+					<option value="48">48 — PoR required, no security, ciphered</option>
+					<option value="80">80 — PoR on error, no security</option>
+					<option value="90">90 — PoR on error, RC</option>
+				</select>
+				<select id="sp-spi2-sm" onchange="updateSp()" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="0">DELIVER-REPORT</option>
+					<option value="1">SUBMIT SM</option>
+				</select>
+				<input id="sp-spi2-hex" readonly class="w-16 font-mono border border-gray-300 text-xs rounded px-2 py-2 bg-gray-100 text-center" value="00">
+			</div>
+		</div>
+
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">KIc (Ciphering Key Identifier)</label>
+			<div class="flex gap-2 items-center">
+				<select id="sp-kic-idx" onchange="updateSpKic()" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="0">Implicit (0)</option>
+					<option value="1">1</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4">4</option>
+					<option value="5">5</option>
+					<option value="6">6</option>
+					<option value="7">7</option>
+					<option value="8">8</option>
+					<option value="9">9</option>
+					<option value="A">A</option>
+					<option value="B">B</option>
+					<option value="C">C</option>
+					<option value="D">D</option>
+					<option value="E">E</option>
+					<option value="F">F</option>
+				</select>
+				<select id="sp-kic-alg" onchange="updateSpKic()" class="flex-1 border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="01">01 — DES-CBC (8B key)</option>
+					<option value="05" selected>05 — 3DES 2-key outer-CBC (16B key)</option>
+					<option value="09">09 — 3DES 3-key outer-CBC (24B key)</option>
+					<option value="0D">0D — DES-ECB (8B key)</option>
+				</select>
+				<input id="sp-kic-hex" readonly class="w-12 font-mono border border-gray-300 text-xs rounded px-2 py-2 bg-gray-100 text-center" value="05">
+			</div>
+		</div>
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">KID (MAC Key Identifier)</label>
+			<div class="flex gap-2 items-center">
+				<select id="sp-kid-idx" onchange="updateSpKid()" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="0">Implicit (0)</option>
+					<option value="1">1</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4">4</option>
+					<option value="5">5</option>
+					<option value="6">6</option>
+					<option value="7">7</option>
+					<option value="8">8</option>
+					<option value="9">9</option>
+					<option value="A">A</option>
+					<option value="B">B</option>
+					<option value="C">C</option>
+					<option value="D">D</option>
+					<option value="E">E</option>
+					<option value="F">F</option>
+				</select>
+				<select id="sp-kid-alg" onchange="updateSpKid()" class="flex-1 border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="01">01 — DES-CBC (8B key)</option>
+					<option value="05" selected>05 — 3DES 2-key outer-CBC (16B key)</option>
+					<option value="09">09 — 3DES 3-key outer-CBC (24B key)</option>
+				</select>
+				<input id="sp-kid-hex" readonly class="w-12 font-mono border border-gray-300 text-xs rounded px-2 py-2 bg-gray-100 text-center" value="05">
+			</div>
+		</div>
+
+		<div class="flex gap-2 mb-3">
+			<div class="flex-1">
+				<label class="block mb-1 text-sm font-medium text-gray-700">TAR (6 hex)</label>
+				<input id="sp-tar" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="B00001" maxlength="6" value="B00001">
+			</div>
+			<div class="flex-1">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Counter (10 hex)</label>
+				<input id="sp-cntr" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="0000000001" maxlength="10" value="0000000001">
+			</div>
+		</div>
+
+		<div class="flex gap-2 mb-3">
+			<div class="flex-1">
+				<label class="block mb-1 text-sm font-medium text-gray-700">KIc Key (hex)</label>
+				<textarea id="sp-kic-key" rows="2" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="16/32/48 hex chars for 8/16/24 byte key"></textarea>
+			</div>
+			<div class="flex-1">
+				<label class="block mb-1 text-sm font-medium text-gray-700">KID Key (hex)</label>
+				<textarea id="sp-kid-key" rows="2" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="16/32/48 hex chars for 8/16/24 byte key"></textarea>
+			</div>
+		</div>
+
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Padding byte</label>
+			<select id="sp-padding" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="00" selected>00 (TS 102 225 default)</option>
+				<option value="FF">FF</option>
+			</select>
+		</div>
+
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">APDU (hex)</label>
+			<textarea id="sp-apdu" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
+		</div>
+
+		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать Secure Packet</button>
+		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
 	</div>
 
 	<div id="tab-convert" class="tab-content hidden">
@@ -1115,7 +1256,236 @@ function genConvert() {
 	document.getElementById('conv-result').value = result;
 }
 
+// ===== Secured Packet UI =====
+function updateSp() {
+	document.getElementById('sp-spi1-hex').value = document.getElementById('sp-spi1').value;
+	const spi2Base = parseInt(document.getElementById('sp-spi2').value, 16);
+	const sm = parseInt(document.getElementById('sp-spi2-sm').value, 16);
+	const spi2Byte = spi2Base | (sm << 2);
+	document.getElementById('sp-spi2-hex').value = spi2Byte.toString(16).padStart(2, '0').toUpperCase();
+}
+function updateSpKic() {
+	const idx = parseInt(document.getElementById('sp-kic-idx').value, 16);
+	const alg = parseInt(document.getElementById('sp-kic-alg').value, 16);
+	const byte = (idx << 4) | alg;
+	document.getElementById('sp-kic-hex').value = byte.toString(16).padStart(2, '0').toUpperCase();
+}
+function updateSpKid() {
+	const idx = parseInt(document.getElementById('sp-kid-idx').value, 16);
+	const alg = parseInt(document.getElementById('sp-kid-alg').value, 16);
+	const byte = (idx << 4) | alg;
+	document.getElementById('sp-kid-hex').value = byte.toString(16).padStart(2, '0').toUpperCase();
+}
+
+// ===== DES / 3DES using des.js library (bundled as des-bundle.js) =====
+function hexToBytes(s) {
+	const len = s.length / 2;
+	const b = new Uint8Array(len);
+	for (let i = 0; i < len; i++) b[i] = parseInt(s.substr(i * 2, 2), 16);
+	return b;
+}
+
+function bytesToHex(b) {
+	return Array.from(b).map(x => x.toString(16).padStart(2, '0').toUpperCase()).join('');
+}
+
+function des3Keys(keyBytes) {
+	const kLen = keyBytes.length;
+	if (kLen === 8) return [keyBytes, keyBytes, keyBytes];
+	if (kLen === 16) return [keyBytes.subarray(0,8), keyBytes.subarray(8,16), keyBytes.subarray(0,8)];
+	if (kLen === 24) return [keyBytes.subarray(0,8), keyBytes.subarray(8,16), keyBytes.subarray(16,24)];
+	throw new Error('Invalid key length: ' + kLen + ' bytes (expected 8, 16, or 24)');
+}
+
+function des3EncryptBlock(block, keyBytes) {
+	const [k1, k2, k3] = des3Keys(keyBytes);
+	const c1 = des.DES.create({type: 'encrypt', key: k1});
+	const c2 = des.DES.create({type: 'decrypt', key: k2});
+	const c3 = des.DES.create({type: 'encrypt', key: k3});
+	const out = new Uint8Array(8);
+	c1._update(block, 0, out, 0);
+	c2._update(out, 0, out, 0);
+	c3._update(out, 0, out, 0);
+	return out;
+}
+
+function des3DecryptBlock(block, keyBytes) {
+	const [k1, k2, k3] = des3Keys(keyBytes);
+	const c1 = des.DES.create({type: 'decrypt', key: k3});
+	const c2 = des.DES.create({type: 'encrypt', key: k2});
+	const c3 = des.DES.create({type: 'decrypt', key: k1});
+	const out = new Uint8Array(8);
+	c1._update(block, 0, out, 0);
+	c2._update(out, 0, out, 0);
+	c3._update(out, 0, out, 0);
+	return out;
+}
+
+function desEncryptBlock(block, key) {
+	const c = des.DES.create({type: 'encrypt', key: key});
+	const out = new Uint8Array(8);
+	c._update(block, 0, out, 0);
+	return out;
+}
+
+function desDecryptBlock(block, key) {
+	const c = des.DES.create({type: 'decrypt', key: key});
+	const out = new Uint8Array(8);
+	c._update(block, 0, out, 0);
+	return out;
+}
+
+function des3CbcEncrypt(data, keyBytes, iv) {
+	const bs = 8;
+	const padded = zeroPad(data, bs);
+	const out = new Uint8Array(padded.length);
+	let prev = iv;
+	for (let i = 0; i < padded.length; i += bs) {
+		const block = padded.subarray(i, i + bs);
+		const xored = new Uint8Array(bs);
+		for (let j = 0; j < bs; j++) xored[j] = block[j] ^ prev[j];
+		const enc = des3EncryptBlock(xored, keyBytes);
+		out.set(enc, i);
+		prev = enc;
+	}
+	return out;
+}
+
+function xorBytes(a, b) {
+	const len = Math.min(a.length, b.length);
+	const out = new Uint8Array(len);
+	for (let i = 0; i < len; i++) out[i] = a[i] ^ b[i];
+	return out;
+}
+
+function zeroPad(data, blockSize) {
+	const padLen = blockSize - (data.length % blockSize);
+	if (padLen === blockSize) return data;
+	const out = new Uint8Array(data.length + padLen);
+	out.set(data);
+	for (let i = data.length; i < out.length; i++) out[i] = 0x00;
+	return out;
+}
+
+function retailMac(data, keyBytes) {
+	const bs = 8;
+	const padded = zeroPad(data, bs);
+	const [k1, k2, k3] = des3Keys(keyBytes);
+	let prev = new Uint8Array(bs);
+	for (let i = 0; i < padded.length; i += bs) {
+		const block = padded.subarray(i, i + bs);
+		const xored = xorBytes(block, prev);
+		let enc;
+		if (keyBytes.length === 8) {
+			enc = desEncryptBlock(xored, k1);
+		} else {
+			enc = des3EncryptBlock(xored, keyBytes);
+		}
+		if (i + bs === padded.length && keyBytes.length >= 16) {
+			enc = desDecryptBlock(enc, k2);
+			enc = desEncryptBlock(enc, k1);
+		}
+		prev = enc;
+	}
+	return prev;
+}
+
+// ===== Secure Packet assembly =====
+function genSp() {
+	const apduHex = (document.getElementById('sp-apdu').value || '').replace(/[^0-9a-fA-F]/g, '');
+	if (!apduHex) { document.getElementById('sp-result').value = 'Ошибка: укажите APDU'; return; }
+
+	const spi1 = parseInt(document.getElementById('sp-spi1').value, 16);
+	const spi2 = parseInt(document.getElementById('sp-spi2-hex').value, 16);
+	const kicHex = document.getElementById('sp-kic-hex').value;
+	const kidHex = document.getElementById('sp-kid-hex').value;
+	const tarHex = (document.getElementById('sp-tar').value || '').replace(/[^0-9a-fA-F]/g, '').padEnd(6, '0').slice(0, 6);
+	const cntrHex = (document.getElementById('sp-cntr').value || '').replace(/[^0-9a-fA-F]/g, '').padEnd(10, '0').slice(0, 10);
+	const kicKeyHex = (document.getElementById('sp-kic-key').value || '').replace(/[^0-9a-fA-F]/g, '');
+	const kidKeyHex = (document.getElementById('sp-kid-key').value || '').replace(/[^0-9a-fA-F]/g, '');
+	const padByte = parseInt(document.getElementById('sp-padding').value, 16);
+
+	const ciphering = (spi1 & 0x04) !== 0;
+	const hasMac = (spi1 & 0x03) === 0x02;
+
+	const resultEl = document.getElementById('sp-result');
+
+	let kicKey, kidKey;
+	try {
+		if (kicKeyHex) {
+			kicKey = hexToBytes(kicKeyHex);
+			if (kicKey.length !== 8 && kicKey.length !== 16 && kicKey.length !== 24)
+				{ resultEl.value = 'Ошибка: KIc key must be 8, 16, or 24 bytes'; return; }
+		}
+	} catch (e) { resultEl.value = 'Ошибка KIc key: ' + e.message; return; }
+
+	try {
+		if (kidKeyHex) {
+			kidKey = hexToBytes(kidKeyHex);
+			if (kidKey.length !== 8 && kidKey.length !== 16 && kidKey.length !== 24)
+				{ resultEl.value = 'Ошибка: KID key must be 8, 16, or 24 bytes'; return; }
+		}
+	} catch (e) { resultEl.value = 'Ошибка KID key: ' + e.message; return; }
+
+	if (ciphering && !kicKey) { resultEl.value = 'Ошибка: ciphering requires KIc key'; return; }
+	if (hasMac && !kidKey) { resultEl.value = 'Ошибка: MAC requires KID key'; return; }
+
+	const apdu = hexToBytes(apduHex);
+
+	const pCntr = (8 - (apdu.length % 8)) % 8;
+	const pCntrByte = pCntr;
+
+	const macLen = hasMac ? 8 : 0;
+
+	const spiOff = 4;
+	const kicOff = 6;
+	const secDataOff = 17 + macLen;
+
+	const packetLen = secDataOff + apdu.length + pCntr;
+	const packet = new Uint8Array(packetLen);
+
+	packet[0] = 0x02;
+	packet[2] = 0x01;
+	packet[4] = spi1;
+	packet[5] = spi2;
+	packet[6] = parseInt(kicHex, 16);
+	packet[7] = parseInt(kidHex, 16);
+	packet[8] = parseInt(tarHex.substr(0,2), 16);
+	packet[9] = parseInt(tarHex.substr(2,2), 16);
+	packet[10] = parseInt(tarHex.substr(4,2), 16);
+	packet[11] = parseInt(cntrHex.substr(0,2), 16);
+	packet[12] = parseInt(cntrHex.substr(2,2), 16);
+	packet[13] = parseInt(cntrHex.substr(4,2), 16);
+	packet[14] = parseInt(cntrHex.substr(6,2), 16);
+	packet[15] = parseInt(cntrHex.substr(8,2), 16);
+	packet[16] = pCntrByte;
+	for (let i = 0; i < macLen; i++) packet[17 + i] = 0x00;
+	packet.set(apdu, secDataOff);
+	for (let i = 0; i < pCntr; i++) packet[secDataOff + apdu.length + i] = padByte;
+
+	const chl = packetLen - spiOff;
+	packet[1] = packetLen - 2;
+	packet[3] = chl;
+
+	if (hasMac && kidKey) {
+		const mac = retailMac(packet, kidKey);
+		packet.set(mac, 17);
+	}
+
+	if (ciphering && kicKey) {
+		const cipherLen = packetLen - kicOff;
+		const toEncrypt = packet.subarray(kicOff, packetLen);
+		const encrypted = des3CbcEncrypt(toEncrypt, kicKey, new Uint8Array(8));
+		packet.set(encrypted, kicOff);
+	}
+
+	resultEl.value = bytesToHex(packet);
+}
+
 // Init
+updateSp();
+updateSpKic();
+updateSpKid();
 updateSimUsimFields('sim');
 updateSimSelectMethod('sim');
 updateSimSelectSection('sim');
