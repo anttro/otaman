@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APDU Helper — Otaman</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-neutral-50 text-gray-800">
+
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+	<h1 class="text-2xl font-bold text-heading mb-6">APDU Helper</h1>
+
+	<div class="flex gap-1 mb-4 border-b border-gray-300">
+		<button class="tab-btn active px-4 py-2 text-sm rounded-t bg-blue-600 text-white" data-tab="sim">SIM</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="usim">USIM</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="ram">RAM</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="convert">Конвертация</button>
+	</div>
+
+	<div id="tab-sim" class="tab-content">
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Команда</label>
+			<select id="sim-cmd" onchange="updateSimUsimFields('sim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="select">SELECT</option>
+				<option value="update-record">UPDATE RECORD</option>
+				<option value="update-binary">UPDATE BINARY</option>
+				<option value="read-record">READ RECORD</option>
+				<option value="read-binary">READ BINARY</option>
+				<option value="erase-binary">ERASE BINARY</option>
+				<option value="activate-file">ACTIVATE FILE</option>
+				<option value="deactivate-file">DEACTIVATE FILE</option>
+				<option value="verify">VERIFY PIN</option>
+				<option value="change">CHANGE PIN</option>
+			</select>
+		</div>
+
+		<div id="sim-select-section">
+			<div id="sim-select-checkbox-row" class="mb-3">
+				<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+					<input id="sim-select" type="checkbox" checked class="rounded border-gray-300" onchange="updateSimSelectSection('sim')">
+					Начать с SELECT
+				</label>
+			</div>
+			<div id="sim-select-method-body">
+			<div id="sim-sel-method-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Метод SELECT</label>
+				<select id="sim-sel-method" onchange="updateSimSelectMethod('sim'); updateP1P2Display('sim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="fid">По FID</option>
+					<option value="path">По полному пути от MF</option>
+					<option value="dfname">По DF name / AID</option>
+					<option value="chain">ADF RFM цепочка</option>
+				</select>
+			</div>
+			<div id="sim-sel-fid-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">FID (4 hex)</label>
+				<input id="sim-sel-fid" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="6FC5" maxlength="4">
+			</div>
+			<div id="sim-sel-path-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Путь (hex)</label>
+				<input id="sim-sel-path" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="3F007FFF6FC5">
+			</div>
+			<div id="sim-sel-dfname-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">AID (hex)</label>
+				<input id="sim-sel-dfname" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A000000151000000">
+			</div>
+			<div id="sim-sel-chain-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">FID цепочка (через запятую)</label>
+				<input id="sim-sel-chain" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A153,4953">
+			</div>
+			</div>
+		</div>
+
+		<div id="sim-record-row" class="mb-3">
+			<div class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Запись №</label>
+				<input id="sim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('sim')" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+			</div>
+			<div class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Режим выборки (P2)</label>
+				<select id="sim-rec-mode" onchange="updateP1P2Display('sim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="04">Абсолютный (04)</option>
+					<option value="06">Следующая (06)</option>
+					<option value="02">Предыдущая (02)</option>
+				</select>
+			</div>
+		</div>
+
+		<div id="sim-offset-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Смещение (hex)</label>
+			<input id="sim-offset" onchange="updateP1P2Display('sim')" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="0000" maxlength="4" value="0000">
+		</div>
+
+		<div id="sim-le-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Le (hex)</label>
+			<input id="sim-le" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+		</div>
+
+		<div id="sim-data-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Данные (hex)</label>
+			<textarea id="sim-data" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
+		</div>
+
+		<div id="sim-recsize-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Размер записи (байт)</label>
+			<input id="sim-recsize" type="number" min="1" value="0" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+		</div>
+
+		<div id="sim-pin-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">PIN</label>
+			<select id="sim-pin" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="01">PIN1 (01)</option>
+				<option value="02">PIN2 (02)</option>
+			</select>
+		</div>
+
+		<div id="sim-override-row" class="mb-3">
+			<div class="flex gap-2 mb-2">
+				<div class="flex-1">
+					<label class="block mb-1 text-sm font-medium text-gray-700">P1 (hex)</label>
+					<input id="sim-p1" disabled class="disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+				</div>
+				<div class="flex-1">
+					<label class="block mb-1 text-sm font-medium text-gray-700">P2 (hex)</label>
+					<input id="sim-p2" disabled class="disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+				</div>
+			</div>
+			<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+				<input id="sim-override" type="checkbox" class="rounded border-gray-300" onchange="toggleSimOverride('sim')">
+				Разрешить редактирование P1/P2
+			</label>
+		</div>
+
+		<button onclick="genSimUsim('sim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
+		<textarea id="sim-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+	</div>
+
+	<div id="tab-usim" class="tab-content hidden">
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Команда</label>
+			<select id="usim-cmd" onchange="updateSimUsimFields('usim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="select">SELECT</option>
+				<option value="update-record">UPDATE RECORD</option>
+				<option value="update-binary">UPDATE BINARY</option>
+				<option value="read-record">READ RECORD</option>
+				<option value="read-binary">READ BINARY</option>
+				<option value="erase-binary">ERASE BINARY</option>
+				<option value="activate-file">ACTIVATE FILE</option>
+				<option value="deactivate-file">DEACTIVATE FILE</option>
+				<option value="verify">VERIFY PIN</option>
+				<option value="change">CHANGE PIN</option>
+			</select>
+		</div>
+
+		<div id="usim-select-section">
+			<div id="usim-select-checkbox-row" class="mb-3">
+				<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+					<input id="usim-select" type="checkbox" checked class="rounded border-gray-300" onchange="updateSimSelectSection('usim')">
+					Начать с SELECT
+				</label>
+			</div>
+			<div id="usim-select-method-body">
+			<div id="usim-sel-method-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Метод SELECT</label>
+				<select id="usim-sel-method" onchange="updateSimSelectMethod('usim'); updateP1P2Display('usim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="fid">По FID</option>
+					<option value="path">По полному пути от MF</option>
+					<option value="dfname">По DF name / AID</option>
+					<option value="chain">ADF RFM цепочка</option>
+				</select>
+			</div>
+			<div id="usim-sel-fid-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">FID (4 hex)</label>
+				<input id="usim-sel-fid" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="6FC5" maxlength="4">
+			</div>
+			<div id="usim-sel-path-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Путь (hex)</label>
+				<input id="usim-sel-path" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="3F007FFF6FC5">
+			</div>
+			<div id="usim-sel-dfname-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">AID (hex)</label>
+				<input id="usim-sel-dfname" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A000000151000000">
+			</div>
+			<div id="usim-sel-chain-row" class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">FID цепочка (через запятую)</label>
+				<input id="usim-sel-chain" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A153,4953">
+			</div>
+			</div>
+		</div>
+
+		<div id="usim-record-row" class="mb-3">
+			<div class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Запись №</label>
+				<input id="usim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('usim')" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+			</div>
+			<div class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Режим выборки (P2)</label>
+				<select id="usim-rec-mode" onchange="updateP1P2Display('usim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="04">Абсолютный (04)</option>
+					<option value="06">Следующая (06)</option>
+					<option value="02">Предыдущая (02)</option>
+				</select>
+			</div>
+		</div>
+
+		<div id="usim-offset-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Смещение (hex)</label>
+			<input id="usim-offset" onchange="updateP1P2Display('usim')" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="0000" maxlength="4" value="0000">
+		</div>
+
+		<div id="usim-le-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Le (hex)</label>
+			<input id="usim-le" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+		</div>
+
+		<div id="usim-data-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Данные (hex)</label>
+			<textarea id="usim-data" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
+		</div>
+
+		<div id="usim-recsize-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Размер записи (байт)</label>
+			<input id="usim-recsize" type="number" min="1" value="0" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+		</div>
+
+		<div id="usim-pin-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">PIN</label>
+			<select id="usim-pin" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="01">PIN1 (01)</option>
+				<option value="02">PIN2 (02)</option>
+			</select>
+		</div>
+
+		<div id="usim-override-row" class="mb-3">
+			<div class="flex gap-2 mb-2">
+				<div class="flex-1">
+					<label class="block mb-1 text-sm font-medium text-gray-700">P1 (hex)</label>
+					<input id="usim-p1" disabled class="disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+				</div>
+				<div class="flex-1">
+					<label class="block mb-1 text-sm font-medium text-gray-700">P2 (hex)</label>
+					<input id="usim-p2" disabled class="disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+				</div>
+			</div>
+			<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+				<input id="usim-override" type="checkbox" class="rounded border-gray-300" onchange="toggleSimOverride('usim')">
+				Разрешить редактирование P1/P2
+			</label>
+		</div>
+
+		<button onclick="genSimUsim('usim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
+		<textarea id="usim-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+	</div>
+
+	<div id="tab-ram" class="tab-content hidden">
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Команда</label>
+			<select id="ram-cmd" onchange="updateRamFields()" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="install-load">INSTALL [for load]</option>
+				<option value="install-install">INSTALL [for install]</option>
+				<option value="install-make-sel">INSTALL [for make selectable]</option>
+				<option value="install-reg-update">INSTALL [for registry update]</option>
+				<option value="install-extradition">INSTALL [for extradition]</option>
+				<option value="load">LOAD</option>
+				<option value="delete">DELETE</option>
+				<option value="get-status">GET STATUS</option>
+				<option value="get-data">GET DATA</option>
+				<option value="store-data">STORE DATA</option>
+				<option value="set-status">SET STATUS</option>
+				<option value="ext-auth">EXTERNAL AUTHENTICATE</option>
+				<option value="int-auth">INTERNAL AUTHENTICATE</option>
+			</select>
+		</div>
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">AID (hex)</label>
+			<input id="ram-aid" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A000000151000000">
+		</div>
+		<div id="ram-sdaid-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">SD AID (hex)</label>
+			<input id="ram-sdaid" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A000000151000000">
+		</div>
+		<div id="ram-priv-row" class="mb-3">
+			<div class="flex items-center gap-3 mb-2">
+				<label class="text-sm font-medium text-gray-700">Привилегии</label>
+				<input id="ram-priv" readonly class="font-mono w-20 border border-gray-300 text-xs rounded px-2 py-1 bg-gray-100" value="00">
+			</div>
+			<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+				<div class="font-medium text-gray-700 mb-1">Байт 1</div>
+				<div class="font-medium text-gray-700 mb-1">Байт 2</div>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="80" onchange="updateRamPriv()"> Security Domain</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="80" onchange="updateRamPriv()"> Trusted Path</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="40" onchange="updateRamPriv()"> DAP Verification</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="40" onchange="updateRamPriv()"> Authorized Management</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="20" onchange="updateRamPriv()"> Delegated Management</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="20" onchange="updateRamPriv()"> Token Verification</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="10" onchange="updateRamPriv()"> Card Lock</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="10" onchange="updateRamPriv()"> Global Delete</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="08" onchange="updateRamPriv()"> Card Terminate</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="08" onchange="updateRamPriv()"> Global Lock</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="04" onchange="updateRamPriv()"> Card Reset</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="04" onchange="updateRamPriv()"> Global Registry</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="02" onchange="updateRamPriv()"> CVM Management</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="02" onchange="updateRamPriv()"> Final Application</label>
+				<div></div>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b3" value="80" onchange="updateRamPriv()"> Receipt Generation</label>
+			</div>
+		</div>
+		<div id="ram-toolkit-row" class="mb-3">
+			<div class="mb-2">
+				<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+					<input id="ram-toolkit-enable" type="checkbox" class="rounded border-gray-300" onchange="updateRamToolkit()">
+					Параметры SIM/UICC Toolkit
+				</label>
+			</div>
+			<div id="ram-toolkit-body" class="">
+				<div class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700">Режим Toolkit</label>
+					<select id="ram-tk-mode" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+						<option value="ca">SIM Toolkit (Tag CA)</option>
+						<option value="80">UICC Toolkit (Tag 80)</option>
+					</select>
+				</div>
+				<div class="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">Приоритет</label>
+						<input id="ram-tk-priority" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">Таймеры (макс)</label>
+						<input id="ram-tk-timers" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">Длина текста меню</label>
+						<input id="ram-tk-textlen" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">Элементов меню</label>
+						<input id="ram-tk-menus" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">Позиция первого меню</label>
+						<input id="ram-tk-firstpos" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">ID первого меню (hex)</label>
+						<input id="ram-tk-firstid" class="font-mono w-full border border-gray-300 text-xs rounded px-2 py-1.5" placeholder="00" maxlength="2" value="00">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">Позиция последнего меню</label>
+						<input id="ram-tk-lastpos" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">ID последнего меню (hex)</label>
+						<input id="ram-tk-lastid" class="font-mono w-full border border-gray-300 text-xs rounded px-2 py-1.5" placeholder="00" maxlength="2" value="00">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">Каналы (макс)</label>
+						<input id="ram-tk-channels" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">MSL (SPI1, hex)</label>
+						<select id="ram-tk-msl" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+							<option value="00">00 — нет проверки</option>
+							<option value="11">11 — RC/CC/DS</option>
+							<option value="12">12 — RC/DS/CC</option>
+							<option value="15">15 — RC/DS/CC + MAC</option>
+							<option value="16" selected>16 — RC/DS/CC + MAC + Cipher</option>
+							<option value="19">19 — RC/DS/CC + MAC + Cipher + DS</option>
+						</select>
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-700">TAR (6 hex)</label>
+						<input id="ram-tk-tar" class="font-mono w-full border border-gray-300 text-xs rounded px-2 py-1.5" placeholder="B00001" maxlength="6" value="B00001">
+					</div>
+					<div id="ram-tk-ad-row">
+						<label class="block mb-1 text-xs font-medium text-gray-700">Домен доступа (hex)</label>
+						<input id="ram-tk-ad" class="font-mono w-full border border-gray-300 text-xs rounded px-2 py-1.5" placeholder="00" maxlength="2" value="00">
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="ram-load-data-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Данные загрузки (hex)</label>
+			<textarea id="ram-load-data" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
+		</div>
+		<div id="ram-data-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Данные (hex)</label>
+			<textarea id="ram-data" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
+		</div>
+		<div id="ram-block-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Номер блока</label>
+			<input id="ram-block" type="number" min="0" value="0" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+		</div>
+		<div id="ram-enc-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Шифрование</label>
+			<select id="ram-enc" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="00">Без шифрования, последний блок</option>
+				<option value="40">Без шифрования, ещё блоки</option>
+				<option value="80">С шифрованием, последний блок</option>
+				<option value="C0">С шифрованием, ещё блоки</option>
+			</select>
+		</div>
+		<div id="ram-del-mode-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Режим DELETE</label>
+			<select id="ram-del-mode" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="00">По AID (00)</option>
+				<option value="80">Связанные объекты (80)</option>
+			</select>
+		</div>
+		<div id="ram-gs-mode-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Режим GET STATUS</label>
+			<select id="ram-gs-mode" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="80">ISD (80)</option>
+				<option value="40">Приложения и SSD (40)</option>
+				<option value="20">Executable Load Files (20)</option>
+				<option value="10">ELF и модули (10)</option>
+			</select>
+		</div>
+		<div id="ram-tag-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Tag (2 байта hex)</label>
+			<input id="ram-tag" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="5F50" maxlength="4" value="5F50">
+		</div>
+		<div id="ram-ss-mode-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Тип SET STATUS</label>
+			<select id="ram-ss-mode" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="80">ISD (80)</option>
+				<option value="40">Приложение или SSD (40)</option>
+				<option value="60">SD и его приложения (60)</option>
+			</select>
+		</div>
+		<div id="ram-ss-state-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Состояние</label>
+			<select id="ram-ss-state" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="00">Разблокировать (предыдущее состояние)</option>
+				<option value="80">Заблокировать (LOCKED)</option>
+			</select>
+		</div>
+		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
+		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+	</div>
+
+	<div id="tab-convert" class="tab-content hidden">
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Тип</label>
+			<select id="conv-type" onchange="updateConvFields()" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+				<option value="imsi">IMSI → EF.IMSI</option>
+				<option value="msisdn">MSISDN → BCD</option>
+				<option value="iccid">ICCID → hex</option>
+				<option value="spn">Provider Name → SPN</option>
+				<option value="plmn">PLMN (MCC+MNC) → EF_PLMNsel</option>
+				<option value="plmnwact">PLMNwAcT (MCC+MNC+AcT) → EF_PLMNwAcT</option>
+			</select>
+		</div>
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700">Значение</label>
+			<input id="conv-input" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+		</div>
+		<div id="conv-plmn-fields" class="">
+			<div class="flex gap-2 mb-2">
+				<div class="flex-1">
+					<label class="block mb-1 text-sm font-medium text-gray-700">MCC (3 цифры)</label>
+					<input id="conv-mcc" maxlength="3" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="250">
+				</div>
+				<div class="flex-1">
+					<label class="block mb-1 text-sm font-medium text-gray-700">MNC (2-3 цифры)</label>
+					<input id="conv-mnc" maxlength="3" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="01">
+				</div>
+			</div>
+			<div id="conv-act-row" class="">
+				<label class="block mb-1 text-sm font-medium text-gray-700">Access Technology (AcT)</label>
+				<select id="conv-act" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+					<option value="8000">GSM (8000)</option>
+					<option value="4000">UTRAN (4000)</option>
+					<option value="2000">E-UTRAN (2000)</option>
+					<option value="1000">NGRAN (1000)</option>
+					<option value="C000">GSM + UTRAN (C000)</option>
+					<option value="6000">UTRAN + E-UTRAN (6000)</option>
+					<option value="E000">GSM + UTRAN + E-UTRAN (E000)</option>
+					<option value="F000">All (F000)</option>
+				</select>
+			</div>
+		</div>
+		<button onclick="genConvert()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Конвертировать</button>
+		<textarea id="conv-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+	</div>
+
+</div>
+
+<script>
+// ===== Tab switching =====
+function switchTab(name) {
+	document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+	document.getElementById('tab-' + name).classList.remove('hidden');
+	document.querySelectorAll('.tab-btn').forEach(btn => {
+		btn.classList.remove('bg-blue-600', 'text-white');
+		btn.classList.add('bg-gray-200', 'text-gray-700');
+	});
+	const active = document.querySelector(`.tab-btn[data-tab="${name}"]`);
+	active.classList.remove('bg-gray-200', 'text-gray-700');
+	active.classList.add('bg-blue-600', 'text-white');
+	if (name === 'sim' || name === 'usim') {
+		updateSimUsimFields(name);
+		updateSimSelectMethod(name);
+	}
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+	btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// ===== SIM/USIM field visibility =====
+const RECORD_OPS = new Set(['update-record', 'read-record']);
+const BINARY_OPS = new Set(['update-binary', 'read-binary', 'erase-binary']);
+const READ_OPS = new Set(['read-record', 'read-binary']);
+const DATA_OPS = new Set(['update-record', 'update-binary', 'verify', 'change']);
+const RECSIZE_OPS = new Set(['update-record']);
+const PIN_OPS = new Set(['verify', 'change']);
+
+function updateSimUsimFields(mode) {
+	if (!mode) return;
+	const cmd = document.getElementById(mode + '-cmd').value;
+	document.getElementById(mode + '-record-row').style.display = RECORD_OPS.has(cmd) ? '' : 'none';
+	document.getElementById(mode + '-offset-row').style.display = BINARY_OPS.has(cmd) ? '' : 'none';
+	document.getElementById(mode + '-le-row').style.display = READ_OPS.has(cmd) ? '' : 'none';
+	document.getElementById(mode + '-data-row').style.display = DATA_OPS.has(cmd) ? '' : 'none';
+	document.getElementById(mode + '-recsize-row').style.display = RECSIZE_OPS.has(cmd) ? '' : 'none';
+	document.getElementById(mode + '-pin-row').style.display = PIN_OPS.has(cmd) ? '' : 'none';
+	if (cmd === 'select') {
+		document.getElementById(mode + '-select-checkbox-row').style.display = 'none';
+	} else {
+		document.getElementById(mode + '-select-checkbox-row').style.display = '';
+	}
+	updateP1P2Display(mode);
+}
+
+function updateSimSelectMethod(mode) {
+	if (!mode) return;
+	const method = document.getElementById(mode + '-sel-method').value;
+	document.getElementById(mode + '-sel-fid-row').style.display = method === 'fid' ? '' : 'none';
+	document.getElementById(mode + '-sel-path-row').style.display = method === 'path' ? '' : 'none';
+	document.getElementById(mode + '-sel-dfname-row').style.display = method === 'dfname' ? '' : 'none';
+	document.getElementById(mode + '-sel-chain-row').style.display = method === 'chain' ? '' : 'none';
+}
+
+function toggleSimOverride(mode) {
+	const checked = document.getElementById(mode + '-override').checked;
+	document.getElementById(mode + '-p1').disabled = !checked;
+	document.getElementById(mode + '-p2').disabled = !checked;
+}
+
+function updateSimSelectSection(mode) {
+	const cmd = document.getElementById(mode + '-cmd').value;
+	if (cmd === 'select') return;
+	document.getElementById(mode + '-select-method-body').style.display =
+		document.getElementById(mode + '-select').checked ? '' : 'none';
+}
+
+function updateP1P2Display(mode) {
+	const preset = mode === 'sim' ? {selP1: 0x00, selP2: 0x00} : {selP1: 0x09, selP2: 0x0C};
+	const cmd = document.getElementById(mode + '-cmd').value;
+	if (cmd === 'select') {
+		document.getElementById(mode + '-p1').value = preset.selP1.toString(16).padStart(2, '0').toUpperCase();
+		document.getElementById(mode + '-p2').value = preset.selP2.toString(16).padStart(2, '0').toUpperCase();
+		return;
+	}
+	const record = parseInt(document.getElementById(mode + '-record').value) || 1;
+	const recMode = parseInt(document.getElementById(mode + '-rec-mode').value, 16);
+	const offsetHex = (document.getElementById(mode + '-offset').value || '0000').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0').slice(0, 4);
+	const offset = parseInt(offsetHex, 16);
+	const pin = document.getElementById(mode + '-pin').value;
+	let p1, p2;
+	if (cmd === 'read-record' || cmd === 'update-record') {
+		p1 = record; p2 = recMode;
+	} else if (cmd === 'read-binary' || cmd === 'update-binary' || cmd === 'erase-binary') {
+		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF;
+	} else if (cmd === 'activate-file' || cmd === 'deactivate-file') {
+		p1 = 0x00; p2 = 0x00;
+	} else if (cmd === 'verify' || cmd === 'change') {
+		p1 = 0x00; p2 = parseInt(pin, 16);
+	} else {
+		p1 = 0x00; p2 = 0x00;
+	}
+	document.getElementById(mode + '-p1').value = p1.toString(16).padStart(2, '0').toUpperCase();
+	document.getElementById(mode + '-p2').value = p2.toString(16).padStart(2, '0').toUpperCase();
+}
+
+// ===== RAM field visibility =====
+function updateRamFields() {
+	const cmd = document.getElementById('ram-cmd').value;
+	document.getElementById('ram-priv-row').style.display = cmd === 'install-install' ? '' : 'none';
+	document.getElementById('ram-toolkit-row').style.display = cmd === 'install-install' ? '' : 'none';
+	document.getElementById('ram-sdaid-row').style.display = cmd === 'install-load' ? '' : 'none';
+	document.getElementById('ram-load-data-row').style.display = cmd === 'install-load' ? '' : 'none';
+	document.getElementById('ram-data-row').style.display = ['load', 'store-data', 'ext-auth', 'int-auth'].includes(cmd) ? '' : 'none';
+	document.getElementById('ram-block-row').style.display = ['load', 'store-data'].includes(cmd) ? '' : 'none';
+	document.getElementById('ram-enc-row').style.display = cmd === 'store-data' ? '' : 'none';
+	document.getElementById('ram-del-mode-row').style.display = cmd === 'delete' ? '' : 'none';
+	document.getElementById('ram-gs-mode-row').style.display = cmd === 'get-status' ? '' : 'none';
+	document.getElementById('ram-tag-row').style.display = cmd === 'get-data' ? '' : 'none';
+	document.getElementById('ram-ss-mode-row').style.display = cmd === 'set-status' ? '' : 'none';
+	document.getElementById('ram-ss-state-row').style.display = cmd === 'set-status' ? '' : 'none';
+	updateRamToolkit();
+}
+
+function updateRamPriv() {
+	let b1 = 0, b2 = 0, b3 = 0;
+	document.querySelectorAll('.ram-priv-b1:checked').forEach(cb => b1 |= parseInt(cb.value, 16));
+	document.querySelectorAll('.ram-priv-b2:checked').forEach(cb => b2 |= parseInt(cb.value, 16));
+	document.querySelectorAll('.ram-priv-b3:checked').forEach(cb => b3 |= parseInt(cb.value, 16));
+	let hex = b1.toString(16).padStart(2, '0').toUpperCase();
+	hex += b2.toString(16).padStart(2, '0').toUpperCase();
+	if (b3) hex += b3.toString(16).padStart(2, '0').toUpperCase();
+	document.getElementById('ram-priv').value = hex;
+}
+
+function updateRamToolkit() {
+	const checked = document.getElementById('ram-toolkit-enable').checked;
+	document.getElementById('ram-toolkit-body').style.display = checked ? '' : 'none';
+	document.getElementById('ram-tk-ad-row').style.display =
+		document.getElementById('ram-tk-mode').value === 'ca' ? '' : 'none';
+}
+document.getElementById('ram-tk-mode').addEventListener('change', () => {
+	document.getElementById('ram-tk-ad-row').style.display =
+		document.getElementById('ram-tk-mode').value === 'ca' ? '' : 'none';
+});
+
+// ===== GSM 7-bit alphabet =====
+const GSM7_ALPHABET = [
+	'\u0040','\u00a3','\u0024','\u00a5','\u00e8','\u00e9','\u00f9','\u00ec',
+	'\u00f2','\u00c7','\u000a','\u00d8','\u00f8','\u000d','\u00c5','\u00e5',
+	'\u0394','\u005f','\u03a6','\u0393','\u039b','\u03a9','\u03a0','\u03a8',
+	'\u03a3','\u0398','\u039e','\u001b','\u00c6','\u00e6','\u00df','\u00c9',
+	'\u0020','\u0021','\u0022','\u0023','\u00a4','\u0025','\u0026','\u0027',
+	'\u0028','\u0029','\u002a','\u002b','\u002c','\u002d','\u002e','\u002f',
+	'\u0030','\u0031','\u0032','\u0033','\u0034','\u0035','\u0036','\u0037',
+	'\u0038','\u0039','\u003a','\u003b','\u003c','\u003d','\u003e','\u003f',
+	'\u00a1','\u0041','\u0042','\u0043','\u0044','\u0045','\u0046','\u0047',
+	'\u0048','\u0049','\u004a','\u004b','\u004c','\u004d','\u004e','\u004f',
+	'\u0050','\u0051','\u0052','\u0053','\u0054','\u0055','\u0056','\u0057',
+	'\u0058','\u0059','\u005a','\u00c4','\u00d6','\u00d1','\u00dc','\u00a7',
+	'\u00bf','\u0061','\u0062','\u0063','\u0064','\u0065','\u0066','\u0067',
+	'\u0068','\u0069','\u006a','\u006b','\u006c','\u006d','\u006e','\u006f',
+	'\u0070','\u0071','\u0072','\u0073','\u0074','\u0075','\u0076','\u0077',
+	'\u0078','\u0079','\u007a','\u00e4','\u00f6','\u00f1','\u00fc','\u00e0',
+];
+
+const GSM7_EXT_MAP = {
+	'\n': 0x0a, '^': 0x14, '{': 0x28, '}': 0x29, '\\': 0x2f,
+	'[': 0x3c, '~': 0x3d, ']': 0x3e, '|': 0x40, '\u20ac': 0x65,
+};
+
+function gsm7TextToSeptets(text) {
+	const septets = [];
+	for (const c of text) {
+		if (c in GSM7_EXT_MAP) {
+			septets.push(0x1B);
+			septets.push(GSM7_EXT_MAP[c]);
+		} else {
+			const idx = GSM7_ALPHABET.indexOf(c);
+			if (idx === -1) throw new Error('Character not in GSM7 alphabet');
+			septets.push(idx);
+		}
+	}
+	return septets;
+}
+
+function gsm7Encode(septets) {
+	const numOctets = Math.ceil(septets.length * 7 / 8);
+	const packed = new Uint8Array(numOctets);
+	for (let i = 0; i < septets.length; i++) {
+		const bitPos = i * 7;
+		const byteIdx = bitPos >>> 3;
+		const bitShift = bitPos & 7;
+		packed[byteIdx] |= (septets[i] << bitShift) & 0xFF;
+		if (byteIdx + 1 < numOctets) {
+			packed[byteIdx + 1] |= septets[i] >>> (8 - bitShift);
+		}
+	}
+	return packed;
+}
+
+function encodeSpn(text) {
+	try {
+		const septets = gsm7TextToSeptets(text);
+		const packed = gsm7Encode(septets);
+		const nSeptets = septets.length;
+		const nOctets = packed.length;
+		const lastOctetDataBits = nSeptets * 7 - (nOctets - 1) * 8;
+		const spareBits = 8 - lastOctetDataBits;
+		let dcs = 0x80 | (spareBits & 0x07);
+		if (dcs === 0x81) dcs = 0x80;
+		const inner = new Uint8Array(16);
+		inner[0] = dcs;
+		inner.set(packed, 1);
+		for (let i = 1 + nOctets; i < 16; i++) inner[i] = 0xFF;
+		return '01' + Array.from(inner).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('');
+	} catch (e) {
+		let hasNonBmp = false;
+		for (const c of text) {
+			const code = c.charCodeAt(0);
+			if (code >= 0xD800 && code <= 0xDBFF) { hasNonBmp = true; break; }
+		}
+		if (hasNonBmp) {
+			const buf = [];
+			for (const c of text) {
+				const code = c.charCodeAt(0);
+				buf.push(code >>> 8, code & 0xFF);
+			}
+			const inner = new Uint8Array(16);
+			inner[0] = 0x80;
+			for (let i = 0; i < buf.length && i + 1 < 16; i++) inner[i + 1] = buf[i];
+			for (let i = 1 + buf.length; i < 16; i++) inner[i] = 0xFF;
+			return '00' + Array.from(inner).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('');
+		} else {
+			const nonGsm7 = [];
+			for (const c of text) {
+				if (GSM7_ALPHABET.indexOf(c) === -1 && !(c in GSM7_EXT_MAP)) {
+					nonGsm7.push(c.charCodeAt(0));
+				}
+			}
+			const base = nonGsm7.length ? (Math.min(...nonGsm7) & 0xFF00) : 0;
+			const baseHigh = base >>> 8;
+			const inner = new Uint8Array(16);
+			inner[0] = 0x81;
+			inner[1] = text.length;
+			inner[2] = baseHigh;
+			let pos = 3;
+			for (const c of text) {
+				if (GSM7_EXT_MAP.hasOwnProperty(c)) {
+					inner[pos++] = GSM7_EXT_MAP[c];
+				} else {
+					const idx = GSM7_ALPHABET.indexOf(c);
+					if (idx !== -1) {
+						inner[pos++] = idx;
+					} else {
+						const code = c.charCodeAt(0);
+						inner[pos++] = 0x80 | (code - base);
+					}
+				}
+			}
+			while (pos < 16) inner[pos++] = 0xFF;
+			return '00' + Array.from(inner).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('');
+		}
+	}
+}
+
+function swapNibbles(s) {
+	let out = '';
+	for (let i = 0; i < s.length; i += 2) {
+		out += s[i + 1] || 'f';
+		out += s[i];
+	}
+	return out.toUpperCase();
+}
+
+function encImsi(imsi) {
+	const l = Math.ceil((imsi.length + 1) / 2);
+	const oe = imsi.length & 1;
+	const indicator = ((oe << 3) | 1).toString(16);
+	const padded = imsi.padEnd(15, 'f');
+	const second = swapNibbles(indicator + padded);
+	return l.toString(16).padStart(2, '0') + second;
+}
+
+function encMsisdn(msisdn) {
+	let s = msisdn.replace(/^\+/, '');
+	if (s.length % 2) s += 'f';
+	return swapNibbles(s);
+}
+
+function encIccid(iccid) {
+	return swapNibbles(iccid);
+}
+
+function buildApdu(cla, ins, p1, p2, p3, data) {
+	let s = cla.toString(16).padStart(2, '0').toUpperCase() +
+		ins.toString(16).padStart(2, '0').toUpperCase() +
+		p1.toString(16).padStart(2, '0').toUpperCase() +
+		p2.toString(16).padStart(2, '0').toUpperCase() +
+		p3.toString(16).padStart(2, '0').toUpperCase();
+	if (data) s += data.toUpperCase();
+	return s;
+}
+
+function buildSelect(cla, p1, p2, fid) {
+	const data = fid.length === 4 ? fid : '0000';
+	return buildApdu(cla, 0xA4, p1, p2, 0x02, data) + '00';
+}
+
+function buildOpNoCla(ins, p1, p2, p3, data) {
+	let s = ins.toString(16).padStart(2, '0').toUpperCase() +
+		p1.toString(16).padStart(2, '0').toUpperCase() +
+		p2.toString(16).padStart(2, '0').toUpperCase() +
+		p3.toString(16).padStart(2, '0').toUpperCase();
+	if (data) s += data.toUpperCase();
+	return s;
+}
+
+const OPS = {
+	'select':            {ins: 0xA4},
+	'read-record':       {ins: 0xB2},
+	'read-binary':       {ins: 0xB0},
+	'update-record':     {ins: 0xDC},
+	'update-binary':     {ins: 0xD6},
+	'erase-binary':      {ins: 0x0E},
+	'activate-file':     {ins: 0x44},
+	'deactivate-file':   {ins: 0x04},
+	'verify':            {ins: 0x20},
+	'change':            {ins: 0x24},
+};
+
+function getSelValue(mode) {
+	const method = document.getElementById(mode + '-sel-method').value;
+	if (method === 'fid') {
+		return {type: 'fid', value: (document.getElementById(mode + '-sel-fid').value || '').replace(/[^0-9a-fA-F]/g, '')};
+	} else if (method === 'path') {
+		return {type: 'path', value: (document.getElementById(mode + '-sel-path').value || '').replace(/[^0-9a-fA-F]/g, '')};
+	} else if (method === 'dfname') {
+		return {type: 'dfname', value: (document.getElementById(mode + '-sel-dfname').value || '').replace(/[^0-9a-fA-F]/g, '')};
+	} else if (method === 'chain') {
+		return {type: 'chain', value: (document.getElementById(mode + '-sel-chain').value || '').trim()};
+	}
+	return null;
+}
+
+function buildSelectApdu(mode, preset, selInfo) {
+	if (!selInfo || !selInfo.value) return '';
+	if (selInfo.type === 'fid') {
+		if (selInfo.value.length !== 4) return '';
+		return buildSelect(preset.cla, preset.selP1, preset.selP2, selInfo.value);
+	} else if (selInfo.type === 'path') {
+		if (selInfo.value.length < 2 || selInfo.value.length % 2 !== 0) return '';
+		const p3 = selInfo.value.length / 2;
+		return buildApdu(preset.cla, 0xA4, 0x08, 0x00, p3, selInfo.value) + '00';
+	} else if (selInfo.type === 'dfname') {
+		if (selInfo.value.length < 2) return '';
+		const p3 = selInfo.value.length / 2;
+		return buildApdu(preset.cla, 0xA4, 0x04, 0x00, p3, selInfo.value) + '00';
+	} else if (selInfo.type === 'chain') {
+		const fids = selInfo.value.split(',').map(f => f.trim().replace(/[^0-9a-fA-F]/g, '')).filter(f => f.length === 4);
+		if (fids.length === 0) return '';
+		return fids.map(fid => buildSelect(preset.cla, preset.selP1, preset.selP2, fid)).join('');
+	}
+	return '';
+}
+
+function genSimUsim(mode) {
+	const preset = mode === 'sim' ? {cla: 0xA0, selP1: 0x00, selP2: 0x00} : {cla: 0x00, selP1: 0x09, selP2: 0x0C};
+	const cmd = document.getElementById(mode + '-cmd').value;
+	const doSelect = document.getElementById(mode + '-select').checked;
+	const selInfo = getSelValue(mode);
+	const record = parseInt(document.getElementById(mode + '-record').value) || 1;
+	const recModeHex = document.getElementById(mode + '-rec-mode').value;
+	const recMode = parseInt(recModeHex, 16);
+	const offsetHex = (document.getElementById(mode + '-offset').value || '0000').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0').slice(0, 4);
+	const offset = parseInt(offsetHex, 16);
+	const leHex = (document.getElementById(mode + '-le').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2);
+	const le = parseInt(leHex, 16);
+	let dataHex = (document.getElementById(mode + '-data').value || '').replace(/[^0-9a-fA-F]/g, '');
+	const recSize = parseInt(document.getElementById(mode + '-recsize').value) || 0;
+	const pin = document.getElementById(mode + '-pin').value;
+	const override = document.getElementById(mode + '-override').checked;
+	const overrideP1 = override ? parseInt((document.getElementById(mode + '-p1').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2), 16) : null;
+	const overrideP2 = override ? parseInt((document.getElementById(mode + '-p2').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2), 16) : null;
+
+	const resultEl = document.getElementById(mode + '-result');
+
+	if (recSize > 0 && dataHex.length > 0) {
+		const targetBytes = recSize * 2;
+		if (dataHex.length > targetBytes) dataHex = dataHex.slice(0, targetBytes);
+		else dataHex = dataHex.padEnd(targetBytes, 'F');
+	}
+
+	if (cmd === 'select') {
+		const selectApdu = buildSelectApdu(mode, preset, selInfo);
+		if (!selectApdu) { resultEl.value = 'Ошибка: укажите параметры SELECT'; return; }
+		resultEl.value = selectApdu;
+		return;
+	}
+
+	const op = OPS[cmd];
+	if (!op) { resultEl.value = 'Ошибка: неизвестная команда'; return; }
+
+	let p1, p2, p3, data = null;
+	if (cmd === 'read-record') {
+		p1 = record; p2 = recMode; p3 = le;
+	} else if (cmd === 'read-binary') {
+		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = le;
+	} else if (cmd === 'update-record') {
+		if (!dataHex) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		p1 = record; p2 = recMode; p3 = dataHex.length / 2; data = dataHex;
+	} else if (cmd === 'update-binary') {
+		if (!dataHex) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = dataHex.length / 2; data = dataHex;
+	} else if (cmd === 'erase-binary') {
+		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = 0x00;
+	} else if (cmd === 'activate-file' || cmd === 'deactivate-file') {
+		p1 = 0x00; p2 = 0x00; p3 = 0x00;
+	} else if (cmd === 'verify' || cmd === 'change') {
+		if (!dataHex) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		p1 = 0x00; p2 = parseInt(pin, 16); p3 = dataHex.length / 2; data = dataHex;
+	}
+
+	if (override) {
+		if (overrideP1 !== null) p1 = overrideP1;
+		if (overrideP2 !== null) p2 = overrideP2;
+	}
+
+	let apdu = '';
+	if (doSelect) {
+		const selectApdu = buildSelectApdu(mode, preset, selInfo);
+		if (selectApdu) {
+			apdu = selectApdu + buildOpNoCla(op.ins, p1, p2, p3, data);
+		} else {
+			apdu = buildApdu(preset.cla, op.ins, p1, p2, p3, data);
+		}
+	} else {
+		apdu = buildApdu(preset.cla, op.ins, p1, p2, p3, data);
+	}
+
+	resultEl.value = apdu;
+}
+
+function genRam() {
+	const cmd = document.getElementById('ram-cmd').value;
+	const aid = (document.getElementById('ram-aid').value || '').replace(/[^0-9a-fA-F]/g, '');
+	const sdAid = (document.getElementById('ram-sdaid').value || '').replace(/[^0-9a-fA-F]/g, '');
+	const loadData = (document.getElementById('ram-load-data').value || '').replace(/[^0-9a-fA-F]/g, '');
+	const ramData = (document.getElementById('ram-data').value || '').replace(/[^0-9a-fA-F]/g, '');
+	const blockNum = parseInt(document.getElementById('ram-block').value) || 0;
+	const enc = document.getElementById('ram-enc').value;
+	const delMode = document.getElementById('ram-del-mode').value;
+	const gsMode = document.getElementById('ram-gs-mode').value;
+	const tagHex = (document.getElementById('ram-tag').value || '5F50').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0').slice(0, 4);
+	const ssMode = document.getElementById('ram-ss-mode').value;
+	const ssState = document.getElementById('ram-ss-state').value;
+
+	const resultEl = document.getElementById('ram-result');
+
+	if (cmd === 'install-load' && !sdAid) { resultEl.value = 'Ошибка: укажите SD AID'; return; }
+
+	const INSTALL_P1 = {
+		'install-load': 0x02,
+		'install-install': 0x0C,
+		'install-make-sel': 0x10,
+		'install-reg-update': 0x01,
+		'install-extradition': 0x04,
+	};
+
+	let apdu = '';
+	if (cmd === 'install-load') {
+		const sdAidLen = (sdAid.length / 2).toString(16).padStart(2, '0');
+		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
+		let dataField = 'C9' + sdAidLen + sdAid + '5F50' + aidLen + aid;
+		if (loadData) {
+			const ldLen = (loadData.length / 2).toString(16).padStart(2, '0');
+			dataField += 'C4' + ldLen + loadData;
+		}
+		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField);
+	} else if (cmd === 'install-install') {
+		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
+		let dataField = '4F' + aidLen + aid;
+		const privHex = document.getElementById('ram-priv').value;
+		const privLen = (privHex.length / 2).toString(16).padStart(2, '0');
+		dataField += 'C7' + privLen + privHex;
+		if (document.getElementById('ram-toolkit-enable').checked) {
+			const tkMode = document.getElementById('ram-tk-mode').value;
+			const priority = parseInt(document.getElementById('ram-tk-priority').value) || 0;
+			const timers = parseInt(document.getElementById('ram-tk-timers').value) || 0;
+			const textLen = parseInt(document.getElementById('ram-tk-textlen').value) || 0;
+			const menus = parseInt(document.getElementById('ram-tk-menus').value) || 0;
+			const firstPos = parseInt(document.getElementById('ram-tk-firstpos').value) || 0;
+			const firstId = (document.getElementById('ram-tk-firstid').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2) || '00';
+			const lastPos = parseInt(document.getElementById('ram-tk-lastpos').value) || 0;
+			const lastId = (document.getElementById('ram-tk-lastid').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2) || '00';
+			const channels = parseInt(document.getElementById('ram-tk-channels').value) || 0;
+			const msl = document.getElementById('ram-tk-msl').value;
+			const tar = (document.getElementById('ram-tk-tar').value || '').replace(/[^0-9a-fA-F]/g, '');
+			const ad = (document.getElementById('ram-tk-ad').value || '').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2);
+			let tkPayload = '';
+			if (tkMode === 'ca') {
+				tkPayload = priority.toString(16).padStart(2, '0') +
+					timers.toString(16).padStart(2, '0') +
+					textLen.toString(16).padStart(2, '0') +
+					menus.toString(16).padStart(2, '0') +
+					firstPos.toString(16).padStart(2, '0') + firstId +
+					lastPos.toString(16).padStart(2, '0') + lastId +
+					channels.toString(16).padStart(2, '0') +
+					'01' + msl +
+					(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00') +
+					'01' + ad;
+				const tkLen = (tkPayload.length / 2).toString(16);
+				dataField += 'CA' + tkLen + tkPayload;
+			} else {
+				tkPayload = priority.toString(16).padStart(2, '0') +
+					timers.toString(16).padStart(2, '0') +
+					textLen.toString(16).padStart(2, '0') +
+					menus.toString(16).padStart(2, '0') +
+					firstPos.toString(16).padStart(2, '0') + firstId +
+					lastPos.toString(16).padStart(2, '0') + lastId +
+					channels.toString(16).padStart(2, '0') +
+					'01' + msl +
+					(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00');
+				const tkLen = (tkPayload.length / 2).toString(16);
+				dataField += '80' + tkLen + tkPayload;
+			}
+		}
+		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField);
+	} else if (cmd === 'install-make-sel') {
+		if (!aid) { resultEl.value = 'Ошибка: укажите AID'; return; }
+		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
+		const dataField = '4F' + aidLen + aid;
+		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField);
+	} else if (cmd === 'install-reg-update' || cmd === 'install-extradition') {
+		if (!aid) { resultEl.value = 'Ошибка: укажите AID'; return; }
+		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
+		const dataField = '4F' + aidLen + aid;
+		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField);
+	} else if (cmd === 'load') {
+		if (!ramData) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		const dataLen = (ramData.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0xE8, 0x00, blockNum, parseInt(dataLen, 16), ramData);
+	} else if (cmd === 'delete') {
+		if (!aid) { resultEl.value = 'Ошибка: укажите AID'; return; }
+		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
+		const dataField = '4F' + aidLen + aid;
+		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0xE4, parseInt(delMode, 16), 0x00, parseInt(dataLen, 16), dataField);
+	} else if (cmd === 'get-status') {
+		apdu = buildApdu(0x80, 0xF2, parseInt(gsMode, 16), 0x00, 0x02, '4F00');
+	} else if (cmd === 'get-data') {
+		const tag = parseInt(tagHex, 16);
+		apdu = buildApdu(0x80, 0xCA, (tag >> 8) & 0xFF, tag & 0xFF, 0x00, null);
+	} else if (cmd === 'store-data') {
+		if (!ramData) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		const dataLen = (ramData.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0xE2, parseInt(enc, 16), blockNum, parseInt(dataLen, 16), ramData);
+	} else if (cmd === 'set-status') {
+		if (!aid) { resultEl.value = 'Ошибка: укажите AID'; return; }
+		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
+		const dataField = '4F' + aidLen + aid;
+		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0xF0, parseInt(ssMode, 16), parseInt(ssState, 16), parseInt(dataLen, 16), dataField);
+	} else if (cmd === 'ext-auth') {
+		if (!ramData) { resultEl.value = 'Ошибка: укажите данные (host cryptogram)'; return; }
+		const dataLen = (ramData.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0x82, 0x00, 0x00, parseInt(dataLen, 16), ramData);
+	} else if (cmd === 'int-auth') {
+		if (!ramData) { resultEl.value = 'Ошибка: укажите данные (challenge)'; return; }
+		const dataLen = (ramData.length / 2).toString(16).padStart(2, '0');
+		apdu = buildApdu(0x80, 0x88, 0x00, 0x00, parseInt(dataLen, 16), ramData) + '00';
+	}
+
+	resultEl.value = apdu || 'Ошибка: неизвестная команда';
+}
+
+function updateConvFields() {
+	const type = document.getElementById('conv-type').value;
+	const isPlmn = type === 'plmn' || type === 'plmnwact';
+	document.getElementById('conv-input').style.display = isPlmn ? 'none' : '';
+	document.getElementById('conv-plmn-fields').style.display = isPlmn ? '' : 'none';
+	document.getElementById('conv-act-row').style.display = type === 'plmnwact' ? '' : 'none';
+}
+
+function encPlmn(mcc, mnc) {
+	mcc = mcc.padEnd(3, '0').slice(0, 3);
+	mnc = mnc.padEnd(3, 'F').slice(0, 3);
+	const d = mcc + mnc;
+	const b1 = d[1] + d[0];
+	const b2 = d[5] + d[2];
+	const b3 = d[4] + d[3];
+	return (b1 + b2 + b3).toUpperCase();
+}
+
+function genConvert() {
+	const type = document.getElementById('conv-type').value;
+	const input = document.getElementById('conv-input').value.trim();
+	const mcc = document.getElementById('conv-mcc').value.trim();
+	const mnc = document.getElementById('conv-mnc').value.trim();
+	const act = document.getElementById('conv-act').value;
+
+	let result = '';
+	try {
+		if (type === 'imsi') {
+			if (!input) { result = 'Ошибка: введите значение'; }
+			else if (!/^\d{15}$/.test(input)) { result = 'Ошибка: IMSI должен быть 15 цифр'; }
+			else result = encImsi(input);
+		} else if (type === 'msisdn') {
+			if (!input) { result = 'Ошибка: введите значение'; }
+			else result = encMsisdn(input);
+		} else if (type === 'iccid') {
+			if (!input) { result = 'Ошибка: введите значение'; }
+			else result = encIccid(input);
+		} else if (type === 'spn') {
+			if (!input) { result = 'Ошибка: введите значение'; }
+			else result = encodeSpn(input);
+		} else if (type === 'plmn') {
+			if (!mcc || !mnc) { result = 'Ошибка: укажите MCC и MNC'; }
+			else if (!/^\d{3}$/.test(mcc)) { result = 'Ошибка: MCC должен быть 3 цифры'; }
+			else if (!/^\d{2,3}$/.test(mnc)) { result = 'Ошибка: MNC должен быть 2-3 цифры'; }
+			else result = encPlmn(mcc, mnc);
+		} else if (type === 'plmnwact') {
+			if (!mcc || !mnc) { result = 'Ошибка: укажите MCC и MNC'; }
+			else if (!/^\d{3}$/.test(mcc)) { result = 'Ошибка: MCC должен быть 3 цифры'; }
+			else if (!/^\d{2,3}$/.test(mnc)) { result = 'Ошибка: MNC должен быть 2-3 цифры'; }
+			else result = encPlmn(mcc, mnc) + act.toUpperCase();
+		}
+	} catch (e) {
+		result = 'Ошибка: ' + e.message;
+	}
+	document.getElementById('conv-result').value = result;
+}
+
+// Init
+updateSimUsimFields('sim');
+updateSimSelectMethod('sim');
+updateSimSelectSection('sim');
+toggleSimOverride('sim');
+toggleSimOverride('usim');
+updateP1P2Display('sim');
+updateP1P2Display('usim');
+updateRamFields();
+</script>
+
+</body>
+</html>
