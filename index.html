@@ -465,14 +465,14 @@
 			<label class="block mb-1 text-sm font-medium text-gray-700">SPI2 (PoR settings)</label>
 			<div class="flex gap-2 items-center">
 				<select id="sp-spi2" onchange="updateSp()" class="flex-1 border border-gray-300 text-sm rounded px-3 py-2.5">
-					<option value="00" selected>00 — No PoR</option>
-					<option value="40">40 — PoR required, no security</option>
-					<option value="50">50 — PoR required, RC</option>
-					<option value="60">60 — PoR required, CC</option>
-					<option value="70">70 — PoR required, DS</option>
-					<option value="48">48 — PoR required, no security, ciphered</option>
-					<option value="80">80 — PoR on error, no security</option>
-					<option value="90">90 — PoR on error, RC</option>
+					<option value="00" selected>00 — No PoR, no security</option>
+					<option value="01">01 — PoR required, no security</option>
+					<option value="05">05 — PoR required, RC</option>
+					<option value="09">09 — PoR required, CC</option>
+					<option value="0D">0D — PoR required, DS</option>
+					<option value="11">11 — PoR required, no security, ciphered</option>
+					<option value="02">02 — PoR on error, no security</option>
+					<option value="06">06 — PoR on error, RC</option>
 				</select>
 				<select id="sp-spi2-sm" onchange="updateSp()" class="border border-gray-300 text-sm rounded px-3 py-2.5">
 					<option value="0">DELIVER-REPORT</option>
@@ -1261,7 +1261,7 @@ function updateSp() {
 	document.getElementById('sp-spi1-hex').value = document.getElementById('sp-spi1').value;
 	const spi2Base = parseInt(document.getElementById('sp-spi2').value, 16);
 	const sm = parseInt(document.getElementById('sp-spi2-sm').value, 16);
-	const spi2Byte = spi2Base | (sm << 2);
+	const spi2Byte = spi2Base | (sm << 5);
 	document.getElementById('sp-spi2-hex').value = spi2Byte.toString(16).padStart(2, '0').toUpperCase();
 }
 function updateSpKic() {
