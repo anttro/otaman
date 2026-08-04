@@ -1,16 +1,25 @@
-# Otaman — APDU Helper
+# OTAMan — APDU Helper & Secured Packet Builder
 
-Standalone offline HTML/JS tool for building APDU commands for SIM, USIM, and GlobalPlatform RAM, plus encoding conversions.
+Standalone offline HTML/JS tool for building APDU commands for SIM, USIM, and GlobalPlatform RAM, assembling secure packets per ETSI TS 102 225, and constructing BER-TLV command scripts per ETSI TS 102 226.
 
 Open `index.html` in any modern browser. No server required.
 
+## Build
+
+Tailwind CSS is used for styling. After cloning, rebuild the CSS:
+
+```sh
+npm install
+npm run build
+```
+
 ## Interface
 
-Four tabs, each with a form and a "Сгенерировать" button. The output textarea contains the bare APDU hex string (no SPI/KIC/KID/TAR header).
+Six tabs, each with a form and a "Сгенерировать" button.
 
 ---
 
-## SIM Tab
+## SIM RFM Tab
 
 CLA = `A0` (GSM 11.11 / ISO 7816-4).
 
@@ -45,6 +54,10 @@ CLA = `A0` (GSM 11.11 / ISO 7816-4).
 - **Размер записи** — pad/truncate data to the specified byte count.
 - **Переопределить P1/P2** — checkbox to enable manual override of P1/P2 bytes.
 
+### Conversion sidebar
+
+A conversion panel is embedded in the right-hand column, supporting IMSI, MSISDN, ICCID, SPN, PLMN, and Nibble swap conversions.
+
 ### References
 
 - ISO/IEC 7816-4: Organization, security and commands for interchange
@@ -53,7 +66,7 @@ CLA = `A0` (GSM 11.11 / ISO 7816-4).
 
 ---
 
-## USIM Tab
+## USIM RFM Tab
 
 CLA = `00` (ETSI TS 102 221). Same commands as SIM, but SELECT uses P1=09, P2=0C (by FID from current directory).
 
@@ -61,6 +74,43 @@ CLA = `00` (ETSI TS 102 221). Same commands as SIM, but SELECT uses P1=09, P2=0C
 
 - ETSI TS 102 221: UICC-Terminal Interface; Physical and Logical Characteristics
 - ETSI TS 102 226: Remote APDU structure for UICC based applications
+
+---
+
+## BER-TLV Tab
+
+Builds Expanded Remote Application data format per ETSI TS 102 226 §5.2.1.
+
+### Format
+
+Two encoding variants:
+- **Definite (AA)**: `AA` + length + Command TLVs
+- **Indefinite (AE)**: `AE` + `80` + Command TLVs + `00 00`
+
+### Command TLVs
+
+| Type | Tag | Description |
+|---|---|---|
+| C-APDU | 22 | Raw APDU hex |
+| Immediate Action | 81 | Proactive command or action indicator |
+| Error Action | 82 | Proactive command on error |
+| Script Chaining | 83 | Chaining data for multi-packet scripts |
+
+### Immediate Action builder
+
+When the type is set to Immediate Action, the tool provides a structured builder for:
+
+- **Action indicator**: `81` (Proactive session indication) / `82` (Early response)
+- **Proactive command**: REFRESH, DISPLAY TEXT, or PLAY TONE — with auto-generated COMPREHENSION-TLV data objects (command details, device identities, text string, tone, etc.)
+- **Custom hex**: freeform input for manual TLV construction
+
+Error Action supports the same builder (DISPLAY TEXT, PLAY TONE).
+
+### References
+
+- ETSI TS 102 226 V13.0.0 §5.2.1: Expanded Remote Application data format
+- ETSI TS 102 223: Card Application Toolkit (CAT) — proactive command structure
+- ETSI TS 101 220: BER-TLV tag assignments
 
 ---
 
@@ -181,9 +231,72 @@ Optional TLV objects appended to the INSTALL data field:
 
 ---
 
-## Конвертация Tab
+## Secured Packet Tab
 
-Value encoding conversions.
+Assembles secured packets per ETSI TS 102 225.
+
+### Packet structure
+
+| Field | Size | Description |
+|---|---|---|
+| CPI | 1 | Command Packet Identifier (`02`) |
+| CPL | 1 | Command Packet Length |
+| CHI | 1 | Command Header Identifier (`01`) |
+| CHL | 1 | Command Header Length |
+| SPI | 2 | Security Parameter Indicator |
+| KIc | 1 | Key Identifier for ciphering |
+| KID | 1 | Key Identifier for MAC |
+| TAR | 3 | Toolkit Application Reference |
+| CNTR | 5 | Replay counter |
+| PCNTR | 1 | Padding counter |
+| RC/CC/DS | 8 | Cryptographic Checksum / MAC |
+| Secured Data | variable | Padded APDU (encrypted if required) |
+
+### SPI1 (Security Level)
+
+| Value | Security | Ciphering | Counter |
+|---|---|---|---|
+| 00 | None | No | None |
+| 01 | RC | No | None |
+| 02 | CC/MAC | No | None |
+| 06 | CC/MAC | Yes | None |
+| 12 | CC/MAC | No | Available |
+| 16 | CC/MAC | Yes | Available |
+| 22 | CC/MAC | No | Check higher |
+| 26 | CC/MAC | Yes | Check higher |
+| 32 | CC/MAC | No | Check +1 |
+| 36 | CC/MAC | Yes | Check +1 |
+
+### SPI2 (PoR settings)
+
+| Value | Mode | Security | Cipher |
+|---|---|---|---|
+| 00 | No PoR | — | No |
+| 01 | PoR required | None | No |
+| 05 | PoR required | RC | No |
+| 09 | PoR required | CC | No |
+| 0D | PoR required | DS | No |
+| 11 | PoR required | None | Yes |
+| 02 | PoR on error | None | No |
+| 06 | PoR on error | RC | No |
+
+### Crypto
+
+- **3DES-CBC** encryption (zero ICV), supporting 8, 16, and 24 byte keys
+- **Retail MAC** (ISO 9797-1 MAC algorithm 3) for cryptographic checksum
+- Padding byte configurable (`00` per TS 102 225 default, or `FF`)
+
+### References
+
+- ETSI TS 102 225 V13.0.0: Secured packet structure for UICC based applications
+- ETSI TS 102 226: Remote APDU structure for UICC based applications
+- ISO 9797-1: MAC algorithms
+
+---
+
+## Conversion (SIM/USIM sidebars)
+
+Value encoding conversions embedded in the SIM RFM and USIM RFM tabs.
 
 ### IMSI → EF.IMSI
 
@@ -212,30 +325,13 @@ Per 3GPP TS 31.102 §4.2.5 (EF_SPN). Three encoding paths:
 
 GSM 7-bit alphabet per 3GPP TS 23.038. Full extension table supported.
 
-### PLMN → EF_PLMNsel
+### PLMN → EF_PLMNsel / PLMNwAcT
 
-Per TS 31.102 §4.2.3 (EF_PLMNsel). 3-byte BCD encoding:
-- Byte 1: MCC digit 2 | MCC digit 1
-- Byte 2: MNC digit 3 | MCC digit 3
-- Byte 3: MNC digit 2 | MNC digit 1
+Per TS 31.102 §4.2.3. 3-byte BCD encoding for PLMN, plus optional 2-byte Access Technology selector.
 
-Input: MCC (3 digits), MNC (2-3 digits). Output: 6 hex characters.
+### Nibble swap
 
-### PLMNwAcT → EF_PLMNwAcT
-
-Per TS 31.102. Same 3-byte PLMN + 2-byte Access Technology selector.
-
-**AcT values**:
-| Value | Technologies |
-|---|---|
-| 8000 | GSM |
-| 4000 | UTRAN |
-| 2000 | E-UTRAN |
-| 1000 | NGRAN |
-| C000 | GSM + UTRAN |
-| 6000 | UTRAN + E-UTRAN |
-| E000 | GSM + UTRAN + E-UTRAN |
-| F000 | All |
+Swaps nibble pairs of an even-length hex string.
 
 ### References
 
@@ -243,3 +339,13 @@ Per TS 31.102. Same 3-byte PLMN + 2-byte Access Technology selector.
 - 3GPP TS 23.038: Alphabets and language information
 - ETSI TS 102 225: Secured packet structure for (U)SIM toolkit
 - pySim: enc_imsi() implementation
+
+---
+
+## Theme
+
+Dark theme is supported. The app follows the OS preference on first visit, and a manual toggle button (🌙/☀️) at the top-right corner persists the choice in `localStorage`.
+
+## Localisation
+
+The UI is in Russian. English translations are in progress. Language is detected from the browser's `navigator.language` preference.

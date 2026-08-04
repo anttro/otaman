@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.dark .text-heading {
+  color: #f1f5f9;
+}
