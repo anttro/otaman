@@ -4,6 +4,8 @@ Standalone offline HTML/JS tool for building APDU commands for SIM, USIM, and Gl
 
 Open `index.html` in any modern browser. No server required.
 
+**Demo:** [otaman.atroshin.ru](https://otaman.atroshin.ru)
+
 ## Build
 
 Tailwind CSS is used for styling. After cloning, rebuild the CSS:
