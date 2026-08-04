@@ -354,6 +354,31 @@
 		<button onclick="packToSp('usim-result')" id="usim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">Упаковать в Secured packet</button>
 	</div>
 
+	<div id="tab-ber" class="tab-content hidden">
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Format</label>
+			<select id="ber-format" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 dark:text-slate-300 font-mono">
+				<option value="AA">Definite (AA)</option>
+				<option value="AE">Indefinite (AE)</option>
+			</select>
+		</div>
+
+		<div class="mb-3">
+			<div class="flex flex-wrap gap-1 mb-2 items-center">
+				<span class="text-sm font-medium text-gray-700 dark:text-slate-300 mr-1">Commands</span>
+				<button onclick="addBerRow('c-apdu')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ C-APDU</button>
+				<button onclick="addBerRow('immediate')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Immediate</button>
+				<button onclick="addBerRow('error')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Error</button>
+				<button onclick="addBerRow('chaining')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Chaining</button>
+			</div>
+			<div id="ber-rows" class="space-y-2"></div>
+		</div>
+
+		<button onclick="genBerTlv()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать BER-TLV</button>
+		<textarea id="ber-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 dark:text-slate-300"></textarea>
+		<button onclick="packToSp('ber-result')" id="ber-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">Упаковать в Secured packet</button>
+	</div>
+
 	<div id="tab-ram" class="tab-content hidden">
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Команда</label>
@@ -683,30 +708,6 @@
 
 		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать Secure Packet</button>
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
-	</div>
-
-	<div id="tab-ber" class="tab-content hidden">
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Format</label>
-			<select id="ber-format" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 dark:text-slate-300 font-mono">
-				<option value="AA">Definite (AA)</option>
-				<option value="AE">Indefinite (AE)</option>
-			</select>
-		</div>
-
-		<div class="mb-3">
-			<div class="flex flex-wrap gap-1 mb-2 items-center">
-				<span class="text-sm font-medium text-gray-700 dark:text-slate-300 mr-1">Commands</span>
-				<button onclick="addBerRow('c-apdu')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ C-APDU</button>
-				<button onclick="addBerRow('immediate')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Immediate</button>
-				<button onclick="addBerRow('error')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Error</button>
-				<button onclick="addBerRow('chaining')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Chaining</button>
-			</div>
-			<div id="ber-rows" class="space-y-2"></div>
-		</div>
-
-		<button onclick="genBerTlv()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать BER-TLV</button>
-		<textarea id="ber-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 dark:text-slate-300"></textarea>
 	</div>
 
 	</div>
@@ -1854,6 +1855,7 @@ function genBerTlv() {
 		result = 'AE80' + content + '0000';
 	}
 	document.getElementById('ber-result').value = result;
+	document.getElementById('ber-pack-btn').disabled = false;
 }
 
 // Init
