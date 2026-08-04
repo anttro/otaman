@@ -7,258 +7,357 @@
 <link rel="stylesheet" href="style.css">
 <script src="des-bundle.js"></script>
 </head>
-<body class="bg-neutral-50 text-gray-800">
+<body class="bg-neutral-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200">
 
 <div class="max-w-4xl mx-auto px-6 py-10">
 
-	<h1 class="text-2xl font-bold text-heading mb-6">OTAMan</h1>
+	<div class="flex items-center justify-between mb-6">
+		<h1 class="text-2xl font-bold text-heading">OTAMan</h1>
+		<button onclick="toggleTheme()" id="theme-btn" class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700">🌙</button>
+	</div>
 
-	<div class="flex gap-1 mb-4 border-b border-gray-300">
-		<button class="tab-btn active px-4 py-2 text-sm rounded-t bg-blue-600 text-white" data-tab="sim">SIM</button>
-		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="usim">USIM</button>
-		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="ram">RAM</button>
-		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="sp">Secured Packet</button>
-		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 hover:bg-gray-300 text-gray-700" data-tab="convert">Конвертация</button>
+	<div class="flex gap-1 mb-4 border-b border-gray-300 dark:border-slate-600">
+		<button class="tab-btn active px-4 py-2 text-sm rounded-t bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-tab="sim">SIM RFM</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="usim">USIM RFM</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="ber">BER-TLV</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="ram">RAM</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="sp">Secured Packet</button>
 	</div>
 
 	<div id="tab-sim" class="tab-content">
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Команда</label>
-			<select id="sim-cmd" onchange="updateSimUsimFields('sim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-				<option value="select">SELECT</option>
-				<option value="update-record">UPDATE RECORD</option>
-				<option value="update-binary">UPDATE BINARY</option>
-				<option value="read-record">READ RECORD</option>
-				<option value="read-binary">READ BINARY</option>
-				<option value="erase-binary">ERASE BINARY</option>
-				<option value="activate-file">ACTIVATE FILE</option>
-				<option value="deactivate-file">DEACTIVATE FILE</option>
-				<option value="verify">VERIFY PIN</option>
-				<option value="change">CHANGE PIN</option>
-			</select>
-		</div>
-
-		<div id="sim-select-section">
-			<div id="sim-select-checkbox-row" class="mb-3">
-				<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-					<input id="sim-select" type="checkbox" checked class="rounded border-gray-300" onchange="updateSimSelectSection('sim')">
-					Начать с SELECT
-				</label>
-			</div>
-			<div id="sim-select-method-body">
-			<div id="sim-sel-method-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Метод SELECT</label>
-				<select id="sim-sel-method" onchange="updateSimSelectMethod('sim'); updateP1P2Display('sim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-					<option value="fid">По FID</option>
-					<option value="path">По полному пути от MF</option>
-					<option value="dfname">По DF name / AID</option>
-					<option value="chain">ADF RFM цепочка</option>
-				</select>
-			</div>
-			<div id="sim-sel-fid-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">FID (4 hex)</label>
-				<input id="sim-sel-fid" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="6FC5" maxlength="4">
-			</div>
-			<div id="sim-sel-path-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Путь (hex)</label>
-				<input id="sim-sel-path" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="3F007FFF6FC5">
-			</div>
-			<div id="sim-sel-dfname-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">AID (hex)</label>
-				<input id="sim-sel-dfname" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A000000151000000">
-			</div>
-			<div id="sim-sel-chain-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">FID цепочка (через запятую)</label>
-				<input id="sim-sel-chain" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A153,4953">
-			</div>
-			</div>
-		</div>
-
-		<div id="sim-record-row" class="mb-3">
-			<div class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Запись №</label>
-				<input id="sim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('sim')" class="border border-gray-300 text-sm rounded px-3 py-2.5">
-			</div>
-			<div class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Режим выборки (P2)</label>
-				<select id="sim-rec-mode" onchange="updateP1P2Display('sim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-					<option value="04">Абсолютный (04)</option>
-					<option value="06">Следующая (06)</option>
-					<option value="02">Предыдущая (02)</option>
-				</select>
-			</div>
-		</div>
-
-		<div id="sim-offset-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Смещение (hex)</label>
-			<input id="sim-offset" onchange="updateP1P2Display('sim')" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="0000" maxlength="4" value="0000">
-		</div>
-
-		<div id="sim-le-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Le (hex)</label>
-			<input id="sim-le" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
-		</div>
-
-		<div id="sim-data-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Данные (hex)</label>
-			<textarea id="sim-data" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
-		</div>
-
-		<div id="sim-recsize-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Размер записи (байт)</label>
-			<input id="sim-recsize" type="number" min="1" value="0" class="border border-gray-300 text-sm rounded px-3 py-2.5">
-		</div>
-
-		<div id="sim-pin-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">PIN</label>
-			<select id="sim-pin" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-				<option value="01">PIN1 (01)</option>
-				<option value="02">PIN2 (02)</option>
-			</select>
-		</div>
-
-		<div id="sim-override-row" class="mb-3">
-			<div class="flex gap-2 mb-2">
-				<div class="flex-1">
-					<label class="block mb-1 text-sm font-medium text-gray-700">P1 (hex)</label>
-					<input id="sim-p1" disabled class="disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+		<div class="flex gap-4 mb-3">
+			<div class="w-2/3">
+				<div class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Команда</label>
+					<select id="sim-cmd" onchange="updateSimUsimFields('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<option value="select">SELECT</option>
+						<option value="update-record">UPDATE RECORD</option>
+						<option value="update-binary">UPDATE BINARY</option>
+						<option value="read-record">READ RECORD</option>
+						<option value="read-binary">READ BINARY</option>
+						<option value="erase-binary">ERASE BINARY</option>
+						<option value="activate-file">ACTIVATE FILE</option>
+						<option value="deactivate-file">DEACTIVATE FILE</option>
+						<option value="verify">VERIFY PIN</option>
+						<option value="change">CHANGE PIN</option>
+					</select>
 				</div>
-				<div class="flex-1">
-					<label class="block mb-1 text-sm font-medium text-gray-700">P2 (hex)</label>
-					<input id="sim-p2" disabled class="disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+
+				<div id="sim-select-section">
+					<div id="sim-select-checkbox-row" class="mb-3">
+						<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
+							<input id="sim-select" type="checkbox" checked class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateSimSelectSection('sim')">
+							Начать с SELECT
+						</label>
+					</div>
+					<div id="sim-select-method-body">
+					<div id="sim-sel-method-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Метод SELECT</label>
+						<select id="sim-sel-method" onchange="updateSimSelectMethod('sim'); updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+							<option value="fid">По FID</option>
+							<option value="path">По полному пути от MF</option>
+							<option value="dfname">По DF name / AID</option>
+							<option value="chain">ADF RFM цепочка</option>
+						</select>
+					</div>
+					<div id="sim-sel-fid-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (4 hex)</label>
+						<input id="sim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
+					</div>
+					<div id="sim-sel-path-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Путь (hex)</label>
+						<input id="sim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F007FFF6FC5">
+					</div>
+					<div id="sim-sel-dfname-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
+						<input id="sim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
+					</div>
+					<div id="sim-sel-chain-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID цепочка (через запятую)</label>
+						<input id="sim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A153,4953">
+					</div>
+					</div>
+				</div>
+
+				<div id="sim-record-row" class="mb-3">
+					<div class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Запись №</label>
+						<input id="sim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					</div>
+					<div class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим выборки (P2)</label>
+						<select id="sim-rec-mode" onchange="updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+							<option value="04">Абсолютный (04)</option>
+							<option value="06">Следующая (06)</option>
+							<option value="02">Предыдущая (02)</option>
+						</select>
+					</div>
+				</div>
+
+				<div id="sim-offset-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Смещение (hex)</label>
+					<input id="sim-offset" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
+				</div>
+
+				<div id="sim-le-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Le (hex)</label>
+					<input id="sim-le" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+				</div>
+
+				<div id="sim-data-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные (hex)</label>
+					<textarea id="sim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
+				</div>
+
+				<div id="sim-recsize-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Размер записи (байт)</label>
+					<input id="sim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				</div>
+
+				<div id="sim-pin-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">PIN</label>
+					<select id="sim-pin" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<option value="01">PIN1 (01)</option>
+						<option value="02">PIN2 (02)</option>
+					</select>
+				</div>
+
+				<div id="sim-override-row" class="mb-3">
+					<div class="flex gap-2 mb-2">
+						<div class="flex-1">
+							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P1 (hex)</label>
+							<input id="sim-p1" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+						</div>
+						<div class="flex-1">
+							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P2 (hex)</label>
+							<input id="sim-p2" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+						</div>
+					</div>
+					<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
+						<input id="sim-override" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="toggleSimOverride('sim')">
+						Разрешить редактирование P1/P2
+					</label>
 				</div>
 			</div>
-			<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-				<input id="sim-override" type="checkbox" class="rounded border-gray-300" onchange="toggleSimOverride('sim')">
-				Разрешить редактирование P1/P2
-			</label>
+			<div class="w-1/3">
+				<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800">
+					<h3 class="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Конвертация</h3>
+					<div class="mb-2">
+						<select id="conv-type" onchange="updateConvFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+							<option value="imsi">IMSI → EF.IMSI</option>
+							<option value="msisdn">MSISDN → BCD</option>
+							<option value="iccid">ICCID → hex</option>
+							<option value="spn">Provider Name → SPN</option>
+							<option value="plmn">MCC,MNC → PLMNsel</option>
+							<option value="plmnwact">MCC,MNC,AcT → PLMNwAcT</option>
+							<option value="nibswap">Nibble swap</option>
+						</select>
+					</div>
+					<div class="mb-2">
+						<input id="conv-input" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+					</div>
+					<div id="conv-plmn-fields" class="" style="display:none">
+						<div class="flex gap-2 mb-2">
+							<div class="flex-1">
+								<input id="conv-mcc" maxlength="3" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="MCC">
+							</div>
+							<div class="flex-1">
+								<input id="conv-mnc" maxlength="3" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="MNC">
+							</div>
+						</div>
+						<div id="conv-act-row" class="" style="display:none">
+							<select id="conv-act" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+								<option value="8000">GSM (8000)</option>
+								<option value="4000">UTRAN (4000)</option>
+								<option value="2000">E-UTRAN (2000)</option>
+								<option value="1000">NGRAN (1000)</option>
+								<option value="C000">GSM + UTRAN (C000)</option>
+								<option value="6000">UTRAN + E-UTRAN (6000)</option>
+								<option value="E000">GSM + UTRAN + E-UTRAN (E000)</option>
+								<option value="F000">All (F000)</option>
+							</select>
+						</div>
+					</div>
+					<button onclick="genConvert()" class="w-full mb-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700">Конвертировать</button>
+					<textarea id="conv-result" rows="2" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
+				</div>
+			</div>
 		</div>
 
 		<button onclick="genSimUsim('sim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
-		<textarea id="sim-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+		<textarea id="sim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		<button onclick="packToSp('sim-result')" id="sim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">Упаковать в Secured packet</button>
 	</div>
 
 	<div id="tab-usim" class="tab-content hidden">
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Команда</label>
-			<select id="usim-cmd" onchange="updateSimUsimFields('usim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-				<option value="select">SELECT</option>
-				<option value="update-record">UPDATE RECORD</option>
-				<option value="update-binary">UPDATE BINARY</option>
-				<option value="read-record">READ RECORD</option>
-				<option value="read-binary">READ BINARY</option>
-				<option value="erase-binary">ERASE BINARY</option>
-				<option value="activate-file">ACTIVATE FILE</option>
-				<option value="deactivate-file">DEACTIVATE FILE</option>
-				<option value="verify">VERIFY PIN</option>
-				<option value="change">CHANGE PIN</option>
-			</select>
-		</div>
-
-		<div id="usim-select-section">
-			<div id="usim-select-checkbox-row" class="mb-3">
-				<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-					<input id="usim-select" type="checkbox" checked class="rounded border-gray-300" onchange="updateSimSelectSection('usim')">
-					Начать с SELECT
-				</label>
-			</div>
-			<div id="usim-select-method-body">
-			<div id="usim-sel-method-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Метод SELECT</label>
-				<select id="usim-sel-method" onchange="updateSimSelectMethod('usim'); updateP1P2Display('usim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-					<option value="fid">По FID</option>
-					<option value="path">По полному пути от MF</option>
-					<option value="dfname">По DF name / AID</option>
-					<option value="chain">ADF RFM цепочка</option>
-				</select>
-			</div>
-			<div id="usim-sel-fid-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">FID (4 hex)</label>
-				<input id="usim-sel-fid" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="6FC5" maxlength="4">
-			</div>
-			<div id="usim-sel-path-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Путь (hex)</label>
-				<input id="usim-sel-path" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="3F007FFF6FC5">
-			</div>
-			<div id="usim-sel-dfname-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">AID (hex)</label>
-				<input id="usim-sel-dfname" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A000000151000000">
-			</div>
-			<div id="usim-sel-chain-row" class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">FID цепочка (через запятую)</label>
-				<input id="usim-sel-chain" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A153,4953">
-			</div>
-			</div>
-		</div>
-
-		<div id="usim-record-row" class="mb-3">
-			<div class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Запись №</label>
-				<input id="usim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('usim')" class="border border-gray-300 text-sm rounded px-3 py-2.5">
-			</div>
-			<div class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Режим выборки (P2)</label>
-				<select id="usim-rec-mode" onchange="updateP1P2Display('usim')" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-					<option value="04">Абсолютный (04)</option>
-					<option value="06">Следующая (06)</option>
-					<option value="02">Предыдущая (02)</option>
-				</select>
-			</div>
-		</div>
-
-		<div id="usim-offset-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Смещение (hex)</label>
-			<input id="usim-offset" onchange="updateP1P2Display('usim')" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="0000" maxlength="4" value="0000">
-		</div>
-
-		<div id="usim-le-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Le (hex)</label>
-			<input id="usim-le" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
-		</div>
-
-		<div id="usim-data-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Данные (hex)</label>
-			<textarea id="usim-data" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
-		</div>
-
-		<div id="usim-recsize-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Размер записи (байт)</label>
-			<input id="usim-recsize" type="number" min="1" value="0" class="border border-gray-300 text-sm rounded px-3 py-2.5">
-		</div>
-
-		<div id="usim-pin-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">PIN</label>
-			<select id="usim-pin" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-				<option value="01">PIN1 (01)</option>
-				<option value="02">PIN2 (02)</option>
-			</select>
-		</div>
-
-		<div id="usim-override-row" class="mb-3">
-			<div class="flex gap-2 mb-2">
-				<div class="flex-1">
-					<label class="block mb-1 text-sm font-medium text-gray-700">P1 (hex)</label>
-					<input id="usim-p1" disabled class="disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+		<div class="flex gap-4 mb-3">
+			<div class="w-2/3">
+				<div class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Команда</label>
+					<select id="usim-cmd" onchange="updateSimUsimFields('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<option value="select">SELECT</option>
+						<option value="update-record">UPDATE RECORD</option>
+						<option value="update-binary">UPDATE BINARY</option>
+						<option value="read-record">READ RECORD</option>
+						<option value="read-binary">READ BINARY</option>
+						<option value="erase-binary">ERASE BINARY</option>
+						<option value="activate-file">ACTIVATE FILE</option>
+						<option value="deactivate-file">DEACTIVATE FILE</option>
+						<option value="verify">VERIFY PIN</option>
+						<option value="change">CHANGE PIN</option>
+					</select>
 				</div>
-				<div class="flex-1">
-					<label class="block mb-1 text-sm font-medium text-gray-700">P2 (hex)</label>
-					<input id="usim-p2" disabled class="disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="00" maxlength="2" value="00">
+
+				<div id="usim-select-section">
+					<div id="usim-select-checkbox-row" class="mb-3">
+						<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
+							<input id="usim-select" type="checkbox" checked class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateSimSelectSection('usim')">
+							Начать с SELECT
+						</label>
+					</div>
+					<div id="usim-select-method-body">
+					<div id="usim-sel-method-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Метод SELECT</label>
+						<select id="usim-sel-method" onchange="updateSimSelectMethod('usim'); updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+							<option value="fid">По FID</option>
+							<option value="path">По полному пути от MF</option>
+							<option value="dfname">По DF name / AID</option>
+							<option value="chain">ADF RFM цепочка</option>
+						</select>
+					</div>
+					<div id="usim-sel-fid-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (4 hex)</label>
+						<input id="usim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
+					</div>
+					<div id="usim-sel-path-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Путь (hex)</label>
+						<input id="usim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F007FFF6FC5">
+					</div>
+					<div id="usim-sel-dfname-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
+						<input id="usim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
+					</div>
+					<div id="usim-sel-chain-row" class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID цепочка (через запятую)</label>
+						<input id="usim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A153,4953">
+					</div>
+					</div>
+				</div>
+
+				<div id="usim-record-row" class="mb-3">
+					<div class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Запись №</label>
+						<input id="usim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					</div>
+					<div class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим выборки (P2)</label>
+						<select id="usim-rec-mode" onchange="updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+							<option value="04">Абсолютный (04)</option>
+							<option value="06">Следующая (06)</option>
+							<option value="02">Предыдущая (02)</option>
+						</select>
+					</div>
+				</div>
+
+				<div id="usim-offset-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Смещение (hex)</label>
+					<input id="usim-offset" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
+				</div>
+
+				<div id="usim-le-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Le (hex)</label>
+					<input id="usim-le" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+				</div>
+
+				<div id="usim-data-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные (hex)</label>
+					<textarea id="usim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
+				</div>
+
+				<div id="usim-recsize-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Размер записи (байт)</label>
+					<input id="usim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				</div>
+
+				<div id="usim-pin-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">PIN</label>
+					<select id="usim-pin" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<option value="01">PIN1 (01)</option>
+						<option value="02">PIN2 (02)</option>
+					</select>
+				</div>
+
+				<div id="usim-override-row" class="mb-3">
+					<div class="flex gap-2 mb-2">
+						<div class="flex-1">
+							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P1 (hex)</label>
+							<input id="usim-p1" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+						</div>
+						<div class="flex-1">
+							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P2 (hex)</label>
+							<input id="usim-p2" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+						</div>
+					</div>
+					<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
+						<input id="usim-override" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="toggleSimOverride('usim')">
+						Разрешить редактирование P1/P2
+					</label>
 				</div>
 			</div>
-			<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-				<input id="usim-override" type="checkbox" class="rounded border-gray-300" onchange="toggleSimOverride('usim')">
-				Разрешить редактирование P1/P2
-			</label>
+			<div class="w-1/3">
+				<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800">
+					<h3 class="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Конвертация</h3>
+					<div class="mb-2">
+						<select id="conv-type" onchange="updateConvFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+							<option value="imsi">IMSI → EF.IMSI</option>
+							<option value="msisdn">MSISDN → BCD</option>
+							<option value="iccid">ICCID → hex</option>
+							<option value="spn">Provider Name → SPN</option>
+							<option value="plmn">MCC,MNC → PLMNsel</option>
+							<option value="plmnwact">MCC,MNC,AcT → PLMNwAcT</option>
+							<option value="nibswap">Nibble swap</option>
+						</select>
+					</div>
+					<div class="mb-2">
+						<input id="conv-input" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+					</div>
+					<div id="conv-plmn-fields" class="" style="display:none">
+						<div class="flex gap-2 mb-2">
+							<div class="flex-1">
+								<input id="conv-mcc" maxlength="3" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="MCC">
+							</div>
+							<div class="flex-1">
+								<input id="conv-mnc" maxlength="3" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="MNC">
+							</div>
+						</div>
+						<div id="conv-act-row" class="" style="display:none">
+							<select id="conv-act" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+								<option value="8000">GSM (8000)</option>
+								<option value="4000">UTRAN (4000)</option>
+								<option value="2000">E-UTRAN (2000)</option>
+								<option value="1000">NGRAN (1000)</option>
+								<option value="C000">GSM + UTRAN (C000)</option>
+								<option value="6000">UTRAN + E-UTRAN (6000)</option>
+								<option value="E000">GSM + UTRAN + E-UTRAN (E000)</option>
+								<option value="F000">All (F000)</option>
+							</select>
+						</div>
+					</div>
+					<button onclick="genConvert()" class="w-full mb-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700">Конвертировать</button>
+					<textarea id="conv-result" rows="2" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
+				</div>
+			</div>
 		</div>
 
 		<button onclick="genSimUsim('usim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
-		<textarea id="usim-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+		<textarea id="usim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		<button onclick="packToSp('usim-result')" id="usim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">Упаковать в Secured packet</button>
 	</div>
 
 	<div id="tab-ram" class="tab-content hidden">
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Команда</label>
-			<select id="ram-cmd" onchange="updateRamFields()" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Команда</label>
+			<select id="ram-cmd" onchange="updateRamFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="install-load">INSTALL [for load]</option>
 				<option value="install-install">INSTALL [for install]</option>
 				<option value="install-make-sel">INSTALL [for make selectable]</option>
@@ -275,21 +374,21 @@
 			</select>
 		</div>
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">AID (hex)</label>
-			<input id="ram-aid" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A000000151000000">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
+			<input id="ram-aid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
 		</div>
 		<div id="ram-sdaid-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">SD AID (hex)</label>
-			<input id="ram-sdaid" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="A000000151000000">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SD AID (hex)</label>
+			<input id="ram-sdaid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
 		</div>
 		<div id="ram-priv-row" class="mb-3">
 			<div class="flex items-center gap-3 mb-2">
-				<label class="text-sm font-medium text-gray-700">Привилегии</label>
-				<input id="ram-priv" readonly class="font-mono w-20 border border-gray-300 text-xs rounded px-2 py-1 bg-gray-100" value="00">
+				<label class="text-sm font-medium text-gray-700 dark:text-slate-300">Привилегии</label>
+				<input id="ram-priv" readonly class="font-mono w-20 border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 bg-gray-100 dark:bg-slate-800" value="00">
 			</div>
 			<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-				<div class="font-medium text-gray-700 mb-1">Байт 1</div>
-				<div class="font-medium text-gray-700 mb-1">Байт 2</div>
+				<div class="font-medium text-gray-700 dark:text-slate-300 mb-1">Байт 1</div>
+				<div class="font-medium text-gray-700 dark:text-slate-300 mb-1">Байт 2</div>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="80" onchange="updateRamPriv()"> Security Domain</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="80" onchange="updateRamPriv()"> Trusted Path</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="40" onchange="updateRamPriv()"> DAP Verification</label>
@@ -310,59 +409,59 @@
 		</div>
 		<div id="ram-toolkit-row" class="mb-3">
 			<div class="mb-2">
-				<label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-					<input id="ram-toolkit-enable" type="checkbox" class="rounded border-gray-300" onchange="updateRamToolkit()">
+				<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
+					<input id="ram-toolkit-enable" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateRamToolkit()">
 					Параметры SIM/UICC Toolkit
 				</label>
 			</div>
 			<div id="ram-toolkit-body" class="">
 				<div class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700">Режим Toolkit</label>
-					<select id="ram-tk-mode" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим Toolkit</label>
+					<select id="ram-tk-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 						<option value="ca">SIM Toolkit (Tag CA)</option>
 						<option value="80">UICC Toolkit (Tag 80)</option>
 					</select>
 				</div>
 				<div class="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">Приоритет</label>
-						<input id="ram-tk-priority" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Приоритет</label>
+						<input id="ram-tk-priority" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">Таймеры (макс)</label>
-						<input id="ram-tk-timers" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Таймеры (макс)</label>
+						<input id="ram-tk-timers" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">Длина текста меню</label>
-						<input id="ram-tk-textlen" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Длина текста меню</label>
+						<input id="ram-tk-textlen" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">Элементов меню</label>
-						<input id="ram-tk-menus" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Элементов меню</label>
+						<input id="ram-tk-menus" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">Позиция первого меню</label>
-						<input id="ram-tk-firstpos" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Позиция первого меню</label>
+						<input id="ram-tk-firstpos" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">ID первого меню (hex)</label>
-						<input id="ram-tk-firstid" class="font-mono w-full border border-gray-300 text-xs rounded px-2 py-1.5" placeholder="00" maxlength="2" value="00">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">ID первого меню (hex)</label>
+						<input id="ram-tk-firstid" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">Позиция последнего меню</label>
-						<input id="ram-tk-lastpos" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Позиция последнего меню</label>
+						<input id="ram-tk-lastpos" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">ID последнего меню (hex)</label>
-						<input id="ram-tk-lastid" class="font-mono w-full border border-gray-300 text-xs rounded px-2 py-1.5" placeholder="00" maxlength="2" value="00">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">ID последнего меню (hex)</label>
+						<input id="ram-tk-lastid" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">Каналы (макс)</label>
-						<input id="ram-tk-channels" type="number" min="0" max="255" value="0" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Каналы (макс)</label>
+						<input id="ram-tk-channels" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">MSL (SPI1, hex)</label>
-						<select id="ram-tk-msl" class="w-full border border-gray-300 text-xs rounded px-2 py-1.5">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">MSL (SPI1, hex)</label>
+						<select id="ram-tk-msl" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 							<option value="00">00 — нет проверки</option>
 							<option value="11">11 — RC/CC/DS</option>
 							<option value="12">12 — RC/DS/CC</option>
@@ -372,31 +471,31 @@
 						</select>
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700">TAR (6 hex)</label>
-						<input id="ram-tk-tar" class="font-mono w-full border border-gray-300 text-xs rounded px-2 py-1.5" placeholder="B00001" maxlength="6" value="B00001">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">TAR (6 hex)</label>
+						<input id="ram-tk-tar" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
 					</div>
 					<div id="ram-tk-ad-row">
-						<label class="block mb-1 text-xs font-medium text-gray-700">Домен доступа (hex)</label>
-						<input id="ram-tk-ad" class="font-mono w-full border border-gray-300 text-xs rounded px-2 py-1.5" placeholder="00" maxlength="2" value="00">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Домен доступа (hex)</label>
+						<input id="ram-tk-ad" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 					</div>
 				</div>
 			</div>
 		</div>
 		<div id="ram-load-data-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Данные загрузки (hex)</label>
-			<textarea id="ram-load-data" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные загрузки (hex)</label>
+			<textarea id="ram-load-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
 		</div>
 		<div id="ram-data-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Данные (hex)</label>
-			<textarea id="ram-data" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные (hex)</label>
+			<textarea id="ram-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
 		</div>
 		<div id="ram-block-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Номер блока</label>
-			<input id="ram-block" type="number" min="0" value="0" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Номер блока</label>
+			<input id="ram-block" type="number" min="0" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 		</div>
 		<div id="ram-enc-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Шифрование</label>
-			<select id="ram-enc" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Шифрование</label>
+			<select id="ram-enc" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="00">Без шифрования, последний блок</option>
 				<option value="40">Без шифрования, ещё блоки</option>
 				<option value="80">С шифрованием, последний блок</option>
@@ -404,15 +503,15 @@
 			</select>
 		</div>
 		<div id="ram-del-mode-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Режим DELETE</label>
-			<select id="ram-del-mode" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим DELETE</label>
+			<select id="ram-del-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="00">По AID (00)</option>
 				<option value="80">Связанные объекты (80)</option>
 			</select>
 		</div>
 		<div id="ram-gs-mode-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Режим GET STATUS</label>
-			<select id="ram-gs-mode" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим GET STATUS</label>
+			<select id="ram-gs-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="80">ISD (80)</option>
 				<option value="40">Приложения и SSD (40)</option>
 				<option value="20">Executable Load Files (20)</option>
@@ -420,33 +519,34 @@
 			</select>
 		</div>
 		<div id="ram-tag-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Tag (2 байта hex)</label>
-			<input id="ram-tag" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="5F50" maxlength="4" value="5F50">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Tag (2 байта hex)</label>
+			<input id="ram-tag" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="5F50" maxlength="4" value="5F50">
 		</div>
 		<div id="ram-ss-mode-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Тип SET STATUS</label>
-			<select id="ram-ss-mode" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Тип SET STATUS</label>
+			<select id="ram-ss-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="80">ISD (80)</option>
 				<option value="40">Приложение или SSD (40)</option>
 				<option value="60">SD и его приложения (60)</option>
 			</select>
 		</div>
 		<div id="ram-ss-state-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Состояние</label>
-			<select id="ram-ss-state" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Состояние</label>
+			<select id="ram-ss-state" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="00">Разблокировать (предыдущее состояние)</option>
 				<option value="80">Заблокировать (LOCKED)</option>
 			</select>
 		</div>
 		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
-		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		<button onclick="packToSp('ram-result')" id="ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">Упаковать в Secured packet</button>
 	</div>
 
 	<div id="tab-sp" class="tab-content hidden">
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">SPI1 (Security Parameter Indicator)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SPI1 (Security Parameter Indicator)</label>
 			<div class="flex gap-2 items-center">
-				<select id="sp-spi1" onchange="updateSp()" class="flex-1 border border-gray-300 text-sm rounded px-3 py-2.5">
+				<select id="sp-spi1" onchange="updateSp()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					<option value="00">00 — No security</option>
 					<option value="01">01 — RC only</option>
 					<option value="02">02 — CC/MAC only</option>
@@ -458,13 +558,13 @@
 					<option value="32">32 — CC/MAC + Counter (check +1)</option>
 					<option value="36">36 — CC/MAC + Ciphering + Counter (check +1)</option>
 				</select>
-				<input id="sp-spi1-hex" readonly class="w-16 font-mono border border-gray-300 text-xs rounded px-2 py-2 bg-gray-100 text-center" value="06">
+				<input id="sp-spi1-hex" readonly class="w-16 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-2 bg-gray-100 dark:bg-slate-800 text-center" value="06">
 			</div>
 		</div>
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">SPI2 (PoR settings)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SPI2 (PoR settings)</label>
 			<div class="flex gap-2 items-center">
-				<select id="sp-spi2" onchange="updateSp()" class="flex-1 border border-gray-300 text-sm rounded px-3 py-2.5">
+				<select id="sp-spi2" onchange="updateSp()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					<option value="00" selected>00 — No PoR, no security</option>
 					<option value="01">01 — PoR required, no security</option>
 					<option value="05">05 — PoR required, RC</option>
@@ -474,20 +574,20 @@
 					<option value="02">02 — PoR on error, no security</option>
 					<option value="06">06 — PoR on error, RC</option>
 				</select>
-				<select id="sp-spi2-sm" onchange="updateSp()" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+				<select id="sp-spi2-sm" onchange="updateSp()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					<option value="0">DELIVER-REPORT</option>
 					<option value="1">SUBMIT SM</option>
 				</select>
-				<input id="sp-spi2-hex" readonly class="w-16 font-mono border border-gray-300 text-xs rounded px-2 py-2 bg-gray-100 text-center" value="00">
+				<input id="sp-spi2-hex" readonly class="w-16 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-2 bg-gray-100 dark:bg-slate-800 text-center" value="00">
 			</div>
 		</div>
 
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">KIc (Ciphering Key Identifier)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KIc (Ciphering Key Identifier)</label>
 			<div class="flex gap-2 items-center">
-				<select id="sp-kic-idx" onchange="updateSpKic()" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+				<select id="sp-kic-idx" onchange="updateSpKic()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					<option value="0">Implicit (0)</option>
-					<option value="1">1</option>
+					<option value="1" selected>1</option>
 					<option value="2">2</option>
 					<option value="3">3</option>
 					<option value="4">4</option>
@@ -503,21 +603,21 @@
 					<option value="E">E</option>
 					<option value="F">F</option>
 				</select>
-				<select id="sp-kic-alg" onchange="updateSpKic()" class="flex-1 border border-gray-300 text-sm rounded px-3 py-2.5">
+				<select id="sp-kic-alg" onchange="updateSpKic()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					<option value="01">01 — DES-CBC (8B key)</option>
 					<option value="05" selected>05 — 3DES 2-key outer-CBC (16B key)</option>
 					<option value="09">09 — 3DES 3-key outer-CBC (24B key)</option>
 					<option value="0D">0D — DES-ECB (8B key)</option>
 				</select>
-				<input id="sp-kic-hex" readonly class="w-12 font-mono border border-gray-300 text-xs rounded px-2 py-2 bg-gray-100 text-center" value="05">
+				<input id="sp-kic-hex" readonly class="w-12 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-2 bg-gray-100 dark:bg-slate-800 text-center" value="15">
 			</div>
 		</div>
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">KID (MAC Key Identifier)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KID (MAC Key Identifier)</label>
 			<div class="flex gap-2 items-center">
-				<select id="sp-kid-idx" onchange="updateSpKid()" class="border border-gray-300 text-sm rounded px-3 py-2.5">
+				<select id="sp-kid-idx" onchange="updateSpKid()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					<option value="0">Implicit (0)</option>
-					<option value="1">1</option>
+					<option value="1" selected>1</option>
 					<option value="2">2</option>
 					<option value="3">3</option>
 					<option value="4">4</option>
@@ -533,100 +633,83 @@
 					<option value="E">E</option>
 					<option value="F">F</option>
 				</select>
-				<select id="sp-kid-alg" onchange="updateSpKid()" class="flex-1 border border-gray-300 text-sm rounded px-3 py-2.5">
+				<select id="sp-kid-alg" onchange="updateSpKid()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					<option value="01">01 — DES-CBC (8B key)</option>
 					<option value="05" selected>05 — 3DES 2-key outer-CBC (16B key)</option>
 					<option value="09">09 — 3DES 3-key outer-CBC (24B key)</option>
 				</select>
-				<input id="sp-kid-hex" readonly class="w-12 font-mono border border-gray-300 text-xs rounded px-2 py-2 bg-gray-100 text-center" value="05">
+				<input id="sp-kid-hex" readonly class="w-12 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-2 bg-gray-100 dark:bg-slate-800 text-center" value="15">
 			</div>
 		</div>
 
 		<div class="flex gap-2 mb-3">
 			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700">TAR (6 hex)</label>
-				<input id="sp-tar" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="B00001" maxlength="6" value="B00001">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">TAR (6 hex)</label>
+				<input id="sp-tar" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
 			</div>
 			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Counter (10 hex)</label>
-				<input id="sp-cntr" class="font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="0000000001" maxlength="10" value="0000000001">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Counter (10 hex)</label>
+				<div class="flex gap-1 items-center">
+					<button type="button" onclick="spCntrAdjust(-1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">−</button>
+					<input id="sp-cntr" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
+					<button type="button" onclick="spCntrAdjust(1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">+</button>
+				</div>
 			</div>
 		</div>
 
 		<div class="flex gap-2 mb-3">
 			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700">KIc Key (hex)</label>
-				<textarea id="sp-kic-key" rows="2" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="16/32/48 hex chars for 8/16/24 byte key"></textarea>
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KIc Key (hex)</label>
+				<textarea id="sp-kic-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="16B key (32 hex)"></textarea>
 			</div>
 			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700">KID Key (hex)</label>
-				<textarea id="sp-kid-key" rows="2" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="16/32/48 hex chars for 8/16/24 byte key"></textarea>
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KID Key (hex)</label>
+				<textarea id="sp-kid-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="16B key (32 hex)"></textarea>
 			</div>
 		</div>
 
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Padding byte</label>
-			<select id="sp-padding" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Padding byte</label>
+			<select id="sp-padding" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="00" selected>00 (TS 102 225 default)</option>
 				<option value="FF">FF</option>
 			</select>
 		</div>
 
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">APDU (hex)</label>
-			<textarea id="sp-apdu" rows="3" class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5"></textarea>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">APDU (hex)</label>
+			<textarea id="sp-apdu" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
 		</div>
 
 		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать Secure Packet</button>
-		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 	</div>
 
-	<div id="tab-convert" class="tab-content hidden">
+	<div id="tab-ber" class="tab-content hidden">
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Тип</label>
-			<select id="conv-type" onchange="updateConvFields()" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-				<option value="imsi">IMSI → EF.IMSI</option>
-				<option value="msisdn">MSISDN → BCD</option>
-				<option value="iccid">ICCID → hex</option>
-				<option value="spn">Provider Name → SPN</option>
-				<option value="plmn">PLMN (MCC+MNC) → EF_PLMNsel</option>
-				<option value="plmnwact">PLMNwAcT (MCC+MNC+AcT) → EF_PLMNwAcT</option>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Format</label>
+			<select id="ber-format" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 dark:text-slate-300 font-mono">
+				<option value="AA">Definite (AA)</option>
+				<option value="AE">Indefinite (AE)</option>
 			</select>
 		</div>
+
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700">Значение</label>
-			<input id="conv-input" class="border border-gray-300 text-sm rounded px-3 py-2.5">
-		</div>
-		<div id="conv-plmn-fields" class="">
-			<div class="flex gap-2 mb-2">
-				<div class="flex-1">
-					<label class="block mb-1 text-sm font-medium text-gray-700">MCC (3 цифры)</label>
-					<input id="conv-mcc" maxlength="3" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="250">
-				</div>
-				<div class="flex-1">
-					<label class="block mb-1 text-sm font-medium text-gray-700">MNC (2-3 цифры)</label>
-					<input id="conv-mnc" maxlength="3" class="border border-gray-300 text-sm rounded px-3 py-2.5" placeholder="01">
-				</div>
+			<div class="flex flex-wrap gap-1 mb-2 items-center">
+				<span class="text-sm font-medium text-gray-700 dark:text-slate-300 mr-1">Commands</span>
+				<button onclick="addBerRow('c-apdu')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ C-APDU</button>
+				<button onclick="addBerRow('immediate')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Immediate</button>
+				<button onclick="addBerRow('error')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Error</button>
+				<button onclick="addBerRow('chaining')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Chaining</button>
 			</div>
-			<div id="conv-act-row" class="">
-				<label class="block mb-1 text-sm font-medium text-gray-700">Access Technology (AcT)</label>
-				<select id="conv-act" class="w-full border border-gray-300 text-sm rounded px-3 py-2.5">
-					<option value="8000">GSM (8000)</option>
-					<option value="4000">UTRAN (4000)</option>
-					<option value="2000">E-UTRAN (2000)</option>
-					<option value="1000">NGRAN (1000)</option>
-					<option value="C000">GSM + UTRAN (C000)</option>
-					<option value="6000">UTRAN + E-UTRAN (6000)</option>
-					<option value="E000">GSM + UTRAN + E-UTRAN (E000)</option>
-					<option value="F000">All (F000)</option>
-				</select>
-			</div>
+			<div id="ber-rows" class="space-y-2"></div>
 		</div>
-		<button onclick="genConvert()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Конвертировать</button>
-		<textarea id="conv-result" rows="3" readonly class="w-full font-mono border border-gray-300 text-sm rounded px-3 py-2.5 bg-gray-100"></textarea>
+
+		<button onclick="genBerTlv()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать BER-TLV</button>
+		<textarea id="ber-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 dark:text-slate-300"></textarea>
 	</div>
 
-</div>
+	</div>
 
 <script>
 // ===== Tab switching =====
@@ -634,12 +717,12 @@ function switchTab(name) {
 	document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
 	document.getElementById('tab-' + name).classList.remove('hidden');
 	document.querySelectorAll('.tab-btn').forEach(btn => {
-		btn.classList.remove('bg-blue-600', 'text-white');
-		btn.classList.add('bg-gray-200', 'text-gray-700');
+		btn.classList.remove('bg-blue-600', 'text-white', 'dark:bg-blue-500', 'dark:text-white');
+		btn.classList.add('bg-gray-200', 'text-gray-700', 'dark:bg-slate-700', 'dark:text-slate-300');
 	});
 	const active = document.querySelector(`.tab-btn[data-tab="${name}"]`);
-	active.classList.remove('bg-gray-200', 'text-gray-700');
-	active.classList.add('bg-blue-600', 'text-white');
+	active.classList.remove('bg-gray-200', 'text-gray-700', 'dark:bg-slate-700', 'dark:text-slate-300');
+	active.classList.add('bg-blue-600', 'text-white', 'dark:bg-blue-500', 'dark:text-white');
 	if (name === 'sim' || name === 'usim') {
 		updateSimUsimFields(name);
 		updateSimSelectMethod(name);
@@ -1016,6 +1099,7 @@ function genSimUsim(mode) {
 		const selectApdu = buildSelectApdu(mode, preset, selInfo);
 		if (!selectApdu) { resultEl.value = 'Ошибка: укажите параметры SELECT'; return; }
 		resultEl.value = selectApdu;
+		document.getElementById(mode + '-pack-btn').disabled = false;
 		return;
 	}
 
@@ -1060,6 +1144,7 @@ function genSimUsim(mode) {
 	}
 
 	resultEl.value = apdu;
+	document.getElementById(mode + '-pack-btn').disabled = false;
 }
 
 function genRam() {
@@ -1197,6 +1282,7 @@ function genRam() {
 	}
 
 	resultEl.value = apdu || 'Ошибка: неизвестная команда';
+	if (apdu) document.getElementById('ram-pack-btn').disabled = false;
 }
 
 function updateConvFields() {
@@ -1249,6 +1335,10 @@ function genConvert() {
 			else if (!/^\d{3}$/.test(mcc)) { result = 'Ошибка: MCC должен быть 3 цифры'; }
 			else if (!/^\d{2,3}$/.test(mnc)) { result = 'Ошибка: MNC должен быть 2-3 цифры'; }
 			else result = encPlmn(mcc, mnc) + act.toUpperCase();
+		} else if (type === 'nibswap') {
+			if (!input) { result = 'Ошибка: введите значение'; }
+			else if (input.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(input)) { result = 'Ошибка: введите чётное количество hex-символов'; }
+			else result = swapNibbles(input);
 		}
 	} catch (e) {
 		result = 'Ошибка: ' + e.message;
@@ -1257,6 +1347,18 @@ function genConvert() {
 }
 
 // ===== Secured Packet UI =====
+function packToSp(sourceId) {
+	const val = document.getElementById(sourceId).value;
+	if (!val) return;
+	switchTab('sp');
+	document.getElementById('sp-apdu').value = val;
+}
+function spCntrAdjust(delta) {
+	const el = document.getElementById('sp-cntr');
+	let val = parseInt(el.value.replace(/[^0-9a-fA-F]/g, ''), 16) || 0;
+	val = Math.max(0, val + delta);
+	el.value = val.toString(16).padStart(10, '0').toUpperCase();
+}
 function updateSp() {
 	document.getElementById('sp-spi1-hex').value = document.getElementById('sp-spi1').value;
 	const spi2Base = parseInt(document.getElementById('sp-spi2').value, 16);
@@ -1269,12 +1371,18 @@ function updateSpKic() {
 	const alg = parseInt(document.getElementById('sp-kic-alg').value, 16);
 	const byte = (idx << 4) | alg;
 	document.getElementById('sp-kic-hex').value = byte.toString(16).padStart(2, '0').toUpperCase();
+	updateKeyPlaceholder('kic', alg & 0x0F);
 }
 function updateSpKid() {
 	const idx = parseInt(document.getElementById('sp-kid-idx').value, 16);
 	const alg = parseInt(document.getElementById('sp-kid-alg').value, 16);
 	const byte = (idx << 4) | alg;
 	document.getElementById('sp-kid-hex').value = byte.toString(16).padStart(2, '0').toUpperCase();
+	updateKeyPlaceholder('kid', alg & 0x0F);
+}
+function updateKeyPlaceholder(prefix, algNib) {
+	const keyLen = {1: 8, 5: 16, 9: 24, 0xD: 8}[algNib] || 8;
+	document.getElementById('sp-' + prefix + '-key').placeholder = keyLen + 'B key (' + (keyLen * 2) + ' hex)';
 }
 
 // ===== DES / 3DES using des.js library (bundled as des-bundle.js) =====
@@ -1482,7 +1590,285 @@ function genSp() {
 	resultEl.value = bytesToHex(packet);
 }
 
+// ===== BER-TLV =====
+const BER_TAGS = {'c-apdu':'22','immediate':'81','error':'82','chaining':'83'};
+const BER_QUAL = {
+	refresh: [
+		['00','Full file change notification'],
+		['01','File change notification'],
+		['02','UICC file change notification'],
+		['03','NAA application reset'],
+		['04','NAA session reset'],
+		['05','UICC reset']
+	],
+	display: [
+		['00','Normal priority'],
+		['01','High priority'],
+		['80','Clear after delay']
+	],
+	tone: [
+		['00','Monotonous tone'],
+		['01','Alternating tone']
+	]
+};
+const BER_TONES = [
+	['01','Dial tone'],['02','Called subscriber busy'],['03','Congestion'],
+	['04','Radio path acknowledge'],['05','Radio path not available'],
+	['06','Error/Special info'],['07','Call waiting'],['08','Ringing tone'],
+	['10','General beep'],['11','Positive acknowledgement'],['12','Negative acknowledgement']
+];
+const BER_DEVICES = [['81','UICC'],['82','Terminal'],['83','Network'],['02','Display']];
+
+function addBerRow(type) {
+	const c = document.getElementById('ber-rows');
+	const idx = c.children.length;
+	const row = document.createElement('div');
+	row.className = 'ber-row border border-gray-300 dark:border-slate-600 rounded p-2 bg-gray-50 dark:bg-slate-800';
+	row.dataset.berIdx = idx;
+	row.innerHTML = berRowHtml(idx, type);
+	c.appendChild(row);
+	onBerTypeChange(row.querySelector('.ber-type'));
+}
+
+function berRowHtml(idx, type) {
+	const types = ['c-apdu','immediate','error','chaining'].map(t =>
+		`<option value="${t}"${t===type?' selected':''}>${t==='c-apdu'?'C-APDU':t==='immediate'?'Immediate':t==='error'?'Error':'Chaining'}</option>`
+	).join('');
+	return `<div class="flex gap-2 items-start mb-1">
+		<span class="text-xs text-gray-500 dark:text-slate-400 w-6 pt-2">${idx+1}</span>
+		<select class="ber-type text-xs w-24 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onBerTypeChange(this)">
+			${types}
+		</select>
+		<div class="ber-body flex-1"></div>
+		<button onclick="removeBerRow(this)" class="text-red-500 hover:text-red-700 text-sm px-1 pt-2">✕</button>
+	</div>
+	<div class="ber-preview text-xs text-gray-400 dark:text-slate-500 font-mono ml-8" data-ber-preview="${idx}"></div>`;
+}
+
+function removeBerRow(btn) {
+	btn.closest('.ber-row').remove();
+	document.querySelectorAll('.ber-row').forEach((r,i)=>r.dataset.berIdx=i);
+	document.querySelectorAll('.ber-row .ber-preview').forEach((p,i)=>p.dataset.berPreview=i);
+}
+
+function onBerTypeChange(sel) {
+	const row = sel.closest('.ber-row');
+	const body = row.querySelector('.ber-body');
+	const type = sel.value;
+	if (type === 'c-apdu' || type === 'chaining') {
+		body.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
+	} else {
+		body.innerHTML = `<div class="flex gap-1 mb-1 flex-wrap">
+			<select class="ber-subtype text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onBerSubTypeChange(this)">
+				<option value="action">Action indicator</option>
+				<option value="proactive">Proactive command</option>
+				<option value="custom">Custom hex</option>
+			</select>
+			<span class="ber-sub-body flex-1"></span>
+		</div>`;
+		onBerSubTypeChange(body.querySelector('.ber-subtype'));
+	}
+	updateBerRow(sel);
+}
+
+function onBerSubTypeChange(sel) {
+	const body = sel.closest('.ber-sub-body') || sel.parentElement.querySelector('.ber-sub-body');
+	const st = sel.value;
+	if (st === 'action') {
+		body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
+			<option value="81">81 (Session indication)</option>
+			<option value="82">82 (Early response)</option>
+		</select>`;
+	} else if (st === 'custom') {
+		body.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
+	} else {
+		body.innerHTML = `<div class="ber-pc">
+			<div class="flex gap-1 mb-1 flex-wrap">
+				<select class="ber-pc-type text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onBerPcTypeChange(this)">
+					<option value="refresh">REFRESH</option>
+					<option value="display">DISPLAY TEXT</option>
+					<option value="tone">PLAY TONE</option>
+					<option value="custom">Custom</option>
+				</select>
+				<span class="text-xs pt-1">#</span>
+				<input class="ber-pc-num text-xs w-10 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" type="number" min="1" max="255" value="1" onchange="updateBerRow(this)">
+				<span class="text-xs pt-1">Qual:</span>
+				<select class="ber-pc-qual text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
+			</div>
+			<div class="flex gap-1 mb-1 flex-wrap items-center">
+				<span class="text-xs">IDs:</span>
+				<select class="ber-pc-src text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
+				<span class="text-xs">→</span>
+				<select class="ber-pc-dst text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
+			</div>
+			<div class="ber-pc-fields text-xs"></div>
+		</div>`;
+		const pc = body.querySelector('.ber-pc');
+		berPopulateDevices(pc);
+		onBerPcTypeChange(pc.querySelector('.ber-pc-type'));
+	}
+	updateBerRow(sel);
+}
+
+function berPopulateDevices(pc) {
+	const src = pc.querySelector('.ber-pc-src');
+	const dst = pc.querySelector('.ber-pc-dst');
+	BER_DEVICES.forEach(([v,l])=>{
+		const o1 = document.createElement('option'); o1.value=v; o1.textContent=v+' ('+l+')';
+		if(v==='81') o1.selected=true; src.appendChild(o1);
+		const o2 = document.createElement('option'); o2.value=v; o2.textContent=v+' ('+l+')';
+		if(v==='82') o2.selected=true; dst.appendChild(o2);
+	});
+}
+
+function onBerPcTypeChange(sel) {
+	const pc = sel.closest('.ber-pc');
+	const qual = pc.querySelector('.ber-pc-qual');
+	const fields = pc.querySelector('.ber-pc-fields');
+	const type = sel.value;
+	qual.innerHTML = (BER_QUAL[type]||[['00','']]).map(([v,l])=>`<option value="${v}">${v} ${l}</option>`).join('');
+	if (type === 'display') {
+		fields.innerHTML = `<div class="flex gap-1 items-center">
+			<input class="ber-pc-text flex-1 text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="Text" oninput="updateBerRow(this)">
+			<select class="ber-pc-enc text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="updateBerRow(this)">
+				<option value="gsm7">GSM 7-bit</option>
+				<option value="ucs2">UCS2</option>
+			</select>
+		</div>
+		<div class="flex gap-1 items-center mt-1">
+			<span class="text-xs">Alpha ID:</span>
+			<input class="ber-pc-alpha flex-1 text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" placeholder="hex (tag 85)" oninput="updateBerRow(this)">
+		</div>`;
+	} else if (type === 'tone') {
+		fields.innerHTML = `<div class="flex gap-1 items-center">
+			<span class="text-xs">Tone:</span>
+			<select class="ber-pc-tone text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
+		</div>`;
+		const tsel = fields.querySelector('.ber-pc-tone');
+		BER_TONES.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=v+' '+l;tsel.appendChild(o);});
+	} else if (type === 'refresh') {
+		fields.innerHTML = `<div class="flex gap-1 items-center">
+			<span class="text-xs">File list (tag 12):</span>
+			<input class="ber-pc-flist flex-1 text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" placeholder="hex (optional)" oninput="updateBerRow(this)">
+		</div>`;
+	} else {
+		fields.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
+	}
+	updateBerRow(sel);
+}
+
+function updateBerRow(el) {
+	const row = el.closest('.ber-row');
+	const preview = row.querySelector('.ber-preview');
+	const val = genBerRowValue(row);
+	preview.textContent = val || '(empty)';
+}
+
+function genBerRowValue(row) {
+	const type = row.querySelector('.ber-type').value;
+	const tag = BER_TAGS[type];
+	if (type === 'c-apdu' || type === 'chaining') {
+		const hex = (row.querySelector('.ber-hex').value||'').replace(/[^0-9a-fA-F]/g,'');
+		if (!hex) return '';
+		return tag + berLenStr(hex.length/2) + hex;
+	}
+	const st = row.querySelector('.ber-subtype').value;
+	if (st === 'action') {
+		const a = row.querySelector('.ber-action').value;
+		return tag + berLenStr(1) + a;
+	}
+	if (st === 'custom') {
+		const hex = (row.querySelector('.ber-hex').value||'').replace(/[^0-9a-fA-F]/g,'');
+		if (!hex) return '';
+		return tag + berLenStr(hex.length/2) + hex;
+	}
+	return genBerPcValue(row, tag);
+}
+
+function genBerPcValue(row, tag) {
+	const pc = row.querySelector('.ber-pc');
+	const pct = pc.querySelector('.ber-pc-type').value;
+	const cmdNum = parseInt(pc.querySelector('.ber-pc-num').value)||1;
+	const qual = pc.querySelector('.ber-pc-qual').value;
+	const src = pc.querySelector('.ber-pc-src').value;
+	const dst = pc.querySelector('.ber-pc-dst').value;
+
+	let value = '8103' + cmdNum.toString(16).padStart(2,'0').toUpperCase();
+	const typeBytes = {refresh:'01',display:'21',tone:'31',custom:'00'};
+	value += (typeBytes[pct]||'00') + qual;
+	value += '8202' + src + dst;
+
+	if (pct === 'display') {
+		const text = pc.querySelector('.ber-pc-text').value;
+		const enc = pc.querySelector('.ber-pc-enc').value;
+		if (text) {
+			if (enc === 'ucs2') {
+				const buf = [];
+				for (const c of text) { const cd=c.charCodeAt(0); buf.push((cd>>8)&0xFF,cd&0xFF); }
+				value += '8D' + berLenStr(buf.length) + buf.map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join('');
+				value += '04' + berLenStr(1) + '80';
+			} else {
+				try {
+					const septets = gsm7TextToSeptets(text);
+					const packed = gsm7Encode(septets);
+					const inner = Array.from(packed).map(b=>b.toString(16).padStart(2,'0').toUpperCase());
+					value += '8D' + berLenStr(inner.length) + inner.join('');
+				} catch(e) {
+					value += '8D' + berLenStr(text.length) + text.split('').map(c=>c.charCodeAt(0).toString(16).padStart(2,'0').toUpperCase()).join('');
+				}
+			}
+		}
+		const alpha = (pc.querySelector('.ber-pc-alpha').value||'').replace(/[^0-9a-fA-F]/g,'');
+		if (alpha) value += '85' + berLenStr(alpha.length/2) + alpha;
+	} else if (pct === 'tone') {
+		const tone = pc.querySelector('.ber-pc-tone').value;
+		value += '8E01' + tone;
+	} else if (pct === 'refresh') {
+		const flist = (pc.querySelector('.ber-pc-flist').value||'').replace(/[^0-9a-fA-F]/g,'');
+		if (flist) value += '12' + berLenStr(flist.length/2) + flist;
+	} else {
+		const hex = (pc.querySelector('.ber-hex').value||'').replace(/[^0-9a-fA-F]/g,'');
+		if (hex) value += hex;
+	}
+
+	return tag + berLenStr(value.length/2) + value;
+}
+
+function berLenStr(n) {
+	if (n < 128) return n.toString(16).padStart(2,'0').toUpperCase();
+	return '81' + n.toString(16).padStart(2,'0').toUpperCase();
+}
+
+function genBerTlv() {
+	const fmt = document.getElementById('ber-format').value;
+	let content = '';
+	document.querySelectorAll('.ber-row').forEach(row => {
+		const v = genBerRowValue(row);
+		if (v) content += v;
+	});
+	if (!content) { document.getElementById('ber-result').value = ''; return; }
+	let result;
+	if (fmt === 'AA') {
+		result = 'AA' + berLenStr(content.length/2) + content;
+	} else {
+		result = 'AE80' + content + '0000';
+	}
+	document.getElementById('ber-result').value = result;
+}
+
 // Init
+if (localStorage.getItem('theme') === 'dark' ||
+    (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+	document.documentElement.classList.add('dark');
+}
+function toggleTheme() {
+	const html = document.documentElement;
+	html.classList.toggle('dark');
+	localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+	document.getElementById('theme-btn').textContent = html.classList.contains('dark') ? '☀️' : '🌙';
+}
+document.getElementById('theme-btn').textContent = document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
+updateConvFields();
 updateSp();
 updateSpKic();
 updateSpKid();
