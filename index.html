@@ -70,7 +70,7 @@
 						</select>
 					</div>
 					<div id="sim-sel-fid-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (4 hex)</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (2 bytes)</label>
 						<input id="sim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
 					</div>
 					<div id="sim-sel-path-row" class="mb-3">
@@ -235,7 +235,7 @@
 						</select>
 					</div>
 					<div id="usim-sel-fid-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (4 hex)</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (2 bytes)</label>
 						<input id="usim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
 					</div>
 					<div id="usim-sel-path-row" class="mb-3">
@@ -505,7 +505,7 @@
 						</select>
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">TAR (6 hex)</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">TAR (3 bytes)</label>
 						<input id="ram-tk-tar" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
 					</div>
 					<div id="ram-tk-ad-row">
@@ -703,11 +703,11 @@
 
 		<div class="flex gap-2 mb-3">
 			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">TAR (6 hex)</label>
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">TAR (3 bytes)</label>
 				<input id="sp-tar" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
 			</div>
 			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Counter (10 hex)</label>
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Counter (5 bytes)</label>
 				<div class="flex gap-1 items-center">
 					<button type="button" onclick="spCntrAdjust(-1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">−</button>
 					<input id="sp-cntr" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
@@ -719,11 +719,11 @@
 		<div class="flex gap-2 mb-3">
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KIc Key (hex)</label>
-				<textarea id="sp-kic-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="16B key (32 hex)"></textarea>
+				<textarea id="sp-kic-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
 			</div>
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KID Key (hex)</label>
-				<textarea id="sp-kid-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="16B key (32 hex)"></textarea>
+				<textarea id="sp-kid-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
 			</div>
 		</div>
 
@@ -1489,7 +1489,7 @@ function updateSpKid() {
 }
 function updateKeyPlaceholder(prefix, algNib) {
 	const keyLen = {1: 8, 5: 16, 9: 24, 0xD: 8}[algNib] || 8;
-	document.getElementById('sp-' + prefix + '-key').placeholder = keyLen + 'B key (' + (keyLen * 2) + ' hex)';
+	document.getElementById('sp-' + prefix + '-key').placeholder = keyLen + ' bytes key';
 }
 
 // ===== DES / 3DES using des.js library (bundled as des-bundle.js) =====
