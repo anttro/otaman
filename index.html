@@ -534,8 +534,8 @@
 		<div id="ram-del-mode-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим DELETE</label>
 			<select id="ram-del-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-				<option value="00">По AID (00)</option>
-				<option value="80">Связанные объекты (80)</option>
+				<option value="00">Только AID (00)</option>
+				<option value="80">AID и все связанные объекты (80)</option>
 			</select>
 		</div>
 		<div id="ram-gs-mode-row" class="mb-3">
@@ -547,9 +547,34 @@
 				<option value="10">ELF и модули (10)</option>
 			</select>
 		</div>
+		<div id="ram-gs-p2-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Формат GET STATUS</label>
+			<select id="ram-gs-p2" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<option value="40">40 — First/all, GP TLV format</option>
+				<option value="42">42 — Next, GP TLV format</option>
+				<option value="00">00 — First/all, old format (deprecated)</option>
+				<option value="02">02 — Next, old format (deprecated)</option>
+			</select>
+		</div>
 		<div id="ram-tag-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Tag (2 байта hex)</label>
-			<input id="ram-tag" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="5F50" maxlength="4" value="5F50">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Tag GET DATA</label>
+			<select id="ram-gd-tag-sel" onchange="document.getElementById('ram-tag').value=this.value" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 mb-1.5">
+				<option value="">— выберите предустановленный —</option>
+				<option value="42">42 — Issuer Identification Number (IIN)</option>
+				<option value="45">45 — Card Image Number (CIN)</option>
+				<option value="66">66 — Card Data / SD Management Data</option>
+				<option value="67">67 — Card Capability Information</option>
+				<option value="E0">E0 — Key Information Template</option>
+				<option value="D3">D3 — Current Security Level</option>
+				<option value="2F00">2F00 — List of Applications</option>
+				<option value="FF21">FF21 — Extended Card Resources Info</option>
+				<option value="5F50">5F50 — SD Manager URL</option>
+				<option value="C1">C1 — Sequence Counter (SCP02/03)</option>
+				<option value="C2">C2 — Confirmation Counter</option>
+				<option value="7F21">7F21 — Certificate (SD public key)</option>
+				<option value="5031">5031 — Certificate info (EF.OD)</option>
+			</select>
+			<input id="ram-tag" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="5F50" maxlength="4" value="5F50">
 		</div>
 		<div id="ram-ss-mode-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Тип SET STATUS</label>
@@ -1262,7 +1287,8 @@ function genRam() {
 		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
 		apdu = buildApdu(0x80, 0xE4, parseInt(delMode, 16), 0x00, parseInt(dataLen, 16), dataField);
 	} else if (cmd === 'get-status') {
-		apdu = buildApdu(0x80, 0xF2, parseInt(gsMode, 16), 0x00, 0x02, '4F00');
+		const gsP2 = document.getElementById('ram-gs-p2').value;
+		apdu = buildApdu(0x80, 0xF2, parseInt(gsMode, 16), parseInt(gsP2, 16), 0x02, '4F00');
 	} else if (cmd === 'get-data') {
 		const tag = parseInt(tagHex, 16);
 		apdu = buildApdu(0x80, 0xCA, (tag >> 8) & 0xFF, tag & 0xFF, 0x00, null);

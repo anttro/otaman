@@ -195,6 +195,33 @@ Optional TLV objects appended to the INSTALL data field:
 | 20 | Executable Load Files |
 | 10 | ELF and their Executable Modules |
 
+### GET STATUS P2 values
+
+| Value | Meaning |
+|---|---|
+| 40 | First/all occurrences, GP TLV format (default) |
+| 42 | Next occurrence, GP TLV format |
+| 00 | First/all, old format (deprecated) |
+| 02 | Next, old format (deprecated) |
+
+### GET DATA tag values
+
+| Tag | Data Object |
+|---|---|
+| 42 | Issuer Identification Number (IIN) |
+| 45 | Card Image Number (CIN) |
+| 66 | Card Data / SD Management Data |
+| 67 | Card Capability Information |
+| E0 | Key Information Template |
+| D3 | Current Security Level |
+| 2F00 | List of Applications (ISO 7816-4) |
+| FF21 | Extended Card Resources Info |
+| 5F50 | SD Manager URL |
+| C1 | Sequence Counter (SCP02/03) |
+| C2 | Confirmation Counter |
+| 7F21 | Certificate (SD public key) |
+| 5031 | Certificate info (EF.OD) |
+
 ### DELETE P1 values
 
 | Value | Meaning |
