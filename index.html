@@ -26,6 +26,7 @@
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="ber">BER-TLV</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="ram">RAM</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="sp">Secured Packet</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="response">Response parser</button>
 	</div>
 
 	<div id="tab-sim" class="tab-content">
@@ -78,7 +79,7 @@
 					</div>
 					<div id="sim-sel-chain-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID цепочка (через запятую)</label>
-						<input id="sim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A153,4953">
+						<input id="sim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00,6F3A">
 					</div>
 					</div>
 				</div>
@@ -243,7 +244,7 @@
 					</div>
 					<div id="usim-sel-chain-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID цепочка (через запятую)</label>
-						<input id="usim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A153,4953">
+						<input id="usim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00,6F3A">
 					</div>
 					</div>
 				</div>
@@ -737,6 +738,76 @@
 
 		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать Secure Packet</button>
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+	</div>
+
+	<div id="tab-response" class="tab-content hidden">
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Команда</label>
+			<select id="resp-cmd" onchange="updateRespCmd()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<option value="">— Выберите команду —</option>
+				<optgroup label="SIM / USIM">
+					<option value="sim-select">SELECT</option>
+					<option value="sim-status">STATUS</option>
+					<option value="sim-read-binary">READ BINARY</option>
+					<option value="sim-update-binary">UPDATE BINARY</option>
+					<option value="sim-read-record">READ RECORD</option>
+					<option value="sim-update-record">UPDATE RECORD</option>
+					<option value="sim-verify">VERIFY PIN</option>
+					<option value="sim-change">CHANGE PIN</option>
+					<option value="sim-disable">DISABLE PIN</option>
+					<option value="sim-enable">ENABLE PIN</option>
+					<option value="sim-unblock">UNBLOCK PIN</option>
+					<option value="sim-deactivate">DEACTIVATE FILE</option>
+					<option value="sim-activate">ACTIVATE FILE</option>
+					<option value="sim-challenge">GET CHALLENGE</option>
+					<option value="sim-auth">AUTHENTICATE</option>
+					<option value="sim-profile">TERMINAL PROFILE</option>
+					<option value="sim-envelope">ENVELOPE</option>
+					<option value="sim-fetch">FETCH</option>
+					<option value="sim-terminal-rsp">TERMINAL RESPONSE</option>
+					<option value="sim-manage-channel">MANAGE CHANNEL</option>
+					<option value="sim-msc">MANAGE SECURE CHANNEL</option>
+					<option value="sim-retrieve">RETRIEVE DATA</option>
+					<option value="sim-set-data">SET DATA</option>
+					<option value="sim-suspend">SUSPEND UICC</option>
+				</optgroup>
+				<optgroup label="RAM (GlobalPlatform)">
+					<option value="ram-install-load">INSTALL [for load]</option>
+					<option value="ram-install-install">INSTALL [for install]</option>
+					<option value="ram-install-make-sel">INSTALL [for make selectable]</option>
+					<option value="ram-install-reg-update">INSTALL [for registry update]</option>
+					<option value="ram-install-extradition">INSTALL [for extradition]</option>
+					<option value="ram-load">LOAD</option>
+					<option value="ram-delete">DELETE</option>
+					<option value="ram-get-status">GET STATUS</option>
+					<option value="ram-get-data">GET DATA</option>
+					<option value="ram-store-data">STORE DATA</option>
+					<option value="ram-set-status">SET STATUS</option>
+					<option value="ram-ext-auth">EXTERNAL AUTHENTICATE</option>
+					<option value="ram-int-auth">INTERNAL AUTHENTICATE</option>
+					<option value="ram-select">SELECT</option>
+					<option value="ram-init-update">INITIALIZE UPDATE</option>
+					<option value="ram-put-key">PUT KEY</option>
+					<option value="ram-manage-channel">MANAGE CHANNEL</option>
+				</optgroup>
+			</select>
+		</div>
+		<div class="flex gap-3 mb-3">
+			<div class="w-24">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SW</label>
+				<input id="resp-sw" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" maxlength="4" placeholder="9000">
+			</div>
+			<div class="flex-1">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Context</label>
+				<input id="resp-ctx" readonly class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800" value="generic">
+			</div>
+		</div>
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные ответа (hex)</label>
+			<textarea id="resp-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="E3 1A 4F 08 A0 00 00 00 03 00 00 00 9F 70 01 07 C5 03 80 00 00"></textarea>
+		</div>
+		<button onclick="decodeResponse()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Декодировать</button>
+		<div id="resp-output" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 whitespace-pre-wrap" style="min-height:100px"></div>
 	</div>
 
 	</div>
@@ -1888,7 +1959,393 @@ function genBerTlv() {
 	document.getElementById('ber-pack-btn').disabled = false;
 }
 
-// Init
+// ===== Response Parser =====
+const SW_MAP = {
+	generic: {
+		'9000': 'Normal ending of command',
+		'61XX': 'Send GET RESPONSE (Le = SW2)',
+		'6CXX': 'Repeat command with Le = SW2',
+		'6200': 'Warning: No information given, NV memory unchanged',
+		'6281': 'Warning: Part of returned data may be corrupted',
+		'6282': 'Warning: End of file/record reached before reading Le bytes',
+		'6283': 'Warning: Selected file invalidated',
+		'6285': 'Warning: Selected file in termination state',
+		'62F1': 'Warning: More data available',
+		'62F2': 'Warning: More data available and proactive command pending',
+		'62F3': 'Warning: Response data available',
+		'63F1': 'Warning: More data expected',
+		'63F2': 'Warning: More data expected and proactive command pending',
+		'63CX': 'Verification failed, X retries remaining (SW2 & 0x0F = tries)',
+		'6400': 'No information given, state of NV memory unchanged',
+		'6500': 'No information given, state of NV memory changed',
+		'6581': 'Memory problem',
+		'6700': 'Wrong length in Lc',
+		'6800': 'Checking error: No information given (CLA functions)',
+		'6881': 'Logical channel not supported',
+		'6882': 'Secure messaging not supported',
+		'6900': 'No information given',
+		'6981': 'Command incompatible with file structure',
+		'6982': 'Security status not satisfied',
+		'6983': 'Authentication/PIN method blocked',
+		'6984': 'Referenced data invalidated',
+		'6985': 'Conditions of use not satisfied',
+		'6986': 'Command not allowed (no EF selected)',
+		'6989': 'Command not allowed — secure channel — security not satisfied',
+		'6A80': 'Incorrect parameters in the data field',
+		'6A81': 'Function not supported',
+		'6A82': 'File not found',
+		'6A83': 'Record not found',
+		'6A84': 'Not enough memory space',
+		'6A86': 'Incorrect parameters P1-P2',
+		'6A87': 'Lc inconsistent with P1-P2',
+		'6A88': 'Referenced data not found',
+		'6B00': 'Wrong parameter(s) P1-P2',
+		'6D00': 'Instruction code not supported or invalid',
+		'6E00': 'Class not supported',
+		'6F00': 'Technical problem, no precise diagnosis',
+		'9850': 'INCREASE cannot be performed, max value reached',
+		'9862': 'Authentication error, application specific',
+		'9863': 'Security session or association expired',
+		'9864': 'Minimum UICC suspension time is too long',
+	},
+	gp: {
+		'6310': 'More data available — send GET STATUS [next] (P2=42)',
+		'6581': 'Memory failure',
+		'6A80': 'Incorrect values in command data',
+		'6A81': 'Function not supported (card Life Cycle State is CARD_LOCKED)',
+		'6A82': 'Selected Application / file not found',
+		'6A84': 'Not enough memory space',
+		'6A88': 'Referenced data not found',
+		'6881': 'Logical channel not supported or is not active',
+		'6882': 'Secure messaging not supported',
+		'6883': 'The last command of the chain was expected',
+		'9484': 'Algorithm not supported (DEPRECATED)',
+		'9485': 'Invalid key check value (DEPRECATED)',
+		'6300': 'Authentication of host cryptogram failed',
+		'6200': 'Warning: Logical Channel already closed',
+		'6283': 'Warning: Card Life Cycle State is CARD_LOCKED',
+	},
+	uicc: {
+		'9100': 'Normal ending with proactive UICC command pending (SW2 = length of response data)',
+		'92XX': 'Normal ending with ongoing data transfer session info',
+		'9300': 'SIM Application Toolkit is busy',
+		'62F1': 'More data available (ENVELOPE, RETRIEVE DATA, SET DATA)',
+		'62F2': 'More data available and proactive command pending',
+		'62F3': 'Response data available (ENVELOPE)',
+		'63F1': 'More data expected (ENVELOPE, RETRIEVE DATA, SET DATA)',
+		'63F2': 'More data expected and proactive command pending (RETRIEVE DATA)',
+		'63CX': 'Verification failed, X retries remaining (VERIFY PIN, CHANGE PIN, etc.)',
+		'6A80': 'Incorrect parameters in the data field',
+		'6A82': 'File not found',
+		'6A83': 'Record not found (READ RECORD, SEARCH RECORD, UPDATE RECORD)',
+		'6A84': 'Not enough memory space (RETRIEVE DATA, SET DATA)',
+		'6A87': 'Lc inconsistent with P1 to P2 (SELECT only)',
+		'6A88': 'Referenced data not found',
+		'6981': 'Command incompatible with file structure',
+		'6983': 'Authentication/PIN method blocked',
+		'6984': 'Referenced data invalidated',
+		'6986': 'Command not allowed (no EF selected)',
+		'6989': 'Command not allowed — secure channel — security not satisfied',
+	},
+};
+
+const SW_CMD_NAMES = {
+	'sim-select': 'SIM / USIM — SELECT',
+	'sim-status': 'SIM / USIM — STATUS',
+	'sim-read-binary': 'SIM / USIM — READ BINARY',
+	'sim-update-binary': 'SIM / USIM — UPDATE BINARY',
+	'sim-read-record': 'SIM / USIM — READ RECORD',
+	'sim-update-record': 'SIM / USIM — UPDATE RECORD',
+	'sim-verify': 'SIM / USIM — VERIFY PIN',
+	'sim-change': 'SIM / USIM — CHANGE PIN',
+	'sim-disable': 'SIM / USIM — DISABLE PIN',
+	'sim-enable': 'SIM / USIM — ENABLE PIN',
+	'sim-unblock': 'SIM / USIM — UNBLOCK PIN',
+	'sim-deactivate': 'SIM / USIM — DEACTIVATE FILE',
+	'sim-activate': 'SIM / USIM — ACTIVATE FILE',
+	'sim-challenge': 'SIM / USIM — GET CHALLENGE',
+	'sim-auth': 'SIM / USIM — AUTHENTICATE',
+	'sim-profile': 'SIM / USIM — TERMINAL PROFILE',
+	'sim-envelope': 'SIM / USIM — ENVELOPE',
+	'sim-fetch': 'SIM / USIM — FETCH',
+	'sim-terminal-rsp': 'SIM / USIM — TERMINAL RESPONSE',
+	'sim-manage-channel': 'SIM / USIM — MANAGE CHANNEL',
+	'sim-msc': 'SIM / USIM — MANAGE SECURE CHANNEL',
+	'sim-retrieve': 'SIM / USIM — RETRIEVE DATA',
+	'sim-set-data': 'SIM / USIM — SET DATA',
+	'sim-suspend': 'SIM / USIM — SUSPEND UICC',
+	'ram-install-load': 'RAM — INSTALL [for load]',
+	'ram-install-install': 'RAM — INSTALL [for install]',
+	'ram-install-make-sel': 'RAM — INSTALL [for make selectable]',
+	'ram-install-reg-update': 'RAM — INSTALL [for registry update]',
+	'ram-install-extradition': 'RAM — INSTALL [for extradition]',
+	'ram-load': 'RAM — LOAD',
+	'ram-delete': 'RAM — DELETE',
+	'ram-get-status': 'RAM — GET STATUS',
+	'ram-get-data': 'RAM — GET DATA',
+	'ram-store-data': 'RAM — STORE DATA',
+	'ram-set-status': 'RAM — SET STATUS',
+	'ram-ext-auth': 'RAM — EXTERNAL AUTHENTICATE',
+	'ram-int-auth': 'RAM — INTERNAL AUTHENTICATE',
+	'ram-select': 'RAM — SELECT',
+	'ram-init-update': 'RAM — INITIALIZE UPDATE',
+	'ram-put-key': 'RAM — PUT KEY',
+	'ram-manage-channel': 'RAM — MANAGE CHANNEL',
+};
+
+const LIFECYCLE_MAP = {
+	'01': 'LOADED (ELF)',
+	'03': 'INSTALLED',
+	'07': 'SELECTABLE',
+	'0F': 'PERSONALIZED (SD) / SECURED (card)',
+	'7F': 'CARD_LOCKED',
+	'FF': 'TERMINATED',
+	'83': 'LOCKED (SD)',
+	'87': 'LOCKED (SD)',
+	'8F': 'LOCKED (SD)',
+};
+
+const PRIVILEGE_NAMES = [
+	['Security Domain', 'DAP Verification', 'Delegated Management', 'Card Lock', 'Card Terminate', 'Card Reset', 'CVM Management', 'Mandated DAP Verification'],
+	['Trusted Path', 'Authorized Management', 'Token Verification', 'Global Delete', 'Global Lock', 'Global Registry', 'Final Application', 'Global Service'],
+	['Receipt Generation', 'Ciphered Load File Data Block', 'Contactless Activation', 'Contactless Self-Activation'],
+];
+
+function getSwCategory(cmd) {
+	if (!cmd) return 'generic';
+	return cmd.startsWith('ram-') ? 'gp' : 'uicc';
+}
+
+function lookupSw(sw1, sw2, cat) {
+	const key = sw1 + sw2;
+	const wild = sw1 + 'XX';
+	const cx = sw1 + 'CX';
+	const maps = [SW_MAP.generic];
+	if (cat === 'gp' || cat === 'uicc') maps.push(SW_MAP[cat]);
+	if (cat === 'uicc') maps.push(SW_MAP.gp);
+	for (const m of maps) {
+		if (m[key]) return m[key];
+		if (m[wild]) return m[wild];
+		if (m[cx] && (parseInt(sw2,16) & 0xF0) === 0xC0) {
+			const tries = parseInt(sw2,16) & 0x0F;
+			return m[cx].replace('X', tries);
+		}
+	}
+	return '';
+}
+
+function updateRespCmd() {
+	const cmd = document.getElementById('resp-cmd').value;
+	const ctx = document.getElementById('resp-ctx');
+	if (!cmd) { ctx.value = 'generic'; return; }
+	ctx.value = getSwCategory(cmd) === 'gp' ? 'GlobalPlatform' : 'SIM / UICC';
+}
+
+function parseTLV(hex) {
+	const tags = [];
+	let i = 0;
+	while (i < hex.length) {
+		let tag = hex.substr(i, 2); i += 2;
+		if (tag >= '1F' && tag <= '7F') { tag += hex.substr(i, 2); i += 2; }
+		else if (tag >= '9F' && tag <= 'BF') { tag += hex.substr(i, 2); i += 2; }
+		else if (tag >= 'DF' && tag <= 'FF') { tag += hex.substr(i, 2); i += 2; }
+		let lenByte = parseInt(hex.substr(i, 2), 16); i += 2;
+		let len;
+		if (lenByte < 0x80) { len = lenByte; }
+		else if (lenByte === 0x81) { len = parseInt(hex.substr(i, 2), 16); i += 2; }
+		else if (lenByte === 0x82) { len = parseInt(hex.substr(i, 4), 16); i += 4; }
+		else { len = lenByte; }
+		const value = hex.substr(i, len * 2); i += len * 2;
+		const isConstructed = parseInt(tag, 16) >= 0xA0 && parseInt(tag, 16) < 0xC0;
+		const children = isConstructed ? parseTLV(value) : null;
+		tags.push({ tag, len, value, children, isConstructed });
+	}
+	return tags;
+}
+
+function formatTlvTree(tags, indent) {
+	if (!indent) indent = 0;
+	const pad = '  '.repeat(indent);
+	let html = '';
+	for (const t of tags) {
+		const tagName = TLV_TAG_NAMES[t.tag] || '';
+		html += pad + '<span class="text-blue-600 dark:text-blue-400">' + t.tag + '</span>';
+		html += ' <span class="text-gray-500">len=' + t.len + '</span>';
+		if (tagName) html += ' <span class="text-green-600 dark:text-green-400">// ' + tagName + '</span>';
+		if (t.children && t.children.length) {
+			html += '\n' + formatTlvTree(t.children, indent + 1);
+		} else {
+			const decoded = decodeTlvValue(t);
+			if (decoded) html += ' <span class="text-purple-600 dark:text-purple-400">→ ' + decoded + '</span>';
+			html += '\n';
+		}
+	}
+	return html;
+}
+
+const TLV_TAG_NAMES = {
+	'4F': 'Application AID',
+	'5F50': 'SD Manager URL',
+	'9F70': 'Life Cycle State',
+	'C5': 'Privileges',
+	'C4': 'Application ELF AID',
+	'CC': 'Associated SD AID',
+	'CE': 'ELF Version Number',
+	'84': 'Executable Module AID',
+	'CF': 'Implicit Selection Parameter',
+	'E3': 'GP Registry Data',
+	'42': 'Issuer Identification Number',
+	'45': 'Card Image Number',
+	'66': 'Card Data',
+	'67': 'Card Capability Information',
+	'E0': 'Key Information Template',
+	'C0': 'Key Information Data',
+	'D3': 'Current Security Level',
+	'C1': 'Sequence Counter',
+	'C2': 'Confirmation Counter',
+	'5C': 'Tag List',
+	'7F21': 'Certificate',
+	'5031': 'Certificate Info (EF.OD)',
+	'6F': 'FCI Template',
+	'62': 'FCP Template',
+	'64': 'FMD Template',
+	'A0': 'Application Template',
+	'A5': 'Proprietary FCI Data',
+	'81': 'Immediate Action',
+	'82': 'Error Action',
+	'22': 'C-APDU',
+	'83': 'Script Chaining',
+};
+
+function decodeTlvValue(t) {
+	if (t.tag === '9F70' && t.value.length === 2) {
+		return LIFECYCLE_MAP[t.value] || 'Unknown state (' + t.value + ')';
+	}
+	if (t.tag === 'C5' && t.value.length >= 2) {
+		return decodePrivileges(t.value);
+	}
+	if (t.tag === '4F') {
+		return t.value.replace(/(..)/g, '$1 ').trim();
+	}
+	if (t.tag === 'C4' || t.tag === 'CC' || t.tag === '84') {
+		return t.value.replace(/(..)/g, '$1 ').trim();
+	}
+	if (t.tag === 'CE' && t.value.length === 4) {
+		return 'v' + parseInt(t.value.substr(0,2),16) + '.' + parseInt(t.value.substr(2,2),16);
+	}
+	if (t.tag === 'D3' && t.value.length === 2) {
+		const v = parseInt(t.value,16);
+		const parts = [];
+		if (v & 0x80) parts.push('C-MAC');
+		if (v & 0x40) parts.push('MAC');
+		if (v & 0x20) parts.push('R-MAC');
+		if (v & 0x10) parts.push('R-CC');
+		if (v & 0x08) parts.push('C-DEC');
+		if (v & 0x04) parts.push('D-DEC');
+		if (v & 0x02) parts.push('C-ENC');
+		if (v & 0x01) parts.push('D-ENC');
+		return parts.length ? parts.join(' + ') : 'No security';
+	}
+	if (t.tag === 'C1' && t.value.length >= 2) {
+		return 'Seq: 0x' + t.value;
+	}
+	if (t.tag === 'C2' && t.value.length >= 2) {
+		return 'Counter: 0x' + t.value;
+	}
+	if (t.tag === '5F50') {
+		try {
+			const bytes = [];
+			for (let i = 0; i < t.value.length; i += 2) bytes.push(parseInt(t.value.substr(i,2),16));
+			return new TextDecoder().decode(new Uint8Array(bytes));
+		} catch(e) { return t.value; }
+	}
+	return '';
+}
+
+function decodePrivileges(hex) {
+	const bytes = [];
+	for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.substr(i,2),16));
+	const names = [];
+	for (let b = 0; b < Math.min(bytes.length, 3); b++) {
+		for (let bit = 0; bit < 8; bit++) {
+			if (bytes[b] & (0x80 >> bit)) {
+				if (b < PRIVILEGE_NAMES.length && bit < PRIVILEGE_NAMES[b].length) {
+					names.push(PRIVILEGE_NAMES[b][bit]);
+				}
+			}
+		}
+	}
+	return names.length ? names.join(', ') : 'None';
+}
+
+function decodeResponse() {
+	const cmd = document.getElementById('resp-cmd').value;
+	const swHex = (document.getElementById('resp-sw').value || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase().padStart(4, '0').slice(0, 4);
+	const sw1 = swHex.slice(0, 2);
+	const sw2 = swHex.slice(2, 4);
+	const rawData = (document.getElementById('resp-data').value || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+
+	const out = document.getElementById('resp-output');
+	let html = '';
+
+	if (!sw1 || !sw2) {
+		html += '<span class="text-red-500">Please enter SW1 and SW2</span>';
+		out.innerHTML = html;
+		return;
+	}
+
+	const cat = getSwCategory(cmd);
+	const swDesc = lookupSw(sw1, sw2, cat);
+	const isOk = sw1 === '90' && sw2 === '00';
+
+	html += '<div class="mb-2">';
+	if (isOk) {
+		html += '<span class="text-green-600 dark:text-green-400 font-bold">✓</span> ';
+	} else {
+		html += '<span class="text-red-500 dark:text-red-400 font-bold">✗</span> ';
+	}
+	html += 'SW1=' + sw1 + ' SW2=' + sw2;
+	if (cmd && SW_CMD_NAMES[cmd]) html += ' <span class="text-gray-500">(' + SW_CMD_NAMES[cmd] + ')</span>';
+	html += '<br>';
+	if (swDesc) {
+		html += '<span class="text-gray-700 dark:text-slate-300">' + swDesc + '</span>';
+	} else {
+		html += '<span class="text-yellow-600 dark:text-yellow-400">Unknown status word</span>';
+	}
+	html += '</div>';
+
+	if (rawData) {
+		html += '<div class="mt-2 pt-2 border-t border-gray-300 dark:border-slate-600">';
+		html += '<div class="text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Response Data</div>';
+		if (cmd === 'ram-get-status') {
+			const tlv = parseTLV(rawData);
+			if (tlv.length) {
+				html += '<pre class="text-xs leading-relaxed">' + formatTlvTree(tlv) + '</pre>';
+			} else {
+				html += '<span class="text-gray-500">' + rawData.replace(/(..)/g, '$1 ').trim() + '</span>';
+			}
+		} else if (cmd === 'ram-get-data') {
+			const tlv = parseTLV(rawData);
+			if (tlv.length) {
+				html += '<pre class="text-xs leading-relaxed">' + formatTlvTree(tlv) + '</pre>';
+			} else {
+				html += '<span class="text-gray-500">' + rawData.replace(/(..)/g, '$1 ').trim() + '</span>';
+			}
+		} else if (cmd === 'sim-select' || cmd === 'ram-select') {
+			const tlv = parseTLV(rawData);
+			if (tlv.length) {
+				html += '<pre class="text-xs leading-relaxed">' + formatTlvTree(tlv) + '</pre>';
+			} else {
+				html += '<span class="text-gray-500">' + rawData.replace(/(..)/g, '$1 ').trim() + '</span>';
+			}
+		} else {
+			html += '<span class="text-gray-500">' + rawData.replace(/(..)/g, '$1 ').trim() + '</span>';
+		}
+		html += '</div>';
+	}
+
+	out.innerHTML = html;
+}
 if (localStorage.getItem('theme') === 'dark' ||
     (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
 	document.documentElement.classList.add('dark');
