@@ -1,4 +1,4 @@
-# OTAMan — APDU Helper & Secured Packet Builder
+# OTAMan — APDU Helper & Secured Packet Builder, SIM OTA in PWA
 
 Standalone offline HTML/JS tool for building APDU commands for SIM, USIM, and GlobalPlatform RAM, assembling secure packets per ETSI TS 102 225, and constructing BER-TLV command scripts per ETSI TS 102 226.
 
@@ -370,6 +370,13 @@ Swaps nibble pairs of an even-length hex string.
 - pySim: enc_imsi() implementation
 
 ---
+
+## PWA
+
+OTAMan is a Progressive Web App and can be installed for offline use. Use the **INSTALL PWA** button in the header, or use the browser's install prompt.
+
+- Service worker pre-caches all assets on first visit
+- App icons at 192×192 and 512×512
 
 ## Theme
 

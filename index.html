@@ -6,6 +6,9 @@
 <title>OTAMan</title>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" type="image/png" href="sim.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="des-bundle.js"></script>
 </head>
 <body class="bg-neutral-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200">
@@ -14,7 +17,8 @@
 
 	<div class="flex items-center justify-between mb-6">
 		<h1 class="text-2xl font-bold text-heading">OTAMan</h1>
-		<div class="flex items-center gap-2">
+		<div class="flex items-center gap-4">
+			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
 			<button onclick="toggleTheme()" id="theme-btn" class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700">🌙</button>
 		</div>
@@ -2369,6 +2373,26 @@ toggleSimOverride('usim');
 updateP1P2Display('sim');
 updateP1P2Display('usim');
 updateRamFields();
+// PWA
+let deferredPrompt;
+const installBtn = document.getElementById('install-btn');
+if (!window.matchMedia('(display-mode: standalone)').matches) {
+	window.addEventListener('beforeinstallprompt', e => {
+		e.preventDefault();
+		deferredPrompt = e;
+		installBtn.style.display = '';
+	});
+	installBtn.addEventListener('click', async () => {
+		if (!deferredPrompt) return;
+		deferredPrompt.prompt();
+		const { outcome } = await deferredPrompt.userChoice;
+		if (outcome === 'accepted') deferredPrompt = null;
+	});
+	window.addEventListener('appinstalled', () => { installBtn.style.display = 'none'; });
+}
+if ('serviceWorker' in navigator) {
+	navigator.serviceWorker.register('sw.js');
+}
 </script>
 
 </body>
