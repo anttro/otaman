@@ -31,6 +31,7 @@
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="ram">RAM</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="sp">Secured Packet</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="response">Response parser</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="pysim">pySim</button>
 	</div>
 
 	<div id="tab-sim" class="tab-content">
@@ -812,6 +813,77 @@
 		</div>
 		<button onclick="decodeResponse()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Декодировать</button>
 		<div id="resp-output" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 whitespace-pre-wrap" style="min-height:100px"></div>
+	</div>
+
+	<div id="tab-pysim" class="tab-content hidden">
+		<div id="pysim-connect-row" class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Server URL</label>
+			<div class="flex gap-2 items-center">
+				<input id="pysim-url" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" value="http://127.0.0.1:8080">
+				<button onclick="pysimConnect()" id="pysim-connect-btn" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Connect</button>
+			</div>
+		</div>
+		<div id="pysim-connect-info" class="mb-3 text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
+			<p>To connect, install and start the <b>pysim-otaman-server</b>:</p>
+			<p><code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">pip install pysim-otaman-server</code></p>
+			<p><code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">pysim-otaman-server --http-port 8080</code></p>
+			<p class="mt-1">Then connect to a SIM card reader and click <b>Connect</b> above.</p>
+		</div>
+		<div id="pysim-connected-row" class="mb-3 hidden">
+			<div class="flex items-center gap-2">
+				<span id="pysim-status-dot" class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+				<span class="text-sm font-medium">Connected</span>
+				<button onclick="pysimStatusCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Status</button>
+				<button onclick="pysimResetCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Reset</button>
+				<button onclick="pysimEquipCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Equip</button>
+				<button onclick="pysimDisconnect()" id="pysim-disconnect-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Disconnect</button>
+			</div>
+		</div>
+		<div id="pysim-status" class="mb-3 text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+
+		<div class="flex gap-1 mb-2">
+			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-blue-600 text-white" data-pysim-sub="cmd">Command</button>
+			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu">Raw APDU</button>
+			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="files">Files</button>
+		</div>
+
+		<div id="pysim-sub-cmd">
+			<div class="flex gap-2 items-center mb-2">
+				<input id="pysim-cmd" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" list="pysim-cmdlist" onkeydown="pysimCmdKeydown(event)">
+				<datalist id="pysim-cmdlist"></datalist>
+				<button onclick="pysimExec()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Execute</button>
+			</div>
+			<textarea id="pysim-cmd-output" rows="10" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		</div>
+
+		<div id="pysim-sub-apdu" class="hidden">
+			<div class="flex gap-2 items-center mb-2">
+				<input id="pysim-apdu" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00A4040000" onkeydown="if(event.key==='Enter')pysimApdu()">
+				<button onclick="pysimApdu()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Send</button>
+			</div>
+			<textarea id="pysim-apdu-output" rows="5" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		</div>
+
+		<div id="pysim-sub-files" class="hidden">
+			<div class="flex gap-2">
+				<div class="w-1/3 border border-gray-300 dark:border-slate-600 rounded p-2 text-xs font-mono overflow-y-auto bg-gray-50 dark:bg-slate-800" style="max-height:420px">
+					<div id="pysim-fs-tree"></div>
+				</div>
+				<div class="flex-1">
+					<div id="pysim-fs-detail" class="hidden">
+						<div class="text-xs font-mono mb-1">File: <b id="pysim-fs-filename"></b></div>
+						<div id="pysim-fs-content" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800 min-h-20 overflow-y-auto"></div>
+						<div class="flex gap-2 mt-1 items-center">
+							<button onclick="pysimFsRead()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Read</button>
+							<span class="text-xs text-gray-400 dark:text-slate-500">|</span>
+							<span class="pysim-mode-pill px-2 py-0.5 text-xs rounded cursor-pointer bg-blue-600 text-white" data-mode="raw" onclick="pysimFsSetMode('raw')">Raw</span>
+							<span class="pysim-mode-pill px-2 py-0.5 text-xs rounded cursor-pointer bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300" data-mode="dec" onclick="pysimFsSetMode('dec')">Decoded</span>
+						</div>
+						<div id="pysim-fs-status" class="mt-1 text-xs font-mono text-gray-500 dark:text-slate-400" style="min-height:1.2em"></div>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	</div>
@@ -2351,6 +2423,441 @@ function decodeResponse() {
 
 	out.innerHTML = html;
 }
+
+// ===== pysim integration =====
+let pysimBase = 'http://127.0.0.1:8080';
+
+function esc(str) {
+	return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function pysimFetch(path, body) {
+	const url = pysimBase + path;
+	const opts = { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' } };
+	if (body) opts.body = JSON.stringify(body);
+	const res = await fetch(url, opts);
+	return await res.json();
+}
+
+function pysimSetDot(ok) {
+	const dot = document.getElementById('pysim-status-dot');
+	dot.className = 'inline-block w-3 h-3 rounded-full ' + (ok ? 'bg-green-500' : 'bg-red-500');
+}
+
+function pysimShowConnected(connected) {
+	document.getElementById('pysim-connect-row').classList.toggle('hidden', connected);
+	document.getElementById('pysim-connect-info').classList.toggle('hidden', connected);
+	document.getElementById('pysim-connected-row').classList.toggle('hidden', !connected);
+}
+
+async function pysimRefresh() {
+	const statusEl = document.getElementById('pysim-status');
+	try {
+		const data = await pysimFetch('/api/status');
+		pysimSetDot(true);
+		let html = 'Reader: <b>' + esc(data.reader || 'none') + '</b>' +
+			' | Card: <b>' + esc(data.card || 'none') + '</b>' +
+			' | Profile: <b>' + esc(data.profile || 'none') + '</b><br>' +
+			'ATR: <b>' + esc(data.atr || 'n/a') + '</b>' +
+			(data.cla_byte ? ' | CLA: <b>' + esc(data.cla_byte) + '</b>' : '') +
+			(data.sel_ctrl ? ' | SEL: <b>' + esc(data.sel_ctrl) + '</b>' : '') +
+			' | Channels: <b>' + (data.channels && data.channels.length ? data.channels.join(', ') : 'none') + '</b><br>' +
+			'ADM: <b>' + (data.adm_verified ? 'verified' : 'not verified') + '</b>' +
+			' | Selection: <b>' + (data.current_selection
+				? (data.current_selection.name || data.current_selection.fid || '?')
+				: 'none') + '</b>' +
+			(data.current_selection
+				? ' [' + (data.current_selection.type || '?') + ']' +
+				  (data.current_selection.file_type ? ' ' + (({transparent:'TR',linear_fixed:'LF',cyclic:'CY',ber_tlv:'BT',df:'DF'})[data.current_selection.file_type] || '') : '') +
+				  ' FID=' + (data.current_selection.fid || '?') +
+				  (data.current_selection.path ? ' path=' + data.current_selection.path : '') +
+				  (data.current_selection.file_size ? ' size=' + data.current_selection.file_size : '') +
+				  (data.current_selection.record_len ? ' rec_len=' + data.current_selection.record_len : '') +
+				  (data.current_selection.num_of_rec ? ' rec_cnt=' + data.current_selection.num_of_rec : '')
+				: '');
+		statusEl.innerHTML = html;
+		return true;
+	} catch (e) {
+		pysimSetDot(false);
+		statusEl.textContent = 'Connection failed: ' + e.message;
+		return false;
+	}
+}
+
+async function pysimConnect() {
+	const urlInput = document.getElementById('pysim-url');
+	pysimBase = urlInput.value.replace(/\/+$/, '');
+	const btn = document.getElementById('pysim-connect-btn');
+	btn.disabled = true;
+	btn.textContent = 'Connecting...';
+	const ok = await pysimRefresh();
+	btn.textContent = ok ? 'Connected' : 'Connect';
+	btn.disabled = false;
+	if (ok) {
+		pysimShowConnected(true);
+		pysimLoadCommands();
+		pysimFsRefresh();
+	}
+}
+
+function pysimDisconnect() {
+	pysimShowConnected(false);
+	document.getElementById('pysim-status').textContent = '';
+	pysimSetDot(false);
+}
+
+async function pysimStatusCmd() {
+	await pysimFetch('/api/command', { cmd: 'status' });
+	pysimRefresh();
+}
+
+async function pysimResetCmd() {
+	await pysimFetch('/api/command', { cmd: 'reset' });
+	pysimRefresh();
+	pysimFsRefresh();
+}
+
+async function pysimEquipCmd() {
+	await pysimFetch('/api/command', { cmd: 'equip' });
+	pysimRefresh();
+	pysimFsRefresh();
+}
+
+async function pysimExec() {
+	const cmd = document.getElementById('pysim-cmd').value.trim();
+	if (!cmd) return;
+	const out = document.getElementById('pysim-cmd-output');
+	out.value = '> ' + cmd + '\n';
+	try {
+		const data = await pysimFetch('/api/command', { cmd });
+		out.value += data.output || '(no output)';
+	} catch (e) {
+		out.value += 'Error: ' + e.message;
+	}
+	pysimRefresh();
+}
+
+async function pysimApdu() {
+	const apdu = document.getElementById('pysim-apdu').value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+	if (!apdu) return;
+	const out = document.getElementById('pysim-apdu-output');
+	out.value = '> ' + apdu + '\n';
+	try {
+		const data = await pysimFetch('/api/apdu', { apdu });
+		if (data.error) {
+			out.value += 'Error: ' + data.error;
+		} else {
+			out.value += 'Response: ' + data.response + '\nSW: ' + data.sw;
+		}
+	} catch (e) {
+		out.value += 'Error: ' + e.message;
+	}
+	pysimRefresh();
+}
+
+// ===== pysim sub-tabs =====
+let pysimCmdHistory = [];
+let pysimCmdHistIdx = -1;
+
+function pysimSwitchSubtab(name) {
+	document.querySelectorAll('.pysim-subtab').forEach(btn => {
+		const isActive = btn.dataset.pysimSub === name;
+		btn.classList.toggle('bg-blue-600', isActive);
+		btn.classList.toggle('text-white', isActive);
+		btn.classList.toggle('bg-gray-200', !isActive);
+		btn.classList.toggle('dark:bg-slate-700', !isActive);
+		btn.classList.toggle('text-gray-700', !isActive);
+		btn.classList.toggle('dark:text-slate-300', !isActive);
+	});
+	['cmd', 'apdu', 'files'].forEach(s => {
+		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
+	});
+	if (name === 'files') pysimFsRefresh();
+}
+
+function pysimCmdKeydown(e) {
+	if (e.key === 'Enter') {
+		const cmd = e.target.value.trim();
+		if (cmd) {
+			pysimCmdHistory.push(cmd);
+			pysimCmdHistIdx = pysimCmdHistory.length;
+		}
+		pysimExec();
+	} else if (e.key === 'ArrowUp') {
+		e.preventDefault();
+		if (pysimCmdHistIdx > 0) {
+			pysimCmdHistIdx--;
+			e.target.value = pysimCmdHistory[pysimCmdHistIdx];
+		}
+	} else if (e.key === 'ArrowDown') {
+		e.preventDefault();
+		if (pysimCmdHistIdx < pysimCmdHistory.length - 1) {
+			pysimCmdHistIdx++;
+			e.target.value = pysimCmdHistory[pysimCmdHistIdx];
+		} else {
+			pysimCmdHistIdx = pysimCmdHistory.length;
+			e.target.value = '';
+		}
+	}
+}
+
+async function pysimLoadCommands() {
+	const list = document.getElementById('pysim-cmdlist');
+	try {
+		const data = await pysimFetch('/api/commands');
+		if (Array.isArray(data)) {
+			list.innerHTML = data.map(c => '<option value="' + esc(c) + '">').join('');
+		}
+	} catch (e) {}
+}
+
+// ===== pysim file browser =====
+let pysimFsTreeRoot = null;
+
+async function pysimFsSelectNode(node) {
+	let sel;
+	if (node.name === 'MF') {
+		sel = 'MF';
+	} else if (node.name.startsWith('ADF.')) {
+		sel = node.name;
+	} else if (node.fid) {
+		sel = node.fid;
+	} else {
+		sel = node.name;
+	}
+	await pysimFetch('/api/command', { cmd: 'select ' + sel });
+}
+
+async function pysimFsRefresh() {
+	const detailEl = document.getElementById('pysim-fs-detail');
+	detailEl.classList.add('hidden');
+	await pysimFetch('/api/command', { cmd: 'select MF' });
+	const status = await pysimFetch('/api/status');
+	const cur = status.current_selection;
+	pysimFsTreeRoot = {
+		name: cur ? cur.name : 'MF',
+		path: cur ? cur.path : 'MF',
+		fid: cur ? cur.fid : '3F00',
+		isDir: true,
+		children: null,
+		expanded: true,
+		parent: null,
+	};
+	await pysimFsLoadChildren(pysimFsTreeRoot);
+	pysimFsRenderTree();
+}
+
+async function pysimFsLoadChildren(node) {
+	if (node.children) return;
+	try {
+		await pysimFsSelectNode(node);
+		const st = await pysimFetch('/api/status');
+		if (st.current_selection && st.current_selection.name !== node.name) {
+			throw new Error('File not found');
+		}
+		const data = await pysimFetch('/api/command', { cmd: 'tree' });
+		const lines = (data.output || '').split('\n');
+		const children = [];
+		for (const line of lines) {
+			if (line.startsWith(' ')) continue;
+			const m = line.match(/^(\S+)\s+([0-9a-fA-F]{4})?(?:\s|$)/);
+			if (m) {
+				const name = m[1];
+				const fid = m[2] ? m[2].toLowerCase() : null;
+				children.push({
+					name: name,
+					fid: fid,
+					isDir: name.startsWith('ADF.') || name.startsWith('DF.') || name === 'MF',
+					children: null,
+					expanded: false,
+					exists: true,
+					parent: node,
+				});
+			}
+		}
+		node.children = children;
+		node.exists = true;
+	} catch (e) {
+		node.exists = false;
+		node.children = [];
+		pysimFsRenderTree();
+	}
+}
+
+function pysimFsRenderTree() {
+	const el = document.getElementById('pysim-fs-tree');
+	if (!pysimFsTreeRoot) { el.innerHTML = '(loading)'; return; }
+	el.innerHTML = pysimFsRenderNode(pysimFsTreeRoot, 0);
+}
+
+function pysimFsRenderNode(node, depth) {
+	if (!node) return '';
+	const pad = '&nbsp;'.repeat(depth * 4);
+	const isDir = node.isDir;
+	const exists = node.exists !== false;
+	const color = exists ? (isDir ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-slate-300') : 'text-red-400 dark:text-red-400';
+	let html = '<div class="' + color + '">';
+	html += pad;
+	if (!exists) {
+		html += '✗ ';
+	}
+	if (isDir) {
+		if (exists) {
+			const toggle = node.children && node.expanded ? '▼' : '▶';
+			html += '<span class="cursor-pointer select-none" onclick="pysimFsToggleDir(\'' + esc(node.name) + '\')">' + toggle + '</span> ';
+			html += '<span class="cursor-pointer hover:underline" onclick="pysimFsToggleDir(\'' + esc(node.name) + '\')">' + esc(node.name) + '</span>';
+		} else {
+			html += esc(node.name) + '</div>';
+			return html;
+		}
+	} else {
+		html += '<span class="' + (exists ? 'cursor-pointer hover:underline ml-4' : 'ml-4') + '"' +
+			(exists ? ' onclick="pysimFsClickFile(\'' + esc(node.name) + '\')"' : '') + '>' + esc(node.name) + '</span>';
+	}
+	html += '</div>';
+	if (isDir && node.children && node.expanded) {
+		for (const child of node.children) {
+			html += pysimFsRenderNode(child, depth + 1);
+		}
+	}
+	return html;
+}
+
+function pysimFsFindNode(name, root) {
+	if (!root) return null;
+	if (root.name === name) return root;
+	if (root.children) {
+		for (const c of root.children) {
+			const found = pysimFsFindNode(name, c);
+			if (found) return found;
+		}
+	}
+	return null;
+}
+
+async function pysimFsToggleDir(name) {
+	const node = pysimFsFindNode(name, pysimFsTreeRoot);
+	if (!node || !node.isDir) return;
+	if (!node.children) {
+		await pysimFsLoadChildren(node);
+	}
+	node.expanded = !node.expanded;
+	pysimFsRenderTree();
+	if (node.expanded) pysimRefresh();
+}
+
+async function pysimFsClickFile(name) {
+	pysimFsSetMode('raw');
+	const node = pysimFsFindNode(name, pysimFsTreeRoot);
+	if (node && node.fid) {
+		await pysimFetch('/api/command', { cmd: 'select ' + node.fid });
+	} else {
+		await pysimFetch('/api/command', { cmd: 'select ' + name });
+	}
+	const status = await pysimFetch('/api/status');
+	const ft = status.current_selection?.file_type;
+	const label = ({ transparent: 'TR', linear_fixed: 'LF', cyclic: 'CY', ber_tlv: 'BT', df: 'DF' })[ft] || '';
+	document.getElementById('pysim-fs-filename').textContent = name + (label ? ' [' + label + ']' : '');
+	document.getElementById('pysim-fs-content').innerHTML = '';
+	document.getElementById('pysim-fs-status').textContent = '';
+	document.getElementById('pysim-fs-detail').classList.remove('hidden');
+	pysimRefresh();
+}
+
+async function pysimFsRead() {
+	const name = document.getElementById('pysim-fs-filename').textContent;
+	const out = document.getElementById('pysim-fs-content');
+	const statusEl = document.getElementById('pysim-fs-status');
+	out.innerHTML = '';
+	statusEl.textContent = 'Loading...';
+	try {
+		const node = pysimFsFindNode(name, pysimFsTreeRoot);
+		if (node && node.fid) {
+			await pysimFetch('/api/command', { cmd: 'select ' + node.fid });
+		} else {
+			await pysimFetch('/api/command', { cmd: 'select ' + name });
+		}
+		const status = await pysimFetch('/api/status');
+		const ft = status.current_selection?.file_type;
+		const isRecord = ft === 'linear_fixed' || ft === 'cyclic';
+		const cmd = pysimFsDecodedMode
+			? (isRecord ? 'read_records_decoded' : 'read_binary_decoded')
+			: (isRecord ? 'read_records' : 'read_binary');
+		const data = await pysimFetch('/api/command', { cmd });
+		const output = data.output || '';
+		const swMatch = output.match(/SW:\s*(\w+)/);
+		const sw = swMatch ? swMatch[1] : null;
+		const errMatch = output.match(/got (\w+)/);
+		if (errMatch) {
+			const swErr = errMatch[1];
+			const desc = ({'6982':'Security status not satisfied (PIN required?)','6983':'PIN blocked','6985':'Conditions of use not satisfied','6A88':'Referenced data not found','6A82':'File not found'})[swErr] || 'Error';
+			statusEl.textContent = 'SW: ' + swErr + ' — ' + desc;
+			return;
+		}
+		statusEl.textContent = sw === '9000' ? 'SW: 9000 OK' : sw ? 'SW: ' + sw : 'OK';
+		if (pysimFsDecodedMode) {
+			try {
+				const parsed = JSON.parse(output);
+				out.innerHTML = '<pre class="text-xs leading-relaxed">' + esc(JSON.stringify(parsed, null, 2)) + '</pre>';
+			} catch (e) {
+				out.innerHTML = '<textarea rows="8" readonly class="w-full font-mono text-xs border-0 bg-transparent resize-none">' + esc(output) + '</textarea>';
+			}
+		} else {
+			const clean = output.replace(/^SW:\s*\w+\s*/m, '').replace(/^SW:\s*\w+\s*/m, '').trim();
+			if (isRecord) {
+				const lines = clean.split('\n');
+				let html = '';
+				for (const line of lines) {
+					const m = line.match(/^(\d+)\s(.+)/);
+					if (m) {
+						html += '<div class="flex items-center gap-1 mb-1">' +
+							'<span class="text-xs w-8 text-gray-500 dark:text-slate-400 shrink-0">' + m[1] + '</span>' +
+							'<input class="flex-1 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200" value="' + esc(m[2]) + '" readonly>' +
+							'</div>';
+					}
+				}
+				out.innerHTML = html || '(no records)';
+			} else {
+				out.innerHTML = '<textarea rows="8" readonly class="w-full font-mono text-xs border-0 bg-transparent resize-none">' + esc(clean) + '</textarea>';
+			}
+		}
+	} catch (e) {
+		statusEl.textContent = 'Error: ' + e.message;
+	}
+}
+
+async function pysimFsSelect() {
+	const name = document.getElementById('pysim-fs-filename').textContent;
+	const node = pysimFsFindNode(name, pysimFsTreeRoot);
+	if (node && node.fid) {
+		await pysimFetch('/api/command', { cmd: 'select ' + node.fid });
+	} else {
+		await pysimFetch('/api/command', { cmd: 'select ' + name });
+	}
+	pysimFsRefresh();
+	pysimRefresh();
+}
+
+let pysimFsDecodedMode = false;
+
+function pysimFsSetMode(mode) {
+	pysimFsDecodedMode = mode === 'dec';
+	document.querySelectorAll('.pysim-mode-pill').forEach(el => {
+		const active = el.dataset.mode === mode;
+		el.classList.toggle('bg-blue-600', active);
+		el.classList.toggle('text-white', active);
+		el.classList.toggle('bg-gray-200', !active);
+		el.classList.toggle('dark:bg-slate-700', !active);
+		el.classList.toggle('text-gray-700', !active);
+		el.classList.toggle('dark:text-slate-300', !active);
+	});
+}
+
+// Init sub-tab pills
+document.querySelectorAll('.pysim-subtab').forEach(btn => {
+	btn.addEventListener('click', () => pysimSwitchSubtab(btn.dataset.pysimSub));
+});
+
 if (localStorage.getItem('theme') === 'dark' ||
     (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
 	document.documentElement.classList.add('dark');
