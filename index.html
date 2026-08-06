@@ -824,47 +824,27 @@
 			</div>
 		</div>
 		<div id="pysim-connect-info" class="mb-3 text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
-			<p>To connect, install and start the <b>pysim-otaman-server</b>:</p>
-			<p><code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">pip install pysim-otaman-server</code></p>
-			<p><code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">pysim-otaman-server --http-port 8080</code></p>
-			<p class="mt-1">Then connect to a SIM card reader and click <b>Connect</b> above.</p>
+			<p>To connect, install <a href="https://github.com/anttro/pysim-otaman-server" target="_blank" class="text-blue-600 dark:text-blue-400 underline">pysim-otaman-server</a>: <code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">git clone https://github.com/anttro/pysim-otaman-server.git</code> and start it. Refer to README.md for details. Click <b>Connect</b> once pysim-otaman-server is ready.</p>
 		</div>
 		<div id="pysim-connected-row" class="mb-3 hidden">
 			<div class="flex items-center gap-2">
 				<span id="pysim-status-dot" class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
 				<span class="text-sm font-medium">Connected</span>
-				<button onclick="pysimStatusCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Status</button>
-				<button onclick="pysimResetCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Reset</button>
-				<button onclick="pysimEquipCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Equip</button>
-				<button onclick="pysimDisconnect()" id="pysim-disconnect-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Disconnect</button>
+				<button onclick="pysimEquipCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Equip card</button>
+				<button onclick="pysimStatusCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Check status</button>
+				<button onclick="pysimResetCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Reset card</button>
+				<button onclick="pysimDisconnect()" id="pysim-disconnect-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Disconnect from pySim</button>
 			</div>
 		</div>
 		<div id="pysim-status" class="mb-3 text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 
 		<div class="flex gap-1 mb-2">
-			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-blue-600 text-white" data-pysim-sub="cmd">Command</button>
+			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-blue-600 text-white" data-pysim-sub="files">File manager</button>
+			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd">pySim command line</button>
 			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu">Raw APDU</button>
-			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="files">Files</button>
 		</div>
 
-		<div id="pysim-sub-cmd">
-			<div class="flex gap-2 items-center mb-2">
-				<input id="pysim-cmd" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" list="pysim-cmdlist" onkeydown="pysimCmdKeydown(event)">
-				<datalist id="pysim-cmdlist"></datalist>
-				<button onclick="pysimExec()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Execute</button>
-			</div>
-			<textarea id="pysim-cmd-output" rows="10" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		</div>
-
-		<div id="pysim-sub-apdu" class="hidden">
-			<div class="flex gap-2 items-center mb-2">
-				<input id="pysim-apdu" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00A4040000" onkeydown="if(event.key==='Enter')pysimApdu()">
-				<button onclick="pysimApdu()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Send</button>
-			</div>
-			<textarea id="pysim-apdu-output" rows="5" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		</div>
-
-		<div id="pysim-sub-files" class="hidden">
+		<div id="pysim-sub-files">
 			<div class="flex gap-2">
 				<div class="w-1/3 border border-gray-300 dark:border-slate-600 rounded p-2 text-xs font-mono overflow-y-auto bg-gray-50 dark:bg-slate-800" style="max-height:420px">
 					<div id="pysim-fs-tree"></div>
@@ -883,6 +863,23 @@
 					</div>
 				</div>
 			</div>
+		</div>
+
+		<div id="pysim-sub-cmd" class="hidden">
+			<div class="flex gap-2 items-center mb-2">
+				<input id="pysim-cmd" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" list="pysim-cmdlist" onkeydown="pysimCmdKeydown(event)">
+				<datalist id="pysim-cmdlist"></datalist>
+				<button onclick="pysimExec()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Execute</button>
+			</div>
+			<textarea id="pysim-cmd-output" rows="10" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		</div>
+
+		<div id="pysim-sub-apdu" class="hidden">
+			<div class="flex gap-2 items-center mb-2">
+				<input id="pysim-apdu" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00A4040000" onkeydown="if(event.key==='Enter')pysimApdu()">
+				<button onclick="pysimApdu()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Send</button>
+			</div>
+			<textarea id="pysim-apdu-output" rows="5" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		</div>
 	</div>
 
@@ -2490,14 +2487,34 @@ async function pysimConnect() {
 	const btn = document.getElementById('pysim-connect-btn');
 	btn.disabled = true;
 	btn.textContent = 'Connecting...';
-	const ok = await pysimRefresh();
-	btn.textContent = ok ? 'Connected' : 'Connect';
-	btn.disabled = false;
-	if (ok) {
+	const statusEl = document.getElementById('pysim-status');
+	statusEl.innerHTML = '<span class="text-gray-500">Checking card...</span>';
+	try {
+		const status = await pysimFetch('/api/status');
+		if (!status.app_ready) {
+			throw new Error('Server not ready');
+		}
+		const cmd = await pysimFetch('/api/command', { cmd: 'status' });
+		if (cmd.output && (cmd.output.includes('Exception') || cmd.output.includes('ProtocolError'))) {
+			pysimSetDot(false);
+			statusEl.innerHTML = '<span class="text-red-500">No card detected. Insert card and click Equip card button</span>';
+			pysimShowConnected(true);
+			btn.textContent = 'Connected';
+			btn.disabled = false;
+			return;
+		}
+		pysimSetDot(true);
 		pysimShowConnected(true);
+		await pysimRefresh();
 		pysimLoadCommands();
 		pysimFsRefresh();
+		btn.textContent = 'Connected';
+	} catch (e) {
+		pysimSetDot(false);
+		statusEl.innerHTML = '<span class="text-red-500">Connection failed: ' + esc(e.message) + '</span>';
+		btn.textContent = 'Connect';
 	}
+	btn.disabled = false;
 }
 
 function pysimDisconnect() {
@@ -2506,21 +2523,48 @@ function pysimDisconnect() {
 	pysimSetDot(false);
 }
 
+async function pysimRunCmd(cmd) {
+	const statusEl = document.getElementById('pysim-status');
+	try {
+		const result = await pysimFetch('/api/command', { cmd });
+		if (result.output && (result.output.includes('Exception') || result.output.includes('ProtocolError') || result.output.includes('SwMatchError'))) {
+			pysimSetDot(false);
+			statusEl.innerHTML = '<span class="text-red-500">No card detected. Insert card and click Equip card button</span>';
+			return null;
+		}
+		return result;
+	} catch (e) {
+		pysimSetDot(false);
+		statusEl.innerHTML = '<span class="text-red-500">No card detected. Insert card and click Equip card button</span>';
+		return null;
+	}
+}
+
 async function pysimStatusCmd() {
-	await pysimFetch('/api/command', { cmd: 'status' });
-	pysimRefresh();
+	const statusEl = document.getElementById('pysim-status');
+	statusEl.innerHTML = '<span class="text-gray-500">Checking...</span>';
+	const result = await pysimRunCmd('status');
+	if (result) await pysimRefresh();
 }
 
 async function pysimResetCmd() {
-	await pysimFetch('/api/command', { cmd: 'reset' });
-	pysimRefresh();
-	pysimFsRefresh();
+	const statusEl = document.getElementById('pysim-status');
+	statusEl.innerHTML = '<span class="text-gray-500">Resetting...</span>';
+	const result = await pysimRunCmd('reset');
+	if (result) {
+		await pysimRefresh();
+		pysimFsRefresh();
+	}
 }
 
 async function pysimEquipCmd() {
-	await pysimFetch('/api/command', { cmd: 'equip' });
-	pysimRefresh();
-	pysimFsRefresh();
+	const statusEl = document.getElementById('pysim-status');
+	statusEl.innerHTML = '<span class="text-gray-500">Equipping...</span>';
+	const result = await pysimRunCmd('equip');
+	if (result) {
+		await pysimRefresh();
+		pysimFsRefresh();
+	}
 }
 
 async function pysimExec() {
@@ -2614,68 +2658,66 @@ async function pysimLoadCommands() {
 // ===== pysim file browser =====
 let pysimFsTreeRoot = null;
 
-async function pysimFsSelectNode(node) {
-	let sel;
-	if (node.name === 'MF') {
-		sel = 'MF';
-	} else if (node.name.startsWith('ADF.')) {
-		sel = node.name;
-	} else if (node.fid) {
-		sel = node.fid;
-	} else {
-		sel = node.name;
-	}
-	await pysimFetch('/api/command', { cmd: 'select ' + sel });
+function getParentSel(node) {
+	if (!node || !node.parent) return null;
+	const p = node.parent;
+	if (p.name === 'MF') return 'MF';
+	if (p.name.startsWith('ADF.')) return p.name;
+	if (p.fid) return p.fid;
+	return p.name;
 }
 
 async function pysimFsRefresh() {
 	const detailEl = document.getElementById('pysim-fs-detail');
 	detailEl.classList.add('hidden');
-	await pysimFetch('/api/command', { cmd: 'select MF' });
-	const status = await pysimFetch('/api/status');
-	const cur = status.current_selection;
+	const data = await pysimFetch('/api/tree', { name: 'MF' });
 	pysimFsTreeRoot = {
-		name: cur ? cur.name : 'MF',
-		path: cur ? cur.path : 'MF',
-		fid: cur ? cur.fid : '3F00',
+		name: data.name || 'MF',
+		path: data.name || 'MF',
+		fid: data.fid || '3F00',
 		isDir: true,
 		children: null,
 		expanded: true,
 		parent: null,
 	};
-	await pysimFsLoadChildren(pysimFsTreeRoot);
+	pysimFsTreeRoot.children = (data.children || []).map(c => ({
+		name: c.name,
+		fid: c.fid,
+		isDir: c.isDir,
+		aid: c.aid,
+		children: null,
+		expanded: false,
+		exists: true,
+		parent: pysimFsTreeRoot,
+	}));
+	pysimFsTreeRoot.exists = true;
 	pysimFsRenderTree();
 }
 
 async function pysimFsLoadChildren(node) {
 	if (node.children) return;
 	try {
-		await pysimFsSelectNode(node);
-		const st = await pysimFetch('/api/status');
-		if (st.current_selection && st.current_selection.name !== node.name) {
+		let body = { name: node.name, fid: node.fid };
+		const parentSel = getParentSel(node);
+		if (parentSel) body.parent_sel = parentSel;
+		let data = await pysimFetch('/api/tree', body);
+		if (!data || data.exists === false) {
+			body = { name: node.name, fid: node.fid };
+			data = await pysimFetch('/api/tree', body);
+		}
+		if (!data || data.exists === false) {
 			throw new Error('File not found');
 		}
-		const data = await pysimFetch('/api/command', { cmd: 'tree' });
-		const lines = (data.output || '').split('\n');
-		const children = [];
-		for (const line of lines) {
-			if (line.startsWith(' ')) continue;
-			const m = line.match(/^(\S+)\s+([0-9a-fA-F]{4})?(?:\s|$)/);
-			if (m) {
-				const name = m[1];
-				const fid = m[2] ? m[2].toLowerCase() : null;
-				children.push({
-					name: name,
-					fid: fid,
-					isDir: name.startsWith('ADF.') || name.startsWith('DF.') || name === 'MF',
-					children: null,
-					expanded: false,
-					exists: true,
-					parent: node,
-				});
-			}
-		}
-		node.children = children;
+		node.children = (data.children || []).map(c => ({
+			name: c.name,
+			fid: c.fid,
+			isDir: c.isDir,
+			aid: c.aid,
+			children: null,
+			expanded: false,
+			exists: true,
+			parent: node,
+		}));
 		node.exists = true;
 	} catch (e) {
 		node.exists = false;
@@ -2696,6 +2738,8 @@ function pysimFsRenderNode(node, depth) {
 	const isDir = node.isDir;
 	const exists = node.exists !== false;
 	const color = exists ? (isDir ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-slate-300') : 'text-red-400 dark:text-red-400';
+	const fidStr = node.fid ? ' <span class="text-gray-400 dark:text-slate-500">(' + node.fid.toUpperCase() + ')</span>' : '';
+	const aidStr = node.aid ? ' <span class="text-gray-400 dark:text-slate-500">[' + node.aid + ']</span>' : '';
 	let html = '<div class="' + color + '">';
 	html += pad;
 	if (!exists) {
@@ -2705,14 +2749,14 @@ function pysimFsRenderNode(node, depth) {
 		if (exists) {
 			const toggle = node.children && node.expanded ? '▼' : '▶';
 			html += '<span class="cursor-pointer select-none" onclick="pysimFsToggleDir(\'' + esc(node.name) + '\')">' + toggle + '</span> ';
-			html += '<span class="cursor-pointer hover:underline" onclick="pysimFsToggleDir(\'' + esc(node.name) + '\')">' + esc(node.name) + '</span>';
+			html += '<span class="cursor-pointer hover:underline" onclick="pysimFsToggleDir(\'' + esc(node.name) + '\')">' + esc(node.name) + fidStr + aidStr + '</span>';
 		} else {
-			html += esc(node.name) + '</div>';
+			html += esc(node.name) + fidStr + aidStr + '</div>';
 			return html;
 		}
 	} else {
 		html += '<span class="' + (exists ? 'cursor-pointer hover:underline ml-4' : 'ml-4') + '"' +
-			(exists ? ' onclick="pysimFsClickFile(\'' + esc(node.name) + '\')"' : '') + '>' + esc(node.name) + '</span>';
+			(exists ? ' onclick="pysimFsClickFile(\'' + esc(node.name) + '\')"' : '') + '>' + esc(node.name) + fidStr + aidStr + '</span>';
 	}
 	html += '</div>';
 	if (isDir && node.children && node.expanded) {
@@ -2749,77 +2793,68 @@ async function pysimFsToggleDir(name) {
 async function pysimFsClickFile(name) {
 	pysimFsSetMode('raw');
 	const node = pysimFsFindNode(name, pysimFsTreeRoot);
-	if (node && node.fid) {
-		await pysimFetch('/api/command', { cmd: 'select ' + node.fid });
-	} else {
-		await pysimFetch('/api/command', { cmd: 'select ' + name });
+	let body = { name: name, fid: node ? node.fid : null };
+	const parentSel = getParentSel(node);
+	if (parentSel) body.parent_sel = parentSel;
+	let sel = await pysimFetch('/api/select', body);
+	if (!sel || sel.exists === false) {
+		body = { name: name, fid: node ? node.fid : null };
+		sel = await pysimFetch('/api/select', body);
 	}
-	const status = await pysimFetch('/api/status');
-	const ft = status.current_selection?.file_type;
+	const exists = sel && sel.exists !== false;
+	if (node) {
+		node.exists = exists;
+		if (!exists) node.children = [];
+		pysimFsRenderTree();
+	}
+	const ft = exists ? sel.file_type : null;
 	const label = ({ transparent: 'TR', linear_fixed: 'LF', cyclic: 'CY', ber_tlv: 'BT', df: 'DF' })[ft] || '';
-	document.getElementById('pysim-fs-filename').textContent = name + (label ? ' [' + label + ']' : '');
+	const prefix = exists ? '' : '✗ ';
+	document.getElementById('pysim-fs-filename').textContent = prefix + name + (label ? ' [' + label + ']' : '');
 	document.getElementById('pysim-fs-content').innerHTML = '';
-	document.getElementById('pysim-fs-status').textContent = '';
-	document.getElementById('pysim-fs-detail').classList.remove('hidden');
+	document.getElementById('pysim-fs-status').textContent = exists ? '' : '✗ File not found on card';
+	if (exists) {
+		document.getElementById('pysim-fs-detail').classList.remove('hidden');
+	} else {
+		document.getElementById('pysim-fs-detail').classList.add('hidden');
+	}
 	pysimRefresh();
 }
 
 async function pysimFsRead() {
-	const name = document.getElementById('pysim-fs-filename').textContent;
+	const rawName = document.getElementById('pysim-fs-filename').textContent.replace(/ \[.*?\]$/, '').replace(/^✗ /, '');
 	const out = document.getElementById('pysim-fs-content');
 	const statusEl = document.getElementById('pysim-fs-status');
 	out.innerHTML = '';
 	statusEl.textContent = 'Loading...';
 	try {
-		const node = pysimFsFindNode(name, pysimFsTreeRoot);
-		if (node && node.fid) {
-			await pysimFetch('/api/command', { cmd: 'select ' + node.fid });
-		} else {
-			await pysimFetch('/api/command', { cmd: 'select ' + name });
+		const node = pysimFsFindNode(rawName, pysimFsTreeRoot);
+		let body = { name: rawName, fid: node ? node.fid : null, mode: pysimFsDecodedMode ? 'decoded' : 'raw' };
+		const parentSel = getParentSel(node);
+		if (parentSel) body.parent_sel = parentSel;
+		let data = await pysimFetch('/api/read', body);
+		if (!data.success) {
+			body = { name: rawName, fid: node ? node.fid : null, mode: pysimFsDecodedMode ? 'decoded' : 'raw' };
+			data = await pysimFetch('/api/read', body);
 		}
-		const status = await pysimFetch('/api/status');
-		const ft = status.current_selection?.file_type;
-		const isRecord = ft === 'linear_fixed' || ft === 'cyclic';
-		const cmd = pysimFsDecodedMode
-			? (isRecord ? 'read_records_decoded' : 'read_binary_decoded')
-			: (isRecord ? 'read_records' : 'read_binary');
-		const data = await pysimFetch('/api/command', { cmd });
-		const output = data.output || '';
-		const swMatch = output.match(/SW:\s*(\w+)/);
-		const sw = swMatch ? swMatch[1] : null;
-		const errMatch = output.match(/got (\w+)/);
-		if (errMatch) {
-			const swErr = errMatch[1];
-			const desc = ({'6982':'Security status not satisfied (PIN required?)','6983':'PIN blocked','6985':'Conditions of use not satisfied','6A88':'Referenced data not found','6A82':'File not found'})[swErr] || 'Error';
-			statusEl.textContent = 'SW: ' + swErr + ' — ' + desc;
+		if (!data.success) {
+			statusEl.textContent = 'SW: ' + (data.sw || '?') + ' — ' + (data.error || 'Error');
 			return;
 		}
-		statusEl.textContent = sw === '9000' ? 'SW: 9000 OK' : sw ? 'SW: ' + sw : 'OK';
-		if (pysimFsDecodedMode) {
-			try {
-				const parsed = JSON.parse(output);
-				out.innerHTML = '<pre class="text-xs leading-relaxed">' + esc(JSON.stringify(parsed, null, 2)) + '</pre>';
-			} catch (e) {
-				out.innerHTML = '<textarea rows="8" readonly class="w-full font-mono text-xs border-0 bg-transparent resize-none">' + esc(output) + '</textarea>';
+		statusEl.textContent = 'SW: ' + data.sw + ' OK';
+		if (data.decoded) {
+			out.innerHTML = '<pre class="text-xs leading-relaxed">' + esc(JSON.stringify(data.decoded, null, 2)) + '</pre>';
+		} else if (data.records) {
+			let html = '';
+			for (const r of data.records) {
+				html += '<div class="flex items-center gap-1 mb-1">' +
+					'<span class="text-xs w-8 text-gray-500 dark:text-slate-400 shrink-0">' + r.num + '</span>' +
+					'<input class="flex-1 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200" style="overflow-x:auto;min-width:100px" value="' + esc(r.data) + '" readonly>' +
+					'</div>';
 			}
+			out.innerHTML = html || '(no records)';
 		} else {
-			const clean = output.replace(/^SW:\s*\w+\s*/m, '').replace(/^SW:\s*\w+\s*/m, '').trim();
-			if (isRecord) {
-				const lines = clean.split('\n');
-				let html = '';
-				for (const line of lines) {
-					const m = line.match(/^(\d+)\s(.+)/);
-					if (m) {
-						html += '<div class="flex items-center gap-1 mb-1">' +
-							'<span class="text-xs w-8 text-gray-500 dark:text-slate-400 shrink-0">' + m[1] + '</span>' +
-							'<input class="flex-1 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200" value="' + esc(m[2]) + '" readonly>' +
-							'</div>';
-					}
-				}
-				out.innerHTML = html || '(no records)';
-			} else {
-				out.innerHTML = '<textarea rows="8" readonly class="w-full font-mono text-xs border-0 bg-transparent resize-none">' + esc(clean) + '</textarea>';
-			}
+			out.innerHTML = '<textarea rows="8" readonly class="w-full font-mono text-xs border-0 bg-transparent resize-none">' + esc(data.data || '(no output)') + '</textarea>';
 		}
 	} catch (e) {
 		statusEl.textContent = 'Error: ' + e.message;
