@@ -1,4 +1,4 @@
-const CACHE = 'otaman-v2';
+const CACHE = 'otaman-v3';
 const URLS = [
   'index.html',
   'style.css',
@@ -7,6 +7,9 @@ const URLS = [
   'icon-512.png',
   'manifest.json',
   'des-bundle.js',
+  'sim.svg',
+  'sim_anim.svg',
+  'nosim.svg',
 ];
 
 self.addEventListener('install', e => {

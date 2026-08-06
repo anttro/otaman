@@ -841,10 +841,9 @@
 				</div>
 			</div>
 		</div>
-		<div id="pysim-status" class="mb-3 text-xs font-mono text-gray-600 dark:text-slate-400"></div>
-
-		<div class="flex gap-1 mb-2">
-			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-blue-600 text-white" data-pysim-sub="files">File manager</button>
+		<div id="pysim-body" class="hidden">
+			<div class="flex gap-1 mb-2">
+				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-blue-600 text-white" data-pysim-sub="files">File manager</button>
 			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd">pySim command line</button>
 			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu">Raw APDU</button>
 		</div>
@@ -2454,6 +2453,7 @@ function pysimShowConnected(connected) {
 	document.getElementById('pysim-connect-row').classList.toggle('hidden', connected);
 	document.getElementById('pysim-connect-info').classList.toggle('hidden', connected);
 	document.getElementById('pysim-connected-row').classList.toggle('hidden', !connected);
+	document.getElementById('pysim-body').classList.toggle('hidden', !connected);
 }
 
 async function pysimRefresh() {
