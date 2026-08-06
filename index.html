@@ -827,13 +827,17 @@
 			<p>To connect, install <a href="https://github.com/anttro/pysim-otaman-server" target="_blank" class="text-blue-600 dark:text-blue-400 underline">pysim-otaman-server</a>: <code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">git clone https://github.com/anttro/pysim-otaman-server.git</code> and start it. Refer to README.md for details. Click <b>Connect</b> once pysim-otaman-server is ready.</p>
 		</div>
 		<div id="pysim-connected-row" class="mb-3 hidden">
-			<div class="flex items-center gap-2">
-				<span id="pysim-status-dot" class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
-				<span class="text-sm font-medium">Connected</span>
-				<button onclick="pysimEquipCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Equip card</button>
-				<button onclick="pysimStatusCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Check status</button>
-				<button onclick="pysimResetCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Reset card</button>
-				<button onclick="pysimDisconnect()" id="pysim-disconnect-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Disconnect from pySim</button>
+			<div class="flex gap-3 items-start">
+				<img id="pysim-status-img" src="nosim.svg" alt="pysim" class="w-16 h-16 shrink-0 dark:invert">
+				<div class="flex-1 min-w-0">
+					<div class="flex items-center gap-2 mb-1 flex-wrap">
+						<button onclick="pysimEquipCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Equip card</button>
+						<button onclick="pysimStatusCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Check status</button>
+						<button onclick="pysimResetCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Reset card</button>
+						<button onclick="pysimDisconnect()" id="pysim-disconnect-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Disconnect from pySim</button>
+					</div>
+					<div id="pysim-status" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+				</div>
 			</div>
 		</div>
 		<div id="pysim-status" class="mb-3 text-xs font-mono text-gray-600 dark:text-slate-400"></div>
@@ -2436,9 +2440,13 @@ async function pysimFetch(path, body) {
 	return await res.json();
 }
 
-function pysimSetDot(ok) {
-	const dot = document.getElementById('pysim-status-dot');
-	dot.className = 'inline-block w-3 h-3 rounded-full ' + (ok ? 'bg-green-500' : 'bg-red-500');
+function pysimSetConnected(state) {
+	const img = document.getElementById('pysim-status-img');
+	if (state === 'spin') {
+		img.src = 'sim_anim.svg';
+	} else {
+		img.src = state ? 'sim.svg' : 'nosim.svg';
+	}
 }
 
 function pysimShowConnected(connected) {
@@ -2451,7 +2459,7 @@ async function pysimRefresh() {
 	const statusEl = document.getElementById('pysim-status');
 	try {
 		const data = await pysimFetch('/api/status');
-		pysimSetDot(true);
+		pysimSetConnected(true);
 		let html = 'Reader: <b>' + esc(data.reader || 'none') + '</b>' +
 			' | Card: <b>' + esc(data.card || 'none') + '</b>' +
 			' | Profile: <b>' + esc(data.profile || 'none') + '</b><br>' +
@@ -2475,7 +2483,7 @@ async function pysimRefresh() {
 		statusEl.innerHTML = html;
 		return true;
 	} catch (e) {
-		pysimSetDot(false);
+		pysimSetConnected(false);
 		statusEl.textContent = 'Connection failed: ' + e.message;
 		return false;
 	}
@@ -2489,6 +2497,7 @@ async function pysimConnect() {
 	btn.textContent = 'Connecting...';
 	const statusEl = document.getElementById('pysim-status');
 	statusEl.innerHTML = '<span class="text-gray-500">Checking card...</span>';
+	pysimSetConnected('spin');
 	try {
 		const status = await pysimFetch('/api/status');
 		if (!status.app_ready) {
@@ -2496,21 +2505,21 @@ async function pysimConnect() {
 		}
 		const cmd = await pysimFetch('/api/command', { cmd: 'status' });
 		if (cmd.output && (cmd.output.includes('Exception') || cmd.output.includes('ProtocolError'))) {
-			pysimSetDot(false);
+			pysimSetConnected(false);
 			statusEl.innerHTML = '<span class="text-red-500">No card detected. Insert card and click Equip card button</span>';
 			pysimShowConnected(true);
 			btn.textContent = 'Connected';
 			btn.disabled = false;
 			return;
 		}
-		pysimSetDot(true);
+		pysimSetConnected(true);
 		pysimShowConnected(true);
 		await pysimRefresh();
 		pysimLoadCommands();
 		pysimFsRefresh();
 		btn.textContent = 'Connected';
 	} catch (e) {
-		pysimSetDot(false);
+		pysimSetConnected(false);
 		statusEl.innerHTML = '<span class="text-red-500">Connection failed: ' + esc(e.message) + '</span>';
 		btn.textContent = 'Connect';
 	}
@@ -2520,7 +2529,7 @@ async function pysimConnect() {
 function pysimDisconnect() {
 	pysimShowConnected(false);
 	document.getElementById('pysim-status').textContent = '';
-	pysimSetDot(false);
+	pysimSetConnected(false);
 }
 
 async function pysimRunCmd(cmd) {
@@ -2528,13 +2537,13 @@ async function pysimRunCmd(cmd) {
 	try {
 		const result = await pysimFetch('/api/command', { cmd });
 		if (result.output && (result.output.includes('Exception') || result.output.includes('ProtocolError') || result.output.includes('SwMatchError'))) {
-			pysimSetDot(false);
+			pysimSetConnected(false);
 			statusEl.innerHTML = '<span class="text-red-500">No card detected. Insert card and click Equip card button</span>';
 			return null;
 		}
 		return result;
 	} catch (e) {
-		pysimSetDot(false);
+		pysimSetConnected(false);
 		statusEl.innerHTML = '<span class="text-red-500">No card detected. Insert card and click Equip card button</span>';
 		return null;
 	}
@@ -2543,6 +2552,7 @@ async function pysimRunCmd(cmd) {
 async function pysimStatusCmd() {
 	const statusEl = document.getElementById('pysim-status');
 	statusEl.innerHTML = '<span class="text-gray-500">Checking...</span>';
+	pysimSetConnected('spin');
 	const result = await pysimRunCmd('status');
 	if (result) await pysimRefresh();
 }
@@ -2550,6 +2560,7 @@ async function pysimStatusCmd() {
 async function pysimResetCmd() {
 	const statusEl = document.getElementById('pysim-status');
 	statusEl.innerHTML = '<span class="text-gray-500">Resetting...</span>';
+	pysimSetConnected('spin');
 	const result = await pysimRunCmd('reset');
 	if (result) {
 		await pysimRefresh();
@@ -2560,6 +2571,7 @@ async function pysimResetCmd() {
 async function pysimEquipCmd() {
 	const statusEl = document.getElementById('pysim-status');
 	statusEl.innerHTML = '<span class="text-gray-500">Equipping...</span>';
+	pysimSetConnected('spin');
 	const result = await pysimRunCmd('equip');
 	if (result) {
 		await pysimRefresh();
