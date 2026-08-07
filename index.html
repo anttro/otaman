@@ -883,8 +883,10 @@
 
 		<div id="pysim-sub-cmd" class="hidden">
 			<div class="flex gap-2 items-center mb-2">
-				<input id="pysim-cmd" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" list="pysim-cmdlist" onkeydown="pysimCmdKeydown(event)" oninput="pysimCmdHint()">
-				<datalist id="pysim-cmdlist"></datalist>
+				<div class="relative flex-1">
+					<input id="pysim-cmd" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" onkeydown="pysimCmdKeydown(event)" oninput="pysimCmdInput()">
+					<div id="pysim-cmd-suggest" class="hidden absolute bottom-full left-0 right-0 mb-1 max-h-32 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-xs font-mono shadow-lg z-10"></div>
+				</div>
 				<button onclick="pysimExec()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Execute</button>
 			</div>
 			<div id="pysim-cmd-hint" class="hidden mb-2 text-xs font-mono text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-slate-700 rounded p-2 bg-gray-50 dark:bg-slate-800 whitespace-pre-wrap"></div>
@@ -2713,14 +2715,57 @@ async function pysimCmdHint() {
 	}, 300);
 }
 
+let pysimCmdList = [];
+
 async function pysimLoadCommands() {
-	const list = document.getElementById('pysim-cmdlist');
 	try {
 		const data = await pysimFetch('/api/commands');
-		if (Array.isArray(data)) {
-			list.innerHTML = data.map(c => '<option value="' + esc(c) + '">').join('');
-		}
+		if (Array.isArray(data)) pysimCmdList = data;
 	} catch (e) {}
+}
+
+function pysimCmdInput() {
+	const input = document.getElementById('pysim-cmd');
+	const text = input.value;
+	const suggestEl = document.getElementById('pysim-cmd-suggest');
+	const hintEl = document.getElementById('pysim-cmd-hint');
+	if (text.includes(' ')) {
+		suggestEl.classList.add('hidden');
+		const cmd = text.split(/\s+/)[0];
+		if (cmd) {
+			clearTimeout(pysimCmdHintTimeout);
+			pysimCmdHintTimeout = setTimeout(async () => {
+				try {
+					const data = await pysimFetch('/api/help', { cmd });
+					if (data.usage) {
+						hintEl.textContent = data.usage;
+						hintEl.classList.remove('hidden');
+					} else {
+						hintEl.classList.add('hidden');
+					}
+				} catch (e) {
+					hintEl.classList.add('hidden');
+				}
+			}, 300);
+			return;
+		}
+		hintEl.classList.add('hidden');
+		return;
+	}
+	hintEl.classList.add('hidden');
+	if (!text) { suggestEl.classList.add('hidden'); return; }
+	const matches = pysimCmdList.filter(c => c.startsWith(text)).slice(0, 20);
+	if (matches.length === 0) { suggestEl.classList.add('hidden'); return; }
+	suggestEl.innerHTML = matches.map(c =>
+		'<div class="px-2 py-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700" onclick="pysimCmdSelect(\'' + esc(c) + '\')">' + esc(c) + '</div>'
+	).join('');
+	suggestEl.classList.remove('hidden');
+}
+
+function pysimCmdSelect(cmd) {
+	document.getElementById('pysim-cmd').value = cmd;
+	document.getElementById('pysim-cmd-suggest').classList.add('hidden');
+	document.getElementById('pysim-cmd').focus();
 }
 
 // ===== pysim file browser =====
