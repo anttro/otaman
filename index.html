@@ -860,10 +860,13 @@
 						<div class="text-xs font-mono mb-1">File: <b id="pysim-fs-filename"></b></div>
 						<div id="pysim-fs-content" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800 min-h-20 overflow-y-auto"></div>
 						<div class="flex gap-2 mt-1 items-center">
-							<button onclick="pysimFsRead()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Read</button>
+							<button onclick="pysimFsRead()" id="pysim-fs-read-btn" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Read</button>
+							<button onclick="pysimFsSave()" id="pysim-fs-save-btn" class="px-2 py-1 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700 hidden">Save</button>
+							<button onclick="pysimFsCancel()" id="pysim-fs-cancel-btn" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700 hidden">Cancel</button>
 							<span class="text-xs text-gray-400 dark:text-slate-500">|</span>
 							<span class="pysim-mode-pill px-2 py-0.5 text-xs rounded cursor-pointer bg-blue-600 text-white" data-mode="raw" onclick="pysimFsSetMode('raw')">Raw</span>
 							<span class="pysim-mode-pill px-2 py-0.5 text-xs rounded cursor-pointer bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300" data-mode="dec" onclick="pysimFsSetMode('dec')">Decoded</span>
+							<button onclick="pysimFsEdit()" id="pysim-fs-edit-btn" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 ml-auto">Edit</button>
 						</div>
 						<div id="pysim-fs-status" class="mt-1 text-xs font-mono text-gray-500 dark:text-slate-400" style="min-height:1.2em"></div>
 					</div>
@@ -879,6 +882,11 @@
 				<button onclick="pysimCustomAdd()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap">Add</button>
 			</div>
 			<div id="pysim-cf-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+			<div class="flex gap-2 mt-2">
+				<button onclick="pysimCustomExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Export as JSON</button>
+				<button onclick="pysimCustomImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">Import JSON from clipboard</button>
+			</div>
+			<textarea id="pysim-cf-io" class="hidden mt-2 w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800" rows="6"></textarea>
 		</div>
 
 		<div id="pysim-sub-cmd" class="hidden">
@@ -2489,7 +2497,6 @@ async function pysimRefresh() {
 				: 'none') + '</b>' +
 			(data.current_selection
 				? ' [' + (data.current_selection.type || '?') + ']' +
-				  (data.current_selection.file_type ? ' ' + (({transparent:'TR',linear_fixed:'LF',cyclic:'CY',ber_tlv:'BT',df:'DF'})[data.current_selection.file_type] || '') : '') +
 				  ' FID=' + (data.current_selection.fid || '?') +
 				  (data.current_selection.path ? ' path=' + data.current_selection.path : '') +
 				  (data.current_selection.file_size ? ' size=' + data.current_selection.file_size : '') +
@@ -2785,7 +2792,7 @@ function pysimCustomInject(node) {
 	const pfid = node.fid.toLowerCase();
 	for (const c of pysimCustomFiles) {
 		if (c.parentFid.toLowerCase() !== pfid) continue;
-		const existing = (node.children || []).find(ch => ch.fid === c.fid);
+		const existing = (node.children || []).find(ch => ch.fid?.toLowerCase() === c.fid.toLowerCase());
 		if (existing) {
 			existing.name = c.name;
 			existing.custom = true;
@@ -2933,6 +2940,7 @@ async function pysimFsToggleDir(name) {
 }
 
 async function pysimFsClickFile(name) {
+	pysimFsResetEdit();
 	pysimFsSetMode('raw');
 	const node = pysimFsFindNode(name, pysimFsTreeRoot);
 	let body = { name: name, fid: node ? node.fid : null };
@@ -3015,7 +3023,77 @@ async function pysimFsSelect() {
 	pysimRefresh();
 }
 
-let pysimFsDecodedMode = false;
+let pysimFsEditMode = false;
+let pysimFsEditData = null;
+
+function pysimFsEdit() {
+	pysimFsEditMode = true;
+	document.getElementById('pysim-fs-read-btn').classList.add('hidden');
+	document.getElementById('pysim-fs-edit-btn').classList.add('hidden');
+	document.getElementById('pysim-fs-save-btn').classList.remove('hidden');
+	document.getElementById('pysim-fs-cancel-btn').classList.remove('hidden');
+	const out = document.getElementById('pysim-fs-content');
+	out.querySelectorAll('textarea, input').forEach(el => el.removeAttribute('readonly'));
+	// Store current data for save
+	pysimFsEditData = out.innerHTML;
+}
+
+function pysimFsCancel() {
+	pysimFsEditMode = false;
+	document.getElementById('pysim-fs-read-btn').classList.remove('hidden');
+	document.getElementById('pysim-fs-edit-btn').classList.remove('hidden');
+	document.getElementById('pysim-fs-save-btn').classList.add('hidden');
+	document.getElementById('pysim-fs-cancel-btn').classList.add('hidden');
+	const out = document.getElementById('pysim-fs-content');
+	if (pysimFsEditData) out.innerHTML = pysimFsEditData;
+	pysimFsEditData = null;
+}
+
+async function pysimFsSave() {
+	const rawName = document.getElementById('pysim-fs-filename').textContent.replace(/ \[.*?\]$/, '').replace(/^✗ /, '');
+	const statusEl = document.getElementById('pysim-fs-status');
+	const out = document.getElementById('pysim-fs-content');
+	const node = pysimFsFindNode(rawName, pysimFsTreeRoot);
+	statusEl.textContent = 'Saving...';
+	try {
+		const textareas = out.querySelectorAll('textarea');
+		if (textareas.length === 1) {
+			// Transparent file
+			const body = { name: rawName, fid: node ? node.fid : null, data: textareas[0].value.replace(/[^0-9a-fA-F]/g, '') };
+			const parentSel = getParentSel(node);
+			if (parentSel) body.parent_sel = parentSel;
+			const data = await pysimFetch('/api/write', body);
+			if (data.success) {
+				statusEl.textContent = 'SW: ' + data.sw + ' OK';
+				pysimFsCancel();
+				pysimFsRead();
+			} else {
+				statusEl.textContent = 'SW: ' + (data.sw || '?') + ' — ' + (data.error || 'Error');
+			}
+		} else {
+			// Record file
+			const inputs = out.querySelectorAll('input');
+			for (const inp of inputs) {
+				const num = inp.closest('div')?.querySelector('span')?.textContent;
+				if (num) {
+					const body = { name: rawName, fid: node ? node.fid : null, data: inp.value.replace(/[^0-9a-fA-F]/g, ''), record_nr: parseInt(num) };
+					const parentSel = getParentSel(node);
+					if (parentSel) body.parent_sel = parentSel;
+					const data = await pysimFetch('/api/write', body);
+					if (!data.success) {
+						statusEl.textContent = 'SW: ' + (data.sw || '?') + ' — ' + (data.error || 'Error') + ' (record ' + num + ')';
+						return;
+					}
+				}
+			}
+			statusEl.textContent = 'SW: 9000 OK';
+			pysimFsCancel();
+			pysimFsRead();
+		}
+	} catch (e) {
+		statusEl.textContent = 'Error: ' + e.message;
+	}
+}
 
 function pysimFsSetMode(mode) {
 	pysimFsDecodedMode = mode === 'dec';
@@ -3028,6 +3106,15 @@ function pysimFsSetMode(mode) {
 		el.classList.toggle('text-gray-700', !active);
 		el.classList.toggle('dark:text-slate-300', !active);
 	});
+}
+
+function pysimFsResetEdit() {
+	pysimFsEditMode = false;
+	pysimFsEditData = null;
+	document.getElementById('pysim-fs-read-btn').classList.remove('hidden');
+	document.getElementById('pysim-fs-edit-btn').classList.remove('hidden');
+	document.getElementById('pysim-fs-save-btn').classList.add('hidden');
+	document.getElementById('pysim-fs-cancel-btn').classList.add('hidden');
 }
 
 // ===== custom files =====
@@ -3048,13 +3135,17 @@ function pysimCustomAdd() {
 	const pathEl = document.getElementById('pysim-cf-path');
 	const nameEl = document.getElementById('pysim-cf-name');
 	const path = pathEl.value.trim().toUpperCase();
-	const name = nameEl.value.trim().toUpperCase();
+	const name = nameEl.value.trim();
 	if (!path || !name) return;
+	if (!name.startsWith('EF.') && !name.startsWith('DF.')) {
+		alert('Alias must start with "EF." or "DF."');
+		return;
+	}
 	const parts = path.split('/').filter(Boolean);
 	if (parts.length < 2) { alert('Path must have at least 2 parts, e.g. 3F00/6F46'); return; }
 	const fid = parts[parts.length - 1];
 	const parentFid = parts[parts.length - 2];
-	if (pysimCustomFiles.some(c => c.path === path)) { alert('Path already exists'); return; }
+	if (pysimCustomFiles.some(c => c.path.toUpperCase() === path)) { alert('Path already exists'); return; }
 	pysimCustomFiles.push({ path, name, fid, parentFid });
 	pysimCustomSave();
 	pysimCustomRender();
@@ -3080,6 +3171,42 @@ function pysimCustomRender() {
 		html += '</div>';
 	}
 	el.innerHTML = html;
+}
+
+function pysimCustomExport() {
+	const el = document.getElementById('pysim-cf-io');
+	el.value = JSON.stringify(pysimCustomFiles, null, 2);
+	el.classList.remove('hidden');
+	el.select();
+}
+
+function pysimCustomImport() {
+	const el = document.getElementById('pysim-cf-io');
+	try {
+		const imported = JSON.parse(el.value);
+		if (!Array.isArray(imported)) throw new Error('Expected an array');
+		let added = 0;
+		for (const entry of imported) {
+			if (!entry.path || !entry.name) continue;
+			const path = entry.path.toUpperCase();
+			if (!pysimCustomFiles.some(c => c.path.toUpperCase() === path)) {
+				const parts = path.split('/').filter(Boolean);
+				pysimCustomFiles.push({
+					path: path,
+					name: entry.name.toUpperCase(),
+					fid: (entry.fid || parts[parts.length - 1]).toUpperCase(),
+					parentFid: (entry.parentFid || parts[parts.length - 2]).toUpperCase(),
+				});
+				added++;
+			}
+		}
+		pysimCustomSave();
+		pysimCustomRender();
+		el.value = 'Imported ' + added + ' files.';
+		setTimeout(() => { el.classList.add('hidden'); }, 2000);
+	} catch (e) {
+		alert('Import error: ' + e.message);
+	}
 }
 
 // Init custom files
