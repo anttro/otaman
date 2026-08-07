@@ -820,7 +820,7 @@
 		<div id="pysim-connect-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Server URL</label>
 			<div class="flex gap-2 items-center">
-				<input id="pysim-url" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" value="http://127.0.0.1:8080">
+				<input id="pysim-url" class="font-mono flex-1 max-w-md border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" value="http://127.0.0.1:8080">
 				<button onclick="pysimConnect()" id="pysim-connect-btn" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Connect</button>
 			</div>
 		</div>
@@ -2998,6 +2998,7 @@ async function pysimFsRead() {
 			let html = '';
 			for (const r of data.records) {
 				html += '<div class="flex items-center gap-1 mb-1">' +
+					'<input type="checkbox" class="pysim-fs-record-cb shrink-0 hidden">' +
 					'<span class="text-xs w-8 text-gray-500 dark:text-slate-400 shrink-0">' + r.num + '</span>' +
 					'<input class="flex-1 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200" style="overflow-x:auto;min-width:100px" value="' + esc(r.data) + '" readonly>' +
 					'</div>';
@@ -3033,8 +3034,14 @@ function pysimFsEdit() {
 	document.getElementById('pysim-fs-save-btn').classList.remove('hidden');
 	document.getElementById('pysim-fs-cancel-btn').classList.remove('hidden');
 	const out = document.getElementById('pysim-fs-content');
-	out.querySelectorAll('textarea, input').forEach(el => el.removeAttribute('readonly'));
-	// Store current data for save
+	out.querySelectorAll('textarea, input:not([type=checkbox])').forEach(el => el.removeAttribute('readonly'));
+	out.querySelectorAll('.pysim-fs-record-cb').forEach(cb => cb.classList.remove('hidden'));
+	out.querySelectorAll('input:not([type=checkbox])').forEach(el => {
+		el.addEventListener('input', function() {
+			const cb = this.closest('div')?.querySelector('.pysim-fs-record-cb');
+			if (cb) cb.checked = true;
+		});
+	});
 	pysimFsEditData = out.innerHTML;
 }
 
@@ -3072,9 +3079,14 @@ async function pysimFsSave() {
 			}
 		} else {
 			// Record file
-			const inputs = out.querySelectorAll('input');
+			const inputs = out.querySelectorAll('input:not([type=checkbox])');
+			let wroteAny = false;
 			for (const inp of inputs) {
-				const num = inp.closest('div')?.querySelector('span')?.textContent;
+				const row = inp.closest('div');
+				const cb = row?.querySelector('.pysim-fs-record-cb');
+				if (cb && !cb.checked) continue;
+				wroteAny = true;
+				const num = row?.querySelector('span')?.textContent;
 				if (num) {
 					const body = { name: rawName, fid: node ? node.fid : null, data: inp.value.replace(/[^0-9a-fA-F]/g, ''), record_nr: parseInt(num) };
 					const parentSel = getParentSel(node);
@@ -3085,6 +3097,10 @@ async function pysimFsSave() {
 						return;
 					}
 				}
+			}
+			if (!wroteAny) {
+				statusEl.textContent = 'No records selected — check the ones you want to update';
+				return;
 			}
 			statusEl.textContent = 'SW: 9000 OK';
 			pysimFsCancel();
