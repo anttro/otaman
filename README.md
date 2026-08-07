@@ -384,4 +384,14 @@ Dark theme is supported. The app follows the OS preference on first visit, and a
 
 ## Localisation
 
-The UI is in Russian. English translations are in progress. Language is detected from the browser's `navigator.language` preference.
+The UI is in English with Russian language support. Language is detected from the browser's `navigator.language` preference. A manual toggle button (EN/RU) in the header persists the choice in `localStorage`.
+
+## Version compatibility
+
+| PWA (OTAMan) | Server | Status |
+|-------------|--------|--------|
+| 1.x.x | 1.x.x | ✅ Compatible |
+| 1.x.x | 0.x.x | ❌ Outdated — update server |
+| 1.x.x | 2.x.x+ | ⚠️ Server newer — update PWA |
+
+The PWA checks the server version on connect via `GET /api/version` and warns if versions are incompatible.

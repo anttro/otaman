@@ -16,10 +16,11 @@
 <div class="max-w-4xl mx-auto px-6 py-4">
 
 	<div class="flex items-center justify-between mb-6">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2">SIM OTA с человеческим лицом</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.0.0</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
+			<button onclick="toggleLang()" id="lang-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700">EN</button>
 			<button onclick="toggleTheme()" id="theme-btn" class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700">🌙</button>
 		</div>
 	</div>
@@ -38,7 +39,7 @@
 		<div class="flex gap-4 mb-3">
 			<div class="w-2/3">
 				<div class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Команда</label>
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
 					<select id="sim-cmd" onchange="updateSimUsimFields('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 						<option value="select">SELECT</option>
 						<option value="update-record">UPDATE RECORD</option>
@@ -57,17 +58,17 @@
 					<div id="sim-select-checkbox-row" class="mb-3">
 						<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
 							<input id="sim-select" type="checkbox" checked class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateSimSelectSection('sim')">
-							Начать с SELECT
+							Start with SELECT
 						</label>
 					</div>
 					<div id="sim-select-method-body">
 					<div id="sim-sel-method-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Метод SELECT</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SELECT method">SELECT method</label>
 						<select id="sim-sel-method" onchange="updateSimSelectMethod('sim'); updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-							<option value="fid">По FID</option>
-							<option value="path">По полному пути от MF</option>
-							<option value="dfname">По DF name / AID</option>
-							<option value="chain">ADF RFM цепочка</option>
+							<option value="fid">By FID</option>
+							<option value="path">By full path from MF</option>
+							<option value="dfname">By DF name / AID</option>
+							<option value="chain">ADF RFM chain</option>
 						</select>
 					</div>
 					<div id="sim-sel-fid-row" class="mb-3">
@@ -75,7 +76,7 @@
 						<input id="sim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
 					</div>
 					<div id="sim-sel-path-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Путь (hex)</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Path (hex)">Path (hex)</label>
 						<input id="sim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F007FFF6FC5">
 					</div>
 					<div id="sim-sel-dfname-row" class="mb-3">
@@ -83,7 +84,7 @@
 						<input id="sim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
 					</div>
 					<div id="sim-sel-chain-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID цепочка (через запятую)</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="FID chain (comma-separated)">FID chain (comma-separated)</label>
 						<input id="sim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00,6F3A">
 					</div>
 					</div>
@@ -91,21 +92,21 @@
 
 				<div id="sim-record-row" class="mb-3">
 					<div class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Запись №</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record #">Record #</label>
 						<input id="sim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					</div>
 					<div class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим выборки (P2)</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Selection mode (P2)">Selection mode (P2)</label>
 						<select id="sim-rec-mode" onchange="updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-							<option value="04">Абсолютный (04)</option>
-							<option value="06">Следующая (06)</option>
-							<option value="02">Предыдущая (02)</option>
+							<option value="04">Absolute (04)</option>
+							<option value="06">Next (06)</option>
+							<option value="02">Previous (02)</option>
 						</select>
 					</div>
 				</div>
 
 				<div id="sim-offset-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Смещение (hex)</label>
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Offset (hex)">Offset (hex)</label>
 					<input id="sim-offset" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
 				</div>
 
@@ -115,12 +116,12 @@
 				</div>
 
 				<div id="sim-data-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные (hex)</label>
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Data (hex)">Data (hex)</label>
 					<textarea id="sim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
 				</div>
 
 				<div id="sim-recsize-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Размер записи (байт)</label>
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record size (bytes)">Record size (bytes)</label>
 					<input id="sim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				</div>
 
@@ -145,13 +146,13 @@
 					</div>
 					<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
 						<input id="sim-override" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="toggleSimOverride('sim')">
-						Разрешить редактирование P1/P2
+						Allow P1/P2 editing
 					</label>
 				</div>
 			</div>
 			<div class="w-1/3">
 				<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800">
-					<h3 class="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Конвертация</h3>
+					<h3 class="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2" data-l10n="Conversion">Conversion</h3>
 					<div class="mb-2">
 						<select id="conv-type" onchange="updateConvFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
 							<option value="nibswap">Nibble swap</option>
@@ -188,22 +189,22 @@
 							</select>
 						</div>
 					</div>
-					<button onclick="genConvert()" class="w-full mb-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700">Конвертировать</button>
+					<button onclick="genConvert()" class="w-full mb-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700" data-l10n="Convert">Convert</button>
 					<textarea id="conv-result" rows="2" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
 				</div>
 			</div>
 		</div>
 
-		<button onclick="genSimUsim('sim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
+		<button onclick="genSimUsim('sim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
 		<textarea id="sim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		<button onclick="packToSp('sim-result')" id="sim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">Упаковать в Secured packet</button>
+		<button onclick="packToSp('sim-result')" id="sim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 
 	<div id="tab-usim" class="tab-content hidden">
 		<div class="flex gap-4 mb-3">
 			<div class="w-2/3">
 				<div class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Команда</label>
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
 					<select id="usim-cmd" onchange="updateSimUsimFields('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 						<option value="select">SELECT</option>
 						<option value="update-record">UPDATE RECORD</option>
@@ -222,17 +223,17 @@
 					<div id="usim-select-checkbox-row" class="mb-3">
 						<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
 							<input id="usim-select" type="checkbox" checked class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateSimSelectSection('usim')">
-							Начать с SELECT
+							Start with SELECT
 						</label>
 					</div>
 					<div id="usim-select-method-body">
 					<div id="usim-sel-method-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Метод SELECT</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SELECT method">SELECT method</label>
 						<select id="usim-sel-method" onchange="updateSimSelectMethod('usim'); updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-							<option value="fid">По FID</option>
-							<option value="path">По полному пути от MF</option>
-							<option value="dfname">По DF name / AID</option>
-							<option value="chain">ADF RFM цепочка</option>
+							<option value="fid">By FID</option>
+							<option value="path">By full path from MF</option>
+							<option value="dfname">By DF name / AID</option>
+							<option value="chain">ADF RFM chain</option>
 						</select>
 					</div>
 					<div id="usim-sel-fid-row" class="mb-3">
@@ -240,7 +241,7 @@
 						<input id="usim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
 					</div>
 					<div id="usim-sel-path-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Путь (hex)</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Path (hex)">Path (hex)</label>
 						<input id="usim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F007FFF6FC5">
 					</div>
 					<div id="usim-sel-dfname-row" class="mb-3">
@@ -248,7 +249,7 @@
 						<input id="usim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
 					</div>
 					<div id="usim-sel-chain-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID цепочка (через запятую)</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="FID chain (comma-separated)">FID chain (comma-separated)</label>
 						<input id="usim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00,6F3A">
 					</div>
 					</div>
@@ -256,21 +257,21 @@
 
 				<div id="usim-record-row" class="mb-3">
 					<div class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Запись №</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record #">Record #</label>
 						<input id="usim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					</div>
 					<div class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим выборки (P2)</label>
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Selection mode (P2)">Selection mode (P2)</label>
 						<select id="usim-rec-mode" onchange="updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-							<option value="04">Абсолютный (04)</option>
-							<option value="06">Следующая (06)</option>
-							<option value="02">Предыдущая (02)</option>
+							<option value="04">Absolute (04)</option>
+							<option value="06">Next (06)</option>
+							<option value="02">Previous (02)</option>
 						</select>
 					</div>
 				</div>
 
 				<div id="usim-offset-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Смещение (hex)</label>
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Offset (hex)">Offset (hex)</label>
 					<input id="usim-offset" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
 				</div>
 
@@ -280,12 +281,12 @@
 				</div>
 
 				<div id="usim-data-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные (hex)</label>
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Data (hex)">Data (hex)</label>
 					<textarea id="usim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
 				</div>
 
 				<div id="usim-recsize-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Размер записи (байт)</label>
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record size (bytes)">Record size (bytes)</label>
 					<input id="usim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				</div>
 
@@ -310,13 +311,13 @@
 					</div>
 					<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
 						<input id="usim-override" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="toggleSimOverride('usim')">
-						Разрешить редактирование P1/P2
+						Allow P1/P2 editing
 					</label>
 				</div>
 			</div>
 			<div class="w-1/3">
 				<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800">
-					<h3 class="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Конвертация</h3>
+					<h3 class="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2" data-l10n="Conversion">Conversion</h3>
 					<div class="mb-2">
 						<select id="conv-type" onchange="updateConvFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
 							<option value="nibswap">Nibble swap</option>
@@ -353,15 +354,15 @@
 							</select>
 						</div>
 					</div>
-					<button onclick="genConvert()" class="w-full mb-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700">Конвертировать</button>
+					<button onclick="genConvert()" class="w-full mb-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700" data-l10n="Convert">Convert</button>
 					<textarea id="conv-result" rows="2" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
 				</div>
 			</div>
 		</div>
 
-		<button onclick="genSimUsim('usim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
+		<button onclick="genSimUsim('usim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
 		<textarea id="usim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		<button onclick="packToSp('usim-result')" id="usim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">Упаковать в Secured packet</button>
+		<button onclick="packToSp('usim-result')" id="usim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 
 	<div id="tab-ber" class="tab-content hidden">
@@ -384,14 +385,14 @@
 			<div id="ber-rows" class="space-y-2"></div>
 		</div>
 
-		<button onclick="genBerTlv()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать BER-TLV</button>
+		<button onclick="genBerTlv()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate BER-TLV">Generate BER-TLV</button>
 		<textarea id="ber-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 dark:text-slate-300"></textarea>
-		<button onclick="packToSp('ber-result')" id="ber-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">Упаковать в Secured packet</button>
+		<button onclick="packToSp('ber-result')" id="ber-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 
 	<div id="tab-ram" class="tab-content hidden">
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Команда</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
 			<select id="ram-cmd" onchange="updateRamFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="install-load">INSTALL [for load]</option>
 				<option value="install-install">INSTALL [for install]</option>
@@ -418,12 +419,12 @@
 		</div>
 		<div id="ram-priv-row" class="mb-3">
 			<div class="flex items-center gap-3 mb-2">
-				<label class="text-sm font-medium text-gray-700 dark:text-slate-300">Привилегии</label>
+				<label class="text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Privileges">Privileges</label>
 				<input id="ram-priv" readonly class="font-mono w-20 border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 bg-gray-100 dark:bg-slate-800" value="00">
 			</div>
 			<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-				<div class="font-medium text-gray-700 dark:text-slate-300 mb-1">Байт 1</div>
-				<div class="font-medium text-gray-700 dark:text-slate-300 mb-1">Байт 2</div>
+				<div class="font-medium text-gray-700 dark:text-slate-300 mb-1" data-l10n="Byte 1">Byte 1</div>
+				<div class="font-medium text-gray-700 dark:text-slate-300 mb-1" data-l10n="Byte 2">Byte 2</div>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="80" onchange="updateRamPriv()"> Security Domain</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="80" onchange="updateRamPriv()"> Trusted Path</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="40" onchange="updateRamPriv()"> DAP Verification</label>
@@ -446,12 +447,12 @@
 			<div class="mb-2">
 				<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
 					<input id="ram-toolkit-enable" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateRamToolkit()">
-					Параметры SIM/UICC Toolkit
+					SIM/UICC Toolkit parameters
 				</label>
 			</div>
 			<div id="ram-toolkit-body" class="">
 				<div class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим Toolkit</label>
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Toolkit mode">Toolkit mode</label>
 					<select id="ram-tk-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 						<option value="ca">SIM Toolkit (Tag CA)</option>
 						<option value="80">UICC Toolkit (Tag 80)</option>
@@ -459,45 +460,45 @@
 				</div>
 				<div class="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Приоритет</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Priority">Priority</label>
 						<input id="ram-tk-priority" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Таймеры (макс)</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Timers (max)">Timers (max)</label>
 						<input id="ram-tk-timers" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Длина текста меню</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Menu text length">Menu text length</label>
 						<input id="ram-tk-textlen" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Элементов меню</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Menu items">Menu items</label>
 						<input id="ram-tk-menus" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Позиция первого меню</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="First menu position">First menu position</label>
 						<input id="ram-tk-firstpos" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">ID первого меню (hex)</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="First menu ID (hex)">First menu ID (hex)</label>
 						<input id="ram-tk-firstid" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Позиция последнего меню</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Last menu position">Last menu position</label>
 						<input id="ram-tk-lastpos" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">ID последнего меню (hex)</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Last menu ID (hex)">Last menu ID (hex)</label>
 						<input id="ram-tk-lastid" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Каналы (макс)</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Channels (max)">Channels (max)</label>
 						<input id="ram-tk-channels" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
 					</div>
 					<div>
 						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">MSL (SPI1, hex)</label>
 						<select id="ram-tk-msl" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-							<option value="00">00 — нет проверки</option>
+							<option value="00">00 — no verification</option>
 							<option value="11">11 — RC/CC/DS</option>
 							<option value="12">12 — RC/DS/CC</option>
 							<option value="15">15 — RC/DS/CC + MAC</option>
@@ -510,51 +511,51 @@
 						<input id="ram-tk-tar" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
 					</div>
 					<div id="ram-tk-ad-row">
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">Домен доступа (hex)</label>
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Access domain (hex)">Access domain (hex)</label>
 						<input id="ram-tk-ad" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 					</div>
 				</div>
 			</div>
 		</div>
 		<div id="ram-load-data-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные загрузки (hex)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Load data (hex)">Load data (hex)</label>
 			<textarea id="ram-load-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
 		</div>
 		<div id="ram-data-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные (hex)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Data (hex)">Data (hex)</label>
 			<textarea id="ram-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
 		</div>
 		<div id="ram-block-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Номер блока</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Block number">Block number</label>
 			<input id="ram-block" type="number" min="0" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 		</div>
 		<div id="ram-enc-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Шифрование</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Encryption">Encryption</label>
 			<select id="ram-enc" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-				<option value="00">Без шифрования, последний блок</option>
-				<option value="40">Без шифрования, ещё блоки</option>
-				<option value="80">С шифрованием, последний блок</option>
-				<option value="C0">С шифрованием, ещё блоки</option>
+				<option value="00">No encryption, last block</option>
+				<option value="40">No encryption, more blocks</option>
+				<option value="80">With encryption, last block</option>
+				<option value="C0">With encryption, more blocks</option>
 			</select>
 		</div>
 		<div id="ram-del-mode-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим DELETE</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="DELETE mode">DELETE mode</label>
 			<select id="ram-del-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-				<option value="00">Только AID (00)</option>
-				<option value="80">AID и все связанные объекты (80)</option>
+				<option value="00">AID only (00)</option>
+				<option value="80">AID and all related objects (80)</option>
 			</select>
 		</div>
 		<div id="ram-gs-mode-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Режим GET STATUS</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET STATUS mode">GET STATUS mode</label>
 			<select id="ram-gs-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="80">ISD (80)</option>
-				<option value="40">Приложения и SSD (40)</option>
+				<option value="40">Applications and SSD (40)</option>
 				<option value="20">Executable Load Files (20)</option>
-				<option value="10">ELF и модули (10)</option>
+				<option value="10">ELF and modules (10)</option>
 			</select>
 		</div>
 		<div id="ram-gs-p2-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Формат GET STATUS</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET STATUS format">GET STATUS format</label>
 			<select id="ram-gs-p2" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="40">40 — First/all, GP TLV format</option>
 				<option value="42">42 — Next, GP TLV format</option>
@@ -563,9 +564,9 @@
 			</select>
 		</div>
 		<div id="ram-tag-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Tag GET DATA</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET DATA tag">GET DATA tag</label>
 			<select id="ram-gd-tag-sel" onchange="document.getElementById('ram-tag').value=this.value" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 mb-1.5">
-				<option value="">— выберите предустановленный —</option>
+				<option value="" data-l10n="— select preset —">— select preset —</option>
 				<option value="42">42 — Issuer Identification Number (IIN)</option>
 				<option value="45">45 — Card Image Number (CIN)</option>
 				<option value="66">66 — Card Data / SD Management Data</option>
@@ -583,23 +584,23 @@
 			<input id="ram-tag" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="5F50" maxlength="4" value="5F50">
 		</div>
 		<div id="ram-ss-mode-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Тип SET STATUS</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SET STATUS type">SET STATUS type</label>
 			<select id="ram-ss-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="80">ISD (80)</option>
-				<option value="40">Приложение или SSD (40)</option>
-				<option value="60">SD и его приложения (60)</option>
+				<option value="40">Application or SSD (40)</option>
+				<option value="60">SD and its applications (60)</option>
 			</select>
 		</div>
 		<div id="ram-ss-state-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Состояние</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="State">State</label>
 			<select id="ram-ss-state" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-				<option value="00">Разблокировать (предыдущее состояние)</option>
-				<option value="80">Заблокировать (LOCKED)</option>
+				<option value="00">Unlock (previous state)</option>
+				<option value="80">Lock (LOCKED)</option>
 			</select>
 		</div>
-		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать APDU</button>
+		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
 		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		<button onclick="packToSp('ram-result')" id="ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">Упаковать в Secured packet</button>
+		<button onclick="packToSp('ram-result')" id="ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 
 	<div id="tab-sp" class="tab-content hidden">
@@ -741,15 +742,15 @@
 			<textarea id="sp-apdu" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
 		</div>
 
-		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Сгенерировать Secure Packet</button>
+		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate Secure Packet">Generate Secure Packet</button>
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 	</div>
 
 	<div id="tab-response" class="tab-content hidden">
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Команда</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
 			<select id="resp-cmd" onchange="updateRespCmd()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-				<option value="">— Выберите команду —</option>
+				<option value="" data-l10n="— Select command —">— Select command —</option>
 				<optgroup label="SIM / USIM">
 					<option value="sim-select">SELECT</option>
 					<option value="sim-status">STATUS</option>
@@ -808,10 +809,10 @@
 			</div>
 		</div>
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Данные ответа (hex)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Response data (hex)">Response data (hex)</label>
 			<textarea id="resp-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="E3 1A 4F 08 A0 00 00 00 03 00 00 00 9F 70 01 07 C5 03 80 00 00"></textarea>
 		</div>
-		<button onclick="decodeResponse()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Декодировать</button>
+		<button onclick="decodeResponse()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Decode">Decode</button>
 		<div id="resp-output" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 whitespace-pre-wrap" style="min-height:100px"></div>
 	</div>
 
@@ -1276,14 +1277,14 @@ function genSimUsim(mode) {
 
 	if (cmd === 'select') {
 		const selectApdu = buildSelectApdu(mode, preset, selInfo);
-		if (!selectApdu) { resultEl.value = 'Ошибка: укажите параметры SELECT'; return; }
+		if (!selectApdu) { resultEl.value = 'Error: specify SELECT parameters'; return; }
 		resultEl.value = selectApdu;
 		document.getElementById(mode + '-pack-btn').disabled = false;
 		return;
 	}
 
 	const op = OPS[cmd];
-	if (!op) { resultEl.value = 'Ошибка: неизвестная команда'; return; }
+	if (!op) { resultEl.value = 'Error: unknown command'; return; }
 
 	let p1, p2, p3, data = null;
 	if (cmd === 'read-record') {
@@ -1291,17 +1292,17 @@ function genSimUsim(mode) {
 	} else if (cmd === 'read-binary') {
 		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = le;
 	} else if (cmd === 'update-record') {
-		if (!dataHex) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		if (!dataHex) { resultEl.value = 'Error: specify data'; return; }
 		p1 = record; p2 = recMode; p3 = dataHex.length / 2; data = dataHex;
 	} else if (cmd === 'update-binary') {
-		if (!dataHex) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		if (!dataHex) { resultEl.value = 'Error: specify data'; return; }
 		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = dataHex.length / 2; data = dataHex;
 	} else if (cmd === 'erase-binary') {
 		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = 0x00;
 	} else if (cmd === 'activate-file' || cmd === 'deactivate-file') {
 		p1 = 0x00; p2 = 0x00; p3 = 0x00;
 	} else if (cmd === 'verify' || cmd === 'change') {
-		if (!dataHex) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		if (!dataHex) { resultEl.value = 'Error: specify data'; return; }
 		p1 = 0x00; p2 = parseInt(pin, 16); p3 = dataHex.length / 2; data = dataHex;
 	}
 
@@ -1342,7 +1343,7 @@ function genRam() {
 
 	const resultEl = document.getElementById('ram-result');
 
-	if (cmd === 'install-load' && !sdAid) { resultEl.value = 'Ошибка: укажите SD AID'; return; }
+	if (cmd === 'install-load' && !sdAid) { resultEl.value = 'Error: specify SD AID'; return; }
 
 	const INSTALL_P1 = {
 		'install-load': 0x02,
@@ -1414,23 +1415,23 @@ function genRam() {
 		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
 		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField);
 	} else if (cmd === 'install-make-sel') {
-		if (!aid) { resultEl.value = 'Ошибка: укажите AID'; return; }
+		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
 		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
 		const dataField = '4F' + aidLen + aid;
 		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
 		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField);
 	} else if (cmd === 'install-reg-update' || cmd === 'install-extradition') {
-		if (!aid) { resultEl.value = 'Ошибка: укажите AID'; return; }
+		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
 		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
 		const dataField = '4F' + aidLen + aid;
 		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
 		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField);
 	} else if (cmd === 'load') {
-		if (!ramData) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		if (!ramData) { resultEl.value = 'Error: specify data'; return; }
 		const dataLen = (ramData.length / 2).toString(16).padStart(2, '0');
 		apdu = buildApdu(0x80, 0xE8, 0x00, blockNum, parseInt(dataLen, 16), ramData);
 	} else if (cmd === 'delete') {
-		if (!aid) { resultEl.value = 'Ошибка: укажите AID'; return; }
+		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
 		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
 		const dataField = '4F' + aidLen + aid;
 		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
@@ -1442,26 +1443,26 @@ function genRam() {
 		const tag = parseInt(tagHex, 16);
 		apdu = buildApdu(0x80, 0xCA, (tag >> 8) & 0xFF, tag & 0xFF, 0x00, null);
 	} else if (cmd === 'store-data') {
-		if (!ramData) { resultEl.value = 'Ошибка: укажите данные'; return; }
+		if (!ramData) { resultEl.value = 'Error: specify data'; return; }
 		const dataLen = (ramData.length / 2).toString(16).padStart(2, '0');
 		apdu = buildApdu(0x80, 0xE2, parseInt(enc, 16), blockNum, parseInt(dataLen, 16), ramData);
 	} else if (cmd === 'set-status') {
-		if (!aid) { resultEl.value = 'Ошибка: укажите AID'; return; }
+		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
 		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
 		const dataField = '4F' + aidLen + aid;
 		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
 		apdu = buildApdu(0x80, 0xF0, parseInt(ssMode, 16), parseInt(ssState, 16), parseInt(dataLen, 16), dataField);
 	} else if (cmd === 'ext-auth') {
-		if (!ramData) { resultEl.value = 'Ошибка: укажите данные (host cryptogram)'; return; }
+		if (!ramData) { resultEl.value = 'Error: specify data (host cryptogram)'; return; }
 		const dataLen = (ramData.length / 2).toString(16).padStart(2, '0');
 		apdu = buildApdu(0x80, 0x82, 0x00, 0x00, parseInt(dataLen, 16), ramData);
 	} else if (cmd === 'int-auth') {
-		if (!ramData) { resultEl.value = 'Ошибка: укажите данные (challenge)'; return; }
+		if (!ramData) { resultEl.value = 'Error: specify data (challenge)'; return; }
 		const dataLen = (ramData.length / 2).toString(16).padStart(2, '0');
 		apdu = buildApdu(0x80, 0x88, 0x00, 0x00, parseInt(dataLen, 16), ramData) + '00';
 	}
 
-	resultEl.value = apdu || 'Ошибка: неизвестная команда';
+	resultEl.value = apdu || 'Error: unknown command';
 	if (apdu) document.getElementById('ram-pack-btn').disabled = false;
 }
 
@@ -1493,35 +1494,35 @@ function genConvert() {
 	let result = '';
 	try {
 		if (type === 'imsi') {
-			if (!input) { result = 'Ошибка: введите значение'; }
-			else if (!/^\d{15}$/.test(input)) { result = 'Ошибка: IMSI должен быть 15 цифр'; }
+			if (!input) { result = 'Error: enter a value'; }
+			else if (!/^\d{15}$/.test(input)) { result = 'Error: IMSI must be 15 digits'; }
 			else result = encImsi(input);
 		} else if (type === 'msisdn') {
-			if (!input) { result = 'Ошибка: введите значение'; }
+			if (!input) { result = 'Error: enter a value'; }
 			else result = encMsisdn(input);
 		} else if (type === 'iccid') {
-			if (!input) { result = 'Ошибка: введите значение'; }
+			if (!input) { result = 'Error: enter a value'; }
 			else result = encIccid(input);
 		} else if (type === 'spn') {
-			if (!input) { result = 'Ошибка: введите значение'; }
+			if (!input) { result = 'Error: enter a value'; }
 			else result = encodeSpn(input);
 		} else if (type === 'plmn') {
-			if (!mcc || !mnc) { result = 'Ошибка: укажите MCC и MNC'; }
-			else if (!/^\d{3}$/.test(mcc)) { result = 'Ошибка: MCC должен быть 3 цифры'; }
-			else if (!/^\d{2,3}$/.test(mnc)) { result = 'Ошибка: MNC должен быть 2-3 цифры'; }
+			if (!mcc || !mnc) { result = 'Error: specify MCC and MNC'; }
+			else if (!/^\d{3}$/.test(mcc)) { result = 'Error: MCC must be 3 digits'; }
+			else if (!/^\d{2,3}$/.test(mnc)) { result = 'Error: MNC must be 2-3 digits'; }
 			else result = encPlmn(mcc, mnc);
 		} else if (type === 'plmnwact') {
-			if (!mcc || !mnc) { result = 'Ошибка: укажите MCC и MNC'; }
-			else if (!/^\d{3}$/.test(mcc)) { result = 'Ошибка: MCC должен быть 3 цифры'; }
-			else if (!/^\d{2,3}$/.test(mnc)) { result = 'Ошибка: MNC должен быть 2-3 цифры'; }
+			if (!mcc || !mnc) { result = 'Error: specify MCC and MNC'; }
+			else if (!/^\d{3}$/.test(mcc)) { result = 'Error: MCC must be 3 digits'; }
+			else if (!/^\d{2,3}$/.test(mnc)) { result = 'Error: MNC must be 2-3 digits'; }
 			else result = encPlmn(mcc, mnc) + act.toUpperCase();
 		} else if (type === 'nibswap') {
-			if (!input) { result = 'Ошибка: введите значение'; }
-			else if (input.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(input)) { result = 'Ошибка: введите чётное количество hex-символов'; }
+			if (!input) { result = 'Error: enter a value'; }
+			else if (input.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(input)) { result = 'Error: enter an even number of hex characters'; }
 			else result = swapNibbles(input);
 		}
 	} catch (e) {
-		result = 'Ошибка: ' + e.message;
+		result = 'Error: ' + e.message;
 	}
 	document.getElementById('conv-result').value = result;
 }
@@ -1681,7 +1682,7 @@ function retailMac(data, keyBytes) {
 // ===== Secure Packet assembly =====
 function genSp() {
 	const apduHex = (document.getElementById('sp-apdu').value || '').replace(/[^0-9a-fA-F]/g, '');
-	if (!apduHex) { document.getElementById('sp-result').value = 'Ошибка: укажите APDU'; return; }
+	if (!apduHex) { document.getElementById('sp-result').value = 'Error: specify APDU'; return; }
 
 	const spi1 = parseInt(document.getElementById('sp-spi1').value, 16);
 	const spi2 = parseInt(document.getElementById('sp-spi2-hex').value, 16);
@@ -1703,20 +1704,20 @@ function genSp() {
 		if (kicKeyHex) {
 			kicKey = hexToBytes(kicKeyHex);
 			if (kicKey.length !== 8 && kicKey.length !== 16 && kicKey.length !== 24)
-				{ resultEl.value = 'Ошибка: KIc key must be 8, 16, or 24 bytes'; return; }
+				{ resultEl.value = 'Error: KIc key must be 8, 16, or 24 bytes'; return; }
 		}
-	} catch (e) { resultEl.value = 'Ошибка KIc key: ' + e.message; return; }
+	} catch (e) { resultEl.value = 'KIc key error: ' + e.message; return; }
 
 	try {
 		if (kidKeyHex) {
 			kidKey = hexToBytes(kidKeyHex);
 			if (kidKey.length !== 8 && kidKey.length !== 16 && kidKey.length !== 24)
-				{ resultEl.value = 'Ошибка: KID key must be 8, 16, or 24 bytes'; return; }
+				{ resultEl.value = 'Error: KID key must be 8, 16, or 24 bytes'; return; }
 		}
-	} catch (e) { resultEl.value = 'Ошибка KID key: ' + e.message; return; }
+	} catch (e) { resultEl.value = 'KID key error: ' + e.message; return; }
 
-	if (ciphering && !kicKey) { resultEl.value = 'Ошибка: ciphering requires KIc key'; return; }
-	if (hasMac && !kidKey) { resultEl.value = 'Ошибка: MAC requires KID key'; return; }
+	if (ciphering && !kicKey) { resultEl.value = 'Error: ciphering requires KIc key'; return; }
+	if (hasMac && !kidKey) { resultEl.value = 'Error: MAC requires KID key'; return; }
 
 	const apdu = hexToBytes(apduHex);
 
@@ -2434,7 +2435,7 @@ function esc(str) {
 
 async function pysimFetch(path, body) {
 	const url = pysimBase + path;
-	const opts = { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' } };
+	const opts = { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', 'Accept-Language': currentLang } };
 	if (body) opts.body = JSON.stringify(body);
 	const res = await fetch(url, opts);
 	return await res.json();
@@ -2500,6 +2501,19 @@ async function pysimConnect() {
 	statusEl.innerHTML = '<span class="text-gray-500">Checking card...</span>';
 	pysimSetConnected('spin');
 	try {
+		// Version check
+		const ver = await pysimFetch('/api/version');
+		if (!ver.version) throw new Error('No version');
+		const sv = (ver.version || '').split('.').map(Number);
+		if (sv[0] < 1 || (sv[0] === 1 && sv[1] < 0)) {
+			statusEl.innerHTML = '<span class="text-red-500">Server version ' + esc(ver.version) + ' is outdated. Please update pysim-otaman-server.</span>';
+			btn.textContent = 'Connect';
+			btn.disabled = false;
+			return;
+		}
+		if (sv[0] > 1) {
+			statusEl.innerHTML = '<span class="text-yellow-500">Warning: server version ' + esc(ver.version) + ' is newer than expected. Update OTAMan for full compatibility.</span>';
+		}
 		const status = await pysimFetch('/api/status');
 		if (!status.app_ready) {
 			throw new Error('Server not ready');
@@ -2906,6 +2920,102 @@ document.querySelectorAll('.pysim-subtab').forEach(btn => {
 	btn.addEventListener('click', () => pysimSwitchSubtab(btn.dataset.pysimSub));
 });
 
+// ===== i18n =====
+const LANG_RU = {
+	'Generate APDU': 'Сгенерировать APDU',
+	'Pack into Secured packet': 'Упаковать в Secured packet',
+	'Convert': 'Конвертировать',
+	'Decode': 'Декодировать',
+	'Generate BER-TLV': 'Сгенерировать BER-TLV',
+	'Generate Secure Packet': 'Сгенерировать Secure Packet',
+	'Conversion': 'Конвертация',
+	'Command': 'Команда',
+	'Start with SELECT': 'Начать с SELECT',
+	'SELECT method': 'Метод SELECT',
+	'Path (hex)': 'Путь (hex)',
+	'FID chain (comma-separated)': 'FID цепочка (через запятую)',
+	'Record #': 'Запись №',
+	'Selection mode (P2)': 'Режим выборки (P2)',
+	'Offset (hex)': 'Смещение (hex)',
+	'Data (hex)': 'Данные (hex)',
+	'Record size (bytes)': 'Размер записи (байт)',
+	'Allow P1/P2 editing': 'Разрешить редактирование P1/P2',
+	'Privileges': 'Привилегии',
+	'Byte 1': 'Байт 1',
+	'Byte 2': 'Байт 2',
+	'SIM/UICC Toolkit parameters': 'Параметры SIM/UICC Toolkit',
+	'Toolkit mode': 'Режим Toolkit',
+	'Priority': 'Приоритет',
+	'Timers (max)': 'Таймеры (макс)',
+	'Menu text length': 'Длина текста меню',
+	'Menu items': 'Пункты меню',
+	'First menu position': 'Первая позиция в меню',
+	'First menu ID (hex)': 'ID первого пункта меню (hex)',
+	'Last menu position': 'Позиция последнего пункта меню',
+	'Last menu ID (hex)': 'ID последнего пункта меню (hex)',
+	'Channels (max)': 'Каналы (макс)',
+	'Access domain (hex)': 'Домен доступа (hex)',
+	'Load data (hex)': 'Данные загрузки (hex)',
+	'Block number': 'Номер блока',
+	'Encryption': 'Шифрование',
+	'DELETE mode': 'Режим DELETE',
+	'GET STATUS mode': 'Режим GET STATUS',
+	'GET STATUS format': 'Формат GET STATUS',
+	'SET STATUS type': 'Тип SET STATUS',
+	'State': 'Состояние',
+	'GET DATA tag': 'Tag GET DATA',
+	'Response data (hex)': 'Данные ответа (hex)',
+	'— Select command —': '— Выберите команду —',
+	'— select preset —': '— выберите предустановленный —',
+	'SIM OTA with a Human Face': 'SIM OTA с человеческим лицом',
+	'Error: specify SELECT parameters': 'Ошибка: укажите параметры SELECT',
+	'Error: unknown command': 'Ошибка: неизвестная команда',
+	'Error: specify data': 'Ошибка: укажите данные',
+	'Error: specify SD AID': 'Ошибка: укажите SD AID',
+	'Error: specify AID': 'Ошибка: укажите AID',
+	'Error: specify data (host cryptogram)': 'Ошибка: укажите данные (host cryptogram)',
+	'Error: specify data (challenge)': 'Ошибка: укажите данные (challenge)',
+	'Error: enter a value': 'Ошибка: введите значение',
+	'Error: IMSI must be 15 digits': 'Ошибка: IMSI должен быть 15 цифр',
+	'Error: specify MCC and MNC': 'Ошибка: укажите MCC и MNC',
+	'Error: MCC must be 3 digits': 'Ошибка: MCC должен быть 3 цифры',
+	'Error: MNC must be 2-3 digits': 'Ошибка: MNC должен быть 2-3 цифры',
+	'Error: enter an even number of hex characters': 'Ошибка: введите чётное количество hex-символов',
+	'Error: specify APDU': 'Ошибка: укажите APDU',
+	'KIc key error: ': 'Ошибка KIc key: ',
+	'KID key error: ': 'Ошибка KID key: ',
+	'Error: ciphering requires KIc key': 'Ошибка: ciphering requires KIc key',
+	'Error: MAC requires KID key': 'Ошибка: MAC requires KID key',
+};
+let currentLang = 'en';
+
+function t(text) {
+	if (currentLang === 'ru' && LANG_RU[text]) return LANG_RU[text];
+	return text;
+}
+
+function toggleLang() {
+	currentLang = currentLang === 'en' ? 'ru' : 'en';
+	localStorage.setItem('lang', currentLang);
+document.getElementById('lang-btn').textContent = currentLang.toUpperCase();
+translatePage();
+	translatePage();
+}
+
+function translatePage() {
+	document.querySelectorAll('[data-l10n]').forEach(el => {
+		const key = el.getAttribute('data-l10n');
+		el.textContent = t(key);
+	});
+	const slogan = document.getElementById('slogan');
+	if (slogan) slogan.textContent = t('SIM OTA with a Human Face');
+}
+
+// Init language
+const userLang = (navigator.language || '').split('-')[0];
+currentLang = localStorage.getItem('lang') || (userLang === 'ru' ? 'ru' : 'en');
+document.getElementById('lang-btn').textContent = currentLang.toUpperCase();
+
 if (localStorage.getItem('theme') === 'dark' ||
     (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
 	document.documentElement.classList.add('dark');
@@ -2929,6 +3039,7 @@ toggleSimOverride('usim');
 updateP1P2Display('sim');
 updateP1P2Display('usim');
 updateRamFields();
+translatePage();
 // PWA
 let deferredPrompt;
 const installBtn = document.getElementById('install-btn');
