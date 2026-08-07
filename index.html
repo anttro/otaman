@@ -16,7 +16,7 @@
 <div class="max-w-4xl mx-auto px-6 py-4">
 
 	<div class="flex items-center justify-between mb-6">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.0.0</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.1.0</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -845,6 +845,7 @@
 		<div id="pysim-body" class="hidden">
 			<div class="flex gap-1 mb-2">
 				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-blue-600 text-white" data-pysim-sub="files">File manager</button>
+				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="custom">Custom files</button>
 			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd">pySim command line</button>
 			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu">Raw APDU</button>
 		</div>
@@ -870,12 +871,23 @@
 			</div>
 		</div>
 
+		<div id="pysim-sub-custom" class="hidden">
+			<div class="mb-2 text-xs font-mono text-gray-600 dark:text-slate-400">Add known file paths and aliases to the file tree.</div>
+			<div class="flex gap-2 items-center mb-2">
+				<input id="pysim-cf-path" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00/6F46" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
+				<input id="pysim-cf-name" class="font-mono w-48 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="EF.SPN" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
+				<button onclick="pysimCustomAdd()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap">Add</button>
+			</div>
+			<div id="pysim-cf-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+		</div>
+
 		<div id="pysim-sub-cmd" class="hidden">
 			<div class="flex gap-2 items-center mb-2">
-				<input id="pysim-cmd" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" list="pysim-cmdlist" onkeydown="pysimCmdKeydown(event)">
+				<input id="pysim-cmd" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" list="pysim-cmdlist" onkeydown="pysimCmdKeydown(event)" oninput="pysimCmdHint()">
 				<datalist id="pysim-cmdlist"></datalist>
 				<button onclick="pysimExec()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Execute</button>
 			</div>
+			<div id="pysim-cmd-hint" class="hidden mb-2 text-xs font-mono text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-slate-700 rounded p-2 bg-gray-50 dark:bg-slate-800 whitespace-pre-wrap"></div>
 			<textarea id="pysim-cmd-output" rows="10" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		</div>
 
@@ -2640,10 +2652,11 @@ function pysimSwitchSubtab(name) {
 		btn.classList.toggle('text-gray-700', !isActive);
 		btn.classList.toggle('dark:text-slate-300', !isActive);
 	});
-	['cmd', 'apdu', 'files'].forEach(s => {
+	['cmd', 'apdu', 'files', 'custom'].forEach(s => {
 		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
 	});
 	if (name === 'files') pysimFsRefresh();
+	if (name === 'custom') pysimCustomRender();
 }
 
 function pysimCmdKeydown(e) {
@@ -2654,6 +2667,7 @@ function pysimCmdKeydown(e) {
 			pysimCmdHistIdx = pysimCmdHistory.length;
 		}
 		pysimExec();
+		document.getElementById('pysim-cmd-hint').classList.add('hidden');
 	} else if (e.key === 'ArrowUp') {
 		e.preventDefault();
 		if (pysimCmdHistIdx > 0) {
@@ -2670,6 +2684,33 @@ function pysimCmdKeydown(e) {
 			e.target.value = '';
 		}
 	}
+}
+
+let pysimCmdHintTimeout = null;
+
+async function pysimCmdHint() {
+	clearTimeout(pysimCmdHintTimeout);
+	pysimCmdHintTimeout = setTimeout(async () => {
+		const input = document.getElementById('pysim-cmd');
+		const text = input.value.trim();
+		const cmd = text.split(/\s+/)[0];
+		if (!cmd || text.includes(' ')) {
+			document.getElementById('pysim-cmd-hint').classList.add('hidden');
+			return;
+		}
+		const hintEl = document.getElementById('pysim-cmd-hint');
+		try {
+			const data = await pysimFetch('/api/help', { cmd });
+			if (data.usage) {
+				hintEl.textContent = data.usage;
+				hintEl.classList.remove('hidden');
+			} else {
+				hintEl.classList.add('hidden');
+			}
+		} catch (e) {
+			hintEl.classList.add('hidden');
+		}
+	}, 300);
 }
 
 async function pysimLoadCommands() {
@@ -2692,6 +2733,31 @@ function getParentSel(node) {
 	if (p.name.startsWith('ADF.')) return p.name;
 	if (p.fid) return p.fid;
 	return p.name;
+}
+
+function pysimCustomInject(node) {
+	if (!node || !node.fid) return;
+	const pfid = node.fid.toLowerCase();
+	for (const c of pysimCustomFiles) {
+		if (c.parentFid.toLowerCase() !== pfid) continue;
+		const existing = (node.children || []).find(ch => ch.fid === c.fid);
+		if (existing) {
+			existing.name = c.name;
+			existing.custom = true;
+		} else {
+			node.children = node.children || [];
+			node.children.push({
+				name: c.name,
+				fid: c.fid,
+				isDir: c.name.startsWith('DF.') || c.name.startsWith('ADF.'),
+				children: null,
+				expanded: false,
+				exists: null,
+				custom: true,
+				parent: node,
+			});
+		}
+	}
 }
 
 async function pysimFsRefresh() {
@@ -2718,6 +2784,7 @@ async function pysimFsRefresh() {
 		parent: pysimFsTreeRoot,
 	}));
 	pysimFsTreeRoot.exists = true;
+	pysimCustomInject(pysimFsTreeRoot);
 	pysimFsRenderTree();
 }
 
@@ -2746,6 +2813,7 @@ async function pysimFsLoadChildren(node) {
 			parent: node,
 		}));
 		node.exists = true;
+		pysimCustomInject(node);
 	} catch (e) {
 		node.exists = false;
 		node.children = [];
@@ -2764,26 +2832,28 @@ function pysimFsRenderNode(node, depth) {
 	const pad = '&nbsp;'.repeat(depth * 4);
 	const isDir = node.isDir;
 	const exists = node.exists !== false;
-	const color = exists ? (isDir ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-slate-300') : 'text-red-400 dark:text-red-400';
+	const verified = node.exists !== null;
+	const color = verified ? (exists ? (isDir ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-slate-300') : 'text-red-400 dark:text-red-400') : 'text-gray-500 dark:text-slate-400';
+	const italic = node.custom ? ' italic' : '';
 	const fidStr = node.fid ? ' <span class="text-gray-400 dark:text-slate-500">(' + node.fid.toUpperCase() + ')</span>' : '';
 	const aidStr = node.aid ? ' <span class="text-gray-400 dark:text-slate-500">[' + node.aid + ']</span>' : '';
-	let html = '<div class="' + color + '">';
+	let html = '<div class="' + color + italic + '">';
 	html += pad;
-	if (!exists) {
+	if (verified && !exists) {
 		html += '✗ ';
 	}
 	if (isDir) {
-		if (exists) {
+		if ((verified && exists) || !verified) {
 			const toggle = node.children && node.expanded ? '▼' : '▶';
-			html += '<span class="cursor-pointer select-none" onclick="pysimFsToggleDir(\'' + esc(node.name) + '\')">' + toggle + '</span> ';
-			html += '<span class="cursor-pointer hover:underline" onclick="pysimFsToggleDir(\'' + esc(node.name) + '\')">' + esc(node.name) + fidStr + aidStr + '</span>';
+			html += '<span class="cursor-pointer select-none' + italic + '" onclick="pysimFsToggleDir(\'' + esc(node.name) + '\')">' + toggle + '</span> ';
+			html += '<span class="cursor-pointer hover:underline' + italic + '" onclick="pysimFsToggleDir(\'' + esc(node.name) + '\')">' + esc(node.name) + fidStr + aidStr + '</span>';
 		} else {
 			html += esc(node.name) + fidStr + aidStr + '</div>';
 			return html;
 		}
 	} else {
-		html += '<span class="' + (exists ? 'cursor-pointer hover:underline ml-4' : 'ml-4') + '"' +
-			(exists ? ' onclick="pysimFsClickFile(\'' + esc(node.name) + '\')"' : '') + '>' + esc(node.name) + fidStr + aidStr + '</span>';
+		html += '<span class="cursor-pointer hover:underline ml-4' + italic + '"' +
+			((verified && exists) ? ' onclick="pysimFsClickFile(\'' + esc(node.name) + '\')"' : (!verified ? ' onclick="pysimFsClickFile(\'' + esc(node.name) + '\')"' : '')) + '>' + esc(node.name) + fidStr + aidStr + '</span>';
 	}
 	html += '</div>';
 	if (isDir && node.children && node.expanded) {
@@ -2914,6 +2984,61 @@ function pysimFsSetMode(mode) {
 		el.classList.toggle('dark:text-slate-300', !active);
 	});
 }
+
+// ===== custom files =====
+let pysimCustomFiles = [];
+
+function pysimCustomLoad() {
+	try {
+		const d = localStorage.getItem('pysim_custom_files');
+		pysimCustomFiles = d ? JSON.parse(d) : [];
+	} catch (e) { pysimCustomFiles = []; }
+}
+
+function pysimCustomSave() {
+	localStorage.setItem('pysim_custom_files', JSON.stringify(pysimCustomFiles));
+}
+
+function pysimCustomAdd() {
+	const pathEl = document.getElementById('pysim-cf-path');
+	const nameEl = document.getElementById('pysim-cf-name');
+	const path = pathEl.value.trim().toUpperCase();
+	const name = nameEl.value.trim().toUpperCase();
+	if (!path || !name) return;
+	const parts = path.split('/').filter(Boolean);
+	if (parts.length < 2) { alert('Path must have at least 2 parts, e.g. 3F00/6F46'); return; }
+	const fid = parts[parts.length - 1];
+	const parentFid = parts[parts.length - 2];
+	if (pysimCustomFiles.some(c => c.path === path)) { alert('Path already exists'); return; }
+	pysimCustomFiles.push({ path, name, fid, parentFid });
+	pysimCustomSave();
+	pysimCustomRender();
+	pathEl.value = '';
+	nameEl.value = '';
+}
+
+function pysimCustomRemove(i) {
+	pysimCustomFiles.splice(i, 1);
+	pysimCustomSave();
+	pysimCustomRender();
+}
+
+function pysimCustomRender() {
+	const el = document.getElementById('pysim-cf-list');
+	if (!pysimCustomFiles.length) { el.innerHTML = '<span class="text-gray-400">No custom files defined.</span>'; return; }
+	let html = '';
+	for (let i = 0; i < pysimCustomFiles.length; i++) {
+		const c = pysimCustomFiles[i];
+		html += '<div class="flex items-center gap-2 py-1 border-b border-gray-200 dark:border-slate-700">';
+		html += '<span class="text-gray-500">' + esc(c.path) + '</span> <span class="text-blue-600 dark:text-blue-400">→</span> <b>' + esc(c.name) + '</b>';
+		html += '<span onclick="pysimCustomRemove(' + i + ')" class="ml-auto cursor-pointer text-red-400 hover:text-red-600">✕</span>';
+		html += '</div>';
+	}
+	el.innerHTML = html;
+}
+
+// Init custom files
+pysimCustomLoad();
 
 // Init sub-tab pills
 document.querySelectorAll('.pysim-subtab').forEach(btn => {
