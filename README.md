@@ -371,6 +371,35 @@ Swaps nibble pairs of an even-length hex string.
 
 ---
 
+
+
+## Card Reader (pySim integration)
+
+Connects to a local [pysim-otaman-server](https://github.com/anttro/pysim-otaman-server) for live card operations.
+
+### File Browser
+
+Browse the UICC filesystem in a tree view. Files are shown with names, FIDs, and AIDs (for ADFs). Click to read contents.
+
+- **Read** — reads the selected file (auto-detects transparent vs record files)
+- **Edit** — switch to edit mode, modify hex data, click **Save** to write back
+- **Raw / Decoded** — toggle between hex dump and pysim-decoded JSON view
+
+### Custom Files
+
+Files not in pysim's model can be added manually:
+
+1. Switch to the **Custom files** sub-tab
+2. Enter the file path (e.g., `3F00/6F46`) and an alias (e.g., `EF.SPN`)
+3. Click **Add** — the file appears in the tree in italics (unverified)
+4. Click the file to verify existence — on success, it behaves like a model file
+
+Custom files persist in `localStorage` across sessions. Export/import as JSON for sharing.
+
+### Command Hints
+
+Type a command name in the **pySim command line** input. Usage hints appear as a tooltip after 300ms. Command autocomplete suggestions appear above the input.
+
 ## PWA
 
 OTAMan is a Progressive Web App and can be installed for offline use. Use the **INSTALL PWA** button in the header, or use the browser's install prompt.
