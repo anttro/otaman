@@ -743,6 +743,7 @@
 		</div>
 
 		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate Secure Packet">Generate Secure Packet</button>
+		<button onclick="pysimSendOta()" class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Send to Card</button>
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 	</div>
 
@@ -1743,10 +1744,9 @@ function genSp() {
 
 	const apdu = hexToBytes(apduHex);
 
+	const macLen = hasMac ? 8 : 0;
 	const pCntr = (8 - (apdu.length % 8)) % 8;
 	const pCntrByte = pCntr;
-
-	const macLen = hasMac ? 8 : 0;
 
 	const spiOff = 4;
 	const kicOff = 6;
@@ -1784,10 +1784,9 @@ function genSp() {
 	}
 
 	if (ciphering && kicKey) {
-		const cipherLen = packetLen - kicOff;
-		const toEncrypt = packet.subarray(kicOff, packetLen);
+		const toEncrypt = packet.subarray(secDataOff, packetLen);
 		const encrypted = des3CbcEncrypt(toEncrypt, kicKey, new Uint8Array(8));
-		packet.set(encrypted, kicOff);
+		packet.set(encrypted, secDataOff);
 	}
 
 	resultEl.value = bytesToHex(packet);
@@ -2645,6 +2644,34 @@ async function pysimApdu() {
 		out.value += 'Error: ' + e.message;
 	}
 	pysimRefresh();
+}
+
+async function pysimSendOta() {
+	const connectedRow = document.getElementById('pysim-connected-row');
+	if (!connectedRow || connectedRow.classList.contains('hidden')) {
+		alert('Card reader server is not connected');
+		return;
+	}
+	const sp = document.getElementById('sp-result').value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+	if (!sp) { alert('No secured packet to send. Generate a secure packet first.'); return; }
+	const statusEl = document.getElementById('pysim-status');
+	statusEl.innerHTML = '<span class="text-gray-500">Sending OTA...</span>';
+	try {
+		const data = await pysimFetch('/api/send-ota', { sp });
+		if (data.success) {
+			if (data.response_data) {
+				document.getElementById('resp-data').value = data.response_data;
+				document.getElementById('resp-sw1').value = data.sw.slice(0, 2);
+				document.getElementById('resp-sw2').value = data.sw.slice(2, 4);
+				switchTab('response');
+			}
+			statusEl.innerHTML = '<span class="text-green-600">OTA sent. SW: ' + data.sw + '</span>';
+		} else {
+			statusEl.innerHTML = '<span class="text-red-500">OTA failed: ' + (data.error || 'SW: ' + data.sw) + '</span>';
+		}
+	} catch (e) {
+		statusEl.innerHTML = '<span class="text-red-500">Error: ' + esc(e.message) + '</span>';
+	}
 }
 
 // ===== pysim sub-tabs =====
