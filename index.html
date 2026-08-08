@@ -757,8 +757,9 @@
 	</div>
 
 	<div id="tab-cards" class="tab-content hidden">
+		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
 		<div class="flex gap-2 mb-3">
-			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="Name (e.g. Alfa SIM)">
+			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
 			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="ICCID">
 			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap">Add</button>
 		</div>
@@ -774,11 +775,6 @@
 			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
 			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
 		</div>
-		<div class="mb-3">
-			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Export as JSON</button>
-			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">Import JSON from clipboard</button>
-		</div>
-		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
 		<div id="cards-list" class="overflow-x-auto">
 			<table class="w-full text-sm">
 				<thead><tr>
@@ -795,6 +791,11 @@
 				<tbody id="cards-tbody"></tbody>
 			</table>
 		</div>
+		<div class="mt-3">
+			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Export as JSON</button>
+			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">Import JSON from clipboard</button>
+		</div>
+		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
 	</div>
 
 	<div id="tab-response" class="tab-content hidden">
