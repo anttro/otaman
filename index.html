@@ -31,6 +31,7 @@
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="ber">BER-TLV</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="ram">RAM</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="sp">Secured Packet</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="cards">Cards</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="response">Response parser</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="pysim">Card reader</button>
 	</div>
@@ -709,6 +710,12 @@
 				<input id="sp-tar" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
 			</div>
 			<div class="flex-1">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Card presets</label>
+				<select id="sp-card-sel" onchange="cardsApply(this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					<option value="">— Select card —</option>
+				</select>
+			</div>
+			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Counter (5 bytes)</label>
 				<div class="flex gap-1 items-center">
 					<button type="button" onclick="spCntrAdjust(-1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">−</button>
@@ -747,6 +754,47 @@
 		<button onclick="pysimSendOta()" class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Send to Card</button>
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
+	</div>
+
+	<div id="tab-cards" class="tab-content hidden">
+		<div class="flex gap-2 mb-3">
+			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="Name (e.g. Alfa SIM)">
+			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="ICCID">
+			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap">Add</button>
+		</div>
+		<div class="flex gap-2 mb-3 flex-wrap">
+			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
+			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
+			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
+			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
+			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono" placeholder="TAR" maxlength="6">
+			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
+		</div>
+		<div class="flex gap-2 mb-3">
+			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
+			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
+		</div>
+		<div class="mb-3">
+			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Export as JSON</button>
+			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">Import JSON from clipboard</button>
+		</div>
+		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
+		<div id="cards-list" class="overflow-x-auto">
+			<table class="w-full text-sm">
+				<thead><tr>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">Name</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">ICCID</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KIc</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KID</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI1</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI2</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">TAR</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">Cntr</th>
+					<th class="border-b border-gray-200 dark:border-slate-700"></th>
+				</tr></thead>
+				<tbody id="cards-tbody"></tbody>
+			</table>
+		</div>
 	</div>
 
 	<div id="tab-response" class="tab-content hidden">
@@ -2869,6 +2917,147 @@ async function stkMenuRespond(result) {
 	}
 }
 
+// ===== Cards storage =====
+let cards = [];
+
+function cardsLoad() {
+	try {
+		const d = localStorage.getItem('otaman_cards');
+		cards = d ? JSON.parse(d) : [];
+	} catch (e) { cards = []; }
+	cardsRebuildSelect();
+}
+
+function cardsSave() {
+	localStorage.setItem('otaman_cards', JSON.stringify(cards));
+	cardsRebuildSelect();
+	cardsRender();
+}
+
+function cardsAdd() {
+	const name = document.getElementById('cards-name').value.trim();
+	const iccid = document.getElementById('cards-iccid').value.trim();
+	const kic = document.getElementById('cards-kic').value.trim();
+	const kid = document.getElementById('cards-kid').value.trim();
+	const spi1 = document.getElementById('cards-spi1').value.trim();
+	const spi2 = document.getElementById('cards-spi2').value.trim();
+	const tar = document.getElementById('cards-tar').value.trim();
+	const cntr = document.getElementById('cards-cntr').value.trim();
+	const kicKey = document.getElementById('cards-kic-key').value.trim();
+	const kidKey = document.getElementById('cards-kid-key').value.trim();
+	if (!name) { alert('Name is required'); return; }
+	if (!iccid) { alert('ICCID is required'); return; }
+	if (!kic || !kid) { alert('KIc and KID are required'); return; }
+	if (!kicKey || !kidKey) { alert('KIc key and KID key are required'); return; }
+	if (cards.some(c => c.iccid === iccid)) { alert('Card with this ICCID already exists'); return; }
+	cards.push({
+		name: name,
+		iccid: iccid,
+		kic: kic,
+		kid: kid,
+		spi1: spi1 || '16',
+		spi2: spi2 || '01',
+		tar: tar,
+		cntr: cntr || '0000000001',
+		kicKey: kicKey,
+		kidKey: kidKey,
+	});
+	cardsSave();
+	['name','iccid','kic','kid','spi1','spi2','tar','cntr','kic-key','kid-key'].forEach(id => {
+		document.getElementById('cards-' + id).value = '';
+	});
+}
+
+function cardsRemove(i) {
+	cards.splice(i, 1);
+	cardsSave();
+	cardsRender();
+}
+
+function cardsRender() {
+	const tbody = document.getElementById('cards-tbody');
+	if (!cards.length) { tbody.innerHTML = '<tr><td colspan="9" class="py-2 text-gray-400">No cards defined.</td></tr>'; return; }
+	let html = '';
+	for (let i = 0; i < cards.length; i++) {
+		const c = cards[i];
+		html += '<tr class="border-b border-gray-100 dark:border-slate-700">';
+		html += '<td class="py-1 px-2 font-medium">' + esc(c.name) + '</td>';
+		html += '<td class="py-1 px-2 font-mono text-xs">' + esc(c.iccid) + '</td>';
+		html += '<td class="py-1 px-2 font-mono text-xs text-center">' + esc(c.kic) + '</td>';
+		html += '<td class="py-1 px-2 font-mono text-xs text-center">' + esc(c.kid) + '</td>';
+		html += '<td class="py-1 px-2 font-mono text-xs text-center">' + esc(c.spi1) + '</td>';
+		html += '<td class="py-1 px-2 font-mono text-xs text-center">' + esc(c.spi2) + '</td>';
+		html += '<td class="py-1 px-2 font-mono text-xs">' + esc(c.tar || '') + '</td>';
+		html += '<td class="py-1 px-2 font-mono text-xs">' + esc(c.cntr) + '</td>';
+		html += '<td class="py-1 px-2"><button onclick="cardsRemove(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700 hover:bg-red-200">Remove</button></td>';
+		html += '</tr>';
+	}
+	tbody.innerHTML = html;
+}
+
+function cardsRebuildSelect() {
+	const sel = document.getElementById('sp-card-sel');
+	if (!sel) return;
+	let html = '<option value="">— Select card —</option>';
+	for (let i = 0; i < cards.length; i++) {
+		html += '<option value="' + i + '">' + esc(cards[i].name) + ' (' + esc(cards[i].iccid) + ')</option>';
+	}
+	sel.innerHTML = html;
+}
+
+function cardsApply(idx) {
+	const c = cards[parseInt(idx)];
+	if (!c) return;
+	document.getElementById('sp-spi1').value = c.spi1;
+	document.getElementById('sp-spi2-hex').value = c.spi2;
+	document.getElementById('sp-kic-hex').value = c.kic;
+	document.getElementById('sp-kid-hex').value = c.kid;
+	document.getElementById('sp-cntr').value = c.cntr;
+	document.getElementById('sp-kic-key').value = c.kicKey;
+	document.getElementById('sp-kid-key').value = c.kidKey;
+	updateSp();
+	genSp();
+}
+
+function cardsExport() {
+	const el = document.getElementById('cards-io');
+	el.value = JSON.stringify(cards, null, 2);
+	el.classList.remove('hidden');
+	el.select();
+}
+
+function cardsImport() {
+	const el = document.getElementById('cards-io');
+	try {
+		const imported = JSON.parse(el.value);
+		if (!Array.isArray(imported)) throw new Error('Expected an array');
+		let added = 0;
+		for (const entry of imported) {
+			if (!entry.name || !entry.iccid) continue;
+			if (cards.some(c => c.iccid === entry.iccid)) continue;
+			cards.push({
+				name: entry.name,
+				iccid: entry.iccid,
+				kic: entry.kic || '15',
+				kid: entry.kid || '15',
+				spi1: entry.spi1 || '16',
+				spi2: entry.spi2 || '01',
+				tar: entry.tar || '',
+				cntr: entry.cntr || '0000000001',
+				kicKey: entry.kicKey || '',
+				kidKey: entry.kidKey || '',
+			});
+			added++;
+		}
+		cardsSave();
+		cardsRender();
+		el.value = 'Imported ' + added + ' cards.';
+		setTimeout(() => { el.classList.add('hidden'); }, 2000);
+	} catch (e) {
+		alert('Import error: ' + e.message);
+	}
+}
+
 // ===== pysim sub-tabs =====
 let pysimCmdHistory = [];
 let pysimCmdHistIdx = -1;
@@ -3449,6 +3638,9 @@ function pysimCustomImport() {
 
 // Init custom files
 pysimCustomLoad();
+
+// Init cards
+cardsLoad();
 
 // Init sub-tab pills
 document.querySelectorAll('.pysim-subtab').forEach(btn => {
