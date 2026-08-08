@@ -917,7 +917,7 @@
 	<div id="stk-menu-panel" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
 		<div class="bg-white dark:bg-slate-800 rounded-lg p-4 max-w-md w-full max-h-[80vh] flex flex-col">
 			<div class="flex justify-between items-center mb-3">
-				<button id="stk-back-btn" onclick="stkMenuRespond('back')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" disabled>← Back</button>
+				<button id="stk-back-btn" onclick="stkMenuRespond('back')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" style="display:none">← Back</button>
 				<span id="stk-menu-panel-title" class="font-bold text-sm"></span>
 				<button onclick="stkMenuExit()" class="px-3 py-1 text-xs rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50">Exit</button>
 			</div>
@@ -2770,7 +2770,7 @@ function stkMenuOpen() {
 	document.getElementById('stk-menu-panel-title').textContent = document.getElementById('stk-menu-title').textContent;
 	stkSetPillsDisabled(true);
 	stkMenuStack = [];
-	document.getElementById('stk-back-btn').disabled = true;
+	document.getElementById('stk-back-btn').style.display = 'none';
 	document.getElementById('stk-menu-buttons').classList.add('hidden');
 	document.getElementById('stk-menu-panel').classList.remove('hidden');
 	stkMenuRenderItems();
@@ -2795,7 +2795,7 @@ function stkMenuRenderItems() {
 		if (!data || !data.items) { content.innerHTML = '<span class="text-red-500 text-sm">No menu data</span>'; return; }
 		let html = '<div class="space-y-1">';
 		data.items.forEach(item => {
-			html += '<div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer" onclick="stkMenuItemClick(' + item.id + ')"><span class="w-5 text-xs font-bold text-gray-400 text-right">' + item.id + '</span><span class="text-sm">' + esc(item.text) + '</span></div>';
+			html += '<div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer" onclick="stkMenuItemClick(' + item.id + ')"><span class="w-5 text-xs text-gray-300 dark:text-gray-600 text-right">' + item.id + '</span><span class="text-sm">' + esc(item.text) + '</span></div>';
 		});
 		html += '</div>';
 		content.innerHTML = html;
@@ -2822,7 +2822,7 @@ function stkMenuHandleResponse(data) {
 	btns.classList.add('hidden');
 	if (data.type === 'display_text') {
 		content.innerHTML = '<div class="text-sm whitespace-pre-wrap p-2 bg-gray-50 dark:bg-slate-700 rounded">' + esc(data.text) + '</div>';
-		backBtn.disabled = stkMenuStack.length === 0;
+		backBtn.style.display = '';
 		btns.classList.remove('hidden');
 	} else if (data.type === 'select_item') {
 		stkMenuStack.push(data.items);
@@ -2830,16 +2830,16 @@ function stkMenuHandleResponse(data) {
 		const items = data.items;
 		let html = '<div class="space-y-1">';
 		items.forEach(item => {
-			html += '<div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer" onclick="stkSubItemClick(' + item.id + ')"><span class="w-5 text-xs font-bold text-gray-400 text-right">' + item.id + '</span><span class="text-sm">' + esc(item.text) + '</span></div>';
+			html += '<div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer" onclick="stkSubItemClick(' + item.id + ')"><span class="w-5 text-xs text-gray-300 dark:text-gray-600 text-right">' + item.id + '</span><span class="text-sm">' + esc(item.text) + '</span></div>';
 		});
 		html += '</div>';
 		content.innerHTML = html;
-		backBtn.disabled = false;
+		backBtn.style.display = '';
 		btns.classList.remove('hidden');
 	} else {
 		content.innerHTML = '<span class="text-gray-500 text-sm">Done</span>';
 		stkSetPillsDisabled(false);
-		backBtn.disabled = stkMenuStack.length === 0;
+		backBtn.style.display = 'none';
 	}
 }
 
@@ -2860,7 +2860,7 @@ async function stkMenuRespond(result) {
 		if (result === 'cancel' || result === 'back' || result === 'timeout') {
 			stkMenuRenderItems();
 			document.getElementById('stk-menu-buttons').classList.add('hidden');
-			document.getElementById('stk-back-btn').disabled = stkMenuStack.length === 0;
+			document.getElementById('stk-back-btn').style.display = 'none';
 			return;
 		}
 		stkMenuHandleResponse(data);
