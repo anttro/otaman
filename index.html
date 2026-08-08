@@ -16,7 +16,7 @@
 <div class="max-w-7xl mx-auto px-6 py-4">
 
 	<div class="flex items-center justify-between mb-6">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.2.2</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.3.0</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -743,8 +743,10 @@
 		</div>
 
 		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate Secure Packet">Generate Secure Packet</button>
+		<button onclick="pysimVerifySp()" class="mb-3 px-5 py-2.5 bg-slate-600 text-white text-sm font-medium rounded hover:bg-slate-700">Verify vs pySim</button>
 		<button onclick="pysimSendOta()" class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Send to Card</button>
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
 	</div>
 
 	<div id="tab-response" class="tab-content hidden">
@@ -1679,30 +1681,25 @@ function zeroPad(data, blockSize) {
 	return out;
 }
 
-function retailMac(data, keyBytes) {
+// TS 03.48 / TS 102 225 KID CC: DES/3DES in CBC mode, zero IV, '00' padding.
+// The MAC is the last 8 octets of the CBC encryption of the input.
+function cbcMac(data, keyBytes) {
 	const bs = 8;
 	const padded = zeroPad(data, bs);
-	const [k1, k2, k3] = des3Keys(keyBytes);
 	let prev = new Uint8Array(bs);
 	for (let i = 0; i < padded.length; i += bs) {
 		const block = padded.subarray(i, i + bs);
 		const xored = xorBytes(block, prev);
-		let enc;
-		if (keyBytes.length === 8) {
-			enc = desEncryptBlock(xored, k1);
-		} else {
-			enc = des3EncryptBlock(xored, keyBytes);
-		}
-		if (i + bs === padded.length && keyBytes.length >= 16) {
-			enc = desDecryptBlock(enc, k2);
-			enc = desEncryptBlock(enc, k1);
-		}
-		prev = enc;
+		prev = des3EncryptBlock(xored, keyBytes);
 	}
 	return prev;
 }
 
 // ===== Secure Packet assembly =====
+// TS 102 225 Table 1/2 + TS 31.115 Table 1 (SMS-PP):
+//   CPL(2) CHL(1) SPI(2) KIc(1) KID(1) TAR(3) CNTR(5) PCNTR(1) [RC/CC/DS] secured-data(+padding)
+// CPL = octets from CHL to end incl. padding; CHL = 13 + len_sig.
+// CPI (0x70) and CHI (null) are NOT part of the SMS packet data.
 function genSp() {
 	const apduHex = (document.getElementById('sp-apdu').value || '').replace(/[^0-9a-fA-F]/g, '');
 	if (!apduHex) { document.getElementById('sp-result').value = 'Error: specify APDU'; return; }
@@ -1745,48 +1742,51 @@ function genSp() {
 	const apdu = hexToBytes(apduHex);
 
 	const macLen = hasMac ? 8 : 0;
-	const pCntr = (8 - (apdu.length % 8)) % 8;
-	const pCntrByte = pCntr;
+	// padding aligns CNTR+PCNTR+RC/CC/DS+data to the DES block size (ciphering only)
+	const padCnt = ciphering ? (8 - ((6 + macLen + apdu.length) % 8)) % 8 : 0;
 
-	const spiOff = 4;
-	const kicOff = 6;
-	const secDataOff = 17 + macLen;
+	const chl = 13 + macLen;
+	const cpl = 14 + macLen + apdu.length + padCnt;
 
-	const packetLen = secDataOff + apdu.length + pCntr;
+	const packetLen = 3 + chl + apdu.length + padCnt;
 	const packet = new Uint8Array(packetLen);
 
-	packet[0] = 0x02;
-	packet[2] = 0x01;
-	packet[4] = spi1;
-	packet[5] = spi2;
-	packet[6] = parseInt(kicHex, 16);
-	packet[7] = parseInt(kidHex, 16);
-	packet[8] = parseInt(tarHex.substr(0,2), 16);
-	packet[9] = parseInt(tarHex.substr(2,2), 16);
-	packet[10] = parseInt(tarHex.substr(4,2), 16);
-	packet[11] = parseInt(cntrHex.substr(0,2), 16);
-	packet[12] = parseInt(cntrHex.substr(2,2), 16);
-	packet[13] = parseInt(cntrHex.substr(4,2), 16);
-	packet[14] = parseInt(cntrHex.substr(6,2), 16);
-	packet[15] = parseInt(cntrHex.substr(8,2), 16);
-	packet[16] = pCntrByte;
-	for (let i = 0; i < macLen; i++) packet[17 + i] = 0x00;
-	packet.set(apdu, secDataOff);
-	for (let i = 0; i < pCntr; i++) packet[secDataOff + apdu.length + i] = padByte;
-
-	const chl = packetLen - spiOff;
-	packet[1] = packetLen - 2;
-	packet[3] = chl;
+	packet[0] = (cpl >> 8) & 0xFF;
+	packet[1] = cpl & 0xFF;
+	packet[2] = chl;
+	packet[3] = spi1;
+	packet[4] = spi2;
+	packet[5] = parseInt(kicHex, 16);
+	packet[6] = parseInt(kidHex, 16);
+	packet[7] = parseInt(tarHex.substr(0,2), 16);
+	packet[8] = parseInt(tarHex.substr(2,2), 16);
+	packet[9] = parseInt(tarHex.substr(4,2), 16);
+	packet[10] = parseInt(cntrHex.substr(0,2), 16);
+	packet[11] = parseInt(cntrHex.substr(2,2), 16);
+	packet[12] = parseInt(cntrHex.substr(4,2), 16);
+	packet[13] = parseInt(cntrHex.substr(6,2), 16);
+	packet[14] = parseInt(cntrHex.substr(8,2), 16);
+	packet[15] = padCnt;
+	const macOff = 16;
+	const dataOff = macOff + macLen;
+	packet.set(apdu, dataOff);
+	for (let i = 0; i < padCnt; i++) packet[dataOff + apdu.length + i] = padByte;
 
 	if (hasMac && kidKey) {
-		const mac = retailMac(packet, kidKey);
-		packet.set(mac, 17);
+		// CC is computed over CPL+CHL+SPI+KIc+KID+TAR+CNTR+PCNTR+data(+padding),
+		// i.e. everything up to (but excluding) the RC/CC/DS field (TS 31.115 4.2).
+		const macInput = new Uint8Array(packet.length - macLen);
+		macInput.set(packet.subarray(0, macOff));
+		macInput.set(packet.subarray(dataOff), macOff);
+		const mac = cbcMac(macInput, kidKey);
+		packet.set(mac, macOff);
 	}
 
 	if (ciphering && kicKey) {
-		const toEncrypt = packet.subarray(secDataOff, packetLen);
+		// ciphering covers CNTR+PCNTR+RC/CC/DS+secured data (TS 102 225 Table 2 note 1)
+		const toEncrypt = packet.subarray(10, packetLen);
 		const encrypted = des3CbcEncrypt(toEncrypt, kicKey, new Uint8Array(8));
-		packet.set(encrypted, secDataOff);
+		packet.set(encrypted, 10);
 	}
 
 	resultEl.value = bytesToHex(packet);
@@ -2646,6 +2646,47 @@ async function pysimApdu() {
 	pysimRefresh();
 }
 
+function spParams() {
+	return {
+		spi1: document.getElementById('sp-spi1').value,
+		spi2: document.getElementById('sp-spi2-hex').value,
+		kic: document.getElementById('sp-kic-hex').value,
+		kid: document.getElementById('sp-kid-hex').value,
+		tar: document.getElementById('sp-tar').value,
+		cntr: document.getElementById('sp-cntr').value,
+		kicKey: document.getElementById('sp-kic-key').value,
+		kidKey: document.getElementById('sp-kid-key').value,
+		apdu: document.getElementById('sp-apdu').value,
+	};
+}
+
+async function pysimVerifySp() {
+	const sp = document.getElementById('sp-result').value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+	const resultEl = document.getElementById('sp-verify-result');
+	if (!sp) { alert('No secured packet to verify. Generate a secure packet first.'); return; }
+	resultEl.classList.remove('hidden');
+	resultEl.textContent = 'Verifying against pySim reference...';
+	try {
+		const data = await pysimFetch('/api/sp-verify', { sp, ...spParams() });
+		if (data.match) {
+			resultEl.textContent = 'MATCH: JS packet byte-identical to pySim reference (' + sp.length / 2 + ' bytes)';
+			resultEl.classList.remove('text-red-600');
+			resultEl.classList.add('text-green-600');
+		} else {
+			let msg = 'MISMATCH vs pySim.';
+			if (data.diffs) msg += ' First diff at byte ' + data.diffs[0].offset + ' (JS=' + data.diffs[0].js + ' pySim=' + data.diffs[0].ref + ')';
+			if (data.py_sp) msg += ' pySim reference: ' + data.py_sp;
+			resultEl.textContent = msg;
+			resultEl.classList.remove('text-green-600');
+			resultEl.classList.add('text-red-600');
+		}
+	} catch (e) {
+		resultEl.textContent = 'Error: ' + e.message;
+		resultEl.classList.remove('text-green-600');
+		resultEl.classList.add('text-red-600');
+	}
+}
+
 async function pysimSendOta() {
 	const connectedRow = document.getElementById('pysim-connected-row');
 	if (!connectedRow || connectedRow.classList.contains('hidden')) {
@@ -2657,7 +2698,7 @@ async function pysimSendOta() {
 	const statusEl = document.getElementById('pysim-status');
 	statusEl.innerHTML = '<span class="text-gray-500">Sending OTA...</span>';
 	try {
-		const data = await pysimFetch('/api/send-ota', { sp });
+		const data = await pysimFetch('/api/send-ota', { sp, ...spParams() });
 		if (data.success) {
 			if (data.response_data) {
 				document.getElementById('resp-data').value = data.response_data;
@@ -2665,7 +2706,13 @@ async function pysimSendOta() {
 				document.getElementById('resp-sw2').value = data.sw.slice(2, 4);
 				switchTab('response');
 			}
-			statusEl.innerHTML = '<span class="text-green-600">OTA sent. SW: ' + data.sw + '</span>';
+			let msg = 'OTA sent. SW: ' + data.sw;
+			const por = data.por;
+			if (por && por.response_status) {
+				msg += ' | PoR status: ' + por.response_status + ' (TAR ' + por.tar + ')';
+				if (por.decoded && por.decoded.last_status_word) msg += ' | last SW ' + por.decoded.last_status_word + ' ' + (por.decoded.last_response_data || '');
+			}
+			statusEl.innerHTML = '<span class="text-green-600">' + esc(msg) + '</span>';
 		} else {
 			statusEl.innerHTML = '<span class="text-red-500">OTA failed: ' + (data.error || 'SW: ' + data.sw) + '</span>';
 		}
