@@ -557,10 +557,11 @@
 		<div id="ram-gs-p2-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET STATUS format">GET STATUS format</label>
 			<select id="ram-gs-p2" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-				<option value="40">40 — First/all, GP TLV format</option>
-				<option value="42">42 — Next, GP TLV format</option>
-				<option value="00">00 — First/all, old format (deprecated)</option>
-				<option value="02">02 — Next, old format (deprecated)</option>
+				<option value="02">02 — First/all, GP v2.3 TLV format</option>
+				<option value="03">03 — Next, GP v2.3 TLV format</option>
+				<option value="40">40 — First/all, GP v2.2 TLV format</option>
+				<option value="42">42 — Next, GP v2.2 TLV format</option>
+				<option value="00">00 — First/all, raw format (deprecated)</option>
 			</select>
 		</div>
 		<div id="ram-tag-row" class="mb-3">
@@ -588,7 +589,6 @@
 			<select id="ram-ss-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 				<option value="80">ISD (80)</option>
 				<option value="40">Application or SSD (40)</option>
-				<option value="60">SD and its applications (60)</option>
 			</select>
 		</div>
 		<div id="ram-ss-state-row" class="mb-3">
@@ -1370,13 +1370,13 @@ function genRam() {
 
 	if (cmd === 'install-load' && !sdAid) { resultEl.value = 'Error: specify SD AID'; return; }
 
-	const INSTALL_P1 = {
-		'install-load': 0x02,
-		'install-install': 0x0C,
-		'install-make-sel': 0x10,
-		'install-reg-update': 0x01,
-		'install-extradition': 0x04,
-	};
+ 	const INSTALL_P1 = {
+ 		'install-load': 0x02,
+ 		'install-install': 0x0C,
+ 		'install-make-sel': 0x08,
+ 		'install-reg-update': 0x40,
+ 		'install-extradition': 0x10,
+ 	};
 
 	let apdu = '';
 	if (cmd === 'install-load') {
