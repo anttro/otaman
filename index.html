@@ -31,8 +31,8 @@
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="ber">BER-TLV</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="ram">RAM</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="sp">Secured Packet</button>
-		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="cards">Cards</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="response">Response parser</button>
+		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="cards">Cards</button>
 		<button class="tab-btn px-4 py-2 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="pysim">Card reader</button>
 	</div>
 
@@ -756,48 +756,6 @@
 		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
 	</div>
 
-	<div id="tab-cards" class="tab-content hidden">
-		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
-		<div class="flex gap-2 mb-3">
-			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
-			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="ICCID">
-			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap">Add</button>
-		</div>
-		<div class="flex gap-2 mb-3 flex-wrap">
-			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
-			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
-			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
-			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
-			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono" placeholder="TAR" maxlength="6">
-			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
-		</div>
-		<div class="flex gap-2 mb-3">
-			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
-			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
-		</div>
-		<div id="cards-list" class="overflow-x-auto">
-			<table class="w-full text-sm">
-				<thead><tr>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">Name</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">ICCID</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KIc</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KID</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI1</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI2</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">TAR</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">Cntr</th>
-					<th class="border-b border-gray-200 dark:border-slate-700"></th>
-				</tr></thead>
-				<tbody id="cards-tbody"></tbody>
-			</table>
-		</div>
-		<div class="mt-3">
-			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Export as JSON</button>
-			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">Import JSON from clipboard</button>
-		</div>
-		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
-	</div>
-
 	<div id="tab-response" class="tab-content hidden">
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
@@ -866,6 +824,48 @@
 		</div>
 		<button onclick="decodeResponse()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Decode">Decode</button>
 		<div id="resp-output" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 whitespace-pre-wrap" style="min-height:100px"></div>
+	</div>
+
+	<div id="tab-cards" class="tab-content hidden">
+		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
+		<div class="flex gap-2 mb-3">
+			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
+			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="ICCID (optional)">
+			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap">Add</button>
+		</div>
+		<div class="flex gap-2 mb-3 flex-wrap">
+			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
+			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
+			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
+			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
+			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono" placeholder="ISD TAR" maxlength="6">
+			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
+		</div>
+		<div class="flex gap-2 mb-3">
+			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
+			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
+		</div>
+		<div id="cards-list" class="overflow-x-auto">
+			<table class="w-full text-sm">
+				<thead><tr>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">Name</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">ICCID</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KIc</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KID</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI1</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI2</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">TAR</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">Cntr</th>
+					<th class="border-b border-gray-200 dark:border-slate-700"></th>
+				</tr></thead>
+				<tbody id="cards-tbody"></tbody>
+			</table>
+		</div>
+		<div class="mt-3">
+			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Export as JSON</button>
+			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">Import JSON from clipboard</button>
+		</div>
+		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
 	</div>
 
 	<div id="tab-pysim" class="tab-content hidden">
@@ -2947,10 +2947,9 @@ function cardsAdd() {
 	const kicKey = document.getElementById('cards-kic-key').value.trim();
 	const kidKey = document.getElementById('cards-kid-key').value.trim();
 	if (!name) { alert('Name is required'); return; }
-	if (!iccid) { alert('ICCID is required'); return; }
 	if (!kic || !kid) { alert('KIc and KID are required'); return; }
 	if (!kicKey || !kidKey) { alert('KIc key and KID key are required'); return; }
-	if (cards.some(c => c.iccid === iccid)) { alert('Card with this ICCID already exists'); return; }
+	if (iccid && cards.some(c => c.iccid === iccid)) { alert('Card with this ICCID already exists'); return; }
 	cards.push({
 		name: name,
 		iccid: iccid,
@@ -3034,8 +3033,8 @@ function cardsImport() {
 		if (!Array.isArray(imported)) throw new Error('Expected an array');
 		let added = 0;
 		for (const entry of imported) {
-			if (!entry.name || !entry.iccid) continue;
-			if (cards.some(c => c.iccid === entry.iccid)) continue;
+			if (!entry.name) continue;
+			if (entry.iccid && cards.some(c => c.iccid === entry.iccid)) continue;
 			cards.push({
 				name: entry.name,
 				iccid: entry.iccid,
