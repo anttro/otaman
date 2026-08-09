@@ -3077,7 +3077,6 @@ function pysimSwitchSubtab(name) {
 	['cmd', 'apdu', 'files', 'custom'].forEach(s => {
 		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
 	});
-	if (name === 'files') pysimFsRefresh();
 	if (name === 'custom') pysimCustomRender();
 }
 
