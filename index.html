@@ -885,10 +885,10 @@
 				<img id="pysim-status-img" src="nosim.svg" alt="pysim" class="w-16 h-16 shrink-0 dark:invert">
 				<div class="flex-1 min-w-0">
 					<div class="flex items-center gap-2 mb-1 flex-wrap">
-						<button onclick="pysimEquipCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Equip card</button>
-						<button onclick="pysimStatusCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Check status</button>
-						<button onclick="pysimResetCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Reset card</button>
-						<button onclick="pysimDisconnect()" id="pysim-disconnect-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300">Disconnect from pySim</button>
+						<button onclick="pysimEquipCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Equip card">Equip card</button>
+						<button onclick="pysimStatusCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Check status">Check status</button>
+						<button onclick="pysimResetCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Reset card">Reset card</button>
+						<button onclick="pysimDisconnect()" id="pysim-disconnect-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Disconnect from pySim">Disconnect from pySim</button>
 					</div>
 					<div id="pysim-status" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 				</div>
@@ -896,10 +896,10 @@
 		</div>
 		<div id="pysim-body" class="hidden">
 			<div class="flex gap-1 mb-2">
-				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-blue-600 text-white" data-pysim-sub="files">File manager</button>
-				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="custom">Custom files</button>
-			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd">pySim command line</button>
-			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu">Raw APDU</button>
+				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-blue-600 text-white" data-pysim-sub="files" data-l10n="File manager">File manager</button>
+				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="custom" data-l10n="Custom files">Custom files</button>
+			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd" data-l10n="pySim command line">pySim command line</button>
+			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu" data-l10n="Raw APDU">Raw APDU</button>
 			<button id="stk-menu-btn" onclick="stkMenuOpen()" class="pysim-subtab px-3 py-1 text-xs rounded-full bg-emerald-600 text-white hover:bg-emerald-700" style="display:none">STK: <span id="stk-menu-title"></span></button>
 		</div>
 
@@ -910,16 +910,16 @@
 				</div>
 				<div class="flex-1">
 					<div id="pysim-fs-detail" class="hidden">
-						<div class="text-xs font-mono mb-1">File: <b id="pysim-fs-filename"></b></div>
+						<div class="text-xs font-mono mb-1"><span data-l10n="File:">File:</span> <b id="pysim-fs-filename"></b></div>
 						<div id="pysim-fs-content" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800 min-h-20 overflow-y-auto"></div>
 						<div class="flex gap-2 mt-1 items-center">
-							<button onclick="pysimFsRead()" id="pysim-fs-read-btn" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Read</button>
-							<button onclick="pysimFsSave()" id="pysim-fs-save-btn" class="px-2 py-1 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700 hidden">Save</button>
-							<button onclick="pysimFsCancel()" id="pysim-fs-cancel-btn" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700 hidden">Cancel</button>
+							<button onclick="pysimFsRead()" id="pysim-fs-read-btn" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Read">Read</button>
+							<button onclick="pysimFsSave()" id="pysim-fs-save-btn" class="px-2 py-1 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700 hidden" data-l10n="Save">Save</button>
+							<button onclick="pysimFsCancel()" id="pysim-fs-cancel-btn" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700 hidden" data-l10n="Cancel">Cancel</button>
 							<span class="text-xs text-gray-400 dark:text-slate-500">|</span>
-							<span class="pysim-mode-pill px-2 py-0.5 text-xs rounded cursor-pointer bg-blue-600 text-white" data-mode="raw" onclick="pysimFsSetMode('raw')">Raw</span>
-							<span class="pysim-mode-pill px-2 py-0.5 text-xs rounded cursor-pointer bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300" data-mode="dec" onclick="pysimFsSetMode('dec')">Decoded</span>
-							<button onclick="pysimFsEdit()" id="pysim-fs-edit-btn" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 ml-auto">Edit</button>
+							<span class="pysim-mode-pill px-2 py-0.5 text-xs rounded cursor-pointer bg-blue-600 text-white" data-mode="raw" onclick="pysimFsSetMode('raw')" data-l10n="Raw">Raw</span>
+							<span class="pysim-mode-pill px-2 py-0.5 text-xs rounded cursor-pointer bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300" data-mode="dec" onclick="pysimFsSetMode('dec')" data-l10n="Decoded">Decoded</span>
+							<button onclick="pysimFsEdit()" id="pysim-fs-edit-btn" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 ml-auto" data-l10n="Edit">Edit</button>
 						</div>
 						<div id="pysim-fs-status" class="mt-1 text-xs font-mono text-gray-500 dark:text-slate-400" style="min-height:1.2em"></div>
 					</div>
@@ -928,11 +928,11 @@
 		</div>
 
 		<div id="pysim-sub-custom" class="hidden">
-			<div class="mb-2 text-xs font-mono text-gray-600 dark:text-slate-400">Add known file paths and aliases to the file tree.</div>
+			<div class="mb-2 text-xs font-mono text-gray-600 dark:text-slate-400" data-l10n="Add known file paths and aliases to the file tree.">Add known file paths and aliases to the file tree.</div>
 			<div class="flex gap-2 items-center mb-2">
 				<input id="pysim-cf-path" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00/6F46" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
 				<input id="pysim-cf-name" class="font-mono w-48 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="EF.SPN" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
-				<button onclick="pysimCustomAdd()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap">Add</button>
+				<button onclick="pysimCustomAdd()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
 			</div>
 			<div id="pysim-cf-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 			<div class="flex gap-2 mt-2">
@@ -948,7 +948,7 @@
 					<input id="pysim-cmd" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" onkeydown="pysimCmdKeydown(event)" oninput="pysimCmdInput()">
 					<div id="pysim-cmd-suggest" class="hidden absolute bottom-full left-0 right-0 mb-1 max-h-32 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-xs font-mono shadow-lg z-10"></div>
 				</div>
-				<button onclick="pysimExec()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Execute</button>
+				<button onclick="pysimExec()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Execute">Execute</button>
 			</div>
 			<div id="pysim-cmd-hint" class="hidden mb-2 text-xs font-mono text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-slate-700 rounded p-2 bg-gray-50 dark:bg-slate-800 whitespace-pre-wrap"></div>
 			<textarea id="pysim-cmd-output" rows="10" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
@@ -957,7 +957,7 @@
 		<div id="pysim-sub-apdu" class="hidden">
 			<div class="flex gap-2 items-center mb-2">
 				<input id="pysim-apdu" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00A4040000" onkeydown="if(event.key==='Enter')pysimApdu()">
-				<button onclick="pysimApdu()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Send</button>
+				<button onclick="pysimApdu()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Send">Send</button>
 			</div>
 			<textarea id="pysim-apdu-output" rows="5" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		</div>
@@ -968,13 +968,13 @@
 			<div class="flex justify-between items-center mb-3">
 				<button id="stk-back-btn" onclick="stkMenuRespond('back')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" style="display:none">← Back</button>
 				<span id="stk-menu-panel-title" class="font-bold text-sm flex-1 text-center"></span>
-				<button onclick="stkMenuExit()" class="px-3 py-1 text-xs rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50">Exit</button>
+				<button onclick="stkMenuExit()" class="px-3 py-1 text-xs rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50" data-l10n="Exit">Exit</button>
 			</div>
 			<div id="stk-menu-panel-content" class="flex-1 overflow-auto"></div>
 			<div id="stk-menu-buttons" class="flex justify-between mt-3 pt-3 border-t border-gray-200 dark:border-slate-700 hidden">
-				<button onclick="stkMenuRespond('timeout')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600">Timeout</button>
-				<button onclick="stkMenuRespond('cancel')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600">Cancel</button>
-				<button onclick="stkMenuRespond('ok')" class="px-4 py-1 text-xs rounded-full bg-blue-600 text-white hover:bg-blue-700">OK</button>
+				<button onclick="stkMenuRespond('timeout')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-l10n="Timeout">Timeout</button>
+				<button onclick="stkMenuRespond('cancel')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-l10n="Cancel">Cancel</button>
+				<button onclick="stkMenuRespond('ok')" class="px-4 py-1 text-xs rounded-full bg-blue-600 text-white hover:bg-blue-700" data-l10n="OK">OK</button>
 			</div>
 		</div>
 	</div>
@@ -2571,7 +2571,7 @@ async function pysimRefresh() {
 		return true;
 	} catch (e) {
 		pysimSetConnected(false);
-		statusEl.textContent = 'Connection failed: ' + e.message;
+		statusEl.textContent = t('Connection failed: ') + ' ' + e.message;
 		return false;
 	}
 }
@@ -2581,9 +2581,9 @@ async function pysimConnect() {
 	pysimBase = urlInput.value.replace(/\/+$/, '');
 	const btn = document.getElementById('pysim-connect-btn');
 	btn.disabled = true;
-	btn.textContent = 'Connecting...';
+	btn.textContent = t('Connecting...');
 	const statusEl = document.getElementById('pysim-status');
-	statusEl.innerHTML = '<span class="text-gray-500">Checking card...</span>';
+	statusEl.innerHTML = '<span class="text-gray-500">' + t('Checking card...') + '</span>';
 	pysimSetConnected('spin');
 	try {
 		// Version check
@@ -2606,9 +2606,9 @@ async function pysimConnect() {
 		const cmd = await pysimFetch('/api/command', { cmd: 'status' });
 		if (cmd.output && (cmd.output.includes('Exception') || cmd.output.includes('ProtocolError'))) {
 			pysimSetConnected(false);
-			statusEl.innerHTML = '<span class="text-red-500">No card detected. Insert card and click Equip card button</span>';
+			statusEl.innerHTML = '<span class="text-red-500">' + t('No card detected. Insert card and click Equip card button') + '</span>';
 			pysimShowConnected(true);
-			btn.textContent = 'Connected';
+			btn.textContent = t('Connected');
 			btn.disabled = false;
 			return;
 		}
@@ -2617,11 +2617,11 @@ async function pysimConnect() {
 		await pysimRefresh();
 		pysimLoadCommands();
 		pysimFsRefresh();
-		btn.textContent = 'Connected';
+		btn.textContent = t('Connected');
 		stkCheckMenu();
 	} catch (e) {
 		pysimSetConnected(false);
-		statusEl.innerHTML = '<span class="text-red-500">Connection failed: ' + esc(e.message) + '</span>';
+		statusEl.innerHTML = '<span class="text-red-500">' + t('Connection failed: ') + ' ' + esc(e.message) + '</span>';
 		btn.textContent = 'Connect';
 	}
 	btn.disabled = false;
@@ -2639,20 +2639,20 @@ async function pysimRunCmd(cmd) {
 		const result = await pysimFetch('/api/command', { cmd });
 		if (result.output && (result.output.includes('Exception') || result.output.includes('ProtocolError') || result.output.includes('SwMatchError'))) {
 			pysimSetConnected(false);
-			statusEl.innerHTML = '<span class="text-red-500">No card detected. Insert card and click Equip card button</span>';
+			statusEl.innerHTML = '<span class="text-red-500">' + t('No card detected. Insert card and click Equip card button') + '</span>';
 			return null;
 		}
 		return result;
 	} catch (e) {
 		pysimSetConnected(false);
-		statusEl.innerHTML = '<span class="text-red-500">No card detected. Insert card and click Equip card button</span>';
+		statusEl.innerHTML = '<span class="text-red-500">' + t('No card detected. Insert card and click Equip card button') + '</span>';
 		return null;
 	}
 }
 
 async function pysimStatusCmd() {
 	const statusEl = document.getElementById('pysim-status');
-	statusEl.innerHTML = '<span class="text-gray-500">Checking...</span>';
+	statusEl.innerHTML = '<span class="text-gray-500">' + t('Checking...') + '</span>';
 	pysimSetConnected('spin');
 	const result = await pysimRunCmd('status');
 	if (result) await pysimRefresh();
@@ -2660,7 +2660,7 @@ async function pysimStatusCmd() {
 
 async function pysimResetCmd() {
 	const statusEl = document.getElementById('pysim-status');
-	statusEl.innerHTML = '<span class="text-gray-500">Resetting...</span>';
+	statusEl.innerHTML = '<span class="text-gray-500">' + t('Resetting...') + '</span>';
 	pysimSetConnected('spin');
 	const result = await pysimRunCmd('reset');
 	if (result) {
@@ -2671,7 +2671,7 @@ async function pysimResetCmd() {
 
 async function pysimEquipCmd() {
 	const statusEl = document.getElementById('pysim-status');
-	statusEl.innerHTML = '<span class="text-gray-500">Equipping...</span>';
+	statusEl.innerHTML = '<span class="text-gray-500">' + t('Equipping...') + '</span>';
 	pysimSetConnected('spin');
 	const result = await pysimRunCmd('equip');
 	if (result) {
@@ -2732,7 +2732,7 @@ async function pysimVerifySp() {
 	const resultEl = document.getElementById('sp-verify-result');
 	if (!sp) { alert('No secured packet to verify. Generate a secure packet first.'); return; }
 	resultEl.classList.remove('hidden');
-	resultEl.textContent = 'Verifying against pySim reference...';
+	resultEl.textContent = t('Verifying against pySim reference...');
 	try {
 		const data = await pysimFetch('/api/sp-verify', { sp, ...spParams() });
 		if (data.match) {
@@ -2763,7 +2763,7 @@ async function pysimSendOta() {
 	const sp = document.getElementById('sp-result').value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
 	if (!sp) { alert('No secured packet to send. Generate a secure packet first.'); return; }
 	const statusEl = document.getElementById('pysim-status');
-	statusEl.innerHTML = '<span class="text-gray-500">Sending OTA...</span>';
+	statusEl.innerHTML = '<span class="text-gray-500">' + t('Sending OTA...') + '</span>';
 	try {
 		const data = await pysimFetch('/api/send-ota', { sp, ...spParams() });
 		if (data.success) {
@@ -3731,6 +3731,37 @@ const LANG_RU = {
 	'and start it.': 'и запустите его.',
 	'Refer to pysim-otaman-server README files for details.': 'Подробности — в README файлах pysim-otaman-server.',
 	'once pysim-otaman-server is ready.': 'Нажмите кнопку Подключиться когда pysim-otaman-server будет готов.',
+	'Equip card': 'Подключить карту',
+	'Check status': 'Проверить статус',
+	'Reset card': 'Сброс карты',
+	'Disconnect from pySim': 'Отключиться от pySim',
+	'File manager': 'Файловый менеджер',
+	'Custom files': 'Пользовательские файлы',
+	'pySim command line': 'Командная строка pySim',
+	'Raw APDU': 'Отправка APDU',
+	'Read': 'Прочитать',
+	'Save': 'Сохранить',
+	'Raw': 'Данные как на карте',
+	'Decoded': 'Декодированные данные',
+	'Edit': 'Редактировать',
+	'Execute': 'Выполнить',
+	'Send': 'Отправить',
+	'Add known file paths and aliases to the file tree.': 'Добавьте пути и псевдонимы файлов в дерево файлов.',
+	'File:': 'Файл:',
+	'Cancel': 'Отмена',
+	'Timeout': 'Таймаут',
+	'OK': 'OK',
+	'Exit': 'Выход',
+	'Connecting...': 'Подключение...',
+	'Checking card...': 'Проверка карты...',
+	'Connected': 'Подключено',
+	'Connection failed:': 'Ошибка подключения:',
+	'No card detected. Insert card and click Equip card button': 'Карта не обнаружена. Вставьте карту и нажмите Подключить карту',
+	'Checking...': 'Проверка...',
+	'Resetting...': 'Сброс...',
+	'Equipping...': 'Подключение...',
+	'Sending OTA...': 'Отправка OTA...',
+	'Verifying against pySim reference...': 'Сверка с эталоном pySim...',
 };
 let currentLang = 'en';
 
