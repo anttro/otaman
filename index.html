@@ -935,9 +935,9 @@
 			</div>
 			<div id="stk-menu-panel-content" class="flex-1 overflow-auto"></div>
 			<div id="stk-menu-buttons" class="flex justify-between mt-3 pt-3 border-t border-gray-200 dark:border-slate-700 hidden">
-				<button onclick="stkMenuRespond('timeout')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-l10n="Timeout">Timeout</button>
-				<button onclick="stkMenuRespond('cancel')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-l10n="Cancel">Cancel</button>
-				<button onclick="stkMenuRespond('ok')" class="px-4 py-1 text-xs rounded-full bg-blue-600 text-white hover:bg-blue-700" data-l10n="OK">OK</button>
+				<button id="stk-timeout-btn" onclick="stkMenuRespond('timeout')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-l10n="Timeout">Timeout</button>
+				<button id="stk-cancel-btn" onclick="stkMenuRespond('cancel')" class="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-l10n="Cancel">Cancel</button>
+				<button id="stk-ok-btn" onclick="stkMenuRespond('ok')" class="px-4 py-1 text-xs rounded-full bg-blue-600 text-white hover:bg-blue-700" data-l10n="OK">OK</button>
 			</div>
 		</div>
 	</div>
@@ -2854,6 +2854,7 @@ function stkMenuHandleResponse(data) {
 	if (data.type === 'display_text') {
 		content.innerHTML = '<div class="text-sm whitespace-pre-wrap p-2 bg-gray-50 dark:bg-slate-700 rounded">' + esc(data.text) + '</div>';
 		backBtn.style.display = '';
+		document.getElementById('stk-ok-btn').style.display = '';
 		btns.classList.remove('hidden');
 	} else if (data.type === 'select_item') {
 		stkMenuStack.push(data.items);
@@ -2866,6 +2867,7 @@ function stkMenuHandleResponse(data) {
 		html += '</div>';
 		content.innerHTML = html;
 		backBtn.style.display = '';
+		document.getElementById('stk-ok-btn').style.display = 'none';
 		btns.classList.remove('hidden');
 	} else {
 		content.innerHTML = '<span class="text-gray-500 text-sm">SW: ' + esc(data.sw || '?') + '</span>';
