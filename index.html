@@ -563,8 +563,12 @@
 			</div>
 			<textarea id="conv-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 mt-2 bg-white dark:bg-slate-800"></textarea>
 		</div>
+		</div>
+		<div id="pysim-sub-proactive" class="hidden">
+			<div class="mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
+			<div id="pysim-event-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+		</div>
 	</div>
-</div>
 </div>
 
 	<div id="tab-sp" class="tab-content hidden">
@@ -863,6 +867,7 @@
 				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="custom" data-l10n="Custom files">Custom files</button>
 			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd" data-l10n="pySim command line">pySim command line</button>
 			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu" data-l10n="Raw APDU">Raw APDU</button>
+			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="proactive">Proactive UICC</button>
 			<button id="stk-menu-btn" onclick="stkMenuOpen()" class="pysim-subtab px-3 py-1 text-xs rounded-full bg-emerald-600 text-white hover:bg-emerald-700" style="display:none">STK: <span id="stk-menu-title"></span></button>
 		</div>
 
@@ -3056,10 +3061,11 @@ function pysimSwitchSubtab(name) {
 		btn.classList.toggle('text-gray-700', !isActive);
 		btn.classList.toggle('dark:text-slate-300', !isActive);
 	});
-	['cmd', 'apdu', 'files', 'custom'].forEach(s => {
+	['cmd', 'apdu', 'files', 'custom', 'proactive'].forEach(s => {
 		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
 	});
 	if (name === 'custom') pysimCustomRender();
+	if (name === 'proactive') pysimEventsRender();
 }
 
 function pysimCmdKeydown(e) {
@@ -3527,6 +3533,46 @@ function pysimFsResetEdit() {
 	document.getElementById('pysim-fs-cancel-btn').classList.add('hidden');
 }
 
+// ===== proactive UICC events =====
+const EVENT_NAMES = {
+	0x00: 'MT call', 0x01: 'Call connected', 0x02: 'Call disconnected',
+	0x03: 'Location status', 0x04: 'User activity', 0x05: 'Idle screen available',
+	0x06: 'Card reader status', 0x07: 'Language selection',
+	0x08: 'Browser termination', 0x09: 'Data available',
+	0x0A: 'Channel status', 0x0B: 'Access Technology Change',
+	0x0C: 'Display parameters changed', 0x0D: 'Local connection',
+	0x0E: 'Network Search Mode Change', 0x0F: 'Browsing status',
+	0x10: 'Frames Information Change', 0x11: 'I-WLAN Access Status',
+	0x12: 'Network Rejection', 0x13: 'HCI Connectivity',
+	0x14: 'Change of UICC Access', 0x15: 'CSG Cell Change',
+	0x16: 'Contactless state request', 0x17: 'Profile Container',
+	0x18: 'LTE D2D Discovery Monitoring', 0x19: 'LTE D2D Communication Monitoring',
+	0x1A: 'LTE D2D Announcement Response', 0x1B: 'LTE D2D Revocation',
+	0x1C: 'LTE D2D Application Port', 0x1D: 'LTE D2D Security Recovery',
+	0x1E: 'Off-net Emergency Call', 0x1F: 'ECall Over IMS',
+	0x20: 'EARFCN Update', 0x21: 'SCEF Channel Status',
+};
+
+async function pysimEventsRender() {
+	const el = document.getElementById('pysim-event-list');
+	el.innerHTML = '<span class="text-gray-400">' + t('Loading...') + '</span>';
+	try {
+		const events = await pysimFetch('/api/events');
+		if (!events || !events.length) {
+			el.innerHTML = '<span class="text-gray-400">' + t('No events configured.') + '</span>';
+			return;
+		}
+		let html = '';
+		events.forEach(e => {
+			const name = EVENT_NAMES[e] || ('Event 0x' + e.toString(16).padStart(2, '0').toUpperCase());
+			html += '<div class="flex items-center gap-2 py-0.5"><span class="w-6 text-right text-gray-400">' + e.toString(16).padStart(2, '0').toUpperCase() + '</span> ' + esc(name) + '</div>';
+		});
+		el.innerHTML = html;
+	} catch (e) {
+		el.innerHTML = '<span class="text-red-500">Error: ' + esc(e.message) + '</span>';
+	}
+}
+
 // ===== custom files =====
 let pysimCustomFiles = [];
 
@@ -3749,6 +3795,9 @@ const LANG_RU = {
 	'Verifying against pySim reference...': 'Сверка с эталоном pySim...',
 	'Verify vs pySim': 'Проверить в pySim',
 	'Send to Card': 'Отправить на карту',
+	'Proactive UICC': 'Проактивный UICC',
+	'Events that the card monitors (SET UP EVENT LIST):': 'События, отслеживаемые картой (SET UP EVENT LIST):',
+	'No events configured.': 'Нет настроенных событий.',
 };
 let currentLang = 'en';
 
