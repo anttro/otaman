@@ -3638,9 +3638,6 @@ function pysimCustomImport() {
 // Init custom files
 pysimCustomLoad();
 
-// Init cards
-cardsLoad();
-
 // Init sub-tab pills
 document.querySelectorAll('.pysim-subtab').forEach(btn => {
 	btn.addEventListener('click', () => pysimSwitchSubtab(btn.dataset.pysimSub));
@@ -3762,6 +3759,8 @@ function translatePage() {
 const userLang = (navigator.language || '').split('-')[0];
 currentLang = localStorage.getItem('lang') || (userLang === 'ru' ? 'ru' : 'en');
 document.getElementById('lang-btn').textContent = currentLang.toUpperCase();
+
+cardsLoad();
 
 if (localStorage.getItem('theme') === 'dark' ||
     (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
