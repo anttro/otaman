@@ -710,9 +710,9 @@
 				<input id="sp-tar" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
 			</div>
 			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Card presets</label>
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Card presets">Card presets</label>
 				<select id="sp-card-sel" onchange="cardsApply(this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
-					<option value="">— Select card —</option>
+					<option value="" data-l10n="— Select card —">— Select card —</option>
 				</select>
 			</div>
 			<div class="flex-1">
@@ -827,11 +827,11 @@
 	</div>
 
 	<div id="tab-cards" class="tab-content hidden">
-		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
+		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="Card presets are stored locally in your browser. JSON export/import buttons are below the card list.">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
 		<div class="flex gap-2 mb-3">
 			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
 			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="ICCID (optional)">
-			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap">Add</button>
+			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
 		</div>
 		<div class="flex gap-2 mb-3 flex-wrap">
 			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
@@ -848,37 +848,37 @@
 		<div id="cards-list" class="overflow-x-auto">
 			<table class="w-full text-sm">
 				<thead><tr>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">Name</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">ICCID</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Name">Name</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="ICCID">ICCID</th>
 					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KIc</th>
 					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KID</th>
 					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI1</th>
 					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI2</th>
 					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">TAR</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">Cntr</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Cntr">Cntr</th>
 					<th class="border-b border-gray-200 dark:border-slate-700"></th>
 				</tr></thead>
 				<tbody id="cards-tbody"></tbody>
 			</table>
 		</div>
 		<div class="mt-3">
-			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Export as JSON</button>
-			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">Import JSON from clipboard</button>
+			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
+			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
 		</div>
 		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
 	</div>
 
 	<div id="tab-pysim" class="tab-content hidden">
 		<div id="pysim-connect-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Server URL</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Server URL">Server URL</label>
 			<div class="flex gap-2 items-center">
 				<input id="pysim-url" class="font-mono flex-1 max-w-md border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" value="http://127.0.0.1:8080">
-				<button onclick="pysimConnect()" id="pysim-connect-btn" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Connect</button>
+				<button onclick="pysimConnect()" id="pysim-connect-btn" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Connect">Connect</button>
 			</div>
 		</div>
 		<div id="pysim-connect-info" class="mb-3 text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
-			<p>To access local card reader, you need pySim running locally.</p>
-			<p>To connect, install <a href="https://github.com/anttro/pysim-otaman-server" target="_blank" class="text-blue-600 dark:text-blue-400 underline">pysim-otaman-server</a>: <code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">git clone https://github.com/anttro/pysim-otaman-server.git</code> and start it.<br>Refer to pysim-otaman-server README files for details. Click <b>Connect</b> once pysim-otaman-server is ready.</p>
+			<p data-l10n="To access local card reader, you need pySim running locally.">To access local card reader, you need pySim running locally.</p>
+			<p><span data-l10n="To connect, install">To connect, install</span> <a href="https://github.com/anttro/pysim-otaman-server" target="_blank" class="text-blue-600 dark:text-blue-400 underline">pysim-otaman-server</a>: <code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">git clone https://github.com/anttro/pysim-otaman-server.git</code> <span data-l10n="and start it.">and start it.</span><br><span data-l10n="Refer to pysim-otaman-server README files for details.">Refer to pysim-otaman-server README files for details.</span> <b>Connect</b> <span data-l10n="once pysim-otaman-server is ready.">once pysim-otaman-server is ready.</span></p>
 		</div>
 		<div id="pysim-connected-row" class="mb-3 hidden">
 			<div class="flex gap-3 items-start">
@@ -2975,7 +2975,7 @@ function cardsRemove(i) {
 
 function cardsRender() {
 	const tbody = document.getElementById('cards-tbody');
-	if (!cards.length) { tbody.innerHTML = '<tr><td colspan="9" class="py-2 text-gray-400">No cards defined.</td></tr>'; return; }
+	if (!cards.length) { tbody.innerHTML = '<tr><td colspan="9" class="py-2 text-gray-400">' + t('No cards defined.') + '</td></tr>'; return; }
 	let html = '';
 	for (let i = 0; i < cards.length; i++) {
 		const c = cards[i];
@@ -2988,7 +2988,7 @@ function cardsRender() {
 		html += '<td class="py-1 px-2 font-mono text-xs text-center">' + esc(c.spi2) + '</td>';
 		html += '<td class="py-1 px-2 font-mono text-xs">' + esc(c.tar || '') + '</td>';
 		html += '<td class="py-1 px-2 font-mono text-xs">' + esc(c.cntr) + '</td>';
-		html += '<td class="py-1 px-2"><button onclick="cardsRemove(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700 hover:bg-red-200">Remove</button></td>';
+		html += '<td class="py-1 px-2"><button onclick="cardsRemove(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700 hover:bg-red-200">' + t('Remove') + '</button></td>';
 		html += '</tr>';
 	}
 	tbody.innerHTML = html;
@@ -2997,7 +2997,7 @@ function cardsRender() {
 function cardsRebuildSelect() {
 	const sel = document.getElementById('sp-card-sel');
 	if (!sel) return;
-	let html = '<option value="">— Select card —</option>';
+	let html = '<option value="">' + t('— Select card —') + '</option>';
 	for (let i = 0; i < cards.length; i++) {
 		html += '<option value="' + i + '">' + esc(cards[i].name) + ' (' + esc(cards[i].iccid) + ')</option>';
 	}
@@ -3715,6 +3715,24 @@ const LANG_RU = {
 	'Response parser': 'Парсер ответов',
 	'Cards': 'Карты',
 	'Card reader': 'Картридер',
+	'Card presets are stored locally in your browser. JSON export/import buttons are below the card list.': 'Пресеты карт хранятся локально в браузере. Кнопки экспорта/импорта JSON — под списком карт.',
+	'Add': 'Добавить',
+	'Export as JSON': 'Экспорт в JSON',
+	'Import JSON from clipboard': 'Импорт JSON из буфера',
+	'Name': 'Имя',
+	'ICCID': 'ICCID',
+	'Cntr': 'Сч',
+	'Remove': 'Удалить',
+	'No cards defined.': 'Карты не заданы.',
+	'Card presets': 'Пресеты карт',
+	'— Select card —': '— Выберите карту —',
+	'Server URL': 'URL сервера',
+	'Connect': 'Подключиться',
+	'To access local card reader, you need pySim running locally.': 'Для доступа к локальному картридеру необходим запущенный pySim.',
+	'To connect, install': 'Для подключения установите',
+	'and start it.': 'и запустите его.',
+	'Refer to pysim-otaman-server README files for details.': 'Подробности — в README файлах pysim-otaman-server.',
+	'once pysim-otaman-server is ready.': 'когда pysim-otaman-server будет готов.',
 };
 let currentLang = 'en';
 
