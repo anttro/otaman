@@ -34,50 +34,8 @@
 	</div>
 
 	<div id="tab-c-apdu" class="tab-content">
-		<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800 mb-3">
-			<div class="flex gap-3 items-end">
-				<div class="flex-1">
-					<div class="mb-2">
-						<select id="conv-type" onchange="updateConvFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-							<option value="nibswap">Nibble swap</option>
-							<option value="imsi">IMSI → EF.IMSI</option>
-							<option value="msisdn">MSISDN → BCD</option>
-							<option value="iccid">ICCID → hex</option>
-							<option value="spn">Provider Name → SPN</option>
-							<option value="plmn">MCC,MNC → PLMNsel</option>
-							<option value="plmnwact">MCC,MNC,AcT → PLMNwAcT</option>
-						</select>
-					</div>
-					<div class="flex gap-2 mb-2">
-						<input id="conv-input" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-						<button onclick="genConvert()" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700" data-l10n="Convert">Convert</button>
-					</div>
-					<div id="conv-plmn-fields" class="" style="display:none">
-						<div class="flex gap-2 mb-2">
-							<div class="flex-1">
-								<input id="conv-mcc" maxlength="3" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="MCC">
-							</div>
-							<div class="flex-1">
-								<input id="conv-mnc" maxlength="3" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="MNC">
-							</div>
-						</div>
-						<div id="conv-act-row" class="" style="display:none">
-							<select id="conv-act" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-								<option value="8000">GSM (8000)</option>
-								<option value="4000">UTRAN (4000)</option>
-								<option value="2000">E-UTRAN (2000)</option>
-								<option value="1000">NGRAN (1000)</option>
-								<option value="C000">GSM + UTRAN (C000)</option>
-								<option value="6000">UTRAN + E-UTRAN (6000)</option>
-								<option value="E000">GSM + UTRAN + E-UTRAN (E000)</option>
-								<option value="F000">All (F000)</option>
-							</select>
-						</div>
-					</div>
-				</div>
-				<textarea id="conv-result" rows="2" readonly class="flex-1 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 bg-white dark:bg-slate-800"></textarea>
-			</div>
-		</div>
+		<div class="flex gap-4">
+		<div class="flex-1">
 		<div class="flex justify-center gap-2 mb-3">
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-sub="sim" onclick="cApduSwitchSubtab('sim')">SIM RFM</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="usim" onclick="cApduSwitchSubtab('usim')">USIM RFM</button>
@@ -564,6 +522,47 @@
 		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
 		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<button onclick="packToSp('ram-result')" id="ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
+	</div>
+	</div>
+	<div class="w-1/4">
+		<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800">
+			<select id="conv-type" onchange="updateConvFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 mb-2">
+				<option value="nibswap">Nibble swap</option>
+				<option value="imsi">IMSI → EF.IMSI</option>
+				<option value="msisdn">MSISDN → BCD</option>
+				<option value="iccid">ICCID → hex</option>
+				<option value="spn">Provider Name → SPN</option>
+				<option value="plmn">MCC,MNC → PLMNsel</option>
+				<option value="plmnwact">MCC,MNC,AcT → PLMNwAcT</option>
+			</select>
+			<div class="flex gap-2 mb-2">
+				<input id="conv-input" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+				<button onclick="genConvert()" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700" data-l10n="Convert">Convert</button>
+			</div>
+			<div id="conv-plmn-fields" class="" style="display:none">
+				<div class="flex gap-2 mb-2">
+					<div class="flex-1">
+						<input id="conv-mcc" maxlength="3" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="MCC">
+					</div>
+					<div class="flex-1">
+						<input id="conv-mnc" maxlength="3" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="MNC">
+					</div>
+				</div>
+				<div id="conv-act-row" class="" style="display:none">
+					<select id="conv-act" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+						<option value="8000">GSM (8000)</option>
+						<option value="4000">UTRAN (4000)</option>
+						<option value="2000">E-UTRAN (2000)</option>
+						<option value="1000">NGRAN (1000)</option>
+						<option value="C000">GSM + UTRAN (C000)</option>
+						<option value="6000">UTRAN + E-UTRAN (6000)</option>
+						<option value="E000">GSM + UTRAN + E-UTRAN (E000)</option>
+						<option value="F000">All (F000)</option>
+					</select>
+				</div>
+			</div>
+			<textarea id="conv-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 mt-2 bg-white dark:bg-slate-800"></textarea>
+		</div>
 	</div>
 </div>
 
