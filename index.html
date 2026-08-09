@@ -751,7 +751,7 @@
 
 		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate Secure Packet">Generate Secure Packet</button>
 		<button onclick="pysimVerifySp()" id="sp-verify-btn" class="hidden mb-3 px-5 py-2.5 bg-slate-600 text-white text-sm font-medium rounded hover:bg-slate-700" data-l10n="Verify vs pySim">Verify vs pySim</button>
-		<button onclick="pysimSendOta()" class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700">Send to Card</button>
+		<button onclick="pysimSendOta()" id="sp-send-btn" class="hidden mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Send to Card">Send to Card</button>
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
 	</div>
@@ -2542,6 +2542,7 @@ function pysimShowConnected(connected) {
 	document.getElementById('pysim-connected-row').classList.toggle('hidden', !connected);
 	document.getElementById('pysim-body').classList.toggle('hidden', !connected);
 	document.getElementById('sp-verify-btn').classList.toggle('hidden', !connected);
+	document.getElementById('sp-send-btn').classList.toggle('hidden', !connected);
 }
 
 async function pysimRefresh() {
@@ -3764,6 +3765,7 @@ const LANG_RU = {
 	'Sending OTA...': 'Отправка OTA...',
 	'Verifying against pySim reference...': 'Сверка с эталоном pySim...',
 	'Verify vs pySim': 'Проверить в pySim',
+	'Send to Card': 'Отправить на карту',
 };
 let currentLang = 'en';
 
