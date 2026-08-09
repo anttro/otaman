@@ -2272,7 +2272,7 @@ const LIFECYCLE_MAP = {
 };
 
 const PRIVILEGE_NAMES = [
-	['Security Domain', 'DAP Verification', 'Delegated Management', 'Card Lock', 'Card Terminate', 'Card Reset', 'CVM Management', 'Mandated DAP Verification'],
+	['Security Domain', 'DAP Verification', null, 'Delegated Management', 'Card Lock', 'Card Terminate', 'Card Reset', 'CVM Management', 'Mandated DAP Verification'],
 	['Trusted Path', 'Authorized Management', 'Token Verification', 'Global Delete', 'Global Lock', 'Global Registry', 'Final Application', 'Global Service'],
 	['Receipt Generation', 'Ciphered Load File Data Block', 'Contactless Activation', 'Contactless Self-Activation'],
 ];
@@ -2432,12 +2432,11 @@ function decodePrivileges(hex) {
 	const bytes = [];
 	for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.substr(i,2),16));
 	const names = [];
-	for (let b = 0; b < Math.min(bytes.length, 3); b++) {
-		for (let bit = 0; bit < 8; bit++) {
+	for (let b = 0; b < Math.min(bytes.length, PRIVILEGE_NAMES.length); b++) {
+		const byteNames = PRIVILEGE_NAMES[b] || [];
+		for (let bit = 0; bit < byteNames.length; bit++) {
 			if (bytes[b] & (0x80 >> bit)) {
-				if (b < PRIVILEGE_NAMES.length && bit < PRIVILEGE_NAMES[b].length) {
-					names.push(PRIVILEGE_NAMES[b][bit]);
-				}
+				if (byteNames[bit]) names.push(byteNames[bit]);
 			}
 		}
 	}
