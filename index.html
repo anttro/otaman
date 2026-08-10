@@ -928,6 +928,7 @@
 		<div id="pysim-sub-proactive" class="hidden">
 			<div class="flex gap-4">
 				<div>
+					<button id="pli-status-btn" onclick="pysimStatusPoll()" class="mb-1 px-2 py-0.5 text-[10px] rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Send STATUS">Send STATUS</button>
 					<div class="mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
 					<div id="pysim-event-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 					<div class="mt-3 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
@@ -3887,6 +3888,27 @@ async function pysimEventSend() {
 	}
 }
 
+async function pysimStatusPoll() {
+	const btn = document.getElementById('pli-status-btn');
+	if (!btn) return;
+	btn.disabled = true;
+	btn.textContent = t('STATUS...');
+	try {
+		const resp = await pysimFetch('/api/status-poll', {});
+		if (resp.fetch) {
+			btn.textContent = 'SW: ' + resp.sw + ' + ' + resp.fetch_sw;
+		} else {
+			btn.textContent = 'SW: ' + resp.sw;
+		}
+		pysimEventsRender();
+		pysimProactiveLogRender();
+	} catch (e) {
+		btn.textContent = t('Error');
+	} finally {
+		setTimeout(() => { btn.textContent = t('Send STATUS'); btn.disabled = false; }, 2000);
+	}
+}
+
 // ===== proactive command log =====
 const CMD_NAMES = {
     '03': 'POLL INTERVAL', '05': 'SET UP EVENT LIST',
@@ -4486,6 +4508,8 @@ const LANG_RU = {
 	'Card reader removed': 'Картридер извлечён',
 	'Card reader inserted': 'Картридер вставлен',
 	'PROVIDE LOCAL INFORMATION response data': 'Данные для PROVIDE LOCAL INFORMATION',
+	'Send STATUS': 'Отправить STATUS',
+	'STATUS...': 'STATUS...',
 	'Saving...': 'Сохранение...',
 	'Saved': 'Сохранено',
 	'Save': 'Сохранить',
