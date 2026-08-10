@@ -928,6 +928,8 @@
 		<div id="pysim-sub-proactive" class="hidden">
 			<div class="mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
 			<div id="pysim-event-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+			<div class="mt-3 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
+			<div id="pysim-proactive-log" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 		</div>
 	</div>
 
@@ -3065,7 +3067,7 @@ function pysimSwitchSubtab(name) {
 		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
 	});
 	if (name === 'custom') pysimCustomRender();
-	if (name === 'proactive') pysimEventsRender();
+	if (name === 'proactive') { pysimEventsRender(); pysimProactiveLogRender(); }
 }
 
 function pysimCmdKeydown(e) {
@@ -3573,6 +3575,40 @@ async function pysimEventsRender() {
 	}
 }
 
+// ===== proactive command log =====
+const CMD_NAMES = {
+    '03': 'POLL INTERVAL', '05': 'SET UP EVENT LIST',
+    '13': 'SEND SHORT MESSAGE', '20': 'PLAY TONE',
+    '21': 'DISPLAY TEXT', '22': 'GET INKEY', '23': 'GET INPUT',
+    '24': 'SELECT ITEM', '25': 'SET UP MENU',
+    '26': 'PROVIDE LOCAL INFORMATION',
+    '15': 'LAUNCH BROWSER', '70': 'ACTIVATE',
+};
+
+async function pysimProactiveLogRender() {
+    const el = document.getElementById('pysim-proactive-log');
+    el.innerHTML = '<span class="text-gray-400">' + t('Loading...') + '</span>';
+    try {
+        const log = await pysimFetch('/api/proactive-log');
+        if (!log || !log.length) {
+            el.innerHTML = '<span class="text-gray-400">' + t('No commands logged yet.') + '</span>';
+            return;
+        }
+        let html = '';
+        log.forEach(e => {
+            const name = CMD_NAMES[e.type_hex] || ('Cmd 0x' + e.type_hex.toUpperCase());
+            html += '<div class="flex items-center gap-2 py-0.5">'
+                + '<span class="w-10 text-right text-gray-400">0x' + e.type_hex.toUpperCase() + '</span>'
+                + '<span class="w-40 truncate">' + esc(name) + '</span>'
+                + '<span class="text-gray-400">— ' + e.elapsed + 's (' + e.bytes + ' bytes)</span>'
+                + '</div>';
+        });
+        el.innerHTML = html;
+    } catch (err) {
+        el.innerHTML = '<span class="text-red-500">Error: ' + esc(err.message) + '</span>';
+    }
+}
+
 // ===== custom files =====
 let pysimCustomFiles = [];
 
@@ -3798,6 +3834,8 @@ const LANG_RU = {
 	'Proactive UICC': 'Проактивный UICC',
 	'Events that the card monitors (SET UP EVENT LIST):': 'События, отслеживаемые картой (SET UP EVENT LIST):',
 	'No events configured.': 'Нет настроенных событий.',
+	'Fetched proactive commands:': 'Извлечённые проактивные команды:',
+	'No commands logged yet.': 'Команды пока не регистрировались.',
 };
 let currentLang = 'en';
 
