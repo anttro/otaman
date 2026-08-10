@@ -3919,6 +3919,14 @@ const CMD_NAMES = {
     '15': 'LAUNCH BROWSER', '70': 'ACTIVATE',
 };
 
+const CMD_QUALIFIER_SHORT = {
+    '26': {0x00:'Loc', 0x01:'IMEI', 0x02:'NMR', 0x03:'Time', 0x04:'Lang', 0x05:'TA',
+           0x06:'AccTech', 0x08:'IMEISV', 0x09:'Search', 0x0A:'Batt', 0x0C:'WSID',
+           0x0D:'BCInfo', 0x0E:'MultiAT', 0x0F:'MultiLoc', 0x10:'MultiNMR',
+           0x11:'CSG', 0x12:'HNB-IP', 0x13:'HNB-Macro', 0x14:'WLAN', 0x15:'Slices',
+           0x16:'CAG', 0x17:'RejSlice'},
+};
+
 async function pysimProactiveLogRender() {
     const el = document.getElementById('pysim-proactive-log');
     el.innerHTML = '<span class="text-gray-400">' + t('Loading...') + '</span>';
@@ -3929,19 +3937,43 @@ async function pysimProactiveLogRender() {
             return;
         }
         let html = '';
-        log.forEach(e => {
+        log.forEach((e, i) => {
             const name = CMD_NAMES[e.type_hex] || ('Cmd 0x' + e.type_hex.toUpperCase());
-            html += '<div class="flex items-center gap-2 py-0.5">'
+            let qual = '';
+            if (e.qualifier) {
+                const qs = CMD_QUALIFIER_SHORT[e.type_hex];
+                if (qs) qual = ' [' + (qs[parseInt(e.qualifier,16)] || '0x'+e.qualifier.toUpperCase()) + ']';
+                else qual = ' [0x' + e.qualifier.toUpperCase() + ']';
+            }
+            html += '<div data-plog-row="' + i + '">'
+                + '<div class="flex items-center gap-2 py-0.5">'
+                + (e.raw ? '<span class="cursor-pointer select-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="pysimPlogToggle(' + i + ')" id="plog-tog-' + i + '">▶</span>' : '<span class="w-3"></span>')
                 + '<span class="w-12 text-right text-gray-400">' + e.elapsed + 's</span>'
                 + '<span class="font-mono text-gray-400">0x' + e.type_hex.toUpperCase() + '</span>'
                 + '<span class="truncate">' + esc(name) + '</span>'
+                + (qual ? '<span class="text-[10px] text-gray-500 dark:text-slate-400">' + esc(qual) + '</span>' : '')
                 + '<span class="ml-auto text-gray-400">' + e.bytes + ' bytes</span>'
+                + '</div>'
+                + (e.raw ? '<div class="pli-decode-panel hidden ml-4 pl-2 border-l border-gray-300 dark:border-slate-600" data-plog-data="' + i + '"><div class="text-[10px] font-mono text-gray-500 dark:text-slate-400 max-h-20 overflow-auto word-break-all whitespace-pre-wrap">' + esc(e.raw) + '</div></div>' : '')
                 + '</div>';
         });
         el.innerHTML = html;
     } catch (err) {
         el.innerHTML = '<span class="text-red-500">Error: ' + esc(err.message) + '</span>';
     }
+}
+
+function pysimPlogToggle(idx) {
+	const panel = document.querySelector('[data-plog-data="' + idx + '"]');
+	const tog = document.getElementById('plog-tog-' + idx);
+	if (!panel || !tog) return;
+	if (panel.classList.contains('hidden')) {
+		panel.classList.remove('hidden');
+		tog.textContent = '▼';
+	} else {
+		panel.classList.add('hidden');
+		tog.textContent = '▶';
+	}
 }
 
 // ===== PLI data dictionary =====
