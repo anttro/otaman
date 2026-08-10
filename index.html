@@ -16,7 +16,7 @@
 <div class="max-w-7xl mx-auto px-6 py-4">
 
 	<div class="flex items-center justify-between mb-6">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.4.3</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.5.0</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -926,11 +926,37 @@
 			<textarea id="pysim-apdu-output" rows="5" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		</div>
 		<div id="pysim-sub-proactive" class="hidden">
-			<div class="mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
-			<div id="pysim-event-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
-			<div class="mt-3 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
-			<div id="pysim-proactive-log" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+			<div class="flex gap-4">
+				<div>
+					<div class="mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
+					<div id="pysim-event-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+					<div class="mt-3 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
+					<div id="pysim-proactive-log" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+				</div>
+				<div>
+					<div class="flex justify-between items-center mb-2">
+						<span class="text-xs text-gray-500 dark:text-slate-400" data-l10n="PROVIDE LOCAL INFORMATION response data">PROVIDE LOCAL INFORMATION response data</span>
+						<button id="pli-save-btn" onclick="pysimPliSave()" class="px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
+					</div>
+					<div id="pysim-pli-dict" class="text-xs font-mono text-gray-600 dark:text-slate-400 max-h-[60vh] overflow-auto">
+						<span class="text-gray-400" data-l10n="Loading...">Loading...</span>
+					</div>
+				</div>
+			</div>
 		</div>
+
+	<div id="event-send-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 max-h-[85vh] overflow-auto">
+			<h3 id="event-send-title" class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200"></h3>
+			<div id="event-send-body" class="space-y-3"></div>
+			<div id="event-send-error" class="text-xs text-red-500 hidden mt-2"></div>
+			<div id="event-send-result" class="text-xs text-emerald-600 dark:text-emerald-400 hidden mt-2"></div>
+			<div class="flex gap-2 mt-4 justify-end">
+				<button onclick="document.getElementById('event-send-modal').classList.add('hidden')" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
+				<button id="event-send-btn" onclick="pysimEventSend()" class="px-4 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Send">Send</button>
+			</div>
+		</div>
+	</div>
 	</div>
 
 	<div id="stk-menu-panel" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
@@ -3017,10 +3043,10 @@ function cardsExport() {
 	el.select();
 }
 
-function cardsImport() {
-	const el = document.getElementById('cards-io');
+async function cardsImport() {
 	try {
-		const imported = JSON.parse(el.value);
+		const text = await navigator.clipboard.readText();
+		const imported = JSON.parse(text);
 		if (!Array.isArray(imported)) throw new Error('Expected an array');
 		let added = 0;
 		for (const entry of imported) {
@@ -3042,6 +3068,7 @@ function cardsImport() {
 		}
 		cardsSave();
 		cardsRender();
+		const el = document.getElementById('cards-io');
 		el.value = 'Imported ' + added + ' cards.';
 		setTimeout(() => { el.classList.add('hidden'); }, 2000);
 	} catch (e) {
@@ -3067,7 +3094,7 @@ function pysimSwitchSubtab(name) {
 		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
 	});
 	if (name === 'custom') pysimCustomRender();
-	if (name === 'proactive') { pysimEventsRender(); pysimProactiveLogRender(); }
+	if (name === 'proactive') { pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); }
 }
 
 function pysimCmdKeydown(e) {
@@ -3555,6 +3582,165 @@ const EVENT_NAMES = {
 	0x20: 'EARFCN Update', 0x21: 'SCEF Channel Status',
 };
 
+const REJECTION_CAUSES = [
+	{v:2,l:'02 \u2014 IMSI unknown in HLR/HSS'},{v:3,l:'03 \u2014 Illegal UE / MS'},
+	{v:5,l:'05 \u2014 IMEI / PEI not accepted'},{v:6,l:'06 \u2014 Illegal ME'},
+	{v:7,l:'07 \u2014 Services not allowed'},{v:8,l:'08 \u2014 Services + non-services not allowed'},
+	{v:9,l:'09 \u2014 UE identity cannot be derived'},{v:10,l:'0A \u2014 Implicitly detached / de-registered'},
+	{v:11,l:'0B \u2014 PLMN not allowed'},{v:12,l:'0C \u2014 Location / Tracking Area not allowed'},
+	{v:13,l:'0D \u2014 Roaming not allowed in this area'},{v:14,l:'0E \u2014 Services not allowed in this PLMN'},
+	{v:15,l:'0F \u2014 No Suitable Cells'},{v:16,l:'10 \u2014 MSC temporarily not reachable'},
+	{v:17,l:'11 \u2014 Network failure'},
+	{v:18,l:'12 \u2014 CS domain not avail. (EMM) / MAC fail (GMM)'},
+	{v:19,l:'13 \u2014 ESM failure (EMM) / Synch failure (GMM)'},
+	{v:20,l:'14 \u2014 MAC failure (EMM) / Congestion (GMM)'},
+	{v:21,l:'15 \u2014 Synch failure (EMM)'},{v:22,l:'16 \u2014 Congestion / PLMN rejected perm. (LU)'},
+	{v:23,l:'17 \u2014 UE security capabilities mismatch'},{v:24,l:'18 \u2014 Security mode rejected, unspecified'},
+	{v:25,l:'19 \u2014 Not authorized for this CSG'},{v:26,l:'1A \u2014 Non-3GPP/5G auth unacceptable'},
+	{v:27,l:'1B \u2014 N1 mode not allowed (5GMM)'},{v:28,l:'1C \u2014 Restricted service area (5GMM)'},
+	{v:31,l:'1F \u2014 Redirection to EPC required (5GMM)'},
+	{v:32,l:'20 \u2014 Service option not supported (LU)'},
+	{v:33,l:'21 \u2014 Requested service option not subscribed (LU)'},
+	{v:34,l:'22 \u2014 Service option temporarily out of order (LU)'},
+	{v:35,l:'23 \u2014 Requested service option not authorized (EMM)'},
+	{v:38,l:'26 \u2014 Call cannot be identified (LU)'},
+	{v:39,l:'27 \u2014 CS service temporarily not available (EMM)'},
+	{v:40,l:'28 \u2014 No EPS bearer context activated (EMM)'},
+	{v:42,l:'2A \u2014 Severe network failure (EMM)'},{v:43,l:'2B \u2014 LADN not available (5GMM)'},
+	{v:48,l:'30 \u2014 Retry upon entry into new cell (LU)'},
+	{v:62,l:'3E \u2014 No network slices available (5GMM)'},
+	{v:65,l:'41 \u2014 Maximum PDU sessions reached (5GMM)'},
+	{v:67,l:'43 \u2014 Insufficient resources for slice/DNN (5GMM)'},
+	{v:69,l:'45 \u2014 Insufficient resources for slice (5GMM)'},
+	{v:71,l:'47 \u2014 ngKSI already in use (5GMM)'},
+	{v:72,l:'48 \u2014 Non-3GPP access to 5GCN not allowed (5GMM)'},
+	{v:73,l:'49 \u2014 Serving network not authorized (5GMM)'},
+	{v:74,l:'4A \u2014 Temporarily not authorized for SNPN (5GMM)'},
+	{v:75,l:'4B \u2014 Permanently not authorized for SNPN (5GMM)'},
+	{v:76,l:'4C \u2014 Not authorized for this CAG (5GMM)'},
+	{v:90,l:'5A \u2014 Payload was not forwarded (5GMM)'},
+	{v:91,l:'5B \u2014 DNN not supported/subscribed in slice (5GMM)'},
+	{v:92,l:'5C \u2014 Insufficient UP resources for PDU session (5GMM)'},
+	{v:95,l:'5F \u2014 Semantically incorrect message'},{v:96,l:'60 \u2014 Invalid mandatory information'},
+	{v:97,l:'61 \u2014 Message type non-existent/not implemented'},
+	{v:98,l:'62 \u2014 Message type not compatible with protocol state'},
+	{v:99,l:'63 \u2014 IE non-existent/not implemented'},
+	{v:100,l:'64 \u2014 Conditional IE error'},{v:101,l:'65 \u2014 Message not compatible with protocol state'},
+	{v:111,l:'6F \u2014 Protocol error, unspecified'},
+];
+
+const EVENT_FORMS = {
+	0x00: { title: 'MT call', note: 'not_yet' },
+	0x01: { title: 'Call connected', note: 'not_yet' },
+	0x02: { title: 'Call disconnected', note: 'not_yet' },
+	0x03: { title: 'Location status',
+		fields: [
+			{ id: 'status', label: 'Service Status', type: 'select',
+			  opts: [{v:0,l:'Normal service'},{v:1,l:'Limited service'},{v:2,l:'No service'}] }
+		],
+		build(v) { return '9B01' + (v.status|0).toString(16).padStart(2,'0'); }
+	},
+	0x04: null,
+	0x05: null,
+	0x06: { title: 'Card reader status',
+		fields: [
+			{ id: 'status', label: 'Status', type: 'select',
+			  opts: [{v:0,l:'Card reader removed'},{v:1,l:'Card reader inserted'}] }
+		],
+		build(v) { return '' + (v.status|0).toString(16).padStart(2,'0'); }
+	},
+	0x07: { title: 'Language selection',
+		fields: [
+			{ id: 'lang', label: 'Language code', type: 'text', placeholder: 'ISO 639, e.g. en, ru', pattern: '[a-zA-Z]{2,3}' }
+		],
+		build(v) { const b = new TextEncoder().encode(v.lang||'en'); return b.length.toString(16).padStart(2,'0') + bytesToHex(Array.from(b)); }
+	},
+	0x08: { title: 'Browser termination', note: 'not_yet' },
+	0x09: null,
+	0x0A: { title: 'Channel status', note: 'not_yet' },
+	0x0B: { title: 'Access Technology Change',
+		fields: [
+			{ id: 'tech', label: 'Access Technology', type: 'select',
+			  opts: [{v:0,l:'GSM'},{v:1,l:'GSM Compact'},{v:3,l:'UTRAN'},{v:4,l:'GSM w/EGPRS'},{v:5,l:'UTRAN w/HSDPA'},{v:6,l:'UTRAN w/HSUPA'},{v:7,l:'UTRAN w/HSPA+'},{v:8,l:'E-UTRAN'},{v:9,l:'E-UTRAN (4G)'},{v:10,l:'5G NR'},{v:11,l:'5G NR (NSA)'},{v:12,l:'Satellite'}] }
+		],
+		build(v) { return 'BF01' + (v.tech|0).toString(16).padStart(2,'0'); }
+	},
+	0x0C: null,
+	0x0D: null,
+	0x0E: null,
+	0x0F: null,
+	0x10: null,
+	0x11: { title: 'I-WLAN Access Status', note: 'not_yet' },
+	0x12: { title: 'Network Rejection',
+		fields: [
+			{ id: 'reg_type', label: 'Registration type', type: 'select', onchange: 'updateNetRejectionFields()',
+			  opts: [
+			      {v:0x00,l:'Normal Location Updating',g:'lu'},{v:0x01,l:'Periodic Location Updating',g:'lu'},
+			      {v:0x02,l:'IMSI Attach',g:'lu'},{v:0x03,l:'GPRS Attach',g:'gprs'},
+			      {v:0x04,l:'Combined GPRS/IMSI Attach',g:'gprs'},{v:0x05,l:'RA Updating',g:'gprs'},
+			      {v:0x06,l:'Combined RA/LA Updating',g:'gprs'},{v:0x07,l:'Combined RA/LA Updating w/ IMSI Attach',g:'gprs'},
+			      {v:0x08,l:'Periodic RA Updating',g:'gprs'},{v:0x09,l:'EPS Attach (EMM)',g:'eps'},
+			      {v:0x0A,l:'Combined EPS/IMSI Attach (EMM)',g:'eps'},{v:0x0B,l:'TA Updating (TAU)',g:'eps'},
+			      {v:0x0C,l:'Combined TA/LA Updating (TAU)',g:'eps'},{v:0x0D,l:'Combined TA/LA Updating w/ IMSI Attach (TAU)',g:'eps'},
+			      {v:0x0E,l:'Periodic TA Updating (TAU)',g:'eps'},{v:0x0F,l:'Initial Registration (5GS)',g:'eps'},
+			      {v:0x10,l:'Mobility Registration Updating (5GS)',g:'eps'},{v:0x11,l:'Periodic Registration Updating (5GS)',g:'eps'},
+			  ]},
+			{ id: 'mcc', label: 'MCC', type: 'text', pattern: '\\d{3}', placeholder: 'e.g. 250', g: 'lu,gprs,eps' },
+			{ id: 'mnc', label: 'MNC', type: 'text', pattern: '\\d{2,3}', placeholder: 'e.g. 01', g: 'lu,gprs,eps' },
+			{ id: 'lac', label: 'LAC', type: 'text', pattern: '[0-9A-Fa-f]{4}', placeholder: 'hex, e.g. 00FF', g: 'lu,gprs' },
+			{ id: 'rac', label: 'RAC', type: 'text', pattern: '[0-9A-Fa-f]{2}', placeholder: 'hex, e.g. 01', g: 'gprs' },
+			{ id: 'tac', label: 'TAC', type: 'text', pattern: '[0-9A-Fa-f]{4,6}', placeholder: '4 (E-UTRAN) or 6 (NR) hex chars', g: 'eps' },
+			{ id: 'access_tech', label: 'Access Technology', type: 'select',
+			  opts: [{v:0x00,l:'GSM'},{v:0x03,l:'UTRAN'},{v:0x08,l:'E-UTRAN'},{v:0x0A,l:'NG-RAN'},{v:0x0B,l:'Satellite NG-RAN'},{v:0x0C,l:'Satellite E-UTRAN'}], g: 'lu,gprs,eps' },
+			{ id: 'cause', label: 'Rejection cause code', type: 'select', opts: REJECTION_CAUSES, g: 'lu,gprs,eps' },
+			{ id: 'ext_cause', label: 'Extended EMM cause (optional)', type: 'number', min: '0', max: '255', placeholder: '0–255', g: 'eps' },
+		],
+		build(v) {
+			const rt = parseInt(v.reg_type) || 0;
+			const g = rt <= 0x02 ? 'lu' : rt <= 0x08 ? 'gprs' : 'eps';
+			let d = 'F401' + rt.toString(16).padStart(2,'0');
+			d += 'BF01' + (parseInt(v.access_tech)|0).toString(16).padStart(2,'0');
+			d += 'F501' + (parseInt(v.cause) || 2).toString(16).padStart(2,'0');
+			const pm = encPlmn(v.mcc||'250',v.mnc||'01');
+			if (g === 'lu') {
+				d += '9305' + pm + ((v.lac||'0000').toUpperCase());
+			} else if (g === 'gprs') {
+				d += 'F306' + pm + ((v.lac||'0000').toUpperCase()) + ((v.rac||'01').toUpperCase());
+			} else {
+				const tc = (v.tac||'0001').toUpperCase();
+				d += '7D0' + (3 + tc.length/2).toString(16) + pm + tc;
+				if (v.ext_cause !== '' && v.ext_cause !== undefined) {
+					d += '5701' + (parseInt(v.ext_cause)|0).toString(16).padStart(2,'0');
+				}
+			}
+			return d.toUpperCase();
+		}
+	},
+	0x13: null,
+	0x14: { title: 'Change of UICC Access',
+		fields: [{ id: 'tech', label: 'Access Technology', type: 'select',
+		           opts: [{v:0,l:'GSM'},{v:3,l:'UTRAN'},{v:8,l:'E-UTRAN'},{v:10,l:'NG-RAN'}] }],
+		build(v) { return 'BF01' + (v.tech|0).toString(16).padStart(2,'0'); }
+	},
+	0x15: { title: 'CSG Cell Change', note: 'not_yet' },
+	0x16: null,
+	0x17: null,
+};
+
+const PLI_QUALIFIERS = [
+	{code:'00',name:'Location Info (MCC, MNC, LAC/TAC, Cell ID)'},{code:'01',name:'IMEI'},
+	{code:'02',name:'Network Measurement results'},{code:'03',name:'Date, time and time zone'},
+	{code:'04',name:'Language setting'},{code:'05',name:'Timing Advance'},
+	{code:'06',name:'Access Technology (single)'},{code:'08',name:'IMEISV'},
+	{code:'09',name:'Search Mode'},{code:'0A',name:'Battery charge state'},
+	{code:'0C',name:'Current WSID'},{code:'0D',name:'Broadcast Network info'},
+	{code:'0E',name:'Multiple Access Technologies'},{code:'0F',name:'Location Info (multi-RAT)'},
+	{code:'10',name:'NMR (multi-RAT)'},{code:'11',name:'CSG ID list + HNB name'},
+	{code:'12',name:'H(e)NB IP address'},{code:'13',name:'H(e)NB surrounding macrocells'},
+	{code:'14',name:'Current WLAN identifier'},{code:'15',name:'Slices information'},
+	{code:'16',name:'CAG information list'},{code:'17',name:'Rejected slices information'},
+];
+
 async function pysimEventsRender() {
 	const el = document.getElementById('pysim-event-list');
 	el.innerHTML = '<span class="text-gray-400">' + t('Loading...') + '</span>';
@@ -3567,11 +3753,137 @@ async function pysimEventsRender() {
 		let html = '';
 		events.forEach(e => {
 			const name = EVENT_NAMES[e] || ('Event 0x' + e.toString(16).padStart(2, '0').toUpperCase());
-			html += '<div class="flex items-center gap-2 py-0.5"><span class="w-6 text-right text-gray-400">' + e.toString(16).padStart(2, '0').toUpperCase() + '</span> ' + esc(name) + '</div>';
+			html += '<div class="flex items-center gap-2 py-0.5"><span class="w-6 text-right text-gray-400">'
+				+ e.toString(16).padStart(2, '0').toUpperCase()
+				+ '</span> ' + esc(name)
+				+ '<button onclick="pysimEventSendForm(' + e + ')" class="ml-auto px-1.5 py-0.5 text-[10px] rounded bg-blue-600 text-white hover:bg-blue-700">' + t('Send') + '</button></div>';
 		});
 		el.innerHTML = html;
 	} catch (e) {
 		el.innerHTML = '<span class="text-red-500">Error: ' + esc(e.message) + '</span>';
+	}
+}
+
+let _eventFormType = null;
+
+function pysimEventSendForm(eventType) {
+	const modal = document.getElementById('event-send-modal');
+	const title = document.getElementById('event-send-title');
+	const body = document.getElementById('event-send-body');
+	const err = document.getElementById('event-send-error');
+	const result = document.getElementById('event-send-result');
+	const btn = document.getElementById('event-send-btn');
+	err.classList.add('hidden');
+	result.classList.add('hidden');
+	err.textContent = '';
+	result.textContent = '';
+
+	const name = EVENT_NAMES[eventType] || ('0x' + eventType.toString(16).padStart(2,'0'));
+	const cfg = EVENT_FORMS[eventType];
+	_eventFormType = eventType;
+
+	if (!cfg) {
+		title.textContent = name + ' (' + t('Send') + ')';
+		body.innerHTML = '<p class="text-sm text-gray-600 dark:text-slate-400">' + t('Send') + ' <span class="font-mono">' + esc(name) + '</span> ' + t('event notification to the card?') + '</p>';
+		btn.textContent = t('Send');
+		modal.classList.remove('hidden');
+		return;
+	}
+	if (cfg.note === 'not_yet') {
+		title.textContent = name;
+		body.innerHTML = '<p class="text-sm text-gray-500 dark:text-slate-400">' + t('This event type is not yet supported.') + '</p>';
+		btn.classList.add('hidden');
+	} else {
+		title.textContent = name + ' (' + t('Send') + ')';
+		let html = '';
+		cfg.fields.forEach(f => {
+			const rg = f.g ? f.g.split(',') : null;
+			html += '<div class="event-field" data-groups="' + (f.g||'') + '" data-id="' + f.id + '">';
+			html += '<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">' + t(f.label) + '</label>';
+			if (f.type === 'select') {
+				html += '<select id="ev-f-' + f.id + '"' + (f.onchange ? ' onchange="' + f.onchange + '"' : '') + ' class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">';
+				f.opts.forEach(o => html += '<option value="' + o.v + '"' + (o.g ? ' data-gr="' + o.g + '"' : '') + '>' + esc(o.l) + '</option>');
+				html += '</select>';
+			} else {
+				const attrs = [];
+				if (f.pattern) attrs.push('pattern="' + f.pattern + '"');
+				if (f.placeholder) attrs.push('placeholder="' + f.placeholder + '"');
+				if (f.min !== undefined) attrs.push('min="' + f.min + '" max="' + f.max + '"');
+				html += '<input id="ev-f-' + f.id + '" type="' + f.type + '" ' + attrs.join(' ') + ' class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono">';
+			}
+			html += '</div>';
+		});
+		body.innerHTML = html;
+		btn.classList.remove('hidden');
+		if (eventType === 0x12) updateNetRejectionFields();
+	}
+	modal.classList.remove('hidden');
+}
+
+function updateNetRejectionFields() {
+	const sel = document.getElementById('ev-f-reg_type');
+	if (!sel) return;
+	const opt = sel.options[sel.selectedIndex];
+	const g = opt ? opt.getAttribute('data-gr') || 'lu' : 'lu';
+	document.querySelectorAll('#event-send-body .event-field').forEach(div => {
+		const groups = div.getAttribute('data-groups') || '';
+		const show = groups === '' || groups.indexOf(g) >= 0;
+		div.style.display = show ? '' : 'none';
+	});
+}
+
+async function pysimEventSend() {
+	const err = document.getElementById('event-send-error');
+	const result = document.getElementById('event-send-result');
+	const btn = document.getElementById('event-send-btn');
+	err.classList.add('hidden');
+	result.classList.add('hidden');
+
+	const cfg = EVENT_FORMS[_eventFormType];
+	let eventData = null;
+
+	if (cfg && cfg.build) {
+		const values = {};
+		let valid = true;
+		cfg.fields.forEach(f => {
+			const el = document.getElementById('ev-f-' + f.id);
+			if (!el || el.closest('.event-field').style.display === 'none') return;
+			const v = el.value.trim();
+			values[f.id] = v;
+			if (f.pattern && v && !new RegExp('^' + f.pattern + '$').test(v)) {
+				err.textContent = t('Invalid') + ': ' + t(f.label);
+				err.classList.remove('hidden');
+				valid = false;
+			}
+		});
+		if (!valid) return;
+		try {
+			eventData = cfg.build(values);
+		} catch (e) {
+			err.textContent = 'Error: ' + e.message;
+			err.classList.remove('hidden');
+			return;
+		}
+	}
+
+	btn.disabled = true;
+	btn.textContent = t('Sending...');
+	try {
+		const resp = await pysimFetch('/api/event-send', { event_type: _eventFormType, event_data: eventData });
+		if (resp.sw === '9000') {
+			result.textContent = (eventData ? t('Event data sent.') : t('Event sent.')) + ' SW: ' + resp.sw;
+			result.classList.remove('hidden');
+		} else {
+			result.textContent = 'SW: ' + resp.sw;
+			result.classList.remove('hidden');
+			result.classList.add('text-amber-600');
+		}
+	} catch (e2) {
+		err.textContent = 'Error: ' + e2.message;
+		err.classList.remove('hidden');
+	} finally {
+		btn.disabled = false;
+		btn.textContent = t('Send');
 	}
 }
 
@@ -3598,15 +3910,333 @@ async function pysimProactiveLogRender() {
         log.forEach(e => {
             const name = CMD_NAMES[e.type_hex] || ('Cmd 0x' + e.type_hex.toUpperCase());
             html += '<div class="flex items-center gap-2 py-0.5">'
-                + '<span class="w-10 text-right text-gray-400">0x' + e.type_hex.toUpperCase() + '</span>'
-                + '<span class="w-40 truncate">' + esc(name) + '</span>'
-                + '<span class="text-gray-400">— ' + e.elapsed + 's (' + e.bytes + ' bytes)</span>'
+                + '<span class="w-12 text-right text-gray-400">' + e.elapsed + 's</span>'
+                + '<span class="font-mono text-gray-400">0x' + e.type_hex.toUpperCase() + '</span>'
+                + '<span class="truncate">' + esc(name) + '</span>'
+                + '<span class="ml-auto text-gray-400">' + e.bytes + ' bytes</span>'
                 + '</div>';
         });
         el.innerHTML = html;
     } catch (err) {
         el.innerHTML = '<span class="text-red-500">Error: ' + esc(err.message) + '</span>';
     }
+}
+
+// ===== PLI data dictionary =====
+function decPlmn(hex3) {
+	const h = hex3.replace(/\s/g, '').slice(0, 6);
+	if (h.length < 6) return ['250', '01'];
+	const b1 = parseInt(h[0]+h[1], 16), b2 = parseInt(h[2]+h[3], 16), b3 = parseInt(h[4]+h[5], 16);
+	const mcc = '' + (b1&0xF) + ((b1>>4)&0xF) + (b2&0xF);
+	let mnc = '' + (b3&0xF);
+	if ((b2>>4) !== 0xF) mnc += ((b2>>4)&0xF);
+	return [mcc, mnc];
+}
+
+function decImei(hex8) {
+	const h = hex8.replace(/\s/g, '').slice(0, 16);
+	if (h.length < 16) return '';
+	let s = '';
+	for (let i = 0; i < 15; i += 2) {
+		const b = parseInt(h[i]+h[i+1], 16);
+		s += '' + (b&0xF) + ((b>>4)&0xF);
+	}
+	return s.slice(0, 15);
+}
+
+function encImeiPli(digits) {
+	const d = digits.replace(/\D/g, '').slice(0, 15);
+	if (d.length < 15) return '';
+	let h = '';
+	for (let i = 0; i < 15; i += 2)
+		h += (parseInt(d[i+1])<<4 | parseInt(d[i])).toString(16).padStart(2, '0');
+	return h;
+}
+
+function encImeisvPli(digits) {
+	const d = digits.replace(/\D/g, '').slice(0, 16);
+	if (d.length < 16) return '';
+	let h = '';
+	for (let i = 0; i < 16; i += 2)
+		h += (parseInt(d[i+1])<<4 | parseInt(d[i])).toString(16).padStart(2, '0');
+	return h;
+}
+
+const ACCESSTECH = [
+	{v:0,l:'GSM'},{v:1,l:'GSM Compact'},{v:2,l:'TIA/EIA-533'},{v:3,l:'UTRAN'},
+	{v:4,l:'TETRA'},{v:5,l:'TIA/EIA-95-B'},{v:6,l:'CDMA2000 1x'},{v:7,l:'CDMA2000 HRPD'},
+	{v:8,l:'E-UTRAN'},{v:9,l:'eHRPD'},{v:10,l:'NG-RAN'},{v:11,l:'Satellite NG-RAN'},{v:12,l:'Satellite E-UTRAN'},
+];
+
+const PLI_CODECS = {
+	'00': { tlv: '9305',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 10) return null;
+			const pl = decPlmn(v); return { mcc: pl[0], mnc: pl[1], lac: v.slice(6,10).toUpperCase() };
+		},
+		encode(v) { return '9305' + encPlmn(v.mcc||'250',v.mnc||'01') + ((v.lac||'0000').toUpperCase()); },
+		fields: [
+			{id:'mcc',label:'MCC',type:'text',pattern:'\\d{3}',placeholder:'e.g. 250'},
+			{id:'mnc',label:'MNC',type:'text',pattern:'\\d{2,3}',placeholder:'e.g. 01'},
+			{id:'lac',label:'LAC/TAC',type:'text',pattern:'[0-9A-Fa-f]{4}',placeholder:'hex'},
+		],
+	},
+	'01': { tlv: '9408',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 16) return null;
+			return { imei: decImei(v) };
+		},
+		encode(v) { const imei = encImeiPli(v.imei||''); return imei ? '9408'+imei : ''; },
+		fields: [
+			{id:'imei',label:'IMEI',type:'text',pattern:'\\d{15}',placeholder:'15 digits'},
+		],
+	},
+	'03': { tlv: '2607',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 14) return null;
+			const yr = parseInt(v[0]+v[1])<70 ? 2000+parseInt(v[0]+v[1]) : 1900+parseInt(v[0]+v[1]);
+			const mo = parseInt(v[2]+v[3]), dy = parseInt(v[4]+v[5]);
+			const hh = parseInt(v[6]+v[7]), mm = parseInt(v[8]+v[9]), ss = parseInt(v[10]+v[11]);
+			const tz = parseInt(v[12]+v[13], 16);
+			const tzSign = (tz & 0x80) ? '-' : '+';
+			const tzH = Math.floor(((tz & 0x3F) || 0) / 4);
+			const tzM = (((tz & 0x3F) || 0) % 4) * 15;
+			return {
+				dt: yr+'-'+(''+mo).padStart(2,'0')+'-'+(''+dy).padStart(2,'0'),
+				tm: (''+hh).padStart(2,'0')+':'+(''+mm).padStart(2,'0')+':'+(''+ss).padStart(2,'0'),
+				tz: tzSign+(''+tzH).padStart(2,'0')+':'+(''+tzM).padStart(2,'0'),
+			};
+		},
+		encode(v) {
+			const dt = (v.dt||'2000-01-01').split('-'), tm = (v.tm||'00:00:00').split(':');
+			let tzQ = 0;
+			const tzM = v.tz ? v.tz.match(/^([-+])(\d{2}):?(\d{2})$/) : null;
+			if (tzM) { const h = parseInt(tzM[2])||0, m = parseInt(tzM[3])||0; tzQ = h*4 + Math.floor(m/15); if (tzM[1]==='-') tzQ |= 0x80; }
+			return '2607'
+				+ (parseInt(dt[0])%100).toString(16).padStart(2,'0')
+				+ (parseInt(dt[1])||1).toString(16).padStart(2,'0')
+				+ (parseInt(dt[2])||1).toString(16).padStart(2,'0')
+				+ (parseInt(tm[0])||0).toString(16).padStart(2,'0')
+				+ (parseInt(tm[1])||0).toString(16).padStart(2,'0')
+				+ (parseInt(tm[2])||0).toString(16).padStart(2,'0')
+				+ tzQ.toString(16).padStart(2,'0');
+		},
+		fields: [
+			{id:'dt',label:'Date',type:'date'},{id:'tm',label:'Time',type:'time'},
+			{id:'tz',label:'TZ offset',type:'text',pattern:'[-+]\\d{2}:?\\d{2}',placeholder:'+00:00'},
+		],
+	},
+	'04': { tlv: 'AD02',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 4) return null;
+			return { lang: String.fromCharCode(parseInt(v[0]+v[1],16), parseInt(v[2]+v[3],16)) };
+		},
+		encode(v) {
+			const lang = (v.lang||'en').slice(0,2);
+			return 'AD02' + lang.charCodeAt(0).toString(16).padStart(2,'0') + lang.charCodeAt(1).toString(16).padStart(2,'0');
+		},
+		fields: [
+			{id:'lang',label:'Language',type:'text',pattern:'[a-zA-Z]{2,3}',placeholder:'en'},
+		],
+	},
+	'05': { tlv: 'C602',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 4) return null;
+			return { status: parseInt(v[0]+v[1],16).toString(), ta: parseInt(v[2]+v[3],16).toString() };
+		},
+		encode(v) { return 'C602' + (parseInt(v.status)||0).toString(16).padStart(2,'0') + (parseInt(v.ta)||0).toString(16).padStart(2,'0'); },
+		fields: [
+			{id:'status',label:'ME Status',type:'number',min:'0',max:'255',placeholder:'0'},
+			{id:'ta',label:'Timing Advance',type:'number',min:'0',max:'255',placeholder:'0'},
+		],
+	},
+	'06': { tlv: 'BF01',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 2) return null;
+			return { tech: parseInt(v[0]+v[1],16).toString() };
+		},
+		encode(v) { return 'BF01' + (parseInt(v.tech)||0).toString(16).padStart(2,'0'); },
+		fields: [{id:'tech',label:'Access Technology',type:'select',opts:ACCESSTECH}],
+	},
+	'08': { tlv: '9408',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 16) return null;
+			return { imeisv: decImei(v) + v.slice(14,16).toUpperCase() };
+		},
+		encode(v) {
+			const raw = (v.imeisv||'').replace(/\D/g, '').slice(0, 16);
+			if (raw.length < 16) return '';
+			let h = '';
+			for (let i = 0; i < 16; i += 2)
+				h += (parseInt(raw[i+1])<<4 | parseInt(raw[i])).toString(16).padStart(2,'0');
+			return '9408' + h;
+		},
+		fields: [{id:'imeisv',label:'IMEISV',type:'text',pattern:'\\d{16}',placeholder:'16 digits'}],
+	},
+	'09': { tlv: 'AD01',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 2) return null;
+			return { mode: parseInt(v[0]+v[1],16).toString() };
+		},
+		encode(v) {
+			return 'AD01' + (parseInt(v.mode)||0).toString(16).padStart(2,'0');
+		},
+		fields: [{id:'mode',label:'Search Mode',type:'select',
+			opts:[{v:0,l:'Automatic'},{v:1,l:'Manual'}]}],
+	},
+	'0A': { tlv: '6301',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 2) return null;
+			return { charge: parseInt(v[0]+v[1],16).toString() };
+		},
+		encode(v) { return '6301' + (parseInt(v.charge)||50).toString(16).padStart(2,'0'); },
+		fields: [{id:'charge',label:'Charge state (%)',type:'number',min:'0',max:'100',placeholder:'50'}],
+	},
+	'0E': { tlv: 'BF',
+		decode(hex) {
+			const v = hex.replace(/\s/g, '').slice(4); if (v.length < 2) return null;
+			const techs = []; for (let i = 0; i < v.length; i += 2) techs.push(parseInt(v[i]+v[i+1],16));
+			return { techs: techs.join(',') };
+		},
+		encode(v) {
+			const techs = (v.techs||'').split(',').filter(t => t !== '').map(t => parseInt(t)&0xFF);
+			if (!techs.length) return '';
+			const len = techs.length.toString(16).padStart(2,'0');
+			return 'BF' + len + techs.map(t => t.toString(16).padStart(2,'0')).join('');
+		},
+		fields: [
+			{id:'techs',label:'Access Technologies (comma-separated)',type:'text',
+			 placeholder:'e.g. 3,8,10 (= UTRAN + E-UTRAN + NG-RAN)'},
+		],
+	},
+};
+async function pysimPliRender() {
+	const el = document.getElementById('pysim-pli-dict');
+	el.innerHTML = '<span class="text-gray-400">' + t('Loading...') + '</span>';
+	try {
+		const data = await pysimFetch('/api/pli-dict');
+		let html = '<div class="space-y-1">';
+		PLI_QUALIFIERS.forEach(q => {
+			const val = data[q.code] || '';
+			const hasCodec = !!PLI_CODECS[q.code];
+			html += '<div data-pli-row="' + q.code + '">'
+				+ '<div class="flex items-center gap-1">'
+				+ '<span class="w-6 text-right text-gray-400 text-[10px]">' + q.code + '</span>'
+				+ '<span class="w-32 truncate text-[10px]" title="' + esc(q.name) + '">' + esc(q.name) + '</span>'
+				+ '<input type="text" id="pli-v-' + q.code + '" value="' + esc(val) + '" placeholder="hex"'
+				+ ' class="w-28 border border-gray-300 dark:border-slate-600 text-[10px] rounded px-1 py-0.5 dark:bg-slate-800 font-mono">';
+			if (hasCodec) {
+				html += '<span onclick="pysimPliDecodeRow(\'' + q.code + '\')" id="pli-tog-' + q.code + '"'
+					+ ' class="cursor-pointer select-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">▶</span>';
+			} else {
+				html += '<span class="w-4"></span>';
+			}
+			html += '</div><div class="pli-decode-panel hidden mt-1 ml-8 pl-2 border-l border-gray-300 dark:border-slate-600" data-pli-panel="' + q.code + '"></div></div>';
+		});
+		html += '</div>';
+		el.innerHTML = html;
+	} catch (e) {
+		el.innerHTML = '<span class="text-red-500">Error: ' + esc(e.message) + '</span>';
+	}
+}
+
+function pysimPliDecodeRow(code) {
+	const panel = document.querySelector('[data-pli-panel="' + code + '"]');
+	const codec = PLI_CODECS[code];
+	if (!codec) return;
+
+	if (!panel.classList.contains('hidden')) {
+		panel.innerHTML = '';
+		panel.classList.add('hidden');
+		const tog = document.getElementById('pli-tog-' + code);
+		if (tog) tog.textContent = '▶';
+		return;
+	}
+
+	const input = document.getElementById('pli-v-' + code);
+	const hex = input.value.trim().replace(/\s/g, '');
+	let values = {};
+	if (hex) {
+		values = codec.decode(hex);
+		if (!values) {
+			panel.innerHTML = '<span class="text-[10px] text-red-500">Invalid hex</span>';
+			panel.classList.remove('hidden');
+			const tog = document.getElementById('pli-tog-' + code);
+			if (tog) tog.textContent = '▼';
+			return;
+		}
+	}
+
+	let html = '<div class="space-y-1 mb-1">';
+	codec.fields.forEach(f => {
+		html += '<div class="flex items-center gap-1">'
+			+ '<span class="text-[10px] w-12 text-gray-500 dark:text-slate-400 truncate" title="' + esc(f.label) + '">' + esc(f.label) + '</span>';
+		if (f.type === 'select') {
+			html += '<select id="pli-d-' + code + '-' + f.id + '" class="text-[10px] border border-gray-300 dark:border-slate-600 rounded px-1 py-0.5 dark:bg-slate-800 w-36">';
+			f.opts.forEach(o => html += '<option value="' + o.v + '"' + (String(values[f.id]) === String(o.v) ? ' selected' : '') + '>' + esc(o.l) + '</option>');
+			html += '</select>';
+		} else {
+			html += '<input id="pli-d-' + code + '-' + f.id + '" type="' + f.type + '"'
+				+ ' value="' + esc(String(values[f.id] || '')) + '"'
+				+ (f.pattern ? ' pattern="' + f.pattern + '"' : '')
+				+ (f.placeholder ? ' placeholder="' + f.placeholder + '"' : '')
+				+ (f.min !== undefined ? ' min="' + f.min + '" max="' + f.max + '"' : '')
+				+ ' class="text-[10px] border border-gray-300 dark:border-slate-600 rounded px-1 py-0.5 dark:bg-slate-800 w-32 font-mono">';
+		}
+		html += '</div>';
+	});
+	html += '</div>';
+	html += '<div class="flex gap-1">'
+		+ '<button onclick="pysimPliApplyRow(\'' + code + '\')" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700">Apply</button>'
+		+ '<button onclick="var p=document.querySelector(\'[data-pli-panel=\\\'' + code + '\\\']\');p.classList.add(\'hidden\');p.innerHTML=\'\';var t=document.getElementById(\'pli-tog-' + code + '\');if(t)t.textContent=\'▶\'" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 dark:border-slate-600">Cancel</button>'
+		+ '</div>';
+	panel.innerHTML = html;
+	panel.classList.remove('hidden');
+	const tog = document.getElementById('pli-tog-' + code);
+	if (tog) tog.textContent = '▼';
+}
+
+function pysimPliApplyRow(code) {
+	const codec = PLI_CODECS[code];
+	if (!codec) return;
+	const values = {};
+	codec.fields.forEach(f => {
+		const el = document.getElementById('pli-d-' + code + '-' + f.id);
+		if (el) values[f.id] = el.value;
+	});
+	const hex = codec.encode(values);
+	if (!hex) return;
+	const input = document.getElementById('pli-v-' + code);
+	if (input) input.value = hex;
+	const panel = document.querySelector('[data-pli-panel="' + code + '"]');
+	if (panel) { panel.innerHTML = ''; panel.classList.add('hidden'); }
+	const tog = document.getElementById('pli-tog-' + code);
+	if (tog) tog.textContent = '▶';
+}
+
+async function pysimPliSave() {
+	const btn = document.getElementById('pli-save-btn');
+	btn.disabled = true;
+	btn.textContent = t('Saving...');
+	const data = {};
+	PLI_QUALIFIERS.forEach(q => {
+		const el = document.getElementById('pli-v-' + q.code);
+		if (el) {
+			const v = el.value.trim().replace(/\s/g, '');
+			if (v && !/^[0-9A-Fa-f]*$/.test(v)) return;
+			data[q.code] = v;
+		}
+	});
+	try {
+		await pysimFetch('/api/pli-dict', data);
+		btn.textContent = t('Saved');
+		btn.classList.add('bg-emerald-700');
+		setTimeout(() => { btn.textContent = t('Save'); btn.classList.remove('bg-emerald-700'); btn.disabled = false; }, 1500);
+	} catch (e) {
+		btn.textContent = 'Error';
+		btn.classList.add('bg-red-600');
+		setTimeout(() => { btn.textContent = t('Save'); btn.classList.remove('bg-red-600'); btn.disabled = false; }, 2000);
+	}
 }
 
 // ===== custom files =====
@@ -3672,10 +4302,10 @@ function pysimCustomExport() {
 	el.select();
 }
 
-function pysimCustomImport() {
-	const el = document.getElementById('pysim-cf-io');
+async function pysimCustomImport() {
 	try {
-		const imported = JSON.parse(el.value);
+		const text = await navigator.clipboard.readText();
+		const imported = JSON.parse(text);
 		if (!Array.isArray(imported)) throw new Error('Expected an array');
 		let added = 0;
 		for (const entry of imported) {
@@ -3694,6 +4324,7 @@ function pysimCustomImport() {
 		}
 		pysimCustomSave();
 		pysimCustomRender();
+		const el = document.getElementById('pysim-cf-io');
 		el.value = 'Imported ' + added + ' files.';
 		setTimeout(() => { el.classList.add('hidden'); }, 2000);
 	} catch (e) {
@@ -3836,6 +4467,28 @@ const LANG_RU = {
 	'No events configured.': 'Нет настроенных событий.',
 	'Fetched proactive commands:': 'Извлечённые проактивные команды:',
 	'No commands logged yet.': 'Команды пока не регистрировались.',
+	'Send event notification to the card?': 'Отправить уведомление о событии на карту?',
+	'This event type is not yet supported.': 'Этот тип события пока не поддерживается.',
+	'Event sent.': 'Событие отправлено.',
+	'Event data sent.': 'Данные события отправлены.',
+	'Sending...': 'Отправка...',
+	'Invalid': 'Некорректное значение',
+	'Service Status': 'Статус сервиса',
+	'Normal service': 'Обычный сервис',
+	'Limited service': 'Ограниченный сервис',
+	'No service': 'Нет сервиса',
+	'Language code': 'Код языка',
+	'Registration type': 'Тип регистрации',
+	'Access Technology': 'Технология доступа',
+	'Rejection cause code': 'Код причины отклонения',
+	'Extended EMM cause (optional)': 'Расширенная EMM причина (опционально)',
+	'Status': 'Статус',
+	'Card reader removed': 'Картридер извлечён',
+	'Card reader inserted': 'Картридер вставлен',
+	'PROVIDE LOCAL INFORMATION response data': 'Данные для PROVIDE LOCAL INFORMATION',
+	'Saving...': 'Сохранение...',
+	'Saved': 'Сохранено',
+	'Save': 'Сохранить',
 };
 let currentLang = 'en';
 
