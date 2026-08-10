@@ -359,6 +359,7 @@
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="04" onchange="updateRamPriv()"> Card Reset</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="04" onchange="updateRamPriv()"> Global Registry</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="02" onchange="updateRamPriv()"> CVM Management</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="01" onchange="updateRamPriv()"> Mandated DAP Verification</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="02" onchange="updateRamPriv()"> Final Application</label>
 				<div></div>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b3" value="80" onchange="updateRamPriv()"> Receipt Generation</label>
@@ -2286,7 +2287,7 @@ const LIFECYCLE_MAP = {
 };
 
 const PRIVILEGE_NAMES = [
-	['Security Domain', 'DAP Verification', null, 'Delegated Management', 'Card Lock', 'Card Terminate', 'Card Reset', 'CVM Management', 'Mandated DAP Verification'],
+	['Security Domain', 'DAP Verification', 'Delegated Management', 'Card Lock', 'Card Terminate', 'Card Reset', 'CVM Management', 'Mandated DAP Verification'],
 	['Trusted Path', 'Authorized Management', 'Token Verification', 'Global Delete', 'Global Lock', 'Global Registry', 'Final Application', 'Global Service'],
 	['Receipt Generation', 'Ciphered Load File Data Block', 'Contactless Activation', 'Contactless Self-Activation'],
 ];
