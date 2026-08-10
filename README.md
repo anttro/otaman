@@ -396,6 +396,48 @@ Files not in pysim's model can be added manually:
 
 Custom files persist in `localStorage` across sessions. Export/import as JSON for sharing.
 
+### Proactive UICC Pill
+
+The **Proactive UICC** sub-tab in the Card Reader provides real-time CAT session
+interaction:
+
+**Subscribed Events** — the card's SET UP EVENT LIST is displayed with per-event
+**Send** buttons. Clicking opens a form specific to the event type:
+
+- **No-data events** (User Activity, Idle Screen, etc.) — single-click confirmation
+- **Location Status** — dropdown for Normal / Limited / No service
+- **Access Technology Change** — dropdown for all 13 RAT types
+- **Card Reader Status, Language, UICC Access** — appropriate inputs
+- **Network Rejection** — full adaptive form with registration type dropdown
+  (LU / GPRS / EPS / 5GS), location fields (MCC, MNC, LAC, RAC, TAC), access
+  technology selection, and 53-cause unified rejection cause code dropdown
+  covering EMM, GMM, 5GMM, and LU causes
+
+**Proactive Command Log** — chronological list of proactive commands encountered
+(seconds elapsed, type code, name, byte count). Covers SET UP MENU, SET UP EVENT
+LIST, POLL INTERVAL, DISPLAY TEXT, SELECT ITEM, and PROVIDE LOCAL INFORMATION.
+
+**PLI Data Dictionary** — editable per-qualifier hex values for all 22 PROVIDE
+LOCAL INFORMATION qualifiers (TS 102 223 + TS 131 111). 10 qualifiers have
+inline decode/encode forms (▶ toggle):
+
+| Code | Decoded fields |
+|------|--------------|
+| 00 | MCC, MNC, LAC/TAC |
+| 01 | IMEI (15 digits) |
+| 03 | Date, Time, TZ offset |
+| 04 | Language (2-char code) |
+| 05 | ME Status, Timing Advance |
+| 06 | Access Technology (dropdown) |
+| 08 | IMEISV (16 digits) |
+| 09 | Search Mode (Auto/Manual) |
+| 0A | Battery charge (%) |
+| 0E | Multiple Access Technologies (comma-list) |
+
+Values persist on the server until restart. Apply → hex updates; Save → POSTs to
+server. The server will use these values to populate TERMINAL RESPONSE data for
+future PLI proactive commands.
+
 ### Command Hints
 
 Type a command name in the **pySim command line** input. Usage hints appear as a tooltip after 300ms. Command autocomplete suggestions appear above the input.
