@@ -3947,14 +3947,14 @@ async function pysimProactiveLogRender() {
             }
             html += '<div data-plog-row="' + i + '">'
                 + '<div class="flex items-center gap-2 py-0.5">'
-                + (e.raw ? '<span class="cursor-pointer select-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="pysimPlogToggle(' + i + ')" id="plog-tog-' + i + '">▶</span>' : '<span class="w-3"></span>')
+                + (e.tr_hex ? '<span class="cursor-pointer select-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="pysimPlogToggle(' + i + ')" id="plog-tog-' + i + '">▶</span>' : '<span class="w-3"></span>')
                 + '<span class="w-12 text-right text-gray-400">' + e.elapsed + 's</span>'
                 + '<span class="font-mono text-gray-400">0x' + e.type_hex.toUpperCase() + '</span>'
                 + '<span class="truncate">' + esc(name) + '</span>'
                 + (qual ? '<span class="text-[10px] text-gray-500 dark:text-slate-400">' + esc(qual) + '</span>' : '')
                 + '<span class="ml-auto text-gray-400">' + e.bytes + ' bytes</span>'
                 + '</div>'
-                + (e.raw ? '<div class="pli-decode-panel hidden ml-4 pl-2 border-l border-gray-300 dark:border-slate-600" data-plog-data="' + i + '"><div class="text-[10px] font-mono text-gray-500 dark:text-slate-400 max-h-20 overflow-auto word-break-all whitespace-pre-wrap">' + esc(e.raw) + '</div></div>' : '')
+                + (e.tr_hex ? '<div class="pli-decode-panel hidden ml-4 pl-2 border-l border-gray-300 dark:border-slate-600" data-plog-data="' + i + '"><div class="text-[10px] font-mono text-gray-500 dark:text-slate-400 max-h-20 overflow-auto whitespace-pre-wrap">Response: ' + esc(e.tr_hex) + '\nSW: ' + esc(e.tr_sw) + '</div></div>' : '')
                 + '</div>';
         });
         el.innerHTML = html;
