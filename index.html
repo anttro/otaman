@@ -927,9 +927,14 @@
 			<textarea id="pysim-apdu-output" rows="5" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		</div>
 		<div id="pysim-sub-proactive" class="hidden">
-			<div class="flex gap-4">
+			<div class="flex gap-6">
 				<div>
-					<button id="pli-status-btn" onclick="pysimStatusPoll()" class="mb-1 px-2 py-0.5 text-[10px] rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Send STATUS">Send STATUS</button>
+					<div class="flex items-center gap-2 mb-1">
+						<button id="pli-status-btn" onclick="pysimStatusPoll()" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Send STATUS">Send STATUS</button>
+						<span class="text-[10px] text-gray-500 dark:text-slate-400">|</span>
+						<button id="pli-pause-btn" onclick="pysimPollToggle()" class="px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600">OFF</button>
+						<span id="pli-poll-stat" class="text-[10px] text-gray-400"></span>
+					</div>
 					<div class="mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
 					<div id="pysim-event-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 					<div class="mt-3 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
@@ -2634,6 +2639,8 @@ async function pysimConnect() {
 		await pysimRefresh();
 		pysimLoadCommands();
 		pysimFsRefresh();
+		pysimPollStatusInit();
+		pysimStartBackendPoll();
 		btn.textContent = t('Connected');
 		stkCheckMenu();
 	} catch (e) {
@@ -2645,6 +2652,7 @@ async function pysimConnect() {
 }
 
 function pysimDisconnect() {
+	if (_pysimPollTimer) { clearInterval(_pysimPollTimer); _pysimPollTimer = null; }
 	pysimShowConnected(false);
 	document.getElementById('pysim-status').textContent = '';
 	pysimSetConnected(false);
@@ -3096,7 +3104,7 @@ function pysimSwitchSubtab(name) {
 		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
 	});
 	if (name === 'custom') pysimCustomRender();
-	if (name === 'proactive') { pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); }
+	if (name === 'proactive') { pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); pysimPollStatusInit(); }
 }
 
 function pysimCmdKeydown(e) {
@@ -3758,7 +3766,7 @@ async function pysimEventsRender() {
 			html += '<div class="flex items-center gap-2 py-0.5"><span class="w-6 text-right text-gray-400">'
 				+ e.toString(16).padStart(2, '0').toUpperCase()
 				+ '</span> ' + esc(name)
-				+ '<button onclick="pysimEventSendForm(' + e + ')" class="ml-auto px-1.5 py-0.5 text-[10px] rounded bg-blue-600 text-white hover:bg-blue-700">' + t('Send') + '</button></div>';
+				+ '<button onclick="pysimEventSendForm(' + e + ')" class="ml-auto px-1.5 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + t('Send') + '</button></div>';
 		});
 		el.innerHTML = html;
 	} catch (e) {
@@ -3908,6 +3916,63 @@ async function pysimStatusPoll() {
 	} finally {
 		setTimeout(() => { btn.textContent = t('Send STATUS'); btn.disabled = false; }, 2000);
 	}
+}
+
+let _pysimPollTimer = null;
+
+async function pysimPollToggle() {
+	const btn = document.getElementById('pli-pause-btn');
+	if (!btn) return;
+	try {
+		const status = await pysimFetch('/api/poll-status');
+		const newEnabled = !status.enabled;
+		const resp = await pysimFetch('/api/poll-toggle', { enabled: newEnabled });
+		pysimUpdatePollUI(resp.enabled, resp.interval);
+	} catch (e) { /* ignore */ }
+}
+
+function pysimUpdatePollUI(enabled, interval) {
+	const btn = document.getElementById('pli-pause-btn');
+	const stat = document.getElementById('pli-poll-stat');
+	if (!btn) return;
+	if (enabled) {
+		btn.textContent = 'ON';
+		btn.classList.remove('bg-gray-200', 'dark:bg-slate-700', 'text-gray-700', 'dark:text-slate-300');
+		btn.classList.add('bg-emerald-600', 'text-white');
+	} else {
+		btn.textContent = 'OFF';
+		btn.classList.remove('bg-emerald-600', 'text-white');
+		btn.classList.add('bg-gray-200', 'dark:bg-slate-700', 'text-gray-700', 'dark:text-slate-300');
+	}
+	if (stat) stat.textContent = enabled ? '(' + interval + 's)' : '';
+}
+
+async function pysimPollStatusInit() {
+	try {
+		const status = await pysimFetch('/api/poll-status');
+		pysimUpdatePollUI(status.enabled, status.interval);
+	} catch (e) { /* ignore */ }
+}
+
+function pysimStartBackendPoll() {
+	if (_pysimPollTimer) clearInterval(_pysimPollTimer);
+	_pysimPollTimer = setInterval(async () => {
+		try {
+			const [log, stk, ps] = await Promise.all([
+				pysimFetch('/api/proactive-log'),
+				pysimFetch('/api/stk-status'),
+				pysimFetch('/api/poll-status'),
+			]);
+			const elLog = document.getElementById('pysim-proactive-log');
+			if (elLog && elLog.parentElement && !elLog.parentElement.closest('.hidden')) {
+				pysimProactiveLogRender();
+			}
+			pysimUpdatePollUI(ps.enabled, ps.interval);
+			if (!ps.enabled && !stk.active && !stk.pending) {
+				// card disconnected — clear stale event list
+			}
+		} catch (e) { /* ignore */ }
+	}, 5000);
 }
 
 // ===== proactive command log =====
