@@ -929,15 +929,17 @@
 		<div id="pysim-sub-proactive" class="hidden">
 			<div class="flex gap-6">
 				<div>
-					<div class="flex items-center gap-2 mb-1">
+					<div class="mb-1 text-xs text-gray-500 dark:text-slate-400" data-l10n="STATUS and Polling">STATUS and Polling</div>
+					<div class="flex items-center gap-2 mb-3">
 						<button id="pli-status-btn" onclick="pysimStatusPoll()" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Send STATUS">Send STATUS</button>
 						<span class="text-[10px] text-gray-500 dark:text-slate-400">|</span>
+						<span class="text-[10px] text-gray-500 dark:text-slate-400" data-l10n="Polling">Polling</span>
 						<button id="pli-pause-btn" onclick="pysimPollToggle()" class="px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600">OFF</button>
 						<span id="pli-poll-stat" class="text-[10px] text-gray-400"></span>
 					</div>
-					<div class="mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
+					<div class="mt-2 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
 					<div id="pysim-event-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
-					<div class="mt-3 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
+					<div class="mt-4 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
 					<div id="pysim-proactive-log" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 				</div>
 				<div>
@@ -3956,6 +3958,7 @@ async function pysimPollStatusInit() {
 
 function pysimStartBackendPoll() {
 	if (_pysimPollTimer) clearInterval(_pysimPollTimer);
+	let _hadData = false;
 	_pysimPollTimer = setInterval(async () => {
 		try {
 			const [log, stk, ps] = await Promise.all([
@@ -3964,12 +3967,19 @@ function pysimStartBackendPoll() {
 				pysimFetch('/api/poll-status'),
 			]);
 			const elLog = document.getElementById('pysim-proactive-log');
-			if (elLog && elLog.parentElement && !elLog.parentElement.closest('.hidden')) {
+			const visible = elLog && elLog.parentElement && !elLog.parentElement.closest('.hidden');
+			if (visible) {
 				pysimProactiveLogRender();
+				pysimEventsRender();
 			}
 			pysimUpdatePollUI(ps.enabled, ps.interval);
-			if (!ps.enabled && !stk.active && !stk.pending) {
-				// card disconnected — clear stale event list
+			if (Array.isArray(log) && log.length > 0) _hadData = true;
+			if (_hadData && !ps.enabled && Array.isArray(log) && log.length === 0) {
+				_hadData = false;
+				const statusEl = document.getElementById('pysim-status');
+				if (statusEl && statusEl.textContent.trim() !== '') {
+					statusEl.innerHTML = '<span class="text-red-500">Card disconnected</span>';
+				}
 			}
 		} catch (e) { /* ignore */ }
 	}, 5000);
@@ -4606,6 +4616,8 @@ const LANG_RU = {
 	'Card reader inserted': 'Картридер вставлен',
 	'PROVIDE LOCAL INFORMATION response data': 'Данные для PROVIDE LOCAL INFORMATION',
 	'Send STATUS': 'Отправить STATUS',
+	'STATUS and Polling': 'STATUS и опрос',
+	'Polling': 'Опрос',
 	'STATUS...': 'STATUS...',
 	'Saving...': 'Сохранение...',
 	'Saved': 'Сохранено',
