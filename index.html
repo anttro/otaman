@@ -4033,9 +4033,31 @@ async function pysimProactiveLogRender() {
                 + '<span class="font-mono text-gray-400">0x' + e.type_hex.toUpperCase() + '</span>'
                 + '<span class="truncate">' + esc(name) + '</span>'
                 + (qual ? '<span class="text-[10px] text-gray-500 dark:text-slate-400">' + esc(qual) + '</span>' : '')
-                + '</div>'
-                + (e.tr_hex ? '<div class="text-[10px] font-mono text-gray-400 dark:text-slate-500 pl-[5.5rem]">Response: ' + esc(e.tr_hex) + '</div>' : '')
                 + '</div>';
+            if (e.tr_hex) {
+                html += '<div class="text-[10px] pl-[5.5rem] text-gray-400 dark:text-slate-500">Response: ';
+                if (e.type_hex === '26' && e.qualifier) {
+                    const codec = PLI_CODECS[e.qualifier];
+                    if (codec && codec.decode) {
+                        const vals = codec.decode(e.tr_hex);
+                        if (vals) {
+                            const parts = [];
+                            codec.fields.forEach(f => {
+                                if (vals[f.id] !== undefined) parts.push(f.label + ': ' + vals[f.id]);
+                            });
+                            html += esc(parts.length ? parts.join(', ') : e.tr_hex);
+                        } else {
+                            html += esc(e.tr_hex);
+                        }
+                    } else {
+                        html += esc(e.tr_hex);
+                    }
+                } else {
+                    html += esc(e.tr_hex);
+                }
+                html += '</div>';
+            }
+            html += '</div>';
         });
         el.innerHTML = html;
     } catch (err) {
