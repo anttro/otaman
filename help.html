@@ -326,7 +326,7 @@
 		<li><strong>Python 3.8+</strong> with <code class="font-mono text-sm">pip</code></li>
 		<li><strong>Git</strong></li>
 		<li><strong>Smart card reader</strong> (PC/SC or serial/FTDI). PC/SC is preferable; on Linux it requires <code class="font-mono text-sm">pcsc-lite</code> + <code class="font-mono text-sm">ccid</code></li>
-		<li><strong>Windows only</strong> — <code class="font-mono text-sm">pyscard</code> (the PC/SC driver wrapper) is installed from precompiled PyPI wheels, so no compiler is normally needed. Microsoft C++ Build Tools (&ldquo;Desktop development with C++&rdquo;) are only required if pip falls back to a source build (e.g. unsupported Python version).</li>
+		<li><strong>Windows only</strong> — use <strong>Python 3.10&ndash;3.13</strong> (3.13 recommended): <code class="font-mono text-sm">pyscard</code> (the PC/SC driver wrapper) ships precompiled wheels for these versions. On Python 3.9 / 3.14 pip builds <code class="font-mono text-sm">pyscard</code> from source, which requires Microsoft C++ Build Tools (&ldquo;Desktop development with C++&rdquo;).</li>
 	</ul>
 
 	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Quick start — Linux / macOS</h3>
