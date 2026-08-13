@@ -326,7 +326,7 @@
 		<li><strong>Python 3.8+</strong> с <code class="font-mono text-sm">pip</code></li>
 		<li><strong>Git</strong></li>
 		<li><strong>Смарт-картридер</strong> (PC/SC или serial/FTDI). Предпочтителен PC/SC; на Linux требуются <code class="font-mono text-sm">pcsc-lite</code> + <code class="font-mono text-sm">ccid</code></li>
-		<li><strong>Только Windows</strong> — используйте <strong>Python 3.10&ndash;3.13</strong> (рекомендуется 3.13): <code class="font-mono text-sm">pyscard</code> (обёртка драйвера PC/SC) поставляет готовые wheels для этих версий. На Python 3.9 / 3.14 pip собирает <code class="font-mono text-sm">pyscard</code> из исходников, для чего требуются Microsoft C++ Build Tools (&laquo;Desktop development with C++&raquo;).</li>
+		<li><strong>Только Windows</strong> — используйте <strong>Python 3.10&ndash;3.13</strong> (рекомендуется 3.13): <code class="font-mono text-sm">pyscard</code> (обёртка драйвера PC/SC) поставляет готовые wheels для этих версий. На Python 3.9 / 3.14 pip собирает <code class="font-mono text-sm">pyscard</code> из исходников, для чего требуются Microsoft C++ Build Tools (&laquo;Desktop development with C++&raquo;). Мост SMPP (<code class="font-mono text-sm">smpp.twisted3</code>) на Windows намеренно не устанавливается, поэтому для Python 3.10&ndash;3.13 C++ Build Tools не нужны.</li>
 	</ul>
 
 	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Быстрый старт — Linux / macOS</h3>
