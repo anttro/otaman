@@ -377,7 +377,7 @@ pip install .
 # Запустить сервер
 pysim-otaman-server --http-port 8080</pre>
 	<p class="text-sm mb-3">Подключите PC/SC-ридер с SIM-картой и укажите в PWA адрес <code class="font-mono text-sm">http://127.0.0.1:8080</code>.</p>
-	<p class="text-sm mb-3">Если PWA раздаётся с публичного HTTPS-хоста (например, <code class="font-mono text-sm">https://otaman.example.com</code>), браузер применяет Private Network Access: сервер автоматически отвечает на preflight заголовком <code class="font-mono text-sm">Access-Control-Allow-Private-Network: true</code>, поэтому локальный сервер карт остаётся доступным из размещённого PWA.</p>
+	<p class="text-sm mb-3">Если PWA раздаётся с публичного HTTPS-хоста (например, <code class="font-mono text-sm">https://otaman.example.com</code>), для доступа к локальному серверу карт нужны два условия: (1) сервер отвечает на preflight заголовком <code class="font-mono text-sm">Access-Control-Allow-Private-Network: true</code> (pysim-otaman-server &ge; 1.6.1 делает это автоматически), и (2) браузеру должно быть разрешено обращаться к локальной сети &mdash; в Chrome/Edge/Vivaldi: Настройки сайта &rarr; Доступ к локальной сети &rarr; разрешить сайт (или подтвердить запрос). Без разрешения браузера запрос к <code class="font-mono text-sm">127.0.0.1</code> блокируется ещё до отправки preflight.</p>
 
 
 <section class="mb-10">

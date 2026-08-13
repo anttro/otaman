@@ -385,6 +385,8 @@ Swaps nibble pairs of an even-length hex string.
 
 Connects to a local [pysim-otaman-server](https://github.com/anttro/pysim-otaman-server) for live card operations.
 
+> **Browser restriction:** when the PWA is served from a public HTTPS host, reaching the local server (`http://127.0.0.1:8080`) requires two things: the server must send `Access-Control-Allow-Private-Network: true` (pysim-otaman-server ≥ 1.6.1 does this automatically), and the browser must be allowed to access the local network — in Chrome/Edge/Vivaldi: Site settings → Local network access → allow the site (or accept the permission prompt). Without the browser permission, the request to `127.0.0.1` is blocked before any preflight is sent.
+
 ### File Browser
 
 Browse the UICC filesystem in a tree view. Files are shown with names, FIDs, and AIDs (for ADFs). Click to read contents.
