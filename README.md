@@ -283,18 +283,23 @@ Assembles secured packets per ETSI TS 102 225.
 
 ### SPI1 (Security Level)
 
-| Value | Security | Ciphering | Counter |
+SPI1 bit layout (TS 102 225 §5.1.1): `b8–b6` padding, `b5–b4` counter, `b3` ciphering, `b2–b1` RC/CC/DS.
+
+| Value | Security | Ciphering | Counter (b5 b4) |
 |---|---|---|---|
-| 00 | None | No | None |
-| 01 | RC | No | None |
-| 02 | CC/MAC | No | None |
-| 06 | CC/MAC | Yes | None |
-| 12 | CC/MAC | No | Available |
-| 16 | CC/MAC | Yes | Available |
-| 22 | CC/MAC | No | Check higher |
-| 26 | CC/MAC | Yes | Check higher |
-| 32 | CC/MAC | No | Check +1 |
-| 36 | CC/MAC | Yes | Check +1 |
+| 00 | None | No | 00 none |
+| 01 | RC | No | 00 none |
+| 02 | CC/MAC | No | 00 none |
+| 06 | CC/MAC | Yes | 00 none |
+| 0A | CC/MAC | No | 01 available |
+| 0E | CC/MAC | Yes | 01 available |
+| 12 | CC/MAC | No | 10 higher |
+| 16 | CC/MAC | Yes | 10 higher |
+| 1A | CC/MAC | No | 11 +1 |
+| 1E | CC/MAC | Yes | 11 +1 |
+
+> **AES requires `b5 b4 = 10` (higher) or `11` (+1)** per TS 102 225 §5.1.2 and §5.1.3.1.
+> The 3DES values `00/01/02/06` (no counter) remain valid for 3DES only.
 
 ### SPI2 (PoR settings)
 
@@ -311,15 +316,18 @@ Assembles secured packets per ETSI TS 102 225.
 
 ### Crypto
 
-- **3DES-CBC** encryption (zero ICV), supporting 8, 16, and 24 byte keys
-- **Retail MAC** (ISO 9797-1 MAC algorithm 3) for cryptographic checksum
+- **3DES-CBC** encryption (zero ICV), supporting 8, 16, and 24 byte keys — deprecated since Rel-18, still supported for backwards compatibility
+- **AES-CBC** encryption (zero ICV, zero-padded to 16), supporting 16, 24, and 32 byte keys (TS 102 225 §5.1.2, KIc `x2`)
+- **Retail MAC** (ISO 9797-1 MAC algorithm 3) for the DES/3DES cryptographic checksum
+- **AES-CMAC** (NIST SP 800-38B, truncated to 8 octets) for the AES cryptographic checksum (TS 102 225 §5.1.3.1, KID `x2`)
 - Padding byte configurable (`00` per TS 102 225 default, or `FF`)
 
 ### References
 
-- ETSI TS 102 225 V13.0.0: Secured packet structure for UICC based applications
+- ETSI TS 102 225 V18.1.0: Secured packet structure for UICC based applications
 - ETSI TS 102 226: Remote APDU structure for UICC based applications
 - ISO 9797-1: MAC algorithms
+- NIST SP 800-38B: CMAC
 
 ---
 

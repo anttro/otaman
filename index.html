@@ -10,13 +10,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="des-bundle.js"></script>
+<script src="aes-bundle.js"></script>
 </head>
 <body class="bg-neutral-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200">
 
 <div class="max-w-7xl mx-auto px-6 py-4">
 
 	<div class="flex items-center justify-between mb-6">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.5.1</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.6.0</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -578,12 +579,12 @@
 					<option value="01">01 — RC only</option>
 					<option value="02">02 — CC/MAC only</option>
 					<option value="06" selected>06 — CC/MAC + Ciphering</option>
-					<option value="12">12 — CC/MAC + Counter (available)</option>
-					<option value="16">16 — CC/MAC + Ciphering + Counter (available)</option>
-					<option value="22">22 — CC/MAC + Counter (check higher)</option>
-					<option value="26">26 — CC/MAC + Ciphering + Counter (check higher)</option>
-					<option value="32">32 — CC/MAC + Counter (check +1)</option>
-					<option value="36">36 — CC/MAC + Ciphering + Counter (check +1)</option>
+					<option value="0A">0A — CC/MAC + Counter (available)</option>
+					<option value="0E">0E — CC/MAC + Ciphering + Counter (available)</option>
+					<option value="12">12 — CC/MAC + Counter (higher)</option>
+					<option value="16">16 — CC/MAC + Ciphering + Counter (higher)</option>
+					<option value="1A">1A — CC/MAC + Counter (+1)</option>
+					<option value="1E">1E — CC/MAC + Ciphering + Counter (+1)</option>
 				</select>
 				<input id="sp-spi1-hex" readonly class="w-16 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-2 bg-gray-100 dark:bg-slate-800 text-center" value="06">
 			</div>
@@ -632,6 +633,7 @@
 				</select>
 				<select id="sp-kic-alg" onchange="updateSpKic()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					<option value="01">01 — DES-CBC (8B key)</option>
+					<option value="02">02 — AES-CBC (16/24/32B key)</option>
 					<option value="05" selected>05 — 3DES 2-key outer-CBC (16B key)</option>
 					<option value="09">09 — 3DES 3-key outer-CBC (24B key)</option>
 					<option value="0D">0D — DES-ECB (8B key)</option>
@@ -662,6 +664,7 @@
 				</select>
 				<select id="sp-kid-alg" onchange="updateSpKid()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
 					<option value="01">01 — DES-CBC (8B key)</option>
+					<option value="02">02 — AES-CMAC (16/24/32B key)</option>
 					<option value="05" selected>05 — 3DES 2-key outer-CBC (16B key)</option>
 					<option value="09">09 — 3DES 3-key outer-CBC (24B key)</option>
 				</select>
@@ -1681,8 +1684,9 @@ function updateSpKid() {
 	updateKeyPlaceholder('kid', alg & 0x0F);
 }
 function updateKeyPlaceholder(prefix, algNib) {
-	const keyLen = {1: 8, 5: 16, 9: 24, 0xD: 8}[algNib] || 8;
-	document.getElementById('sp-' + prefix + '-key').placeholder = keyLen + ' bytes key';
+	const keyLen = {1: 8, 2: 16, 5: 16, 9: 24, 0xD: 8}[algNib] || 8;
+	const ph = algNib === 2 ? '16/24/32 bytes key (AES)' : keyLen + ' bytes key';
+	document.getElementById('sp-' + prefix + '-key').placeholder = ph;
 }
 
 // ===== DES / 3DES using des.js library (bundled as des-bundle.js) =====
@@ -1789,6 +1793,64 @@ function cbcMac(data, keyBytes) {
 	return prev;
 }
 
+// ===== AES using aes-js library (bundled as aes-bundle.js) =====
+function aesCbcEncrypt(data, keyBytes, iv) {
+	const bs = 16;
+	const padded = zeroPad(data, bs);
+	const aesCbc = new aesjs.ModeOfOperation.cbc(keyBytes, iv);
+	return new Uint8Array(aesCbc.encrypt(padded));
+}
+
+function aesShiftLeft1(bytes) {
+	const out = new Uint8Array(bytes.length);
+	let carry = 0;
+	for (let i = bytes.length - 1; i >= 0; i--) {
+		out[i] = (bytes[i] << 1) | carry;
+		carry = (bytes[i] & 0x80) ? 1 : 0;
+	}
+	return out;
+}
+
+function aesCmacSubkeys(keyBytes) {
+	const ecb = new aesjs.ModeOfOperation.ecb(keyBytes);
+	const L = new Uint8Array(ecb.encrypt(new Uint8Array(16)));
+	const K1 = aesShiftLeft1(L);
+	if (L[0] & 0x80) K1[15] ^= 0x87;
+	const K2 = aesShiftLeft1(K1);
+	if (K1[0] & 0x80) K2[15] ^= 0x87;
+	return [K1, K2];
+}
+
+// AES-CMAC (NIST SP 800-38B) truncated to 8 octets, matching pySim's CMAC(mac_len=8).
+// Unlike the 3DES CBC-MAC above, CMAC pads internally - do NOT pre-pad the input.
+function aesCmac(data, keyBytes) {
+	const bs = 16;
+	const [K1, K2] = aesCmacSubkeys(keyBytes);
+	const ecb = new aesjs.ModeOfOperation.ecb(keyBytes);
+	const n = Math.max(1, Math.ceil(data.length / bs));
+	const lastLen = data.length % bs;
+	const complete = data.length > 0 && lastLen === 0;
+	let prev = new Uint8Array(bs);
+	for (let i = 0; i < n - 1; i++) {
+		const block = data.subarray(i * bs, (i + 1) * bs);
+		const xored = xorBytes(block, prev);
+		prev = new Uint8Array(ecb.encrypt(xored));
+	}
+	let lastBlock;
+	if (complete) {
+		lastBlock = xorBytes(data.subarray((n - 1) * bs, n * bs), K1);
+	} else {
+		const padded = new Uint8Array(bs);
+		const start = (n - 1) * bs;
+		if (data.length > start) padded.set(data.subarray(start));
+		padded[data.length - start] = 0x80;
+		lastBlock = xorBytes(padded, K2);
+	}
+	const xored = xorBytes(lastBlock, prev);
+	const mac = new Uint8Array(ecb.encrypt(xored));
+	return mac.subarray(0, 8);
+}
+
 // ===== Secure Packet assembly =====
 // TS 102 225 Table 1/2 + TS 31.115 Table 1 (SMS-PP):
 //   CPL(2) CHL(1) SPI(2) KIc(1) KID(1) TAR(3) CNTR(5) PCNTR(1) [RC/CC/DS] secured-data(+padding)
@@ -1808,25 +1870,53 @@ function genSp() {
 	const kidKeyHex = (document.getElementById('sp-kid-key').value || '').replace(/[^0-9a-fA-F]/g, '');
 	const padByte = parseInt(document.getElementById('sp-padding').value, 16);
 
+	const kicAlg = parseInt(kicHex, 16) & 0x0F;
+	const kidAlg = parseInt(kidHex, 16) & 0x0F;
+	const kicIsAes = kicAlg === 0x02;
+	const kidIsAes = kidAlg === 0x02;
+
 	const ciphering = (spi1 & 0x04) !== 0;
 	const hasMac = (spi1 & 0x03) === 0x02;
 
 	const resultEl = document.getElementById('sp-result');
 
+	// Rel-18: AES requires a replay-protected counter (SPI1 b5b4 = 10 or 11)
+	if ((kicIsAes && ciphering) || (kidIsAes && hasMac)) {
+		const counterBits = (spi1 >> 3) & 0x03;
+		if (counterBits !== 2 && counterBits !== 3) {
+			resultEl.value = 'Error: AES requires a replay-protected counter (SPI1 counter: "higher" or "+1")';
+			return;
+		}
+	}
+
 	let kicKey, kidKey;
 	try {
 		if (kicKeyHex) {
 			kicKey = hexToBytes(kicKeyHex);
-			if (kicKey.length !== 8 && kicKey.length !== 16 && kicKey.length !== 24)
-				{ resultEl.value = 'Error: KIc key must be 8, 16, or 24 bytes'; return; }
+			const ok = kicIsAes
+				? (kicKey.length === 16 || kicKey.length === 24 || kicKey.length === 32)
+				: (kicKey.length === 8 || kicKey.length === 16 || kicKey.length === 24);
+			if (!ok) {
+				resultEl.value = kicIsAes
+					? 'Error: AES KIc key must be 16, 24, or 32 bytes'
+					: 'Error: KIc key must be 8, 16, or 24 bytes';
+				return;
+			}
 		}
 	} catch (e) { resultEl.value = 'KIc key error: ' + e.message; return; }
 
 	try {
 		if (kidKeyHex) {
 			kidKey = hexToBytes(kidKeyHex);
-			if (kidKey.length !== 8 && kidKey.length !== 16 && kidKey.length !== 24)
-				{ resultEl.value = 'Error: KID key must be 8, 16, or 24 bytes'; return; }
+			const ok = kidIsAes
+				? (kidKey.length === 16 || kidKey.length === 24 || kidKey.length === 32)
+				: (kidKey.length === 8 || kidKey.length === 16 || kidKey.length === 24);
+			if (!ok) {
+				resultEl.value = kidIsAes
+					? 'Error: AES KID key must be 16, 24, or 32 bytes'
+					: 'Error: KID key must be 8, 16, or 24 bytes';
+				return;
+			}
 		}
 	} catch (e) { resultEl.value = 'KID key error: ' + e.message; return; }
 
@@ -1836,8 +1926,9 @@ function genSp() {
 	const apdu = hexToBytes(apduHex);
 
 	const macLen = hasMac ? 8 : 0;
-	// padding aligns CNTR+PCNTR+RC/CC/DS+data to the DES block size (ciphering only)
-	const padCnt = ciphering ? (8 - ((6 + macLen + apdu.length) % 8)) % 8 : 0;
+	// padding aligns CNTR+PCNTR+RC/CC/DS+data to the cipher block size (ciphering only)
+	const cipherBlock = kicIsAes ? 16 : 8;
+	const padCnt = ciphering ? (cipherBlock - ((6 + macLen + apdu.length) % cipherBlock)) % cipherBlock : 0;
 
 	const chl = 13 + macLen;
 	const cpl = 14 + macLen + apdu.length + padCnt;
@@ -1872,14 +1963,16 @@ function genSp() {
 		const macInput = new Uint8Array(packet.length - macLen);
 		macInput.set(packet.subarray(0, macOff));
 		macInput.set(packet.subarray(dataOff), macOff);
-		const mac = cbcMac(macInput, kidKey);
+		const mac = kidIsAes ? aesCmac(macInput, kidKey) : cbcMac(macInput, kidKey);
 		packet.set(mac, macOff);
 	}
 
 	if (ciphering && kicKey) {
 		// ciphering covers CNTR+PCNTR+RC/CC/DS+secured data (TS 102 225 Table 2 note 1)
 		const toEncrypt = packet.subarray(10, packetLen);
-		const encrypted = des3CbcEncrypt(toEncrypt, kicKey, new Uint8Array(8));
+		const encrypted = kicIsAes
+			? aesCbcEncrypt(toEncrypt, kicKey, new Uint8Array(16))
+			: des3CbcEncrypt(toEncrypt, kicKey, new Uint8Array(8));
 		packet.set(encrypted, 10);
 	}
 

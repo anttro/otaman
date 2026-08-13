@@ -195,8 +195,11 @@
 	</table>
 	<h3 id="packet-crypto" class="text-lg font-medium mb-2">Crypto</h3>
 	<ul class="list-disc list-inside text-sm space-y-1">
-		<li><strong>3DES-CBC</strong> encryption (zero ICV), 8/16/24-byte keys</li>
-		<li><strong>Retail MAC</strong> (ISO 9797-1 MAC algorithm 3) for the cryptographic checksum</li>
+		<li><strong>3DES-CBC</strong> encryption (zero ICV), 8/16/24-byte keys &mdash; deprecated since Rel-18, still supported for backwards compatibility</li>
+		<li><strong>AES-CBC</strong> encryption (zero ICV, zero-padded to 16), 16/24/32-byte keys (TS 102 225 &sect;5.1.2, KIc <code class="font-mono text-sm">x2</code>)</li>
+		<li><strong>Retail MAC</strong> (ISO 9797-1 MAC algorithm 3) for the DES/3DES cryptographic checksum</li>
+		<li><strong>AES-CMAC</strong> (NIST SP 800-38B, truncated to 8 octets) for the AES cryptographic checksum (TS 102 225 &sect;5.1.3.1, KID <code class="font-mono text-sm">x2</code>)</li>
+		<li>AES requires a replay-protected counter: SPI1 bits b5&nbsp;b4 must be <code class="font-mono text-sm">10</code> (counter higher) or <code class="font-mono text-sm">11</code> (counter +1) per TS 102 225 &sect;5.1.2/&sect;5.1.3.1</li>
 		<li>Padding byte configurable (<code class="font-mono text-sm">00</code> default, or <code class="font-mono text-sm">FF</code>)</li>
 	</ul>
 	<p class="text-sm mb-3">A &ldquo;Verify vs pySim&rdquo; button cross-checks the assembled packet against pySim&rsquo;s reference <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. A &ldquo;Send to Card&rdquo; button delivers it via SMS-PP-DOWNLOAD ENVELOPE (when connected to the server).</p>
@@ -221,11 +224,11 @@
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Human-readable label</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Optional card identifier</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Key and algorithm indicators (e.g. 15 = index 1, 3DES-CBC2)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Key and algorithm indicators (e.g. 15 = index 1, 3DES-CBC2; x2 = AES)</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Replay counter (5 bytes)</td></tr>
-			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">32 hex chars each (16-byte 3DES keys)</td></tr>
+			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex chars (8/16/24-byte 3DES) or 32/48/64 hex chars (16/24/32-byte AES) keys</td></tr>
 		</tbody>
 	</table>
 	<p class="text-sm mb-3"><strong>Export as JSON</strong> / <strong>Import JSON from clipboard</strong> share presets. The selected card preset auto-fills the Secured Packet form.</p>

@@ -195,8 +195,11 @@
 	</table>
 	<h3 id="packet-crypto" class="text-lg font-medium mb-2">Крипто</h3>
 	<ul class="list-disc list-inside text-sm space-y-1">
-		<li><strong>3DES-CBC</strong> шифрование (нулевой ICV), ключи 8/16/24 байта</li>
-		<li><strong>Retail MAC</strong> (ISO 9797-1, MAC algorithm 3) для контрольной суммы</li>
+		<li><strong>3DES-CBC</strong> шифрование (нулевой ICV), ключи 8/16/24 байта &mdash; устарело с Rel-18, но поддерживается для обратной совместимости</li>
+		<li><strong>AES-CBC</strong> шифрование (нулевой ICV, дополнение нулями до 16), ключи 16/24/32 байта (TS 102 225 &sect;5.1.2, KIc <code class="font-mono text-sm">x2</code>)</li>
+		<li><strong>Retail MAC</strong> (ISO 9797-1, MAC algorithm 3) для контрольной суммы DES/3DES</li>
+		<li><strong>AES-CMAC</strong> (NIST SP 800-38B, усечённый до 8 октетов) для контрольной суммы AES (TS 102 225 &sect;5.1.3.1, KID <code class="font-mono text-sm">x2</code>)</li>
+		<li>AES требует счётчик с защитой от повтора: биты SPI1 b5&nbsp;b4 должны быть <code class="font-mono text-sm">10</code> (счётчик больше) или <code class="font-mono text-sm">11</code> (счётчик +1) согласно TS 102 225 &sect;5.1.2/&sect;5.1.3.1</li>
 		<li>Байт паддинга настраивается (<code class="font-mono text-sm">00</code> по умолчанию или <code class="font-mono text-sm">FF</code>)</li>
 	</ul>
 	<p class="text-sm mb-3">Кнопка &laquo;Verify vs pySim&raquo; сверяет собранный пакет с эталонной реализацией <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. Кнопка &laquo;Send to Card&raquo; доставляет пакет через ENVELOPE SMS-PP-DOWNLOAD (при подключении к серверу).</p>
@@ -221,11 +224,11 @@
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Понятная метка</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Опциональный идентификатор карты</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Индикаторы ключа и алгоритма (например, 15 = индекс 1, 3DES-CBC2)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Индикаторы ключа и алгоритма (например, 15 = индекс 1, 3DES-CBC2; x2 = AES)</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Счётчик повторов (5 байт)</td></tr>
-			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">По 32 hex-символа (16-байтные ключи 3DES)</td></tr>
+			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex-символа (ключи 8/16/24 байта 3DES) или 32/48/64 hex-символа (ключи 16/24/32 байта AES)</td></tr>
 		</tbody>
 	</table>
 	<p class="text-sm mb-3"><strong>Export as JSON</strong> / <strong>Import JSON from clipboard</strong> для обмена предустановками. Выбранная предустановка автоматически заполняет форму Secured Packet.</p>

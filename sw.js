@@ -1,4 +1,4 @@
-const CACHE = 'otaman-v6';
+const CACHE = 'otaman-v7';
 const URLS = [
   'index.html',
   'help.html',
@@ -9,6 +9,7 @@ const URLS = [
   'icon-512.png',
   'manifest.json',
   'des-bundle.js',
+  'aes-bundle.js',
   'sim.svg',
   'sim_anim.svg',
   'nosim.svg',

@@ -5,6 +5,8 @@ const path = require('node:path');
 
 const des = require('des.js');
 global.des = des;
+const aesjs = require('aes-js');
+global.aesjs = aesjs;
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
@@ -25,7 +27,8 @@ function extractFunc(src, name) {
 }
 
 const FNS = ['hexToBytes', 'bytesToHex', 'des3Keys', 'des3EncryptBlock', 'des3CbcEncrypt',
-	'xorBytes', 'zeroPad', 'cbcMac', 'genSp'];
+	'xorBytes', 'zeroPad', 'cbcMac', 'aesCbcEncrypt', 'aesShiftLeft1', 'aesCmacSubkeys',
+	'aesCmac', 'genSp'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 
@@ -120,4 +123,97 @@ test('missing APDU reports an error', () => {
 test('cbcMac known answer (synthetic key)', () => {
 	const input = hexToBytes('001d1502091515b0000000000000010000a40000023f00');
 	assert.strictEqual(bytesToHex(cbcMac(input, hexToBytes(K))), '85A8CA1A9828B0BB');
+});
+
+// Public synthetic AES keys from pySim tests/unittests/test_ota.py (no live keys).
+const KIC_AES = '200102030405060708090a0b0c0d0e0f';
+const KID_AES = '201102030405060708090a0b0c0d0e0f';
+
+test('aesCmac known answer (NIST SP 800-38B, truncated to 8)', () => {
+	const key = hexToBytes('2b7e151628aed2a6abf7158809cf4f3c');
+	assert.strictEqual(bytesToHex(aesCmac(new Uint8Array(0), key)), 'BB1D6929E9593728');
+	assert.strictEqual(
+		bytesToHex(aesCmac(hexToBytes('6bc1bee22e409f96e93d7e117393172a'), key)),
+		'070A16B46B4D4144');
+	assert.strictEqual(
+		bytesToHex(aesCmac(hexToBytes('6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411'), key)),
+		'DFA66747DE9AE630');
+});
+
+test('AES ciphered + CC SPI 16/19 (counter higher)', () => {
+	assert.strictEqual(
+		makeRun({
+			'sp-apdu': '00A40004023F00',
+			'sp-spi1': '16',
+			'sp-spi2-hex': '19',
+			'sp-kic-hex': '22',
+			'sp-kid-hex': '22',
+			'sp-tar': 'B00011',
+			'sp-cntr': '0000000011',
+			'sp-kic-key': KIC_AES,
+			'sp-kid-key': KID_AES,
+		}),
+		'00281516192222B000115A47655527E96E832F1A5C698655715D4331454A0D83952C0ED35245706976B1');
+});
+
+test('AES unciphered + CC SPI 12/09 (counter higher)', () => {
+	assert.strictEqual(
+		makeRun({
+			'sp-apdu': '00A40004023F00',
+			'sp-spi1': '12',
+			'sp-spi2-hex': '09',
+			'sp-kic-hex': '22',
+			'sp-kid-hex': '22',
+			'sp-tar': 'B00011',
+			'sp-cntr': '0000000011',
+			'sp-kic-key': KIC_AES,
+			'sp-kid-key': KID_AES,
+		}),
+		'001D1512092222B0001100000000110029826122C7A0B79500A40004023F00');
+});
+
+test('AES ciphered + CC SPI 1E/19 (counter +1)', () => {
+	assert.strictEqual(
+		makeRun({
+			'sp-apdu': '00A40004023F00',
+			'sp-spi1': '1E',
+			'sp-spi2-hex': '19',
+			'sp-kic-hex': '22',
+			'sp-kid-hex': '22',
+			'sp-tar': 'B00011',
+			'sp-cntr': '0000000011',
+			'sp-kic-key': KIC_AES,
+			'sp-kid-key': KID_AES,
+		}),
+		'0028151E192222B0001118B202EE47A3203E7370861C383B4142E704157B36E5C0EB4BB33EB6036CBAF8');
+});
+
+test('AES rejects no_counter (SPI1 b5b4 = 00)', () => {
+	const err = makeRun({
+		'sp-apdu': '00A40004023F00',
+		'sp-spi1': '06',
+		'sp-spi2-hex': '19',
+		'sp-kic-hex': '22',
+		'sp-kid-hex': '22',
+		'sp-tar': 'B00011',
+		'sp-cntr': '0000000011',
+		'sp-kic-key': KIC_AES,
+		'sp-kid-key': KID_AES,
+	});
+	assert.ok(err.startsWith('Error: AES requires a replay-protected counter'));
+});
+
+test('AES rejects 8-byte key', () => {
+	const err = makeRun({
+		'sp-apdu': '00A40004023F00',
+		'sp-spi1': '16',
+		'sp-spi2-hex': '19',
+		'sp-kic-hex': '22',
+		'sp-kid-hex': '22',
+		'sp-tar': 'B00011',
+		'sp-cntr': '0000000011',
+		'sp-kic-key': '0011223344556677',
+		'sp-kid-key': KID_AES,
+	});
+	assert.strictEqual(err, 'Error: AES KIc key must be 16, 24, or 32 bytes');
 });
