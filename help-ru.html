@@ -377,6 +377,7 @@ pip install .
 # Запустить сервер
 pysim-otaman-server --http-port 8080</pre>
 	<p class="text-sm mb-3">Подключите PC/SC-ридер с SIM-картой и укажите в PWA адрес <code class="font-mono text-sm">http://127.0.0.1:8080</code>.</p>
+	<p class="text-sm mb-3">Если PWA раздаётся с публичного HTTPS-хоста (например, <code class="font-mono text-sm">https://otaman.example.com</code>), браузер применяет Private Network Access: сервер автоматически отвечает на preflight заголовком <code class="font-mono text-sm">Access-Control-Allow-Private-Network: true</code>, поэтому локальный сервер карт остаётся доступным из размещённого PWA.</p>
 
 
 <section class="mb-10">
