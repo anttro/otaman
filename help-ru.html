@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OTAMan — Справка</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-neutral-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200">
+
+<div class="flex">
+
+<aside class="sticky top-0 h-screen overflow-y-auto w-72 shrink-0 border-r border-gray-300 dark:border-slate-700 px-4 py-6">
+	<a href="index.html" class="block text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 mb-4">&larr; Назад к приложению</a>
+	<nav id="toc" class="text-sm"></nav>
+</aside>
+
+<main class="flex-1 min-w-0 px-6 py-8">
+	<h1 class="text-2xl font-bold text-heading mb-6">OTAMan <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">Документация</span></h1>
+<section class="mb-10">
+	<h2 id="overview" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">1. Обзор</h2>
+	<p class="mb-3">OTAMan — Progressive Web App (PWA) для построения APDU-команд, сборки защищённых пакетов SCP80, просмотра меню SIM Toolkit (STK) и симуляции реальной сетевой среды для тестирования SIM/USIM/UICC-карт через PC/SC-ридер.</p>
+	<p class="mb-3">Приложение — один статический файл <code class="font-mono text-sm">index.html</code>. Все вычисления выполняются в браузере; доступ к карте — через локальный HTTP-сервер (<code class="font-mono text-sm">pysim-otaman-server</code>), оборачивающий библиотеку <a href="https://osmocom.org/projects/pysim" class="text-blue-600 dark:text-blue-400 hover:underline">pySim</a>.</p>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">Браузер (OTAMan PWA) &rarr; HTTP :8080 &rarr; pysim-otaman-server &rarr; pySim &rarr; PC/SC &rarr; ридер &rarr; UICC/SIM</pre>
+	<p class="mb-3">Стандарты, на которые опирается приложение:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li>ETSI TS 102 221 — интерфейс UICC-терминал (CLA 00, файлы USIM)</li>
+		<li>ETSI TS 102 222 — административные команды</li>
+		<li>ETSI TS 102 223 — Card Application Toolkit (CAT, проактивные команды)</li>
+		<li>ETSI TS 102 225 — структура защищённых пакетов для (U)SIM toolkit</li>
+		<li>ETSI TS 102 226 — структура удалённых APDU для UICC-приложений</li>
+		<li>ETSI TS 151 011 — интерфейс SIM-ME (CLA A0)</li>
+		<li>3GPP TS 131 111 — USIM Application Toolkit (USAT)</li>
+		<li>3GPP TS 31.102 — характеристики приложения USIM</li>
+		<li>3GPP TS 23.038 — алфавит GSM 7-bit и DCS</li>
+		<li>3GPP TS 24.008 / 24.301 / 24.501 — коды причин NAS</li>
+		<li>GlobalPlatform Card Specification v2.3.1</li>
+		<li>ISO/IEC 7816-4 — команды обмена</li>
+		<li>ISO/IEC 9797-1 — алгоритмы MAC</li>
+	</ul>
+
+
+<section class="mb-10">
+	<h2 id="c-apdu" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">2. Вкладка C-APDU</h2>
+	<p class="mb-3">Построение командных APDU (C-APDU). Четыре подвкладки охватывают разные поколения карт и наборы команд.</p>
+
+	<h3 id="sim-rfm" class="text-lg font-medium mb-2">2.1 SIM RFM</h3>
+	<p class="mb-2">CLA = <code class="font-mono text-sm">A0</code> (GSM 11.11 / TS 151 011, ISO 7816-4). Удалённое управление файлами классических SIM-карт.</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Команда</th><th class="text-left py-1 px-2">INS</th><th class="text-left py-1 px-2">Описание</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">SELECT</td><td class="py-1 px-2 font-mono">A4</td><td class="py-1 px-2">Выбор EF/DF по FID, пути, DF name или цепочке</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">UPDATE RECORD</td><td class="py-1 px-2 font-mono">DC</td><td class="py-1 px-2">Обновление записи</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">UPDATE BINARY</td><td class="py-1 px-2 font-mono">D6</td><td class="py-1 px-2">Обновление бинарных данных</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">READ RECORD</td><td class="py-1 px-2 font-mono">B2</td><td class="py-1 px-2">Чтение записи</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">READ BINARY</td><td class="py-1 px-2 font-mono">B0</td><td class="py-1 px-2">Чтение бинарных данных</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">ERASE BINARY</td><td class="py-1 px-2 font-mono">0E</td><td class="py-1 px-2">Стирание бинарных данных</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">ACTIVATE FILE</td><td class="py-1 px-2 font-mono">44</td><td class="py-1 px-2">Активация файла</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">DEACTIVATE FILE</td><td class="py-1 px-2 font-mono">04</td><td class="py-1 px-2">Деактивация файла</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">VERIFY PIN</td><td class="py-1 px-2 font-mono">20</td><td class="py-1 px-2">Проверка PIN1 или PIN2</td></tr>
+			<tr><td class="py-1 px-2 font-mono">CHANGE PIN</td><td class="py-1 px-2 font-mono">24</td><td class="py-1 px-2">Смена PIN1 или PIN2</td></tr>
+		</tbody>
+	</table>
+	<h4 id="sim-select-methods" class="font-medium mb-1">Методы SELECT</h4>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Метод</th><th class="text-left py-1 px-2">P1</th><th class="text-left py-1 px-2">P2</th><th class="text-left py-1 px-2">Ввод</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">По FID</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">FID (4 hex)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">По полному пути от MF</td><td class="py-1 px-2 font-mono">08</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Полный путь от MF</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">По DF name / AID</td><td class="py-1 px-2 font-mono">04</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">AID</td></tr>
+			<tr><td class="py-1 px-2">Цепочка ADF RFM</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">FID через запятую</td></tr>
+		</tbody>
+	</table>
+	<h4 id="sim-options" class="font-medium mb-1">Опции</h4>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Start with SELECT</strong> — добавить SELECT перед операцией.</li>
+		<li><strong>Selection mode (P2)</strong> — для record-команд: Absolute (04), Next (06), Previous (02).</li>
+		<li><strong>Record size</strong> — дополнить/обрезать данные до указанного размера.</li>
+		<li><strong>Allow P1/P2 editing</strong> — ручное редактирование P1/P2.</li>
+	</ul>
+	<p class="text-sm mb-3">В правой колонке — панель конвертации (IMSI, MSISDN, ICCID, SPN, PLMN, nibble swap). См. <a href="#conversion" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;2.5</a>.</p>
+
+	<h3 id="usim-rfm" class="text-lg font-medium mb-2">2.2 USIM RFM</h3>
+	<p class="mb-2">CLA = <code class="font-mono text-sm">00</code> (ETSI TS 102 221). Те же команды, что и SIM, но SELECT использует P1=<code class="font-mono text-sm">09</code>, P2=<code class="font-mono text-sm">0C</code> (выбор по FID из текущего каталога).</p>
+
+	<h3 id="ber-tlv" class="text-lg font-medium mb-2">2.3 Expanded BER-TLV</h3>
+	<p class="mb-2">Построение формата Expanded Remote Application data по ETSI TS 102 226 &sect;5.2.1.</p>
+	<h4 id="ber-format" class="font-medium mb-1">Формат</h4>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Definite (AA)</strong>: <code class="font-mono text-sm">AA</code> + длина + Command TLV</li>
+		<li><strong>Indefinite (AE)</strong>: <code class="font-mono text-sm">AE</code> + <code class="font-mono text-sm">80</code> + Command TLV + <code class="font-mono text-sm">00 00</code></li>
+	</ul>
+	<h4 id="ber-command-tlvs" class="font-medium mb-1">Command TLV</h4>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Тип</th><th class="text-left py-1 px-2">Тег</th><th class="text-left py-1 px-2">Описание</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">C-APDU</td><td class="py-1 px-2 font-mono">22</td><td class="py-1 px-2">APDU</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Immediate Action</td><td class="py-1 px-2 font-mono">81</td><td class="py-1 px-2">Проактивная команда или action indicator</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Проактивная команда при ошибке</td></tr>
+			<tr><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Данные для многопакетных скриптов</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-3">Сборщик Immediate Action предлагает action indicator (<code class="font-mono text-sm">81</code>/<code class="font-mono text-sm">82</code>), структурированный сборщик проактивных команд (REFRESH, DISPLAY TEXT, PLAY TONE с авто-генерацией COMPREHENSION-TLV), или ручной hex-ввод.</p>
+
+	<h3 id="ram-gp" class="text-lg font-medium mb-2">2.4 RAM/GP</h3>
+	<p class="mb-2">CLA = <code class="font-mono text-sm">80</code> (GlobalPlatform Card Specification v2.3.1). Команды удалённого управления приложениями.</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Команда</th><th class="text-left py-1 px-2">INS</th><th class="text-left py-1 px-2">P1</th><th class="text-left py-1 px-2">Описание</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [for load]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">02</td><td class="py-1 px-2">Регистрация загружаемого файла</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [for install]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">0C</td><td class="py-1 px-2">Установка приложения или SD</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [make selectable]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">10</td><td class="py-1 px-2">Сделать приложение выбираемым</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [registry update]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">01</td><td class="py-1 px-2">Обновление реестра</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [extradition]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">04</td><td class="py-1 px-2">Перемещение между SD</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">LOAD</td><td class="py-1 px-2 font-mono">E8</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Загрузка кода</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">DELETE</td><td class="py-1 px-2 font-mono">E4</td><td class="py-1 px-2 font-mono">00/80</td><td class="py-1 px-2">Удаление приложения или SD</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">GET STATUS</td><td class="py-1 px-2 font-mono">F2</td><td class="py-1 px-2 font-mono">80/40/20/10</td><td class="py-1 px-2">Статус карты</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">GET DATA</td><td class="py-1 px-2 font-mono">CA</td><td class="py-1 px-2 font-mono">tag</td><td class="py-1 px-2">Чтение объектов данных</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">STORE DATA</td><td class="py-1 px-2 font-mono">E2</td><td class="py-1 px-2 font-mono">00/40/80/C0</td><td class="py-1 px-2">Запись данных</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">SET STATUS</td><td class="py-1 px-2 font-mono">F0</td><td class="py-1 px-2 font-mono">80/40/60</td><td class="py-1 px-2">Управление жизненным циклом</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">EXTERNAL AUTHENTICATE</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Аутентификация SCP</td></tr>
+			<tr><td class="py-1 px-2 font-mono">INTERNAL AUTHENTICATE</td><td class="py-1 px-2 font-mono">88</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Challenge-response</td></tr>
+		</tbody>
+	</table>
+	<h4 id="ram-privileges" class="font-medium mb-1">Привилегии (INSTALL [for install])</h4>
+	<p class="text-sm mb-2">Тег <code class="font-mono text-sm">C7</code> в поле данных INSTALL, три байта привилегий (таблицы 11-7/8/9 спецификации GP):</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Бит</th><th class="text-left py-1 px-2">Байт 1</th><th class="text-left py-1 px-2">Байт 2</th><th class="text-left py-1 px-2">Байт 3</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b8</td><td class="py-1 px-2">Security Domain</td><td class="py-1 px-2">Trusted Path</td><td class="py-1 px-2">Receipt Generation</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b7</td><td class="py-1 px-2">DAP Verification</td><td class="py-1 px-2">Authorized Management</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b6</td><td class="py-1 px-2">Delegated Management</td><td class="py-1 px-2">Token Verification</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b5</td><td class="py-1 px-2">Card Lock</td><td class="py-1 px-2">Global Delete</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b4</td><td class="py-1 px-2">Card Terminate</td><td class="py-1 px-2">Global Lock</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b3</td><td class="py-1 px-2">Card Reset</td><td class="py-1 px-2">Global Registry</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b2</td><td class="py-1 px-2">CVM Management</td><td class="py-1 px-2">Final Application</td><td class="py-1 px-2"></td></tr>
+			<tr><td class="py-1 px-2 font-mono">b1</td><td class="py-1 px-2">Mandated DAP Verification</td><td class="py-1 px-2"></td><td class="py-1 px-2"></td></tr>
+		</tbody>
+	</table>
+	<h4 id="ram-msl" class="font-medium mb-1">MSL (Minimum Security Level) &mdash; байт SPI1 по TS 102 225</h4>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Значение</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Нет проверки</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">11</td><td class="py-1 px-2">RC/CC/DS</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">12</td><td class="py-1 px-2">RC/DS/CC</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">15</td><td class="py-1 px-2">RC/DS/CC + MAC</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">16</td><td class="py-1 px-2">RC/DS/CC + MAC + Cipher</td></tr>
+			<tr><td class="py-1 px-2 font-mono">19</td><td class="py-1 px-2">RC/DS/CC + MAC + Cipher + DS</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-3">Полные таблицы GET STATUS P1/P2, тегов GET DATA, DELETE P1, STORE DATA P1 и SET STATUS см. в GlobalPlatform v2.3.1 и ETSI TS 102 226 &sect;8.2.1.3.2.</p>
+
+	<h3 id="conversion" class="text-lg font-medium mb-2">2.5 Конвертация (боковые панели SIM/USIM)</h3>
+	<ul class="list-disc list-inside text-sm space-y-1">
+		<li><strong>IMSI &rarr; EF.IMSI</strong> — 15-значный IMSI в 9-байтный формат (TS 31.102 &sect;4.2.3).</li>
+		<li><strong>MSISDN &rarr; BCD</strong> — удалить <code class="font-mono text-sm">+</code>, дополнить нечётную длину символом <code class="font-mono text-sm">f</code>, поменять полубайты.</li>
+		<li><strong>ICCID &rarr; hex</strong> — поменять полубайты строки ICCID.</li>
+		<li><strong>Provider Name &rarr; SPN</strong> — GSM 7-bit packed, UCS2 non-BMP или UCS2 BMP (TS 31.102 &sect;4.2.5, TS 23.038).</li>
+		<li><strong>PLMN &rarr; EF_PLMNsel / PLMNwAcT</strong> — 3-байтный BCD + опциональный селектор технологии доступа.</li>
+		<li><strong>Nibble swap</strong> — поменять пары полубайтов hex-строки чётной длины.</li>
+	</ul>
+
+
+<section class="mb-10">
+	<h2 id="secured-packet" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">3. Вкладка Secured Packet</h2>
+	<p class="mb-3">Сборка защищённых пакетов SCP80 по ETSI TS 102 225.</p>
+	<h3 id="packet-structure" class="text-lg font-medium mb-2">Структура пакета</h3>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Поле</th><th class="text-left py-1 px-2">Размер</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CPI</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Command Packet Identifier (02)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CPL</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Command Packet Length</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CHI</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Command Header Identifier (01)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CHL</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Command Header Length</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">SPI</td><td class="py-1 px-2">2</td><td class="py-1 px-2">Security Parameter Indicator</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">KIc</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Key Identifier для шифрования</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">KID</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Key Identifier для MAC</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">TAR</td><td class="py-1 px-2">3</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CNTR</td><td class="py-1 px-2">5</td><td class="py-1 px-2">Счётчик повторов</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">PCNTR</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Padding counter</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">RC/CC/DS</td><td class="py-1 px-2">8</td><td class="py-1 px-2">Контрольная сумма / MAC</td></tr>
+			<tr><td class="py-1 px-2 font-mono">Secured Data</td><td class="py-1 px-2">пер.</td><td class="py-1 px-2">APDU (с шифрованием при необходимости)</td></tr>
+		</tbody>
+	</table>
+	<h3 id="packet-crypto" class="text-lg font-medium mb-2">Крипто</h3>
+	<ul class="list-disc list-inside text-sm space-y-1">
+		<li><strong>3DES-CBC</strong> шифрование (нулевой ICV), ключи 8/16/24 байта</li>
+		<li><strong>Retail MAC</strong> (ISO 9797-1, MAC algorithm 3) для контрольной суммы</li>
+		<li>Байт паддинга настраивается (<code class="font-mono text-sm">00</code> по умолчанию или <code class="font-mono text-sm">FF</code>)</li>
+	</ul>
+	<p class="text-sm mb-3">Кнопка &laquo;Verify vs pySim&raquo; сверяет собранный пакет с эталонной реализацией <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. Кнопка &laquo;Send to Card&raquo; доставляет пакет через ENVELOPE SMS-PP-DOWNLOAD (при подключении к серверу).</p>
+
+
+<section class="mb-10">
+	<h2 id="response-parser" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Вкладка Response parser</h2>
+	<p class="mb-3">Декодирование ответа команды: выберите отправленную команду, введите SW (например, <code class="font-mono text-sm">9000</code>) и данные ответа в hex, затем нажмите <strong>Decode</strong>.</p>
+	<ul class="list-disc list-inside text-sm space-y-1">
+		<li><strong>Команда</strong> — группа SIM/USIM (SELECT, STATUS, READ/UPDATE, операции с PIN, CAT-команды TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, &hellip;) или группа RAM/GP (INSTALL, LOAD, DELETE, GET/STORE DATA, аутентификация, команды SCP).</li>
+		<li><strong>Декодирование SW</strong> — статусные слова по картам generic, UICC (TS 102 221) и GlobalPlatform с автоопределением контекста.</li>
+		<li><strong>Декодирование привилегий</strong> — байты привилегий из ответов GET DATA / INSTALL в читаемые флаги.</li>
+		<li><strong>Данные ответа</strong> — hex с интерпретацией по команде (например, шаблоны FCP из SELECT).</li>
+	</ul>
+
+
+<section class="mb-10">
+	<h2 id="cards" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Вкладка Cards</h2>
+	<p class="mb-3">Хранит предустановки карт локально в браузере (<code class="font-mono text-sm">localStorage</code>), чтобы вкладка Secured Packet могла автоматически подставлять ключи и параметры.</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Поле</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Понятная метка</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Опциональный идентификатор карты</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Индикаторы ключа и алгоритма (например, 15 = индекс 1, 3DES-CBC2)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Счётчик повторов (5 байт)</td></tr>
+			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">По 32 hex-символа (16-байтные ключи 3DES)</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-3"><strong>Export as JSON</strong> / <strong>Import JSON from clipboard</strong> для обмена предустановками. Выбранная предустановка автоматически заполняет форму Secured Packet.</p>
+
+
+<section class="mb-10">
+	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Вкладка Card reader (pySim)</h2>
+	<p class="mb-3">Подключение к локальному <a href="https://github.com/anttro/pysim-otaman-server" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> для работы с картой. Подвкладки: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong> и <strong>Proactive UICC</strong>.</p>
+
+	<h3 id="file-manager" class="text-lg font-medium mb-2">6.1 File manager</h3>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Read</strong> — чтение файла (автоопределение transparent/record)</li>
+		<li><strong>Edit</strong> — изменить hex-данные, <strong>Save</strong> для записи</li>
+		<li><strong>Raw / Decoded</strong> — переключение между hex-дампом и декодированным JSON</li>
+	</ul>
+
+	<h3 id="custom-files" class="text-lg font-medium mb-2">6.2 Custom files</h3>
+	<p class="text-sm mb-3">Добавление файлов, не покрытых моделью pySim. Сохраняется в <code class="font-mono text-sm">localStorage</code>; экспорт/импорт JSON.</p>
+
+	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">6.3 pySim command line</h3>
+	<p class="text-sm mb-3">Выполнение любых команд pySim-shell с подсказками (300&nbsp;мс) и автодополнением.</p>
+
+	<h3 id="raw-apdu" class="text-lg font-medium mb-2">6.4 Raw APDU</h3>
+	<p class="text-sm mb-3">Отправка произвольного APDU и просмотр ответа.</p>
+
+	<h3 id="proactive-uicc" class="text-lg font-medium mb-2">6.5 Proactive UICC</h3>
+	<p class="text-sm mb-3">Работа с сессией Card Application Toolkit: подписанные события, журнал проактивных команд, словарь данных PROVIDE LOCAL INFORMATION и опрос STATUS.</p>
+
+	<h4 id="subscribed-events" class="font-medium mb-1">6.5.1 Подписанные события (SET UP EVENT LIST)</h4>
+	<p class="text-sm mb-2">События, которые отслеживает карта. У каждого события есть кнопка <strong>Send</strong>, открывающая форму, специфичную для типа события:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>События без данных</strong> (User Activity, Idle Screen, Data Available, &hellip;) — уведомление в один клик</li>
+		<li><strong>Location Status</strong> — выпадающий список: Normal / Limited / No service (тег <code class="font-mono text-sm">9B</code>)</li>
+		<li><strong>Access Technology Change</strong> — 13 типов RAT (тег <code class="font-mono text-sm">BF</code>)</li>
+		<li><strong>Network Rejection</strong> — полная адаптивная форма: тип регистрации (LU / GPRS / EPS / 5GS), поля местоположения (MCC, MNC, LAC, RAC, TAC), технология доступа и единый выпадающий список из 53 кодов причин (EMM, GMM, 5GMM и LU)</li>
+	</ul>
+	<p class="text-sm mb-3">Отправка события использует <code class="font-mono text-sm">ENVELOPE(Event Download)</code> по TS 102 223 / TS 131 111.</p>
+
+	<h4 id="proactive-log" class="font-medium mb-1">6.5.2 Журнал проактивных команд</h4>
+	<p class="text-sm mb-2">Хронологический список извлечённых проактивных команд. Каждая строка показывает время, код типа, имя и декодированный квалификатор (для команд, у которых он есть). Для команд с данными ответа показывается строка <code class="font-mono text-sm">Response:</code> с байтами TERMINAL RESPONSE (без служебных TLV); ответы PROVIDE LOCAL INFORMATION декодируются через словарь данных PLI.</p>
+
+	<h4 id="pli-dict" class="font-medium mb-1">6.5.3 Словарь данных PROVIDE LOCAL INFORMATION</h4>
+	<p class="text-sm mb-2">Редактируемые hex-значения для всех 22 квалификаторов PLI (TS 102 223 &sect;8.6 + TS 131 111). У десяти квалификаторов есть встроенные формы декодирования/кодирования:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
+		<li><strong>01</strong> IMEI &middot; <strong>03</strong> Дата/время/TZ &middot; <strong>04</strong> Язык &middot; <strong>05</strong> Timing Advance</li>
+		<li><strong>06</strong> Access Technology &middot; <strong>08</strong> IMEISV &middot; <strong>09</strong> Search Mode</li>
+		<li><strong>0A</strong> Battery &middot; <strong>0E</strong> Multiple Access Technologies</li>
+	</ul>
+	<p class="text-sm mb-3">Значения хранятся на сервере до перезапуска. Когда карта выдаёт PLI, сервер вставляет значения словаря в TERMINAL RESPONSE.</p>
+
+	<h4 id="status-polling" class="font-medium mb-1">6.5.4 Опрос STATUS</h4>
+	<p class="text-sm mb-3">Кнопка <strong>Send STATUS</strong> отправляет STATUS (F2) вручную. Переключатель <strong>Polling</strong> включает фоновый опрос: после настраиваемого интервала бездействия (аргумент сервера <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;с, по умолчанию 30&nbsp;с) сервер отправляет STATUS и обрабатывает любую ожидающую проактивную команду. При извлечении карты опрос останавливается, а состояние карты сбрасывается.</p>
+
+	<h3 id="usage-scenarios" class="text-lg font-medium mb-2">6.6 Сценарии использования</h3>
+
+	<h4 id="scenario-a" class="font-medium mb-1">Сценарий A &mdash; Работа с файлами, не входящими в модель pySim (Custom files)</h4>
+	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
+		<li>Получите FID целевого файла (документация вендора или анализ ATR/файловой системы; такие файлы часто отсутствуют в открытых спецификациях).</li>
+		<li>Откройте вкладку <strong>Card reader</strong> &rarr; подвкладку <strong>Custom files</strong>.</li>
+		<li>Введите полный путь (например, <code class="font-mono text-sm">3F00/7F20/6F46</code>) и псевдоним (например, <code class="font-mono text-sm">EF.SPN</code>).</li>
+		<li>Нажмите <strong>Add</strong> — файл появится в дереве курсивом (непроверенный).</li>
+		<li>Кликните по файлу для проверки существования; при успехе (<code class="font-mono text-sm">9000</code>) он работает как обычный файл.</li>
+		<li>Читайте, редактируйте и сохраняйте hex-данные; переключайте Raw/Decoded.</li>
+		<li>Экспортируйте список пользовательских файлов в JSON для переноса на другие машины.</li>
+	</ol>
+
+	<h4 id="scenario-b" class="font-medium mb-1">Сценарий B &mdash; Симуляция реальной сетевой среды для тестирования SIM</h4>
+	<p class="text-sm mb-1"><strong>B.1 Ответы на PROVIDE LOCAL INFORMATION (PLI)</strong></p>
+	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
+		<li>Откройте <strong>Proactive UICC</strong> &rarr; <strong>PROVIDE LOCAL INFORMATION response data</strong>.</li>
+		<li>Используйте формы декодирования/кодирования для IMEI (<code class="font-mono text-sm">01</code>), Location Info (<code class="font-mono text-sm">00</code>), Access Technology (<code class="font-mono text-sm">06</code>) и т.д.</li>
+		<li>Нажмите <strong>Save</strong> — значения сохранятся на сервере.</li>
+		<li>Включите <strong>Polling</strong> (интервал 30&nbsp;с), чтобы карта периодически выдавала PLI.</li>
+		<li>Сервер вставляет значения словаря в каждый TERMINAL RESPONSE.</li>
+		<li>Проверьте в журнале проактивных команд: запись PLI покажет декодированный ответ.</li>
+	</ol>
+	<p class="text-sm mb-1"><strong>B.2 Симуляция сетевых действий через ENVELOPE (event download)</strong></p>
+	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
+		<li>Проверьте список <strong>подписанных событий</strong> (из SET UP EVENT LIST).</li>
+		<li>Нажмите <strong>Send</strong> на событии (например, Location Status) и заполните форму; будет отправлен <code class="font-mono text-sm">ENVELOPE(Event Download)</code>.</li>
+		<li>Для <strong>Network Rejection</strong> выберите тип регистрации &rarr; поля местоположения &rarr; технологию доступа &rarr; причину отклонения.</li>
+		<li>Карта может ответить проактивной командой, которую обработчик цепочки зарегистрирует и обработает автоматически.</li>
+	</ol>
+	<p class="text-sm mb-1"><strong>B.3 Проверка симулированной среды</strong></p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li>Журнал проактивных команд показывает полный цикл (команда + байты TERMINAL RESPONSE).</li>
+		<li>Кнопка STATUS / автопросмотр поддерживают сессию CAT (цикл дренажа).</li>
+	</ul>
+
+
+<section class="mb-10">
+	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Установка сервера</h2>
+	<p class="mb-3">Для работы с картой (вкладка Card reader, Proactive UICC, доставка OTA) нужен локальный <a href="https://github.com/anttro/pysim-otaman-server" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — небольшой HTTP-сервер, оборачивающий pySim и взаимодействующий с ридером через PC/SC или serial.</p>
+
+	<h3 id="prerequisites" class="text-lg font-medium mb-2">7.1 Требования</h3>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Python 3.8+</strong> с <code class="font-mono text-sm">pip</code></li>
+		<li><strong>Git</strong></li>
+		<li><strong>Смарт-картридер</strong> (PC/SC или serial/FTDI). Предпочтителен PC/SC; на Linux требуются <code class="font-mono text-sm">pcsc-lite</code> + <code class="font-mono text-sm">ccid</code></li>
+	</ul>
+
+	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Быстрый старт — Linux / macOS</h3>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/pysim-otaman-server.git
+cd pysim-otaman-server
+chmod +x setup.sh start.sh
+./setup.sh          # создаёт .venv, устанавливает pysim + сервер (однократно)
+./start.sh          # запускает сервер (автоопределение ридера)</pre>
+
+	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">7.3 Быстрый старт — Windows</h3>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/pysim-otaman-server.git
+cd pysim-otaman-server
+setup.bat           # создаёт .venv, устанавливает pysim + сервер (однократно)
+start.bat           # запускает сервер</pre>
+
+	<h3 id="helper-scripts" class="text-lg font-medium mb-2">7.4 Вспомогательные скрипты</h3>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Скрипт</th><th class="text-left py-1 px-2">Назначение</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">setup.sh / setup.bat</td><td class="py-1 px-2">Создаёт <code class="font-mono text-sm">.venv/</code>, устанавливает pySim и сервер. Запускается один раз после клонирования.</td></tr>
+			<tr><td class="py-1 px-2 font-mono">start.sh / start.bat</td><td class="py-1 px-2">Запускает сервер из venv (при отсутствии — из глобальной установки).</td></tr>
+		</tbody>
+	</table>
+
+	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">7.5 Автоопределение ридера (<code class="font-mono text-sm">start.sh</code>)</h3>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>PC/SC (Linux)</strong> — если запущен демон <code class="font-mono text-sm">pcscd</code>, передаёт <code class="font-mono text-sm">-p 0</code></li>
+		<li><strong>Serial (Linux)</strong> — если существует <code class="font-mono text-sm">/dev/ttyUSB0</code>, передаёт <code class="font-mono text-sm">-d /dev/ttyUSB0</code></li>
+		<li><strong>PC/SC (Windows)</strong> — всегда использует <code class="font-mono text-sm">-p 0</code> (PC/SC встроен в Windows)</li>
+	</ul>
+	<p class="text-sm mb-3">Если ридер не обнаружен, сервер запускается без аргументов и показывает &laquo;Reader: none&raquo;. Карту можно инициализировать позже кнопкой <strong>Equip</strong> на вкладке Card reader.</p>
+
+	<h3 id="manual-install" class="text-lg font-medium mb-2">7.6 Ручная установка</h3>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3"># Создать и активировать venv
+python3 -m venv .venv
+source .venv/bin/activate   # Linux/macOS
+# .venv\Scripts\activate    # Windows
+
+# Установить pysim
+pip install git+https://gitea.osmocom.org/sim-card/pysim.git
+
+# Установить pysim-otaman-server
+pip install .
+
+# Запустить сервер
+pysim-otaman-server --http-port 8080</pre>
+	<p class="text-sm mb-3">Подключите PC/SC-ридер с SIM-картой и укажите в PWA адрес <code class="font-mono text-sm">http://127.0.0.1:8080</code>.</p>
+
+
+<section class="mb-10">
+	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">8. Совместимость версий</h2>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (OTAMan)</th><th class="text-left py-1 px-2">Сервер</th><th class="text-left py-1 px-2">Статус</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2">&#9989; Совместимы</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">0.x.x</td><td class="py-1 px-2">&#10060; Устарел &mdash; обновите сервер</td></tr>
+			<tr><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">2.x.x+</td><td class="py-1 px-2">&#9888;&#65039; Сервер новее &mdash; обновите PWA</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm">PWA проверяет версию сервера при подключении через <code class="font-mono text-sm">GET /api/version</code> и предупреждает о несовместимости.</p>
+
+
+</main>
+</div>
+
+<script>
+(function () {
+	if (localStorage.getItem('theme') === 'dark' ||
+	    (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+		document.documentElement.classList.add('dark');
+	}
+	var toc = document.getElementById('toc');
+	var main = document.querySelector('main');
+	if (!toc || !main) return;
+	var headings = Array.prototype.filter.call(main.querySelectorAll('h2, h3, h4'), function (h) {
+		return /^\d/.test(h.textContent.trim());
+	});
+	var stack = [document.createElement('ol')];
+	stack[0].className = 'space-y-1 list-none';
+	var lastLevel = 2;
+	headings.forEach(function (h) {
+		var level = parseInt(h.tagName.charAt(1), 10);
+		var li = document.createElement('li');
+		var a = document.createElement('a');
+		a.href = '#' + h.id;
+		a.textContent = h.textContent;
+		li.appendChild(a);
+		if (level > lastLevel) {
+			var ul = document.createElement('ul');
+			ul.className = 'pl-4 mt-1 space-y-1 list-none';
+			var parent = stack[stack.length - 1].lastElementChild;
+			parent.appendChild(ul);
+			stack.push(ul);
+		} else if (level < lastLevel) {
+			while (stack.length > 1 && level < lastLevel) { stack.pop(); lastLevel--; }
+		}
+		stack[stack.length - 1].appendChild(li);
+		lastLevel = level;
+	});
+	toc.appendChild(stack[0]);
+})();
+</script>
+</body>
+</html>

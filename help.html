@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OTAMan — Help</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-neutral-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200">
+
+<div class="flex">
+
+<aside class="sticky top-0 h-screen overflow-y-auto w-72 shrink-0 border-r border-gray-300 dark:border-slate-700 px-4 py-6">
+	<a href="index.html" class="block text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 mb-4">&larr; Back to app</a>
+	<nav id="toc" class="text-sm"></nav>
+</aside>
+
+<main class="flex-1 min-w-0 px-6 py-8">
+	<h1 class="text-2xl font-bold text-heading mb-6">OTAMan <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">Documentation</span></h1>
+<section class="mb-10">
+	<h2 id="overview" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">1. Overview</h2>
+	<p class="mb-3">OTAMan is a Progressive Web App (PWA) for building APDU commands, assembling SCP80 secured packets, browsing the SIM Toolkit (STK) menu, and simulating a real network environment against a SIM/USIM/UICC card via a PC/SC reader.</p>
+	<p class="mb-3">The application is a single static <code class="font-mono text-sm">index.html</code> file. All computation runs in the browser; the card is accessed through a local HTTP server (<code class="font-mono text-sm">pysim-otaman-server</code>) that wraps the <a href="https://osmocom.org/projects/pysim" class="text-blue-600 dark:text-blue-400 hover:underline">pySim</a> library.</p>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">Browser (OTAMan PWA) &rarr; HTTP :8080 &rarr; pysim-otaman-server &rarr; pySim &rarr; PC/SC &rarr; card reader &rarr; UICC/SIM</pre>
+	<p class="mb-3">Standards referenced across the application:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li>ETSI TS 102 221 — UICC-Terminal interface (CLA 00, USIM files)</li>
+		<li>ETSI TS 102 222 — Administrative commands</li>
+		<li>ETSI TS 102 223 — Card Application Toolkit (CAT, proactive commands)</li>
+		<li>ETSI TS 102 225 — Secured packet structure for (U)SIM toolkit</li>
+		<li>ETSI TS 102 226 — Remote APDU structure for UICC based applications</li>
+		<li>ETSI TS 151 011 — SIM-ME interface (CLA A0)</li>
+		<li>3GPP TS 131 111 — USIM Application Toolkit (USAT)</li>
+		<li>3GPP TS 31.102 — USIM application characteristics</li>
+		<li>3GPP TS 23.038 — GSM 7-bit alphabet and DCS</li>
+		<li>3GPP TS 24.008 / 24.301 / 24.501 — NAS cause codes</li>
+		<li>GlobalPlatform Card Specification v2.3.1</li>
+		<li>ISO/IEC 7816-4 — commands for interchange</li>
+		<li>ISO/IEC 9797-1 — MAC algorithms</li>
+	</ul>
+
+
+<section class="mb-10">
+	<h2 id="c-apdu" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">2. C-APDU tab</h2>
+	<p class="mb-3">Builds command APDUs (C-APDUs). Four sub-tabs cover different card generations and command sets.</p>
+
+	<h3 id="sim-rfm" class="text-lg font-medium mb-2">2.1 SIM RFM</h3>
+	<p class="mb-2">CLA = <code class="font-mono text-sm">A0</code> (GSM 11.11 / TS 151 011, ISO 7816-4). Remote File Management for classic SIM cards.</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Command</th><th class="text-left py-1 px-2">INS</th><th class="text-left py-1 px-2">Description</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">SELECT</td><td class="py-1 px-2 font-mono">A4</td><td class="py-1 px-2">Select EF/DF by FID, path, DF name or chain</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">UPDATE RECORD</td><td class="py-1 px-2 font-mono">DC</td><td class="py-1 px-2">Update a record in a record-oriented EF</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">UPDATE BINARY</td><td class="py-1 px-2 font-mono">D6</td><td class="py-1 px-2">Update binary content at an offset</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">READ RECORD</td><td class="py-1 px-2 font-mono">B2</td><td class="py-1 px-2">Read a record</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">READ BINARY</td><td class="py-1 px-2 font-mono">B0</td><td class="py-1 px-2">Read binary content</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">ERASE BINARY</td><td class="py-1 px-2 font-mono">0E</td><td class="py-1 px-2">Erase binary at an offset</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">ACTIVATE FILE</td><td class="py-1 px-2 font-mono">44</td><td class="py-1 px-2">Activate a file</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">DEACTIVATE FILE</td><td class="py-1 px-2 font-mono">04</td><td class="py-1 px-2">Deactivate a file</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">VERIFY PIN</td><td class="py-1 px-2 font-mono">20</td><td class="py-1 px-2">Verify PIN1 or PIN2</td></tr>
+			<tr><td class="py-1 px-2 font-mono">CHANGE PIN</td><td class="py-1 px-2 font-mono">24</td><td class="py-1 px-2">Change PIN1 or PIN2</td></tr>
+		</tbody>
+	</table>
+	<h4 id="sim-select-methods" class="font-medium mb-1">SELECT methods</h4>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Method</th><th class="text-left py-1 px-2">P1</th><th class="text-left py-1 px-2">P2</th><th class="text-left py-1 px-2">Input</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">By FID</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">2-byte FID (4 hex)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">By full path from MF</td><td class="py-1 px-2 font-mono">08</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Full path hex from MF</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">By DF name / AID</td><td class="py-1 px-2 font-mono">04</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">AID (application ID)</td></tr>
+			<tr><td class="py-1 px-2">ADF RFM chain</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Comma-separated FIDs</td></tr>
+		</tbody>
+	</table>
+	<h4 id="sim-options" class="font-medium mb-1">Options</h4>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Start with SELECT</strong> — prepend a SELECT before the operation; unchecked sends standalone.</li>
+		<li><strong>Selection mode (P2)</strong> — record commands: Absolute (04), Next (06), Previous (02).</li>
+		<li><strong>Record size</strong> — pad/truncate data to the specified byte count.</li>
+		<li><strong>Allow P1/P2 editing</strong> — manual override of P1/P2 bytes.</li>
+	</ul>
+	<p class="text-sm mb-3">A conversion panel is embedded in the right column (IMSI, MSISDN, ICCID, SPN, PLMN, nibble swap). See <a href="#conversion" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;2.5</a>.</p>
+
+	<h3 id="usim-rfm" class="text-lg font-medium mb-2">2.2 USIM RFM</h3>
+	<p class="mb-2">CLA = <code class="font-mono text-sm">00</code> (ETSI TS 102 221). Same commands as SIM, but SELECT uses P1=<code class="font-mono text-sm">09</code>, P2=<code class="font-mono text-sm">0C</code> (select by FID from the current directory).</p>
+
+	<h3 id="ber-tlv" class="text-lg font-medium mb-2">2.3 Expanded BER-TLV</h3>
+	<p class="mb-2">Builds the Expanded Remote Application data format per ETSI TS 102 226 &sect;5.2.1.</p>
+	<h4 id="ber-format" class="font-medium mb-1">Format</h4>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Definite (AA)</strong>: <code class="font-mono text-sm">AA</code> + length + Command TLVs</li>
+		<li><strong>Indefinite (AE)</strong>: <code class="font-mono text-sm">AE</code> + <code class="font-mono text-sm">80</code> + Command TLVs + <code class="font-mono text-sm">00 00</code></li>
+	</ul>
+	<h4 id="ber-command-tlvs" class="font-medium mb-1">Command TLVs</h4>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Type</th><th class="text-left py-1 px-2">Tag</th><th class="text-left py-1 px-2">Description</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">C-APDU</td><td class="py-1 px-2 font-mono">22</td><td class="py-1 px-2">Raw APDU hex</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Immediate Action</td><td class="py-1 px-2 font-mono">81</td><td class="py-1 px-2">Proactive command or action indicator</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Proactive command on error</td></tr>
+			<tr><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Chaining data for multi-packet scripts</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-3">The Immediate Action builder offers an action indicator (<code class="font-mono text-sm">81</code>/<code class="font-mono text-sm">82</code>), a structured proactive command builder (REFRESH, DISPLAY TEXT, PLAY TONE with auto-generated COMPREHENSION-TLV objects), or a freeform hex input.</p>
+
+	<h3 id="ram-gp" class="text-lg font-medium mb-2">2.4 RAM/GP</h3>
+	<p class="mb-2">CLA = <code class="font-mono text-sm">80</code> (GlobalPlatform Card Specification v2.3.1). Remote Application Management commands for card content management.</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Command</th><th class="text-left py-1 px-2">INS</th><th class="text-left py-1 px-2">P1</th><th class="text-left py-1 px-2">Description</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [for load]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">02</td><td class="py-1 px-2">Register a load file for loading</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [for install]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">0C</td><td class="py-1 px-2">Install an application or SD</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [make selectable]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">10</td><td class="py-1 px-2">Make an application selectable</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [registry update]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">01</td><td class="py-1 px-2">Update registry entries</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [extradition]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">04</td><td class="py-1 px-2">Extradition between SDs</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">LOAD</td><td class="py-1 px-2 font-mono">E8</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Load executable code blocks</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">DELETE</td><td class="py-1 px-2 font-mono">E4</td><td class="py-1 px-2 font-mono">00/80</td><td class="py-1 px-2">Delete application or SD</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">GET STATUS</td><td class="py-1 px-2 font-mono">F2</td><td class="py-1 px-2 font-mono">80/40/20/10</td><td class="py-1 px-2">Get card status</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">GET DATA</td><td class="py-1 px-2 font-mono">CA</td><td class="py-1 px-2 font-mono">tag</td><td class="py-1 px-2">Read card data objects</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">STORE DATA</td><td class="py-1 px-2 font-mono">E2</td><td class="py-1 px-2 font-mono">00/40/80/C0</td><td class="py-1 px-2">Store data (key, certificate, &hellip;)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">SET STATUS</td><td class="py-1 px-2 font-mono">F0</td><td class="py-1 px-2 font-mono">80/40/60</td><td class="py-1 px-2">Lifecycle state management</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">EXTERNAL AUTHENTICATE</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">SCP host authentication</td></tr>
+			<tr><td class="py-1 px-2 font-mono">INTERNAL AUTHENTICATE</td><td class="py-1 px-2 font-mono">88</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Card challenge-response</td></tr>
+		</tbody>
+	</table>
+	<h4 id="ram-privileges" class="font-medium mb-1">Privileges (INSTALL [for install])</h4>
+	<p class="text-sm mb-2">Tag <code class="font-mono text-sm">C7</code> in the INSTALL data field, built from 3 privilege bytes (GP spec Tables 11-7/8/9):</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
+			<th class="text-left py-1 px-2">Bit</th><th class="text-left py-1 px-2">Byte 1</th><th class="text-left py-1 px-2">Byte 2</th><th class="text-left py-1 px-2">Byte 3</th>
+		</tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b8</td><td class="py-1 px-2">Security Domain</td><td class="py-1 px-2">Trusted Path</td><td class="py-1 px-2">Receipt Generation</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b7</td><td class="py-1 px-2">DAP Verification</td><td class="py-1 px-2">Authorized Management</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b6</td><td class="py-1 px-2">Delegated Management</td><td class="py-1 px-2">Token Verification</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b5</td><td class="py-1 px-2">Card Lock</td><td class="py-1 px-2">Global Delete</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b4</td><td class="py-1 px-2">Card Terminate</td><td class="py-1 px-2">Global Lock</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b3</td><td class="py-1 px-2">Card Reset</td><td class="py-1 px-2">Global Registry</td><td class="py-1 px-2"></td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">b2</td><td class="py-1 px-2">CVM Management</td><td class="py-1 px-2">Final Application</td><td class="py-1 px-2"></td></tr>
+			<tr><td class="py-1 px-2 font-mono">b1</td><td class="py-1 px-2">Mandated DAP Verification</td><td class="py-1 px-2"></td><td class="py-1 px-2"></td></tr>
+		</tbody>
+	</table>
+	<h4 id="ram-msl" class="font-medium mb-1">MSL (Minimum Security Level) &mdash; SPI1 byte per TS 102 225</h4>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Value</th><th class="text-left py-1 px-2">Meaning</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">No check</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">11</td><td class="py-1 px-2">RC/CC/DS</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">12</td><td class="py-1 px-2">RC/DS/CC</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">15</td><td class="py-1 px-2">RC/DS/CC + MAC</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">16</td><td class="py-1 px-2">RC/DS/CC + MAC + Cipher</td></tr>
+			<tr><td class="py-1 px-2 font-mono">19</td><td class="py-1 px-2">RC/DS/CC + MAC + Cipher + DS</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-3">Refer to GlobalPlatform v2.3.1 and ETSI TS 102 226 &sect;8.2.1.3.2 for the full GET STATUS P1/P2, GET DATA tag, DELETE P1, STORE DATA P1, and SET STATUS tables.</p>
+
+	<h3 id="conversion" class="text-lg font-medium mb-2">2.5 Conversion (SIM/USIM sidebars)</h3>
+	<ul class="list-disc list-inside text-sm space-y-1">
+		<li><strong>IMSI &rarr; EF.IMSI</strong> — 15-digit IMSI to 9-byte format (TS 31.102 &sect;4.2.3).</li>
+		<li><strong>MSISDN &rarr; BCD</strong> — strip <code class="font-mono text-sm">+</code>, pad odd length with <code class="font-mono text-sm">f</code>, swap nibbles.</li>
+		<li><strong>ICCID &rarr; hex</strong> — nibble-swap the ICCID string.</li>
+		<li><strong>Provider Name &rarr; SPN</strong> — GSM 7-bit packed, UCS2 non-BMP, or UCS2 BMP (TS 31.102 &sect;4.2.5, TS 23.038).</li>
+		<li><strong>PLMN &rarr; EF_PLMNsel / PLMNwAcT</strong> — 3-byte BCD + optional access technology selector.</li>
+		<li><strong>Nibble swap</strong> — swap nibble pairs of an even-length hex string.</li>
+	</ul>
+
+
+<section class="mb-10">
+	<h2 id="secured-packet" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">3. Secured Packet tab</h2>
+	<p class="mb-3">Assembles SCP80 secured packets per ETSI TS 102 225.</p>
+	<h3 id="packet-structure" class="text-lg font-medium mb-2">Packet structure</h3>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Field</th><th class="text-left py-1 px-2">Size</th><th class="text-left py-1 px-2">Description</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CPI</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Command Packet Identifier (02)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CPL</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Command Packet Length</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CHI</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Command Header Identifier (01)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CHL</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Command Header Length</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">SPI</td><td class="py-1 px-2">2</td><td class="py-1 px-2">Security Parameter Indicator</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">KIc</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Key Identifier for ciphering</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">KID</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Key Identifier for MAC</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">TAR</td><td class="py-1 px-2">3</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CNTR</td><td class="py-1 px-2">5</td><td class="py-1 px-2">Replay counter</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">PCNTR</td><td class="py-1 px-2">1</td><td class="py-1 px-2">Padding counter</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">RC/CC/DS</td><td class="py-1 px-2">8</td><td class="py-1 px-2">Cryptographic Checksum / MAC</td></tr>
+			<tr><td class="py-1 px-2 font-mono">Secured Data</td><td class="py-1 px-2">var.</td><td class="py-1 px-2">Padded APDU (encrypted if required)</td></tr>
+		</tbody>
+	</table>
+	<h3 id="packet-crypto" class="text-lg font-medium mb-2">Crypto</h3>
+	<ul class="list-disc list-inside text-sm space-y-1">
+		<li><strong>3DES-CBC</strong> encryption (zero ICV), 8/16/24-byte keys</li>
+		<li><strong>Retail MAC</strong> (ISO 9797-1 MAC algorithm 3) for the cryptographic checksum</li>
+		<li>Padding byte configurable (<code class="font-mono text-sm">00</code> default, or <code class="font-mono text-sm">FF</code>)</li>
+	</ul>
+	<p class="text-sm mb-3">A &ldquo;Verify vs pySim&rdquo; button cross-checks the assembled packet against pySim&rsquo;s reference <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. A &ldquo;Send to Card&rdquo; button delivers it via SMS-PP-DOWNLOAD ENVELOPE (when connected to the server).</p>
+
+
+<section class="mb-10">
+	<h2 id="response-parser" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Response parser tab</h2>
+	<p class="mb-3">Decodes a raw command response: pick the command that was sent, enter the SW (e.g. <code class="font-mono text-sm">9000</code>) and the response data hex, then press <strong>Decode</strong>.</p>
+	<ul class="list-disc list-inside text-sm space-y-1">
+		<li><strong>Command</strong> — SIM/USIM group (SELECT, STATUS, READ/UPDATE, PIN ops, CAT commands like TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, &hellip;) or RAM/GP group (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP commands).</li>
+		<li><strong>SW decode</strong> — status words resolved against generic, UICC (TS 102 221), and GlobalPlatform maps, with context auto-detected.</li>
+		<li><strong>Privilege decode</strong> — GET DATA / INSTALL response payloads decode the privilege bytes into human-readable flags.</li>
+		<li><strong>Response data</strong> — raw hex rendered and interpreted per command (e.g. SELECT FCP templates).</li>
+	</ul>
+
+
+<section class="mb-10">
+	<h2 id="cards" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Cards tab</h2>
+	<p class="mb-3">Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet tab can auto-fill keys and parameters.</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Field</th><th class="text-left py-1 px-2">Description</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Human-readable label</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Optional card identifier</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Key and algorithm indicators (e.g. 15 = index 1, 3DES-CBC2)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Replay counter (5 bytes)</td></tr>
+			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">32 hex chars each (16-byte 3DES keys)</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-3"><strong>Export as JSON</strong> / <strong>Import JSON from clipboard</strong> share presets. The selected card preset auto-fills the Secured Packet form.</p>
+
+
+<section class="mb-10">
+	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Card reader (pySim) tab</h2>
+	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/pysim-otaman-server" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations. Sub-tabs: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>, and <strong>Proactive UICC</strong>.</p>
+
+	<h3 id="file-manager" class="text-lg font-medium mb-2">6.1 File manager</h3>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Read</strong> — reads the selected file (auto-detects transparent vs record files)</li>
+		<li><strong>Edit</strong> — modify hex data, <strong>Save</strong> to write back</li>
+		<li><strong>Raw / Decoded</strong> — toggle between hex dump and pySim-decoded JSON</li>
+	</ul>
+
+	<h3 id="custom-files" class="text-lg font-medium mb-2">6.2 Custom files</h3>
+	<p class="text-sm mb-3">Add files that pySim&rsquo;s model does not cover. Persists in <code class="font-mono text-sm">localStorage</code>; JSON export/import.</p>
+
+	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">6.3 pySim command line</h3>
+	<p class="text-sm mb-3">Execute any pySim-shell command with usage hints (300&nbsp;ms) and autocomplete.</p>
+
+	<h3 id="raw-apdu" class="text-lg font-medium mb-2">6.4 Raw APDU</h3>
+	<p class="text-sm mb-3">Send an arbitrary APDU and view the raw response.</p>
+
+	<h3 id="proactive-uicc" class="text-lg font-medium mb-2">6.5 Proactive UICC</h3>
+	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session: subscribed events, the proactive command log, the PROVIDE LOCAL INFORMATION data dictionary, and STATUS polling.</p>
+
+	<h4 id="subscribed-events" class="font-medium mb-1">6.5.1 Subscribed events (SET UP EVENT LIST)</h4>
+	<p class="text-sm mb-2">The events the card monitors. Each event has a <strong>Send</strong> button that opens a form specific to the event type:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>No-data events</strong> (User Activity, Idle Screen, Data Available, &hellip;) — one-click notification</li>
+		<li><strong>Location Status</strong> — dropdown: Normal / Limited / No service (tag <code class="font-mono text-sm">9B</code>)</li>
+		<li><strong>Access Technology Change</strong> — 13 RAT types (tag <code class="font-mono text-sm">BF</code>)</li>
+		<li><strong>Network Rejection</strong> — full adaptive form: registration type (LU / GPRS / EPS / 5GS), location fields (MCC, MNC, LAC, RAC, TAC), access technology, and a 53-cause unified rejection cause dropdown covering EMM, GMM, 5GMM and LU causes</li>
+	</ul>
+	<p class="text-sm mb-3">Sending an event uses <code class="font-mono text-sm">ENVELOPE(Event Download)</code> per TS 102 223 / TS 131 111.</p>
+
+	<h4 id="proactive-log" class="font-medium mb-1">6.5.2 Proactive command log</h4>
+	<p class="text-sm mb-2">Chronological list of fetched proactive commands. Each row shows the elapsed time, type code, name, and a decoded qualifier (for commands that have one). Commands with response data show a <code class="font-mono text-sm">Response:</code> line with the TERMINAL RESPONSE bytes (boilerplate TLVs stripped); PROVIDE LOCAL INFORMATION responses are decoded using the PLI data dictionary decoders.</p>
+
+	<h4 id="pli-dict" class="font-medium mb-1">6.5.3 PROVIDE LOCAL INFORMATION data dictionary</h4>
+	<p class="text-sm mb-2">Editable hex values for all 22 PLI qualifiers (TS 102 223 &sect;8.6 + TS 131 111). Ten qualifiers have inline decode/encode forms:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
+		<li><strong>01</strong> IMEI &middot; <strong>03</strong> Date/Time/TZ &middot; <strong>04</strong> Language &middot; <strong>05</strong> Timing Advance</li>
+		<li><strong>06</strong> Access Technology &middot; <strong>08</strong> IMEISV &middot; <strong>09</strong> Search Mode</li>
+		<li><strong>0A</strong> Battery &middot; <strong>0E</strong> Multiple Access Technologies</li>
+	</ul>
+	<p class="text-sm mb-3">Values persist server-side until restart. When the card issues PLI, the server injects the dictionary values into the TERMINAL RESPONSE.</p>
+
+	<h4 id="status-polling" class="font-medium mb-1">6.5.4 STATUS polling</h4>
+	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
+
+	<h3 id="usage-scenarios" class="text-lg font-medium mb-2">6.6 Usage scenarios</h3>
+
+	<h4 id="scenario-a" class="font-medium mb-1">Scenario A &mdash; Working with files not in pySim&rsquo;s model (Custom files)</h4>
+	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
+		<li>Obtain the FID of the target file (vendor documentation or ATR/file-system analysis; such files are often not in public specs).</li>
+		<li>Open the <strong>Card reader</strong> tab &rarr; <strong>Custom files</strong> sub-tab.</li>
+		<li>Enter the full path (e.g. <code class="font-mono text-sm">3F00/7F20/6F46</code>) and an alias (e.g. <code class="font-mono text-sm">EF.SPN</code>).</li>
+		<li>Click <strong>Add</strong> — the file appears in the tree in italics (unverified).</li>
+		<li>Click the file to verify existence; on success (<code class="font-mono text-sm">9000</code>) it behaves like a normal file.</li>
+		<li>Read, edit and save hex data; toggle Raw/Decoded views.</li>
+		<li>Export the custom-file list as JSON to share with other machines.</li>
+	</ol>
+
+	<h4 id="scenario-b" class="font-medium mb-1">Scenario B &mdash; Simulating a real network environment for SIM testing</h4>
+	<p class="text-sm mb-1"><strong>B.1 Answer PROVIDE LOCAL INFORMATION (PLI)</strong></p>
+	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
+		<li>Open <strong>Proactive UICC</strong> &rarr; <strong>PROVIDE LOCAL INFORMATION response data</strong>.</li>
+		<li>Use the decode/encode forms to set IMEI (<code class="font-mono text-sm">01</code>), Location Info (<code class="font-mono text-sm">00</code>), Access Technology (<code class="font-mono text-sm">06</code>), etc.</li>
+		<li>Click <strong>Save</strong> — values persist server-side.</li>
+		<li>Enable <strong>Polling</strong> (interval 30&nbsp;s) so the card issues PLI periodically.</li>
+		<li>The server injects the dictionary values into each TERMINAL RESPONSE.</li>
+		<li>Verify in the proactive log: the PLI entry shows the decoded response.</li>
+	</ol>
+	<p class="text-sm mb-1"><strong>B.2 Simulate network actions via ENVELOPE (event download)</strong></p>
+	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
+		<li>Check the <strong>subscribed events</strong> list (from SET UP EVENT LIST).</li>
+		<li>Click <strong>Send</strong> on an event (e.g. Location Status) and fill the form; an <code class="font-mono text-sm">ENVELOPE(Event Download)</code> is sent.</li>
+		<li>For <strong>Network Rejection</strong>, select registration type &rarr; location fields &rarr; access technology &rarr; rejection cause.</li>
+		<li>The card may respond with a proactive command, which the chain handler logs and answers automatically.</li>
+	</ol>
+	<p class="text-sm mb-1"><strong>B.3 Verify the simulated environment</strong></p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li>The proactive command log shows the full round-trip (command + TERMINAL RESPONSE bytes).</li>
+		<li>The STATUS button / auto-polling keep the CAT session alive (drain loop).</li>
+	</ul>
+
+
+<section class="mb-10">
+	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Server installation</h2>
+	<p class="mb-3">Live card operations (Card reader tab, Proactive UICC, OTA delivery) require the local <a href="https://github.com/anttro/pysim-otaman-server" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — a small HTTP server that wraps pySim and talks to the reader over PC/SC or serial.</p>
+
+	<h3 id="prerequisites" class="text-lg font-medium mb-2">7.1 Prerequisites</h3>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Python 3.8+</strong> with <code class="font-mono text-sm">pip</code></li>
+		<li><strong>Git</strong></li>
+		<li><strong>Smart card reader</strong> (PC/SC or serial/FTDI). PC/SC is preferable; on Linux it requires <code class="font-mono text-sm">pcsc-lite</code> + <code class="font-mono text-sm">ccid</code></li>
+	</ul>
+
+	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Quick start — Linux / macOS</h3>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/pysim-otaman-server.git
+cd pysim-otaman-server
+chmod +x setup.sh start.sh
+./setup.sh          # creates .venv, installs pysim + server (run once)
+./start.sh          # starts the server (auto-detects reader)</pre>
+
+	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">7.3 Quick start — Windows</h3>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/pysim-otaman-server.git
+cd pysim-otaman-server
+setup.bat           # creates .venv, installs pysim + server (run once)
+start.bat           # starts the server</pre>
+
+	<h3 id="helper-scripts" class="text-lg font-medium mb-2">7.4 Helper scripts</h3>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Script</th><th class="text-left py-1 px-2">Purpose</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">setup.sh / setup.bat</td><td class="py-1 px-2">Creates <code class="font-mono text-sm">.venv/</code>, installs pySim and the server. Run once after cloning.</td></tr>
+			<tr><td class="py-1 px-2 font-mono">start.sh / start.bat</td><td class="py-1 px-2">Starts the server from the venv (falls back to a global install).</td></tr>
+		</tbody>
+	</table>
+
+	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">7.5 Reader auto-detection (<code class="font-mono text-sm">start.sh</code>)</h3>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>PC/SC (Linux)</strong> — if the <code class="font-mono text-sm">pcscd</code> daemon is running, passes <code class="font-mono text-sm">-p 0</code></li>
+		<li><strong>Serial (Linux)</strong> — if <code class="font-mono text-sm">/dev/ttyUSB0</code> exists, passes <code class="font-mono text-sm">-d /dev/ttyUSB0</code></li>
+		<li><strong>PC/SC (Windows)</strong> — always uses <code class="font-mono text-sm">-p 0</code> (PC/SC is built into Windows)</li>
+	</ul>
+	<p class="text-sm mb-3">If no reader is detected, the server starts without reader arguments and shows &ldquo;Reader: none&rdquo;. The card can be initialized later via the <strong>Equip</strong> button in the Card reader tab.</p>
+
+	<h3 id="manual-install" class="text-lg font-medium mb-2">7.6 Manual installation</h3>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3"># Create and activate a venv
+python3 -m venv .venv
+source .venv/bin/activate   # Linux/macOS
+# .venv\Scripts\activate    # Windows
+
+# Install pysim
+pip install git+https://gitea.osmocom.org/sim-card/pysim.git
+
+# Install pysim-otaman-server
+pip install .
+
+# Start the server
+pysim-otaman-server --http-port 8080</pre>
+	<p class="text-sm mb-3">Connect a PC/SC reader with a SIM card, then point the PWA at <code class="font-mono text-sm">http://127.0.0.1:8080</code>.</p>
+
+
+<section class="mb-10">
+	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">8. Version compatibility</h2>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (OTAMan)</th><th class="text-left py-1 px-2">Server</th><th class="text-left py-1 px-2">Status</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2">&#9989; Compatible</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">0.x.x</td><td class="py-1 px-2">&#10060; Outdated &mdash; update server</td></tr>
+			<tr><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">2.x.x+</td><td class="py-1 px-2">&#9888;&#65039; Server newer &mdash; update PWA</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm">The PWA checks the server version on connect via <code class="font-mono text-sm">GET /api/version</code> and warns if versions are incompatible.</p>
+
+
+</main>
+</div>
+
+<script>
+(function () {
+	if (localStorage.getItem('theme') === 'dark' ||
+	    (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+		document.documentElement.classList.add('dark');
+	}
+	var toc = document.getElementById('toc');
+	var main = document.querySelector('main');
+	if (!toc || !main) return;
+	var headings = Array.prototype.filter.call(main.querySelectorAll('h2, h3, h4'), function (h) {
+		return /^\d/.test(h.textContent.trim());
+	});
+	var stack = [document.createElement('ol')];
+	stack[0].className = 'space-y-1 list-none';
+	var lastLevel = 2;
+	headings.forEach(function (h) {
+		var level = parseInt(h.tagName.charAt(1), 10);
+		var li = document.createElement('li');
+		var a = document.createElement('a');
+		a.href = '#' + h.id;
+		a.textContent = h.textContent;
+		li.appendChild(a);
+		if (level > lastLevel) {
+			var ul = document.createElement('ul');
+			ul.className = 'pl-4 mt-1 space-y-1 list-none';
+			var parent = stack[stack.length - 1].lastElementChild;
+			parent.appendChild(ul);
+			stack.push(ul);
+		} else if (level < lastLevel) {
+			while (stack.length > 1 && level < lastLevel) { stack.pop(); lastLevel--; }
+		}
+		stack[stack.length - 1].appendChild(li);
+		lastLevel = level;
+	});
+	toc.appendChild(stack[0]);
+})();
+</script>
+</body>
+</html>

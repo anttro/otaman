@@ -20,6 +20,7 @@
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
+			<a id="help-link" href="help.html" target="_blank" rel="noopener" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300" data-l10n="help">help</a>
 			<button onclick="toggleLang()" id="lang-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700">EN</button>
 			<button onclick="toggleTheme()" id="theme-btn" class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700">🌙</button>
 		</div>
@@ -999,6 +1000,10 @@ function switchTab(name) {
 	active.classList.remove('bg-gray-200', 'text-gray-700', 'dark:bg-slate-700', 'dark:text-slate-300');
 	active.classList.add('bg-blue-600', 'text-white', 'dark:bg-blue-500', 'dark:text-white');
 	if (name === 'c-apdu') cApduSwitchSubtab('sim');
+	else if (name === 'sp') setHelpAnchor('secured-packet');
+	else if (name === 'response') setHelpAnchor('response-parser');
+	else if (name === 'cards') setHelpAnchor('cards');
+	else if (name === 'pysim') setHelpAnchor(pysimHelpAnchor);
 }
 
 function cApduSwitchSubtab(name) {
@@ -1019,6 +1024,7 @@ function cApduSwitchSubtab(name) {
 		updateSimUsimFields(name);
 		updateSimSelectMethod(name);
 	}
+	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp'}[name] || 'c-apdu');
 }
 document.querySelectorAll('.tab-btn').forEach(btn => {
 	btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -3107,6 +3113,8 @@ function pysimSwitchSubtab(name) {
 	});
 	if (name === 'custom') pysimCustomRender();
 	if (name === 'proactive') { pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); pysimPollStatusInit(); }
+	pysimHelpAnchor = {cmd:'pysim-cmdline', apdu:'raw-apdu', files:'file-manager', custom:'custom-files', proactive:'proactive-uicc'}[name] || 'card-reader';
+	setHelpAnchor(pysimHelpAnchor);
 }
 
 function pysimCmdKeydown(e) {
@@ -4630,6 +4638,7 @@ const LANG_RU = {
 	'Card reader inserted': 'Картридер вставлен',
 	'PROVIDE LOCAL INFORMATION response data': 'Данные для PROVIDE LOCAL INFORMATION',
 	'Send STATUS': 'Отправить STATUS',
+	'help': 'справка',
 	'STATUS and Polling': 'STATUS и опрос',
 	'Polling': 'Опрос',
 	'STATUS...': 'STATUS...',
@@ -4650,6 +4659,20 @@ function toggleLang() {
 document.getElementById('lang-btn').textContent = currentLang.toUpperCase();
 translatePage();
 	translatePage();
+	updateHelpLink();
+}
+
+let currentHelpAnchor = 'sim-rfm';
+let pysimHelpAnchor = 'file-manager';
+
+function updateHelpLink() {
+	const link = document.getElementById('help-link');
+	if (link) link.href = (currentLang === 'ru' ? 'help-ru.html' : 'help.html') + '#' + currentHelpAnchor;
+}
+
+function setHelpAnchor(anchor) {
+	currentHelpAnchor = anchor;
+	updateHelpLink();
 }
 
 function translatePage() {
@@ -4665,6 +4688,7 @@ function translatePage() {
 const userLang = (navigator.language || '').split('-')[0];
 currentLang = localStorage.getItem('lang') || (userLang === 'ru' ? 'ru' : 'en');
 document.getElementById('lang-btn').textContent = currentLang.toUpperCase();
+updateHelpLink();
 
 cardsLoad();
 
