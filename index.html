@@ -2648,6 +2648,21 @@ async function pysimFetch(path, body) {
 	return await res.json();
 }
 
+function pysimTargetSpace() {
+	let h;
+	try { h = new URL(pysimBase).hostname.toLowerCase(); } catch (e) { return 'public'; }
+	if (h === 'localhost' || h === '[::1]' || h === '::1' || /^127\./.test(h)) return 'loopback';
+	if (/^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)) return 'private';
+	return 'public';
+}
+
+function pysimIsLikelyBlocked() {
+	const pagePublic = location.protocol === 'https:'
+		|| !(location.hostname === 'localhost' || /^127\./.test(location.hostname));
+	const s = pysimTargetSpace();
+	return pagePublic && (s === 'loopback' || s === 'private');
+}
+
 function pysimSetConnected(state) {
 	const img = document.getElementById('pysim-status-img');
 	if (state === 'spin') {
@@ -2694,7 +2709,7 @@ async function pysimRefresh() {
 		return true;
 	} catch (e) {
 		pysimSetConnected(false);
-		statusEl.textContent = t('Connection failed: ') + ' ' + e.message;
+		statusEl.textContent = t('Connection failed:') + ' ' + e.message;
 		return false;
 	}
 }
@@ -2715,7 +2730,7 @@ async function pysimConnect() {
 		const sv = (ver.version || '').split('.').map(Number);
 		if (sv[0] < 1 || (sv[0] === 1 && sv[1] < 0)) {
 			statusEl.innerHTML = '<span class="text-red-500">Server version ' + esc(ver.version) + ' is outdated. Please update pysim-otaman-server.</span>';
-			btn.textContent = 'Connect';
+			btn.textContent = t('Connect');
 			btn.disabled = false;
 			return;
 		}
@@ -2746,8 +2761,12 @@ async function pysimConnect() {
 		stkCheckMenu();
 	} catch (e) {
 		pysimSetConnected(false);
-		statusEl.innerHTML = '<span class="text-red-500">' + t('Connection failed: ') + ' ' + esc(e.message) + '</span>';
-		btn.textContent = 'Connect';
+		const hint = t(pysimIsLikelyBlocked() ? 'pysim-blocked-hint' : 'pysim-unreachable-hint')
+			.replace('{url}', esc(pysimBase));
+		statusEl.innerHTML =
+			'<span class="text-red-500">' + t('Connection failed:') + ' ' + esc(e.message) + '</span>' +
+			'<br><span class="text-sm text-gray-600 dark:text-slate-400">' + hint + '</span>';
+		btn.textContent = t('Connect');
 	}
 	btn.disabled = false;
 }
@@ -4698,6 +4717,8 @@ const LANG_RU = {
 	'Checking card...': 'Проверка карты...',
 	'Connected': 'Подключено',
 	'Connection failed:': 'Ошибка подключения:',
+	'pysim-blocked-hint': 'Браузер, вероятно, заблокировал доступ к локальному серверу карт. Разрешите доступ к локальной сети для этого сайта (Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → Разрешить). Также проверьте, что pysim-otaman-server запущен по адресу {url}.',
+	'pysim-unreachable-hint': 'Не удалось подключиться к серверу карт. Проверьте, что pysim-otaman-server запущен и адрес указан верно ({url}). Если эта страница открыта по HTTPS, также разрешите доступ к локальной сети в браузере (Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → Разрешить).',
 	'No card detected. Insert card and click Equip card button': 'Карта не обнаружена. Вставьте карту и нажмите Подключить карту',
 	'Checking...': 'Проверка...',
 	'Resetting...': 'Сброс...',
