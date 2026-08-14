@@ -17,7 +17,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.6.1</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.7.0</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -846,7 +846,7 @@
 		</div>
 		<div id="pysim-connect-info" class="mb-3 text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
 			<p data-l10n="To access local card reader, you need pysim-otaman-server running locally.">To access local card reader, you need pysim-otaman-server running locally.</p>
-			<p><span data-l10n="To connect, install">To connect, install</span> <a href="https://github.com/anttro/pysim-otaman-server" target="_blank" class="text-blue-600 dark:text-blue-400 underline">pysim-otaman-server</a>: <code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">git clone https://github.com/anttro/pysim-otaman-server.git</code> <span data-l10n="and start it.">and start it.</span><br><span data-l10n="Refer to pysim-otaman-server README files for details.">Refer to pysim-otaman-server README files for details.</span> <span data-l10n="Click">Click</span> <b data-l10n="Connect">Connect</b> <span data-l10n="when pysim-otaman-server is ready">when pysim-otaman-server is ready</span></p>
+			<p><span data-l10n="To connect, install">To connect, install</span> <a href="https://github.com/anttro/otaman" target="_blank" class="text-blue-600 dark:text-blue-400 underline">pysim-otaman-server</a>: <code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">git clone https://github.com/anttro/otaman.git</code> <span data-l10n="and start it.">and start it.</span><br><span data-l10n="Refer to pysim-otaman-server README files for details.">Refer to pysim-otaman-server README files for details.</span> <span data-l10n="Click">Click</span> <b data-l10n="Connect">Connect</b> <span data-l10n="when pysim-otaman-server is ready">when pysim-otaman-server is ready</span></p>
 			<div id="pysim-connect-msg" class="text-xs"></div>
 		</div>
 		<div id="pysim-connected-row" class="mb-3 hidden">
@@ -2635,7 +2635,13 @@ function decodeResponse() {
 }
 
 // ===== pysim integration =====
-let pysimBase = 'http://127.0.0.1:8080';
+// When served by pysim-otaman-server itself (same origin), the API is relative;
+// otherwise default to the local server on 127.0.0.1:8080.
+let pysimBase = window.PYSIM_EMBEDDED ? '' : 'http://127.0.0.1:8080';
+if (window.PYSIM_EMBEDDED) {
+	const urlEl = document.getElementById('pysim-url');
+	if (urlEl) { urlEl.value = ''; urlEl.placeholder = '(same origin)'; }
+}
 
 function esc(str) {
 	return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

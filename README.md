@@ -1,23 +1,37 @@
-# OTAMan — APDU Helper & Secured Packet Builder, SIM OTA in PWA
+# OTAMan — SIM OTA toolkit: PWA + local card server
 
-Standalone offline HTML/JS tool for building APDU commands for SIM, USIM, and GlobalPlatform RAM, assembling secure packets per ETSI TS 102 225, and constructing BER-TLV command scripts per ETSI TS 102 226.
+OTAMan is an offline HTML/JS PWA for building APDU commands (SIM, USIM, GlobalPlatform RAM), assembling SCP80 secured packets per ETSI TS 102 225, and constructing BER-TLV command scripts per ETSI TS 102 226. A bundled [`pysim-otaman-server`](pysim_otaman_server/) exposes a local HTTP API over pySim for live card operations: file manager, raw APDU, SIM Toolkit menu browsing, and OTA (SCP80) delivery.
 
-Open `index.html` in any modern browser. No server required.
+**Demo:** [otaman.atroshin.ru](https://otaman.atroshin.ru) — the PWA alone, for experimenting. Install the server (below) for card-reader functions.
 
-**Demo:** [otaman.atroshin.ru](https://otaman.atroshin.ru)
+## Quick start
+
+**PWA only (client-side tools):** open `frontend/index.html` in any browser, or serve `frontend/` with any static server. No Python required.
+
+**Full (PWA + card server):**
+
+```sh
+git clone https://github.com/anttro/otaman.git
+cd otaman
+./setup.sh     # or setup.bat on Windows — creates .venv, installs pysim + server
+./start.sh     # or start.bat — starts the server (it serves the PWA too)
+```
+
+Then open http://127.0.0.1:8080 — the UI and API share one origin, so no CORS or browser-permission setup is needed.
 
 ## Build
 
 Tailwind CSS is used for styling. After cloning, rebuild the CSS:
 
 ```sh
+cd frontend
 npm install
 npm run build
 ```
 
 ## Interface
 
-Six tabs, each with a form and a "Сгенерировать" button.
+Five tabs, each with a form and a "Generate" button.
 
 ---
 
@@ -383,7 +397,7 @@ Swaps nibble pairs of an even-length hex string.
 
 ## Card Reader (pySim integration)
 
-Connects to a local [pysim-otaman-server](https://github.com/anttro/pysim-otaman-server) for live card operations.
+Connects to the bundled [`pysim-otaman-server`](pysim_otaman_server/) for live card operations.
 
 > **Browser restriction:** when the PWA is served from a public HTTPS host, reaching the local server (`http://127.0.0.1:8080`) requires two things: the server must send `Access-Control-Allow-Private-Network: true` (pysim-otaman-server ≥ 1.6.1 does this automatically), and the browser must be allowed to access the local network — in Chrome/Edge/Vivaldi: Site settings → Local network access → allow the site (or accept the permission prompt). Without the browser permission, the request to `127.0.0.1` is blocked before any preflight is sent.
 
@@ -458,6 +472,60 @@ OTAMan is a Progressive Web App and can be installed for offline use. Use the **
 
 - Service worker pre-caches all assets on first visit
 - App icons at 192×192 and 512×512
+
+## Server (pysim-otaman-server)
+
+The bundled Python server wraps [pySim](https://osmocom.org/projects/pysim/wiki) and serves both the OTAMan PWA (from `frontend/`) and a JSON API under `/api/*`.
+
+### Prerequisites
+
+- **Python 3.8+** with `pip`, and **Git**
+- **Smart card reader** (PC/SC or serial/FTDI) — PC/SC is preferable (`pcsc-lite` + `ccid` on Linux)
+- **Windows** — use Python 3.10–3.13 (3.13 recommended): `pyscard` ships precompiled wheels for these versions. On 3.9 / 3.14 it builds from source (needs MSVC C++ Build Tools). The SMPP bridge (`smpp.twisted3`) is intentionally skipped on Windows.
+
+### Scripts
+
+| Script | What it does |
+|--------|-------------|
+| `setup.sh` / `setup.bat` | Creates `.venv/`, installs pysim and the server. Run once after cloning. |
+| `start.sh` / `start.bat` | Starts the server from the venv (serves the PWA + API on `:8080`). |
+
+`start.sh` auto-detects the reader (PC/SC if `pcscd` is running, else `/dev/ttyUSB0`); `start.bat` always uses `-p 0` (PC/SC is built into Windows). If no reader is found the server still starts ("Reader: none") — initialize the card later via the **Equip** button.
+
+### Manual installation
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate          # Linux/macOS   (Windows: .venv\Scripts\activate)
+pip install git+https://github.com/osmocom/pysim.git
+pip install -e .                   # editable — serves frontend/ from the source tree
+pysim-otaman-server --http-port 8080
+```
+
+### CLI options
+
+| Option | Description |
+|--------|-------------|
+| `--http-host` | Bind address (default: `127.0.0.1`) |
+| `--http-port` | TCP port (default: `8080`) |
+| `--web-dir` | Directory with PWA static files (default: `<repo>/frontend`) |
+| `-p` / `--pcsc-device` | PC/SC reader slot number |
+| `-d` / `--device` | Serial device path |
+| `--no-card-init` | Skip card init to preserve the CAT session (no file manager) |
+| `--apdu-trace` | Log APDU-level traces to stderr |
+| `--log-requests` | Log request/response payloads to stderr |
+| `--sms-oa` / `--sms-sm-sc` | SMS-DELIVER originating address / SM-SC for PoR-in-submit |
+| `--terminal-profile` | TERMINAL PROFILE payload hex (default 10-byte GSM profile) |
+| `--poll-interval` | Idle interval before automatic STATUS polling (default 30s) |
+
+### Troubleshooting
+
+- **"Failed to establish context: Access denied"** — `pcscd` isn't running or the user lacks permission: `sudo systemctl enable --now pcscd && sudo usermod -a -G pcscd $USER`.
+- **"device file /dev/ttyUSB0 does not exist"** — no serial reader; connect a USB reader or pass `-d` explicitly. The server still starts without a reader.
+
+### API reference
+
+See [docs/api.md](docs/api.md) for the full endpoint reference.
 
 ## Theme
 

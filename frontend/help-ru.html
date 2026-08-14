@@ -236,7 +236,7 @@
 
 <section class="mb-10">
 	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Вкладка Card reader (pySim)</h2>
-	<p class="mb-3">Подключение к локальному <a href="https://github.com/anttro/pysim-otaman-server" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> для работы с картой. Подвкладки: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong> и <strong>Proactive UICC</strong>.</p>
+	<p class="mb-3">Подключение к локальному <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> для работы с картой. Подвкладки: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong> и <strong>Proactive UICC</strong>.</p>
 
 	<h3 id="file-manager" class="text-lg font-medium mb-2">6.1 File manager</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
@@ -322,7 +322,7 @@
 
 <section class="mb-10">
 	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Установка сервера</h2>
-	<p class="mb-3">Для работы с картой (вкладка Card reader, Proactive UICC, доставка OTA) нужен локальный <a href="https://github.com/anttro/pysim-otaman-server" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — небольшой HTTP-сервер, оборачивающий pySim и взаимодействующий с ридером через PC/SC или serial.</p>
+	<p class="mb-3">Для работы с картой (вкладка Card reader, Proactive UICC, доставка OTA) нужен локальный <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — встроенный в OTAMan HTTP-сервер, оборачивающий pySim, работающий с ридером через PC/SC или serial и раздающий сам PWA (откройте <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
 
 	<h3 id="prerequisites" class="text-lg font-medium mb-2">7.1 Требования</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
@@ -333,17 +333,17 @@
 	</ul>
 
 	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Быстрый старт — Linux / macOS</h3>
-	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/pysim-otaman-server.git
-cd pysim-otaman-server
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
+cd otaman
 chmod +x setup.sh start.sh
 ./setup.sh          # создаёт .venv, устанавливает pysim + сервер (однократно)
-./start.sh          # запускает сервер (автоопределение ридера)</pre>
+./start.sh          # запускает сервер (PWA + API, автоопределение ридера)</pre>
 
 	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">7.3 Быстрый старт — Windows</h3>
-	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/pysim-otaman-server.git
-cd pysim-otaman-server
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
+cd otaman
 setup.bat           # создаёт .venv, устанавливает pysim + сервер (однократно)
-start.bat           # запускает сервер</pre>
+start.bat           # запускает сервер (PWA + API)</pre>
 
 	<h3 id="helper-scripts" class="text-lg font-medium mb-2">7.4 Вспомогательные скрипты</h3>
 	<table class="w-full text-sm mb-3 border-collapse">
@@ -369,14 +369,14 @@ source .venv/bin/activate   # Linux/macOS
 # .venv\Scripts\activate    # Windows
 
 # Установить pysim
-pip install git+https://gitea.osmocom.org/sim-card/pysim.git
+pip install git+https://github.com/osmocom/pysim.git
 
-# Установить pysim-otaman-server
-pip install .
+# Установить pysim-otaman-server (editable — раздаёт встроенный PWA)
+pip install -e .
 
-# Запустить сервер
+# Запустить сервер (PWA + API)
 pysim-otaman-server --http-port 8080</pre>
-	<p class="text-sm mb-3">Подключите PC/SC-ридер с SIM-картой и укажите в PWA адрес <code class="font-mono text-sm">http://127.0.0.1:8080</code>.</p>
+	<p class="text-sm mb-3">Подключите PC/SC-ридер с SIM-картой и откройте <code class="font-mono text-sm">http://127.0.0.1:8080</code> — PWA и API на одном origin, поэтому CORS не требуется.</p>
 	<p class="text-sm mb-3">Если PWA раздаётся с публичного HTTPS-хоста (например, <code class="font-mono text-sm">https://otaman.example.com</code>), для доступа к локальному серверу карт нужны два условия: (1) сервер отвечает на preflight заголовком <code class="font-mono text-sm">Access-Control-Allow-Private-Network: true</code> (pysim-otaman-server &ge; 1.6.1 делает это автоматически), и (2) браузеру должно быть разрешено обращаться к локальной сети &mdash; в Chrome/Edge/Vivaldi: Настройки сайта &rarr; Доступ к локальной сети &rarr; разрешить сайт (или подтвердить запрос). Без разрешения браузера запрос к <code class="font-mono text-sm">127.0.0.1</code> блокируется ещё до отправки preflight.</p>
 
 
