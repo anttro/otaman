@@ -13,3 +13,6 @@ requires-python = ">=3.8"
 
 [project.scripts]
 pysim-otaman-server = "pysim_otaman_server.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["pysim_otaman_server*"]
