@@ -49,7 +49,7 @@
 			<div class="w-full">
 				<div class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
-					<select id="sim-cmd" onchange="updateSimUsimFields('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					<select id="sim-cmd" onchange="updateSimUsimFields('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 						<option value="select">SELECT</option>
 						<option value="update-record">UPDATE RECORD</option>
 						<option value="update-binary">UPDATE BINARY</option>
@@ -73,7 +73,7 @@
 					<div id="sim-select-method-body">
 					<div id="sim-sel-method-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SELECT method">SELECT method</label>
-						<select id="sim-sel-method" onchange="updateSimSelectMethod('sim'); updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<select id="sim-sel-method" onchange="updateSimSelectMethod('sim'); updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 							<option value="fid">By FID</option>
 							<option value="path">By full path from MF</option>
 							<option value="dfname">By DF name / AID</option>
@@ -82,19 +82,19 @@
 					</div>
 					<div id="sim-sel-fid-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (2 bytes)</label>
-						<input id="sim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
+						<input id="sim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
 					</div>
 					<div id="sim-sel-path-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Path (hex)">Path (hex)</label>
-						<input id="sim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F007FFF6FC5">
+						<input id="sim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F007FFF6FC5">
 					</div>
 					<div id="sim-sel-dfname-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
-						<input id="sim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
+						<input id="sim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
 					</div>
 					<div id="sim-sel-chain-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="FID chain (comma-separated)">FID chain (comma-separated)</label>
-						<input id="sim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00,6F3A">
+						<input id="sim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F00,6F3A">
 					</div>
 					</div>
 				</div>
@@ -102,11 +102,11 @@
 				<div id="sim-record-row" class="mb-3">
 					<div class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record #">Record #</label>
-						<input id="sim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<input id="sim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					</div>
 					<div class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Selection mode (P2)">Selection mode (P2)</label>
-						<select id="sim-rec-mode" onchange="updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<select id="sim-rec-mode" onchange="updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 							<option value="04">Absolute (04)</option>
 							<option value="06">Next (06)</option>
 							<option value="02">Previous (02)</option>
@@ -116,27 +116,27 @@
 
 				<div id="sim-offset-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Offset (hex)">Offset (hex)</label>
-					<input id="sim-offset" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
+					<input id="sim-offset" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
 				</div>
 
 				<div id="sim-le-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Le (hex)</label>
-					<input id="sim-le" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+					<input id="sim-le" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 				</div>
 
 				<div id="sim-data-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Data (hex)">Data (hex)</label>
-					<textarea id="sim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
+					<textarea id="sim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
 				</div>
 
 				<div id="sim-recsize-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record size (bytes)">Record size (bytes)</label>
-					<input id="sim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					<input id="sim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				</div>
 
 				<div id="sim-pin-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">PIN</label>
-					<select id="sim-pin" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					<select id="sim-pin" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 						<option value="01">PIN1 (01)</option>
 						<option value="02">PIN2 (02)</option>
 					</select>
@@ -146,11 +146,11 @@
 					<div class="flex gap-2 mb-2">
 						<div class="flex-1">
 							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P1 (hex)</label>
-							<input id="sim-p1" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+							<input id="sim-p1" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 						</div>
 						<div class="flex-1">
 							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P2 (hex)</label>
-							<input id="sim-p2" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+							<input id="sim-p2" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 						</div>
 					</div>
 					<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
@@ -162,7 +162,7 @@
 		</div>
 
 		<button onclick="genSimUsim('sim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
-		<textarea id="sim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		<textarea id="sim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<button onclick="packToSp('sim-result')" id="sim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 
@@ -171,7 +171,7 @@
 			<div class="w-full">
 				<div class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
-					<select id="usim-cmd" onchange="updateSimUsimFields('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					<select id="usim-cmd" onchange="updateSimUsimFields('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 						<option value="select">SELECT</option>
 						<option value="update-record">UPDATE RECORD</option>
 						<option value="update-binary">UPDATE BINARY</option>
@@ -195,7 +195,7 @@
 					<div id="usim-select-method-body">
 					<div id="usim-sel-method-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SELECT method">SELECT method</label>
-						<select id="usim-sel-method" onchange="updateSimSelectMethod('usim'); updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<select id="usim-sel-method" onchange="updateSimSelectMethod('usim'); updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 							<option value="fid">By FID</option>
 							<option value="path">By full path from MF</option>
 							<option value="dfname">By DF name / AID</option>
@@ -204,19 +204,19 @@
 					</div>
 					<div id="usim-sel-fid-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (2 bytes)</label>
-						<input id="usim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
+						<input id="usim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
 					</div>
 					<div id="usim-sel-path-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Path (hex)">Path (hex)</label>
-						<input id="usim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F007FFF6FC5">
+						<input id="usim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F007FFF6FC5">
 					</div>
 					<div id="usim-sel-dfname-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
-						<input id="usim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
+						<input id="usim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
 					</div>
 					<div id="usim-sel-chain-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="FID chain (comma-separated)">FID chain (comma-separated)</label>
-						<input id="usim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00,6F3A">
+						<input id="usim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F00,6F3A">
 					</div>
 					</div>
 				</div>
@@ -224,11 +224,11 @@
 				<div id="usim-record-row" class="mb-3">
 					<div class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record #">Record #</label>
-						<input id="usim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<input id="usim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					</div>
 					<div class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Selection mode (P2)">Selection mode (P2)</label>
-						<select id="usim-rec-mode" onchange="updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+						<select id="usim-rec-mode" onchange="updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 							<option value="04">Absolute (04)</option>
 							<option value="06">Next (06)</option>
 							<option value="02">Previous (02)</option>
@@ -238,27 +238,27 @@
 
 				<div id="usim-offset-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Offset (hex)">Offset (hex)</label>
-					<input id="usim-offset" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
+					<input id="usim-offset" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
 				</div>
 
 				<div id="usim-le-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Le (hex)</label>
-					<input id="usim-le" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+					<input id="usim-le" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 				</div>
 
 				<div id="usim-data-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Data (hex)">Data (hex)</label>
-					<textarea id="usim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
+					<textarea id="usim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
 				</div>
 
 				<div id="usim-recsize-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record size (bytes)">Record size (bytes)</label>
-					<input id="usim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					<input id="usim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				</div>
 
 				<div id="usim-pin-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">PIN</label>
-					<select id="usim-pin" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					<select id="usim-pin" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 						<option value="01">PIN1 (01)</option>
 						<option value="02">PIN2 (02)</option>
 					</select>
@@ -268,11 +268,11 @@
 					<div class="flex gap-2 mb-2">
 						<div class="flex-1">
 							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P1 (hex)</label>
-							<input id="usim-p1" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+							<input id="usim-p1" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 						</div>
 						<div class="flex-1">
 							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P2 (hex)</label>
-							<input id="usim-p2" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+							<input id="usim-p2" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 						</div>
 					</div>
 					<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
@@ -284,14 +284,14 @@
 		</div>
 
 		<button onclick="genSimUsim('usim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
-		<textarea id="usim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		<textarea id="usim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<button onclick="packToSp('usim-result')" id="usim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 
 	<div id="c-apdu-sub-ber" class="hidden">
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Format</label>
-			<select id="ber-format" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 dark:text-slate-300 font-mono">
+			<select id="ber-format" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 dark:text-slate-300 font-mono">
 				<option value="AA">Definite (AA)</option>
 				<option value="AE">Indefinite (AE)</option>
 			</select>
@@ -309,14 +309,14 @@
 		</div>
 
 		<button onclick="genBerTlv()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate BER-TLV">Generate BER-TLV</button>
-		<textarea id="ber-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 dark:text-slate-300"></textarea>
+		<textarea id="ber-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800 dark:text-slate-300"></textarea>
 		<button onclick="packToSp('ber-result')" id="ber-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 
 	<div id="c-apdu-sub-ram" class="hidden">
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
-			<select id="ram-cmd" onchange="updateRamFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<select id="ram-cmd" onchange="updateRamFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="install-load">INSTALL [for load]</option>
 				<option value="install-install">INSTALL [for install]</option>
 				<option value="install-make-sel">INSTALL [for make selectable]</option>
@@ -334,11 +334,11 @@
 		</div>
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
-			<input id="ram-aid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
+			<input id="ram-aid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
 		</div>
 		<div id="ram-sdaid-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SD AID (hex)</label>
-			<input id="ram-sdaid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="A000000151000000">
+			<input id="ram-sdaid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
 		</div>
 		<div id="ram-priv-row" class="mb-3">
 			<div class="flex items-center gap-3 mb-2">
@@ -377,7 +377,7 @@
 			<div id="ram-toolkit-body" class="">
 				<div class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Toolkit mode">Toolkit mode</label>
-					<select id="ram-tk-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+					<select id="ram-tk-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 						<option value="ca">SIM Toolkit (Tag CA)</option>
 						<option value="80">UICC Toolkit (Tag 80)</option>
 					</select>
@@ -443,19 +443,19 @@
 		</div>
 		<div id="ram-load-data-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Load data (hex)">Load data (hex)</label>
-			<textarea id="ram-load-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
+			<textarea id="ram-load-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
 		</div>
 		<div id="ram-data-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Data (hex)">Data (hex)</label>
-			<textarea id="ram-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
+			<textarea id="ram-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
 		</div>
 		<div id="ram-block-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Block number">Block number</label>
-			<input id="ram-block" type="number" min="0" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<input id="ram-block" type="number" min="0" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 		</div>
 		<div id="ram-enc-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Encryption">Encryption</label>
-			<select id="ram-enc" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<select id="ram-enc" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="00">No encryption, last block</option>
 				<option value="40">No encryption, more blocks</option>
 				<option value="80">With encryption, last block</option>
@@ -464,14 +464,14 @@
 		</div>
 		<div id="ram-del-mode-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="DELETE mode">DELETE mode</label>
-			<select id="ram-del-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<select id="ram-del-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="00">AID only (00)</option>
 				<option value="80">AID and all related objects (80)</option>
 			</select>
 		</div>
 		<div id="ram-gs-mode-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET STATUS mode">GET STATUS mode</label>
-			<select id="ram-gs-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<select id="ram-gs-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="80">ISD (80)</option>
 				<option value="40">Applications and SSD (40)</option>
 				<option value="20">Executable Load Files (20)</option>
@@ -480,7 +480,7 @@
 		</div>
 		<div id="ram-gs-p2-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET STATUS format">GET STATUS format</label>
-			<select id="ram-gs-p2" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<select id="ram-gs-p2" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="02">02 — First/all, GP v2.3 TLV format</option>
 				<option value="03">03 — Next, GP v2.3 TLV format</option>
 				<option value="40">40 — First/all, GP v2.2 TLV format</option>
@@ -490,7 +490,7 @@
 		</div>
 		<div id="ram-tag-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET DATA tag">GET DATA tag</label>
-			<select id="ram-gd-tag-sel" onchange="document.getElementById('ram-tag').value=this.value" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 mb-1.5">
+			<select id="ram-gd-tag-sel" onchange="document.getElementById('ram-tag').value=this.value" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 mb-1.5">
 				<option value="" data-l10n="— select preset —">— select preset —</option>
 				<option value="42">42 — Issuer Identification Number (IIN)</option>
 				<option value="45">45 — Card Image Number (CIN)</option>
@@ -506,24 +506,24 @@
 				<option value="7F21">7F21 — Certificate (SD public key)</option>
 				<option value="5031">5031 — Certificate info (EF.OD)</option>
 			</select>
-			<input id="ram-tag" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="5F50" maxlength="4" value="5F50">
+			<input id="ram-tag" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="5F50" maxlength="4" value="5F50">
 		</div>
 		<div id="ram-ss-mode-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SET STATUS type">SET STATUS type</label>
-			<select id="ram-ss-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<select id="ram-ss-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="80">ISD (80)</option>
 				<option value="40">Application or SSD (40)</option>
 			</select>
 		</div>
 		<div id="ram-ss-state-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="State">State</label>
-			<select id="ram-ss-state" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<select id="ram-ss-state" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="00">Unlock (previous state)</option>
 				<option value="80">Lock (LOCKED)</option>
 			</select>
 		</div>
 		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
-		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<button onclick="packToSp('ram-result')" id="ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 	</div>
@@ -574,7 +574,7 @@
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SPI1 (Security Parameter Indicator)</label>
 			<div class="flex gap-2 items-center">
-				<select id="sp-spi1" onchange="updateSp()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<select id="sp-spi1" onchange="updateSp()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="00">00 — No security</option>
 					<option value="01">01 — RC only</option>
 					<option value="02">02 — CC/MAC only</option>
@@ -592,7 +592,7 @@
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SPI2 (PoR settings)</label>
 			<div class="flex gap-2 items-center">
-				<select id="sp-spi2" onchange="updateSp()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<select id="sp-spi2" onchange="updateSp()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="00" selected>00 — No PoR, no security</option>
 					<option value="01">01 — PoR required, no security</option>
 					<option value="05">05 — PoR required, RC</option>
@@ -602,7 +602,7 @@
 					<option value="02">02 — PoR on error, no security</option>
 					<option value="06">06 — PoR on error, RC</option>
 				</select>
-				<select id="sp-spi2-sm" onchange="updateSp()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<select id="sp-spi2-sm" onchange="updateSp()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="0">DELIVER-REPORT</option>
 					<option value="1">SUBMIT SM</option>
 				</select>
@@ -613,7 +613,7 @@
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KIc (Ciphering Key Identifier)</label>
 			<div class="flex gap-2 items-center">
-				<select id="sp-kic-idx" onchange="updateSpKic()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<select id="sp-kic-idx" onchange="updateSpKic()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="0">Implicit (0)</option>
 					<option value="1" selected>1</option>
 					<option value="2">2</option>
@@ -631,7 +631,7 @@
 					<option value="E">E</option>
 					<option value="F">F</option>
 				</select>
-				<select id="sp-kic-alg" onchange="updateSpKic()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<select id="sp-kic-alg" onchange="updateSpKic()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="01">01 — DES-CBC (8B key)</option>
 					<option value="02">02 — AES-CBC (16/24/32B key)</option>
 					<option value="05" selected>05 — 3DES 2-key outer-CBC (16B key)</option>
@@ -644,7 +644,7 @@
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KID (MAC Key Identifier)</label>
 			<div class="flex gap-2 items-center">
-				<select id="sp-kid-idx" onchange="updateSpKid()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<select id="sp-kid-idx" onchange="updateSpKid()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="0">Implicit (0)</option>
 					<option value="1" selected>1</option>
 					<option value="2">2</option>
@@ -662,7 +662,7 @@
 					<option value="E">E</option>
 					<option value="F">F</option>
 				</select>
-				<select id="sp-kid-alg" onchange="updateSpKid()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<select id="sp-kid-alg" onchange="updateSpKid()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="01">01 — DES-CBC (8B key)</option>
 					<option value="02">02 — AES-CMAC (16/24/32B key)</option>
 					<option value="05" selected>05 — 3DES 2-key outer-CBC (16B key)</option>
@@ -675,11 +675,11 @@
 		<div class="flex gap-2 mb-3">
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">TAR (3 bytes)</label>
-				<input id="sp-tar" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
+				<input id="sp-tar" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
 			</div>
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Card presets">Card presets</label>
-				<select id="sp-card-sel" onchange="cardsApply(this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+				<select id="sp-card-sel" onchange="cardsApply(this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="" data-l10n="— Select card —">— Select card —</option>
 				</select>
 			</div>
@@ -687,7 +687,7 @@
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Counter (5 bytes)</label>
 				<div class="flex gap-1 items-center">
 					<button type="button" onclick="spCntrAdjust(-1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">−</button>
-					<input id="sp-cntr" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
+					<input id="sp-cntr" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
 					<button type="button" onclick="spCntrAdjust(1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">+</button>
 				</div>
 			</div>
@@ -696,17 +696,17 @@
 		<div class="flex gap-2 mb-3">
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KIc Key (hex)</label>
-				<textarea id="sp-kic-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
+				<textarea id="sp-kic-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
 			</div>
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KID Key (hex)</label>
-				<textarea id="sp-kid-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
+				<textarea id="sp-kid-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
 			</div>
 		</div>
 
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Padding byte</label>
-			<select id="sp-padding" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<select id="sp-padding" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="00" selected>00 (TS 102 225 default)</option>
 				<option value="FF">FF</option>
 			</select>
@@ -714,20 +714,20 @@
 
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">APDU (hex)</label>
-			<textarea id="sp-apdu" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800"></textarea>
+			<textarea id="sp-apdu" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
 		</div>
 
 		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate Secure Packet">Generate Secure Packet</button>
 		<button onclick="pysimVerifySp()" id="sp-verify-btn" class="hidden mb-3 px-5 py-2.5 bg-slate-600 text-white text-sm font-medium rounded hover:bg-slate-700" data-l10n="Verify vs pySim">Verify vs pySim</button>
 		<button onclick="pysimSendOta()" id="sp-send-btn" class="hidden mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Send to Card">Send to Card</button>
-		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
 	</div>
 
 	<div id="tab-response" class="tab-content hidden">
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
-			<select id="resp-cmd" onchange="updateRespCmd()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800">
+			<select id="resp-cmd" onchange="updateRespCmd()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="" data-l10n="— Select command —">— Select command —</option>
 				<optgroup label="SIM / USIM">
 					<option value="sim-select">SELECT</option>
@@ -779,39 +779,39 @@
 		<div class="flex gap-3 mb-3">
 			<div class="w-24">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SW</label>
-				<input id="resp-sw" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" maxlength="4" placeholder="9000">
+				<input id="resp-sw" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" maxlength="4" placeholder="9000">
 			</div>
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Context</label>
-				<input id="resp-ctx" readonly class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800" value="generic">
+				<input id="resp-ctx" readonly class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800" value="generic">
 			</div>
 		</div>
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Response data (hex)">Response data (hex)</label>
-			<textarea id="resp-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="E3 1A 4F 08 A0 00 00 00 03 00 00 00 9F 70 01 07 C5 03 80 00 00"></textarea>
+			<textarea id="resp-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="E3 1A 4F 08 A0 00 00 00 03 00 00 00 9F 70 01 07 C5 03 80 00 00"></textarea>
 		</div>
 		<button onclick="decodeResponse()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Decode">Decode</button>
-		<div id="resp-output" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800 whitespace-pre-wrap" style="min-height:100px"></div>
+		<div id="resp-output" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800 whitespace-pre-wrap" style="min-height:100px"></div>
 	</div>
 
 	<div id="tab-cards" class="tab-content hidden">
 		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="Card presets are stored locally in your browser. JSON export/import buttons are below the card list.">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
 		<div class="flex gap-2 mb-3">
-			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
-			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="ICCID (optional)">
+			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
+			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="ICCID (optional)">
 			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
 		</div>
 		<div class="flex gap-2 mb-3 flex-wrap">
-			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
-			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
-			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
-			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
-			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono" placeholder="ISD TAR" maxlength="6">
-			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
+			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
+			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
+			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
+			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
+			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="ISD TAR" maxlength="6">
+			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
 		</div>
 		<div class="flex gap-2 mb-3">
-			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
-			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
+			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
+			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
 		</div>
 		<div id="cards-list" class="overflow-x-auto">
 			<table class="w-full text-sm">
@@ -833,7 +833,7 @@
 			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
 			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
 		</div>
-		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
+		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
 	</div>
 
 	<div id="tab-pysim" class="tab-content hidden">
