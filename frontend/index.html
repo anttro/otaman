@@ -2644,13 +2644,14 @@ let pysimBase = 'http://127.0.0.1:8080';
 async function pysimDetectSameOrigin() {
 	try {
 		const res = await fetch('/api/version', { method: 'GET', cache: 'no-store' });
-		if (res.ok) {
-			pysimBase = '';
-			const urlEl = document.getElementById('pysim-url');
-			if (urlEl) { urlEl.value = ''; urlEl.placeholder = '(same origin)'; }
-		}
+		if (!res.ok) return;
+		const data = await res.json();
+		if (!data || typeof data.version !== 'string') return;
+		pysimBase = '';
+		const urlEl = document.getElementById('pysim-url');
+		if (urlEl) { urlEl.value = ''; urlEl.placeholder = '(same origin)'; }
 	} catch (e) {
-		// no co-located API (file://, plain static server) — keep the default
+		// no co-located API (file://, plain static server, SPA fallback) — keep default
 	}
 }
 pysimDetectSameOrigin();
