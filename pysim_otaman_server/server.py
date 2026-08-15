@@ -36,7 +36,6 @@ _STATIC_MIME = {
     '.woff': 'font/woff',
     '.woff2': 'font/woff2',
 }
-_EMBEDDED_MARKER = "<script>window.PYSIM_EMBEDDED='1'</script>"
 
 
 class StderrApduTracer(ApduTracer):
@@ -801,10 +800,6 @@ class PysimHandler(BaseHTTPRequestHandler):
             return
         with open(fs_path, 'rb') as f:
             data = f.read()
-        if rel == 'index.html':
-            # Tell the frontend it is served by this server (same origin), so
-            # it can default to a relative API base instead of 127.0.0.1:8080.
-            data = data.replace(b'</head>', _EMBEDDED_MARKER.encode() + b'</head>', 1)
         content_type = _STATIC_MIME.get(os.path.splitext(rel)[1].lower(), 'application/octet-stream')
         self.send_response(200)
         self.send_header('Content-Type', content_type)

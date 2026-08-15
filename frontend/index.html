@@ -2635,13 +2635,25 @@ function decodeResponse() {
 }
 
 // ===== pysim integration =====
-// When served by pysim-otaman-server itself (same origin), the API is relative;
-// otherwise default to the local server on 127.0.0.1:8080.
-let pysimBase = window.PYSIM_EMBEDDED ? '' : 'http://127.0.0.1:8080';
-if (window.PYSIM_EMBEDDED) {
-	const urlEl = document.getElementById('pysim-url');
-	if (urlEl) { urlEl.value = ''; urlEl.placeholder = '(same origin)'; }
+// Default to a local server on 127.0.0.1:8080. If this PWA is served by
+// pysim-otaman-server itself (same origin), detect the co-located API once
+// and switch to a relative base; otherwise keep the default and wait for the
+// user to point at a server.
+let pysimBase = 'http://127.0.0.1:8080';
+
+async function pysimDetectSameOrigin() {
+	try {
+		const res = await fetch('/api/version', { method: 'GET', cache: 'no-store' });
+		if (res.ok) {
+			pysimBase = '';
+			const urlEl = document.getElementById('pysim-url');
+			if (urlEl) { urlEl.value = ''; urlEl.placeholder = '(same origin)'; }
+		}
+	} catch (e) {
+		// no co-located API (file://, plain static server) — keep the default
+	}
 }
+pysimDetectSameOrigin();
 
 function esc(str) {
 	return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
