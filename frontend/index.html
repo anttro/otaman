@@ -4403,17 +4403,17 @@ async function pysimPliRender() {
 		PLI_QUALIFIERS.forEach(q => {
 			const val = data[q.code] || '';
 			const hasCodec = !!PLI_CODECS[q.code];
-			html += '<div data-pli-row="' + q.code + '">'
-				+ '<div class="flex items-center gap-1">'
-				+ '<span class="w-6 text-right text-gray-400 text-[10px]">' + q.code + '</span>'
-				+ '<span class="w-32 truncate text-[10px]" title="' + esc(q.name) + '">' + esc(q.name) + '</span>'
+			html += '<div data-pli-row="' + q.code + '" class="py-0.5 border-b border-gray-200 dark:border-slate-700">'
+				+ '<div class="flex items-baseline gap-1.5">'
+				+ '<span class="w-6 shrink-0 text-right text-gray-400 text-[10px]">' + q.code + '</span>'
+				+ '<span class="flex-1 min-w-0 text-[11px] leading-snug">' + esc(q.name) + '</span>'
+				+ '</div>'
+				+ '<div class="flex items-center gap-1 mt-0.5 ml-8">'
 				+ '<input type="text" id="pli-v-' + q.code + '" value="' + esc(val) + '" placeholder="hex"'
-				+ ' class="w-28 border border-gray-300 dark:border-slate-600 text-[10px] rounded px-1 py-0.5 dark:bg-slate-800 font-mono">';
+				+ ' class="flex-1 min-w-0 border border-gray-300 dark:border-slate-600 text-[10px] rounded px-1 py-0.5 dark:bg-slate-800 font-mono">';
 			if (hasCodec) {
 				html += '<span onclick="pysimPliDecodeRow(\'' + q.code + '\')" id="pli-tog-' + q.code + '"'
 					+ ' class="cursor-pointer select-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">▶</span>';
-			} else {
-				html += '<span class="w-4"></span>';
 			}
 			html += '</div><div class="pli-decode-panel hidden mt-1 ml-8 pl-2 border-l border-gray-300 dark:border-slate-600" data-pli-panel="' + q.code + '"></div></div>';
 		});
