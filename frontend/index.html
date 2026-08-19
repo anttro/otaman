@@ -2384,7 +2384,7 @@ function generateScriptIdHint(rowIdx) {
 function genScriptChainingValue(row, tag) {
 	const firstRadio = row.querySelector(`input[name="chaining-"][value="first"]`);
 	const intermediateRadio = row.querySelector(`input[name="chaining-"][value="intermediary"]`);
-	const lastCheckbox = row.querySelector(`input[name="chaining-]-last"]`);
+	const lastCheckbox = row.querySelector(`input[name="chaining-${rowIdx}-last"]`);
 	const scriptIdInput = row.querySelector('.chaining-script-id');
 	const additionalInput = row.querySelector('.chaining-additional');
 	
