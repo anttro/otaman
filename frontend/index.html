@@ -2923,6 +2923,8 @@ async function pysimDetectSameOrigin() {
 		pysimBase = '';
 		const urlEl = document.getElementById('pysim-url');
 		if (urlEl) { urlEl.value = ''; urlEl.placeholder = '(same origin)'; }
+		_pysimAutoConnectAttempted = true;
+		pysimConnect();
 	} catch (e) {
 		// no co-located API (file://, plain static server, SPA fallback) — keep default
 	}
@@ -3010,6 +3012,8 @@ async function pysimRefresh() {
 async function pysimConnect() {
 	const urlInput = document.getElementById('pysim-url');
 	pysimBase = urlInput.value.replace(/\/+$/, '');
+	const wasAuto = _pysimAutoConnectAttempted;
+	_pysimAutoConnectAttempted = false;
 	const btn = document.getElementById('pysim-connect-btn');
 	btn.disabled = true;
 	btn.textContent = t('Connecting...');
@@ -3054,6 +3058,7 @@ async function pysimConnect() {
 		btn.textContent = t('Connected');
 		stkCheckMenu();
 	} catch (e) {
+		if (wasAuto) _pysimAutoConnectAttempted = true;
 		pysimSetConnected(false);
 		const hint = t(pysimIsLikelyBlocked() ? 'pysim-blocked-hint' : 'pysim-unreachable-hint')
 			.replace('{url}', esc(pysimBase));
@@ -3503,6 +3508,7 @@ async function cardsImport() {
 // ===== pysim sub-tabs =====
 let pysimCmdHistory = [];
 let pysimCmdHistIdx = -1;
+let _pysimAutoConnectAttempted = false;
 
 function pysimSwitchSubtab(name) {
 	document.querySelectorAll('.pysim-subtab').forEach(btn => {
