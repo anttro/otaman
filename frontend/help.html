@@ -102,11 +102,39 @@
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">C-APDU</td><td class="py-1 px-2 font-mono">22</td><td class="py-1 px-2">Raw APDU hex</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Immediate Action</td><td class="py-1 px-2 font-mono">81</td><td class="py-1 px-2">Proactive command or action indicator</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Proactive command on error</td></tr>
-			<tr><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Chaining data for multi-packet scripts</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Conditional error recovery with proactive command fallback</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Multi-packet script execution with First/Intermediary/Last flags</td></tr>
+			<tr><td class="py-1 px-2">Response Type</td><td class="py-1 px-2 font-mono">-</td><td class="py-1 px-2">Expanded/Compact/None response parsing indicator</td></tr>
 		</tbody>
 	</table>
 	<p class="text-sm mb-3">The Immediate Action builder offers an action indicator (<code class="font-mono text-sm">81</code>/<code class="font-mono text-sm">82</code>), a structured proactive command builder (REFRESH, DISPLAY TEXT, PLAY TONE with auto-generated COMPREHENSION-TLV objects), or a freeform hex input.</p>
+
+	<h4 id="ber-error-action" class="font-medium mb-2 text-base">Error Action TLV (Tag 82)</h4>
+	<p class="text-sm mb-2">Conditional error recovery for graceful rollback:</p>
+	<ul class="text-sm list-disc pl-5 mb-2">
+		<li><strong>Action Type:</strong> Immediate (00), delayed (01), or conditional (02) execution</li>
+		<li><strong>Trigger Conditions:</strong> SW pattern matching (any error, specific SW, SW range, specific command fails)</li>
+		<li><strong>Recovery Action:</strong> Proactive command (DISPLAY TEXT, PLAY TONE, REFRESH) to notify user or fallback</li>
+		<li><strong>Retry Count:</strong> Number of retry attempts before giving up (0=no retry)</li>
+	</ul>
+
+	<h4 id="ber-script-chaining" class="font-medium mb-2 text-base">Script Chaining TLV (Tag 83)</h4>
+	<p class="text-sm mb-2">Multi-packet script execution with context preservation:</p>
+	<ul class="text-sm list-disc pl-5 mb-2">
+		<li><strong>Chaining Flags:</strong> First/Intermediary/Last Script position (bit 0/1/2)</li>
+		<li><strong>Script ID:</strong> Correlation identifier across packets (1-4 bytes hex, auto-increment hints provided)</li>
+		<li><strong>Additional Data:</strong> Extended chaining information (optional hex)</li>
+		<li><strong>Context Preservation:</strong> UICC keeps security/transaction state open across chained scripts</li>
+	</ul>
+
+	<h4 id="expanded-response" class="font-medium mb-2 text-base">Expanded Remote Response (TS 102 226 §5.2.2)</h4>
+	<p class="text-sm mb-2">Per-command results with error details and chaining context:</p>
+	<ul class="text-sm list-disc pl-5">
+		<li>Command number, status word, response data for each command</li>
+		<li>Error code and error info for failed commands (highlighted in red)</li>
+		<li>Script ID and position for chained script correlation (ID, FIRST, LAST)</li>
+		<li>Response type indicator: 'expanded' vs 'compact' vs 'none'</li>
+	</ul>
 
 	<h3 id="ram-gp" class="text-lg font-medium mb-2">2.4 RAM/GP</h3>
 	<p class="mb-2">CLA = <code class="font-mono text-sm">80</code> (GlobalPlatform Card Specification v2.3.1). Remote Application Management commands for card content management.</p>

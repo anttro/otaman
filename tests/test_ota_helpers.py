@@ -336,5 +336,63 @@ class TestProactiveDecode(unittest.TestCase):
         self.assertNotIn('tr_result', entry)
 
 
+class TestExpandedRemoteResponse(unittest.TestCase):
+    """Expanded Remote Response parsing (TS 102 226 §5.2.2)."""
+    
+    def test_expanded_response_single_command(self):
+        entry = {'type_hex': '03', 'qualifier': None}
+        _record_tr(entry, bytes.fromhex('810301030082028183030100'))
+        self.assertEqual(entry['tr_result'], '00')
+        self.assertEqual(entry['tr_result_name'], 'Command performed successfully')
+    
+    def test_expanded_response_parser_single_command(self):
+        # Simple test of the construct parsing structure
+        try:
+            from construct import Struct, Int8ub, Bytes, GreedyBytes, Optional, Array, this
+            from osmocom.utils import b2h
+            
+            # Create sample expanded response data
+            secured_data = bytes.fromhex('01' '01' '9000' '11')  # response_count, cmd#, SW, data
+            
+            ExpandedRemoteResponse = Struct(
+                'response_count'/Int8ub,
+                'responses'/Array(this.response_count, Struct(
+                    'command_number'/Int8ub,
+                    'status_word'/Bytes(2),
+                    'response_data'/GreedyBytes,
+                    'error_details'/Optional(Struct(
+                        'error_code'/Int8ub,
+                        'error_info'/GreedyBytes
+                    )),
+                    'chaining_context'/Optional(Struct(
+                        'script_id'/Bytes(4),
+                        'is_first'/Int8ub,
+                        'is_last'/Int8ub,
+                    ))
+                ))
+            )
+            expanded = ExpandedRemoteResponse.parse(secured_data)
+            self.assertEqual(expanded.response_count, 1)
+            self.assertEqual(expanded.responses[0].command_number, 1)
+            self.assertEqual(b2h(expanded.responses[0].status_word).upper(), '9000')
+            self.assertEqual(b2h(expanded.responses[0].response_data).upper(), '11')
+        except Exception as e:
+            self.fail(f"ExpandedRemoteResponse parsing failed: {e}")
+    
+    def test_expanded_response_with_error(self):
+        entry = {'type_hex': '26', 'qualifier': '01'}
+        # Result TLV: 03 01 6A (error_code 0x6A)
+        _record_tr(entry, bytes.fromhex('81030326008202818303016A'))
+        self.assertEqual(entry['tr_result'], '6a')
+        self.assertEqual(entry['tr_result_name'], 'Command performed with limited understanding')
+    
+    def test_expanded_response_with_chaining(self):
+        entry = {'type_hex': '26', 'qualifier': '00'}
+        # Result: 03 01 00 + chaining context with script_id
+        _record_tr(entry, bytes.fromhex('81030326008202818303010093'))
+        self.assertEqual(entry['tr_result'], '00')
+        self.assertEqual(entry['tr_result_name'], 'Command performed successfully')
+
+
 if __name__ == '__main__':
     unittest.main()

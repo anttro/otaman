@@ -2045,8 +2045,10 @@ function onBerTypeChange(sel) {
 	const row = sel.closest('.ber-row');
 	const body = row.querySelector('.ber-body');
 	const type = sel.value;
-	if (type === 'c-apdu' || type === 'chaining') {
+	if (type === 'c-apdu') {
 		body.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
+	} else if (type === 'chaining') {
+		body.innerHTML = buildScriptChainingRow(row.dataset.berIdx);
 	} else {
 		body.innerHTML = `<div class="flex gap-1 mb-1 flex-wrap">
 			<select class="ber-subtype text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onBerSubTypeChange(this)">
@@ -2061,14 +2063,88 @@ function onBerTypeChange(sel) {
 	updateBerRow(sel);
 }
 
+function buildErrorActionRow(rowIdx) {
+	return `
+	<div class="space-y-2">
+		<div class="flex gap-2 items-center">
+			<span class="text-xs text-gray-600 dark:text-slate-400">Action Type:</span>
+			<select class="error-action-type text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-700 dark:text-slate-300">
+				<option value="00">Immediate execution</option>
+				<option value="01">Delayed execution</option>
+				<option value="02">Conditional execution</option>
+			</select>
+		</div>
+
+		<div class="border border-gray-300 dark:border-slate-600 rounded p-2">
+			<div class="text-xs mb-2 font-medium text-gray-700 dark:text-slate-300">Trigger Conditions:</div>
+			
+			<div class="flex gap-2 mb-2 items-center">
+				<span class="text-xs text-gray-600 dark:text-slate-400">When:</span>
+				<select class="error-trigger-type text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-700 dark:text-slate-300">
+					<option value="any-sw">Any error</option>
+					<option value="specific-sw">Specific SW</option>
+					<option value="sw-range">SW range</option>
+					<option value="cmd-number">Specific command fails</option>
+				</select>
+			</div>
+
+			<div class="flex gap-2 items-center">
+				<span class="text-xs text-gray-600 dark:text-slate-400">SW Pattern:</span>
+				<input class="error-sw-mask font-mono text-xs w-16 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="XXXX" maxlength="4">
+				<span class="text-xs text-gray-500">=</span>
+				<input class="error-sw-value font-mono text-xs w-16 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="6A82" maxlength="4">
+				<span class="text-xs text-gray-400">(hex)</span>
+			</div>
+
+			<div class="flex gap-2 items-center mt-2">
+				<span class="text-xs text-gray-600 dark:text-slate-400">Command #:</span>
+				<input class="error-cmd-num text-xs w-10 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" type="number" min="1" max="255" placeholder="1">
+				<span class="text-xs text-gray-400">(optional)</span>
+			</div>
+
+			<div class="mt-2 text-xs text-gray-500 dark:text-slate-400">
+				Mask: <code class="error-sw-mask-display font-mono">FFFF</code>
+			</div>
+		</div>
+
+		<div class="border border-gray-300 dark:border-slate-600 rounded p-2">
+			<div class="text-xs mb-2 font-medium text-gray-700 dark:text-slate-300">Recovery Action:</div>
+			<div class="error-recovery-builder"></div>
+		</div>
+
+		<div class="flex gap-2 items-center">
+			<span class="text-xs text-gray-600 dark:text-slate-400">Retry Count:</span>
+			<input class="error-retry-count text-xs w-10 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" type="number" min="0" max="255" value="0">
+			<span class="text-xs text-gray-400">(0=no retry)</span>
+		</div>
+	</div>`;
+}
+
 function onBerSubTypeChange(sel) {
 	const body = sel.closest('.ber-sub-body') || sel.parentElement.querySelector('.ber-sub-body');
 	const st = sel.value;
+	
 	if (st === 'action') {
-		body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
-			<option value="81">81 (Session indication)</option>
-			<option value="82">82 (Early response)</option>
-		</select>`;
+		const row = sel.closest('.ber-row');
+		const type = row.querySelector('.ber-type').value;
+		
+		if (type === 'error') {
+			body.innerHTML = buildErrorActionRow(row.dataset.berIdx);
+			const recoveryBuilder = body.querySelector('.error-recovery-builder');
+			const recoveryHtml = berRowHtml(0, 'immediate');
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = recoveryHtml;
+			const recoveryBody = tempDiv.querySelector('.ber-body');
+			const recoverySubBody = recoveryBody.querySelector('.ber-sub-body');
+			const recoverySubtype = recoverySubBody.querySelector('.ber-subtype');
+			recoverySubtype.value = 'proactive';
+			onBerSubTypeChange(recoverySubtype);
+		} else {
+			body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
+				<option value="81">81 (Session indication)</option>
+				<option value="82">82 (Early response)</option>
+			</select>`;
+		}
 	} else if (st === 'custom') {
 		body.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
 	} else {
@@ -2157,7 +2233,13 @@ function updateBerRow(el) {
 function genBerRowValue(row) {
 	const type = row.querySelector('.ber-type').value;
 	const tag = BER_TAGS[type];
-	if (type === 'c-apdu' || type === 'chaining') {
+	if (type === 'error') {
+		return genErrorActionValue(row, tag);
+	}
+	if (type === 'chaining') {
+		return genScriptChainingValue(row, tag);
+	}
+	if (type === 'c-apdu') {
 		const hex = (row.querySelector('.ber-hex').value||'').replace(/[^0-9a-fA-F]/g,'');
 		if (!hex) return '';
 		return tag + berLenStr(hex.length/2) + hex;
@@ -2173,6 +2255,158 @@ function genBerRowValue(row) {
 		return tag + berLenStr(hex.length/2) + hex;
 	}
 	return genBerPcValue(row, tag);
+}
+
+function genErrorActionValue(row, tag) {
+	const actionType = row.querySelector('.error-action-type');
+	const triggerType = row.querySelector('.error-trigger-type');
+	const maskInput = row.querySelector('.error-sw-mask');
+	const valueInput = row.querySelector('.error-sw-value');
+	const cmdNumInput = row.querySelector('.error-cmd-num');
+	const recoveryBuilder = row.querySelector('.error-recovery-builder');
+	const retryCount = row.querySelector('.error-retry-count');
+	
+	if (!actionType) return '';
+	
+	let value = actionType.value;
+	
+	const cmdNum = cmdNumInput.value ? parseInt(cmdNumInput.value) : 0xFF;
+	if (triggerType.value === 'cmd-number') {
+		value += cmdNum.toString(16).padStart(2, '0').toUpperCase();
+	} else {
+		value += 'FF';
+	}
+	
+	let swMask = '0000';
+	let swValue = '0000';
+	
+	switch (triggerType.value) {
+		case 'any-sw':
+			swMask = '0000';
+			swValue = '0000';
+			break;
+		case 'specific-sw':
+			swMask = 'FFFF';
+			swValue = (valueInput.value || '').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0');
+			break;
+		case 'sw-range':
+			swMask = (maskInput.value || '').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0') || '6A00';
+			swValue = (valueInput.value || '').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0') || '6A82';
+			break;
+		case 'cmd-number':
+			swMask = '0000';
+			swValue = '0000';
+			break;
+	}
+	
+	value += swMask + swValue;
+	
+	if (recoveryBuilder) {
+		const recoveryValue = genBerPcValue(recoveryBuilder.querySelector('.ber-pc'), '81');
+		if (recoveryValue) {
+			value += recoveryValue.slice(2);
+		}
+	}
+	
+	const retry = parseInt(retryCount.value);
+	if (!isNaN(retry) && retry > 0) {
+		value += retry.toString(16).padStart(2, '0').toUpperCase();
+	}
+	
+	return tag + berLenStr(value.length/2) + value;
+}
+
+function buildScriptChainingRow(rowIdx, hint = '') {
+	return `
+	<div class="space-y-2">
+		<div class="flex gap-4 items-center">
+			<span class="text-xs font-medium text-gray-700 dark:text-slate-300">Position:</span>
+			<label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400">
+				<input type="radio" name="chaining-${rowIdx}" value="first" ${hint === 'first' ? 'checked' : ''} onchange="updateChainingFlags(${rowIdx})">
+				First Script
+			</label>
+			<label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400">
+				<input type="radio" name="chaining-${rowIdx}" value="intermediary" ${hint === 'intermediary' ? 'checked' : ''} onchange="updateChainingFlags(${rowIdx})">
+				Intermediary Script
+			</label>
+			<label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400">
+				<input type="checkbox" name="chaining-${rowIdx}-last" value="last" ${hint === 'last' ? 'checked' : ''} onchange="updateChainingFlags(${rowIdx})">
+				Also Last Script
+			</label>
+		</div>
+
+		<div class="flex gap-2 items-center">
+			<span class="text-xs text-gray-600 dark:text-slate-400">Script ID:</span>
+			<input class="chaining-script-id font-mono text-xs w-20 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-700 dark:text-slate-300" 
+			       placeholder="${hint || ''}" 
+			       maxlength="8"
+			       oninput="updateBerRow(this)">
+			<span class="text-xs text-gray-400">(hex, 1-4 bytes)</span>
+			<button type="button" class="text-xs text-blue-600 hover:underline" 
+			        onclick="generateScriptIdHint(${rowIdx})">Hint</button>
+		</div>
+
+		<div class="flex gap-2 items-center">
+			<span class="text-xs text-gray-600 dark:text-slate-400">Additional Data:</span>
+			<input class="chaining-additional font-mono text-xs flex-1 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-700 dark:text-slate-300" 
+			       placeholder="hex (optional)"
+			       oninput="updateBerRow(this)">
+		</div>
+	</div>`;
+}
+
+function updateChainingFlags(rowIdx) {
+	const first = document.querySelector(`input[name="chaining-${rowIdx}"][value="first"]`);
+	const intermediate = document.querySelector(`input[name="chaining-${rowIdx}"][value="intermediary"]`);
+	if (first && intermediate) {
+		if (first.checked) intermediate.checked = false;
+		if (intermediate.checked) first.checked = false;
+	}
+	updateBerRow(document.querySelector(`[data-ber-idx="${rowIdx}"] .ber-type`));
+}
+
+function generateScriptIdHint(rowIdx) {
+	const row = document.querySelector(`[data-ber-idx="${rowIdx}"]`);
+	if (!row) return;
+	const scriptIdInput = row.querySelector('.chaining-script-id');
+	if (!scriptIdInput) return;
+	
+	const allIds = Array.from(document.querySelectorAll('.chaining-script-id'))
+		.map(input => input.value || input.placeholder)
+		.filter(id => id && id !== '');
+	
+	const lastId = allIds.length ? allIds[allIds.length - 1] : '00000000';
+	const num = parseInt(lastId, 16) + 1;
+	const nextId = num.toString(16).padStart(8, '0').toUpperCase();
+	scriptIdInput.placeholder = nextId;
+}
+
+function genScriptChainingValue(row, tag) {
+	const firstRadio = row.querySelector(`input[name="chaining-"][value="first"]`);
+	const intermediateRadio = row.querySelector(`input[name="chaining-"][value="intermediary"]`);
+	const lastCheckbox = row.querySelector(`input[name="chaining-]-last"]`);
+	const scriptIdInput = row.querySelector('.chaining-script-id');
+	const additionalInput = row.querySelector('.chaining-additional');
+	
+	let flags = 0;
+	if (firstRadio && firstRadio.checked) flags |= 0x01;
+	if (intermediateRadio && intermediateRadio.checked) flags |= 0x02;
+	if (lastCheckbox && lastCheckbox.checked) flags |= 0x04;
+	
+	let value = flags.toString(16).padStart(2, '0').toUpperCase();
+	
+	const scriptId = (scriptIdInput.value || '').replace(/[^0-9a-fA-F]/g, '');
+	if (scriptId) {
+		value += scriptId;
+	}
+	
+	const additional = (additionalInput.value || '').replace(/[^0-9a-fA-F]/g, '');
+	if (additional) {
+		value += additional;
+	}
+	
+	if (!value || value === '00') return '';
+	return tag + berLenStr(value.length/2) + value;
 }
 
 function genBerPcValue(row, tag) {
@@ -2228,6 +2462,44 @@ function berLenStr(n) {
 	if (n < 128) return n.toString(16).padStart(2,'0').toUpperCase();
 	return '81' + n.toString(16).padStart(2,'0').toUpperCase();
 }
+
+function updateSwMaskDisplay(row) {
+	const triggerType = row.querySelector('.error-trigger-type');
+	if (!triggerType) return;
+	const maskInput = row.querySelector('.error-sw-mask');
+	const valueInput = row.querySelector('.error-sw-value');
+	const display = row.querySelector('.error-sw-mask-display');
+	
+	let mask = '0000';
+	
+	switch (triggerType.value) {
+		case 'any-sw':
+			mask = '0000';
+			break;
+		case 'specific-sw':
+			mask = 'FFFF';
+			break;
+		case 'sw-range':
+			mask = maskInput.value || '6A00';
+			break;
+		case 'cmd-number':
+			mask = '0000';
+			break;
+	}
+	
+	display.textContent = mask.toUpperCase();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+	document.addEventListener('change', (e) => {
+		if (e.target.classList.contains('error-trigger-type') || 
+		    e.target.classList.contains('error-sw-mask')) {
+			const row = e.target.closest('.ber-row');
+			if (row) updateSwMaskDisplay(row);
+			updateBerRow(e.target);
+		}
+	});
+});
 
 function genBerTlv() {
 	const fmt = document.getElementById('ber-format').value;

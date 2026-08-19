@@ -316,7 +316,7 @@ def _ota_reference(spi1, spi2, kic, kid, tar_hex, cntr_hex, apdu_hex, kic_key_he
 
 
 def _decode_por(spi1, spi2, kic, kid, cntr_hex, kic_key_hex, kid_key_hex, response_hex):
-    from pySim.ota import OtaDialectSms
+    from pySim.ota import OtaDialectSms, CompactRemoteResp
     from osmocom.utils import h2b, b2h
     if not response_hex:
         return None
@@ -336,12 +336,67 @@ def _decode_por(spi1, spi2, kic, kid, cntr_hex, kic_key_hex, kid_key_hex, respon
         'tar': res['tar'].hex().upper(),
         'pcntr': res['pcntr'],
     }
-    if dec is not None:
+    
+    # Try ExpandedRemoteResponse first (TS 102 226 §5.2.2)
+    if res.response_status == 'por_ok' and len(res['secured_data']):
+        try:
+            from construct import Struct, Int8ub, Bytes, GreedyBytes, Optional, Array, this
+            ExpandedRemoteResponse = Struct(
+                'response_count'/Int8ub,
+                'responses'/Array(this.response_count, Struct(
+                    'command_number'/Int8ub,
+                    'status_word'/Bytes(2),
+                    'response_data'/GreedyBytes,
+                    'error_details'/Optional(Struct(
+                        'error_code'/Int8ub,
+                        'error_info'/GreedyBytes
+                    )),
+                    'chaining_context'/Optional(Struct(
+                        'script_id'/Bytes(4),
+                        'is_first'/Int8ub,
+                        'is_last'/Int8ub,
+                    ))
+                ))
+            )
+            expanded = ExpandedRemoteResponse.parse(res['secured_data'])
+            out['response_type'] = 'expanded'
+            out['response_count'] = expanded.response_count
+            out['responses'] = []
+            for resp in expanded.responses:
+                response_data = {
+                    'command_number': resp.command_number,
+                    'status_word': resp.status_word.hex().upper(),
+                    'response_data': b2h(resp.response_data).upper() if resp.response_data else '',
+                }
+                if resp.error_details:
+                    response_data['error_code'] = resp.error_details.error_code
+                    response_data['error_info'] = b2h(resp.error_details.error_info).upper()
+                if resp.chaining_context:
+                    response_data['script_id'] = resp.chaining_context.script_id.hex().upper()
+                    response_data['is_first'] = resp.chaining_context.is_first == 0x01
+                    response_data['is_last'] = resp.chaining_context.is_last == 0x01
+                out['responses'].append(response_data)
+        except Exception:
+            # Fallback to CompactRemoteResp
+            if dec is not None:
+                out['response_type'] = 'compact'
+                out['decoded'] = {
+                    'number_of_commands': dec.number_of_commands,
+                    'last_status_word': str(dec.last_status_word),
+                    'last_response_data': str(dec.last_response_data),
+                }
+            else:
+                out['response_type'] = 'none'
+    elif dec is not None:
+        out['response_type'] = 'compact'
         out['decoded'] = {
-            'number_of_commands': dec['number_of_commands'],
-            'last_status_word': str(dec['last_status_word']),
-            'last_response_data': str(dec['last_response_data']),
+            'number_of_commands': dec.number_of_commands,
+            'last_status_word': str(dec.last_status_word),
+            'last_response_data': str(dec.last_response_data),
         }
+    else:
+        out['response_type'] = 'none'
+    
     return out
 
 

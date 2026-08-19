@@ -102,11 +102,39 @@
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">C-APDU</td><td class="py-1 px-2 font-mono">22</td><td class="py-1 px-2">APDU</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Immediate Action</td><td class="py-1 px-2 font-mono">81</td><td class="py-1 px-2">Проактивная команда или action indicator</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Проактивная команда при ошибке</td></tr>
-			<tr><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Данные для многопакетных скриптов</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Условное восстановление при ошибках с проактивной командой</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Многопакетное выполнение скрипта с флагами First/Intermediary/Last</td></tr>
+			<tr><td class="py-1 px-2">Response Type</td><td class="py-1 px-2 font-mono">-</td><td class="py-1 px-2">Индикатор типа ответа: expanded/compact/none</td></tr>
 		</tbody>
 	</table>
 	<p class="text-sm mb-3">Сборщик Immediate Action предлагает action indicator (<code class="font-mono text-sm">81</code>/<code class="font-mono text-sm">82</code>), структурированный сборщик проактивных команд (REFRESH, DISPLAY TEXT, PLAY TONE с авто-генерацией COMPREHENSION-TLV), или ручной hex-ввод.</p>
+
+	<h4 id="ber-error-action" class="font-medium mb-2 text-base">Error Action TLV (Tag 82)</h4>
+	<p class="text-sm mb-2">Условное восстановление при ошибках для graceful rollback:</p>
+	<ul class="text-sm list-disc pl-5 mb-2">
+		<li><strong>Тип действия:</strong> Немедленное (00), отложенное (01) или условное (02) выполнение</li>
+		<li><strong>Условия запуска:</strong> Сопоставление SW (любая ошибка, конкретный SW, диапазон SW, конкретная команда)</li>
+		<li><strong>Действие восстановления:</strong> Проактивная команда (DISPLAY TEXT, PLAY TONE, REFRESH) для уведомления или отката</li>
+		<li><strong>Количество попыток:</strong> Число повторных попыток до отказа (0=без повтора)</li>
+	</ul>
+
+	<h4 id="ber-script-chaining" class="font-medium mb-2 text-base">Script Chaining TLV (Tag 83)</h4>
+	<p class="text-sm mb-2">Многопакетное выполнение скрипта с сохранением контекста:</p>
+	<ul class="text-sm list-disc pl-5 mb-2">
+		<li><strong>Флаги цепочки:</strong> Позиция First/Intermediary/Last Script (бит 0/1/2)</li>
+		<li><strong>Идентификатор скрипта:</strong> Корреляционный идентификатор между пакетами (1-4 байта hex, авто-инкремент подсказки)</li>
+		<li><strong>Дополнительные данные:</strong> Расширенная информация цепочки (опционально hex)</li>
+		<li><strong>Сохранение контекста:</strong> UICC сохраняет состояние безопасности/транзакции между пакетами</li>
+	</ul>
+
+	<h4 id="expanded-response" class="font-medium mb-2 text-base">Expanded Remote Response (TS 102 226 §5.2.2)</h4>
+	<p class="text-sm mb-2">Результаты по каждой команде с деталями ошибок и контекстом цепочки:</p>
+	<ul class="text-sm list-disc pl-5">
+		<li>Номер команды, статус слова, данные ответа для каждой команды</li>
+		<li>Код ошибки и информация о ней для неудачных команд (подсвечено красным)</li>
+		<li>Идентификатор скрипта и позиция для корреляции цепочки (ID, FIRST, LAST)</li>
+		<li>Индикатор типа ответа: 'expanded' vs 'compact' vs 'none'</li>
+	</ul>
 
 	<h3 id="ram-gp" class="text-lg font-medium mb-2">2.4 RAM/GP</h3>
 	<p class="mb-2">CLA = <code class="font-mono text-sm">80</code> (GlobalPlatform Card Specification v2.3.1). Команды удалённого управления приложениями.</p>
