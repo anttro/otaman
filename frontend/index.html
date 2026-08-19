@@ -2120,6 +2120,30 @@ function buildErrorActionRow(rowIdx) {
 	</div>`;
 }
 
+function buildBerPcHtml() {
+	return `<div class="ber-pc">
+		<div class="flex gap-1 mb-1 flex-wrap">
+			<select class="ber-pc-type text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onBerPcTypeChange(this)">
+				<option value="refresh">REFRESH</option>
+				<option value="display">DISPLAY TEXT</option>
+				<option value="tone">PLAY TONE</option>
+				<option value="custom">Custom</option>
+			</select>
+			<span class="text-xs pt-1">#</span>
+			<input class="ber-pc-num text-xs w-10 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" type="number" min="1" max="255" value="1" onchange="updateBerRow(this)">
+			<span class="text-xs pt-1">Qual:</span>
+			<select class="ber-pc-qual text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
+		</div>
+		<div class="flex gap-1 mb-1 flex-wrap items-center">
+			<span class="text-xs">IDs:</span>
+			<select class="ber-pc-src text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
+			<span class="text-xs">→</span>
+			<select class="ber-pc-dst text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
+		</div>
+		<div class="ber-pc-fields text-xs"></div>
+	</div>`;
+}
+
 function onBerSubTypeChange(sel) {
 	const body = sel.closest('.ber-sub-body') || sel.parentElement.querySelector('.ber-sub-body');
 	const st = sel.value;
@@ -2131,12 +2155,10 @@ function onBerSubTypeChange(sel) {
 		if (type === 'error') {
 			body.innerHTML = buildErrorActionRow(row.dataset.berIdx);
 			const recoveryBuilder = body.querySelector('.error-recovery-builder');
-			recoveryBuilder.innerHTML = berRowHtml(0, 'immediate');
-			const recoverySubtype = recoveryBuilder.querySelector('.ber-subtype');
-			if (recoverySubtype) {
-				recoverySubtype.value = 'proactive';
-				onBerSubTypeChange(recoverySubtype);
-			}
+			recoveryBuilder.innerHTML = buildBerPcHtml();
+			const pc = recoveryBuilder.querySelector('.ber-pc');
+			berPopulateDevices(pc);
+			onBerPcTypeChange(pc.querySelector('.ber-pc-type'));
 		} else {
 			body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
 				<option value="81">81 (Session indication)</option>
@@ -2146,27 +2168,7 @@ function onBerSubTypeChange(sel) {
 	} else if (st === 'custom') {
 		body.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
 	} else {
-		body.innerHTML = `<div class="ber-pc">
-			<div class="flex gap-1 mb-1 flex-wrap">
-				<select class="ber-pc-type text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onBerPcTypeChange(this)">
-					<option value="refresh">REFRESH</option>
-					<option value="display">DISPLAY TEXT</option>
-					<option value="tone">PLAY TONE</option>
-					<option value="custom">Custom</option>
-				</select>
-				<span class="text-xs pt-1">#</span>
-				<input class="ber-pc-num text-xs w-10 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" type="number" min="1" max="255" value="1" onchange="updateBerRow(this)">
-				<span class="text-xs pt-1">Qual:</span>
-				<select class="ber-pc-qual text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
-			</div>
-			<div class="flex gap-1 mb-1 flex-wrap items-center">
-				<span class="text-xs">IDs:</span>
-				<select class="ber-pc-src text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
-				<span class="text-xs">→</span>
-				<select class="ber-pc-dst text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)"></select>
-			</div>
-			<div class="ber-pc-fields text-xs"></div>
-		</div>`;
+		body.innerHTML = buildBerPcHtml();
 		const pc = body.querySelector('.ber-pc');
 		berPopulateDevices(pc);
 		onBerPcTypeChange(pc.querySelector('.ber-pc-type'));
@@ -2300,7 +2302,7 @@ function genErrorActionValue(row, tag) {
 	value += swMask + swValue;
 	
 	if (recoveryBuilder) {
-		const recoveryValue = genBerPcValue(recoveryBuilder.querySelector('.ber-pc'), '81');
+		const recoveryValue = genBerPcValue(recoveryBuilder, '81');
 		if (recoveryValue) {
 			value += recoveryValue.slice(2);
 		}
