@@ -102,7 +102,7 @@
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">C-APDU</td><td class="py-1 px-2 font-mono">22</td><td class="py-1 px-2">Raw APDU hex</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Immediate Action</td><td class="py-1 px-2 font-mono">81</td><td class="py-1 px-2">Proactive command or action indicator</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Conditional error recovery with proactive command fallback</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Conditional error recovery with action indicator or proactive command</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Multi-packet script execution with First/Intermediary/Last flags</td></tr>
 			<tr><td class="py-1 px-2">Response Type</td><td class="py-1 px-2 font-mono">-</td><td class="py-1 px-2">Expanded/Compact/None response parsing indicator</td></tr>
 		</tbody>
@@ -114,7 +114,7 @@
 	<ul class="text-sm list-disc pl-5 mb-2">
 		<li><strong>Action Type:</strong> Immediate (00), delayed (01), or conditional (02) execution</li>
 		<li><strong>Trigger Conditions:</strong> SW pattern matching (any error, specific SW, SW range, specific command fails)</li>
-		<li><strong>Recovery Action:</strong> Proactive command (DISPLAY TEXT, PLAY TONE, REFRESH) to notify user or fallback</li>
+		<li><strong>Recovery Action:</strong> Action Indicator (81 session indication / 82 early response) or Proactive Command (DISPLAY TEXT, PLAY TONE, REFRESH) to notify user or fallback</li>
 		<li><strong>Retry Count:</strong> Number of retry attempts before giving up (0=no retry)</li>
 	</ul>
 

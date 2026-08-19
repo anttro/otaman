@@ -2109,7 +2109,12 @@ function buildErrorActionRow(rowIdx) {
 
 		<div class="border border-gray-300 dark:border-slate-600 rounded p-2">
 			<div class="text-xs mb-2 font-medium text-gray-700 dark:text-slate-300">Recovery Action:</div>
-			<div class="error-recovery-builder"></div>
+			<select class="error-recovery-type text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onRecoveryTypeChange(this)">
+				<option value="none">None</option>
+				<option value="action">Action Indicator</option>
+				<option value="proactive" selected>Proactive Command</option>
+			</select>
+			<div class="error-recovery-body mt-1"></div>
 		</div>
 
 		<div class="flex gap-2 items-center">
@@ -2144,6 +2149,25 @@ function buildBerPcHtml() {
 	</div>`;
 }
 
+function onRecoveryTypeChange(sel) {
+	const body = sel.nextElementSibling;
+	if (sel.value === 'action') {
+		body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
+			<option value="81">81 (Session indication)</option>
+			<option value="82">82 (Early response)</option>
+		</select>`;
+	} else if (sel.value === 'proactive') {
+		body.innerHTML = buildBerPcHtml();
+		const pc = body.querySelector('.ber-pc');
+		berPopulateDevices(pc);
+		onBerPcTypeChange(pc.querySelector('.ber-pc-type'));
+	} else {
+		body.innerHTML = '';
+	}
+	const row = sel.closest('.ber-row');
+	if (row) updateBerRow(sel);
+}
+
 function onBerSubTypeChange(sel) {
 	const body = sel.closest('.ber-sub-body') || sel.parentElement.querySelector('.ber-sub-body');
 	const st = sel.value;
@@ -2154,11 +2178,8 @@ function onBerSubTypeChange(sel) {
 		
 		if (type === 'error') {
 			body.innerHTML = buildErrorActionRow(row.dataset.berIdx);
-			const recoveryBuilder = body.querySelector('.error-recovery-builder');
-			recoveryBuilder.innerHTML = buildBerPcHtml();
-			const pc = recoveryBuilder.querySelector('.ber-pc');
-			berPopulateDevices(pc);
-			onBerPcTypeChange(pc.querySelector('.ber-pc-type'));
+			const recoveryType = body.querySelector('.error-recovery-type');
+			onRecoveryTypeChange(recoveryType);
 		} else {
 			body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
 				<option value="81">81 (Session indication)</option>
@@ -2263,7 +2284,7 @@ function genErrorActionValue(row, tag) {
 	const maskInput = row.querySelector('.error-sw-mask');
 	const valueInput = row.querySelector('.error-sw-value');
 	const cmdNumInput = row.querySelector('.error-cmd-num');
-	const recoveryBuilder = row.querySelector('.error-recovery-builder');
+	const recoveryType = row.querySelector('.error-recovery-type');
 	const retryCount = row.querySelector('.error-retry-count');
 	
 	if (!actionType) return '';
@@ -2301,10 +2322,14 @@ function genErrorActionValue(row, tag) {
 	
 	value += swMask + swValue;
 	
-	if (recoveryBuilder) {
-		const recoveryValue = genBerPcValue(recoveryBuilder, '81');
-		if (recoveryValue) {
-			value += recoveryValue.slice(2);
+	if (recoveryType) {
+		const rt = recoveryType.value;
+		if (rt === 'proactive') {
+			const rv = genBerPcValue(recoveryType.parentElement, '81');
+			if (rv) value += rv.slice(2);
+		} else if (rt === 'action') {
+			const a = recoveryType.parentElement.querySelector('.ber-action');
+			if (a) value += '8101' + a.value;
 		}
 	}
 	
