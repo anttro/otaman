@@ -11,7 +11,7 @@ from pySim.log import PySimLogger
 from pySim.cards import UiccCardBase
 
 from .shell import load_pysim_app
-from .server import PysimHandler, StderrApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session
+from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session
 
 
 _server_start = 0
@@ -59,7 +59,7 @@ def main():
     try:
         kwargs = {}
         if opts.apdu_trace:
-            kwargs['apdu_tracer'] = StderrApduTracer()
+            kwargs['apdu_tracer'] = _LoggingApduTracer()
         sl = mod.init_reader(opts, **kwargs)
         scc = SimCardCommands(sl)
         scc.cat_cla = '80'  # UICC CLA default; overridden for SIM after init_card
@@ -78,7 +78,7 @@ def main():
         traceback.print_exc()
         app = None
     if scc and hasattr(scc, '_tp'):
-        scc._tp.apdu_tracer = StderrApduTracer()
+        scc._tp.apdu_tracer = _LoggingApduTracer()
         try:
             _init_proactive_session()
             sys.stderr.write('INIT: sending TERMINAL PROFILE %s (CLA=%s)\n' % (opts.terminal_profile, scc.cat_cla))
@@ -104,7 +104,7 @@ def main():
         # PysimApp.__init__ and every `equip` wipe the transport apdu_tracer
         # (_onchange_apdu_trace sets it to None). Re-attach our tracer and make
         # sure it stays attached across equip/re-equip.
-        tracer = StderrApduTracer()
+        tracer = _LoggingApduTracer()
         def _reattach_tracer():
             if app.card:
                 app.card._scc._tp.apdu_tracer = tracer

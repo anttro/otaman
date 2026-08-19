@@ -15,9 +15,10 @@ from pySim.cards import UiccCardBase
 import gsm0338  # registers 'gsm03.38' codec
 from construct import GreedyBytes
 from osmocom.construct import GsmOrUcs2Adapter
+from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.7.0'
+VERSION = '1.8.0'
 
 
 # Static file serving (the PWA lives in <repo>/frontend, served by this server
@@ -52,6 +53,20 @@ class StderrApduTracer(ApduTracer):
         if resp:
             msg += ' RESP: %s' % resp
         os.write(2, (msg + '\n').encode())
+
+
+class _LoggingApduTracer(StderrApduTracer):
+    """StderrApduTracer that additionally records the SW of TERMINAL RESPONSE
+    APDUs sent by pySim's auto-handler (which happen outside our own chain code)
+    onto the most recent log entry that is still missing its tr_sw."""
+
+    def trace_response(self, cmd, sw, resp):
+        super().trace_response(cmd, sw, resp)
+        if len(cmd) >= 4 and cmd[2:4] == '14':
+            for entry in reversed(_PROACTIVE_LOG):
+                if 'tr_hex' in entry and 'tr_sw' not in entry:
+                    entry['tr_sw'] = sw
+                    break
 
 
 ERROR_MSGS = {
@@ -341,16 +356,51 @@ class PoRSubmitHandler(ProactiveHandler):
 
 
 class _DefaultProactiveHandler(ProactiveHandler):
-    """Catch-all for any proactive command not explicitly handled. Responds
-    with 'performed_successfully' so pySim's auto-fetch never crashes."""
+    """Catch-all for any proactive command not explicitly handled. Logs the
+    fetch and its TERMINAL RESPONSE into _PROACTIVE_LOG and answers
+    PROVIDE LOCAL INFORMATION (0x26) with data from the PLI dictionary,
+    so the card does not re-request."""
+
     def receive_fetch_raw(self, pcmd, parsed):
-        return self.prepare_response(pcmd, 'performed_successfully')
+        cmd_num, cmd_type, dev_src, dev_dst, cmd_qual = 1, 0, 0x83, 0x81, None
+        entry = None
+        try:
+            raw = bytes.fromhex(parsed) if parsed else None
+            if raw:
+                cmd_num, cmd_type, dev_src, dev_dst, cmd_qual = _parse_proactive_header(raw)
+            entry = _log_proactive(cmd_type, raw, cmd_qual, cmd_num)
+        except Exception:
+            pass
+        ti_list = self.prepare_response(pcmd, 'performed_successfully')
+        if cmd_type == 0x26 and cmd_qual is not None:
+            pli_hex = _PLI_DATA.get(cmd_qual, '')
+            if pli_hex:
+                try:
+                    ti_list.insert(2, _RawBerTlv(pli_hex))
+                except Exception:
+                    pass
+        if entry:
+            _record_tr(entry, b''.join(x.to_tlv() for x in ti_list))
+        return ti_list
+
+
+class _RawBerTlv(BER_TLV_IE):
+    """Emits pre-encoded TLV bytes verbatim (used to inject PLI data TLVs
+    into the TERMINAL RESPONSE built by pySim's auto-handler)."""
+
+    def __init__(self, data_hex):
+        super().__init__()
+        self._raw = bytes.fromhex(data_hex)
+
+    def to_bytes(self, context={}):
+        return self._raw
 
 
 _STK_DECODE = GsmOrUcs2Adapter(GreedyBytes)
 
 _PROACTIVE_LOG = []
 _PROACTIVE_SESSION_START = None
+_PROACTIVE_ENTRY_ID = 0
 
 PROACTIVE_TYPE_NAMES = {
     0x03: 'POLL INTERVAL', 0x05: 'SET UP EVENT LIST',
@@ -457,6 +507,273 @@ def _tr_data_only(tr_tlv):
     return bytes(data)
 
 
+EVENT_NAMES = {
+    0x00: 'MT call', 0x01: 'Call connected', 0x02: 'Call disconnected',
+    0x03: 'Location status', 0x04: 'User activity', 0x05: 'Idle screen available',
+    0x06: 'Card reader status', 0x07: 'Language selection',
+    0x08: 'Browser termination', 0x09: 'Data available',
+    0x0A: 'Channel status', 0x0B: 'Access Technology Change',
+    0x0C: 'Display parameters changed', 0x0D: 'Local connection',
+    0x0E: 'Network Search Mode Change', 0x0F: 'Browsing status',
+    0x10: 'Frames Information Change', 0x11: 'I-WLAN Access Status',
+    0x12: 'Network Rejection', 0x13: 'HCI Connectivity',
+    0x14: 'Change of UICC Access', 0x15: 'CSG Cell Change',
+    0x16: 'Contactless state request', 0x17: 'Profile Container',
+    0x18: 'LTE D2D Discovery Monitoring', 0x19: 'LTE D2D Communication Monitoring',
+    0x1A: 'LTE D2D Announcement Response', 0x1B: 'LTE D2D Revocation',
+    0x1C: 'LTE D2D Application Port', 0x1D: 'LTE D2D Security Recovery',
+    0x1E: 'Off-net Emergency Call', 0x1F: 'ECall Over IMS',
+    0x20: 'EARFCN Update', 0x21: 'SCEF Channel Status',
+}
+
+ACCESSTECH_NAMES = {
+    0: 'GSM', 1: 'GSM Compact', 2: 'TIA/EIA-533', 3: 'UTRAN',
+    4: 'TETRA', 5: 'TIA/EIA-95-B', 6: 'CDMA2000 1x', 7: 'CDMA2000 HRPD',
+    8: 'E-UTRAN', 9: 'eHRPD', 10: 'NG-RAN', 11: 'Satellite NG-RAN',
+    12: 'Satellite E-UTRAN',
+}
+
+PLI_QUALIFIER_SHORT = {
+    0x00: 'Loc', 0x01: 'IMEI', 0x02: 'NMR', 0x03: 'Time', 0x04: 'Lang',
+    0x05: 'TA', 0x06: 'AccTech', 0x08: 'IMEISV', 0x09: 'Search', 0x0A: 'Batt',
+    0x0C: 'WSID', 0x0D: 'BCInfo', 0x0E: 'MultiAT', 0x0F: 'MultiLoc',
+    0x10: 'MultiNMR', 0x11: 'CSG', 0x12: 'HNB-IP', 0x13: 'HNB-Macro',
+    0x14: 'WLAN', 0x15: 'Slices', 0x16: 'CAG', 0x17: 'RejSlice',
+}
+
+
+def _dec_plmn(hex6):
+    """Decode 3-byte MCC/MNC nibble-swapped PLMN, e.g. '25001' from 'F50010'."""
+    h = re.sub(r'\s', '', hex6)[:6]
+    if len(h) < 6:
+        return '250', '01'
+    b1, b2, b3 = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    mcc = '%d%d%d' % (b1 & 0xF, (b1 >> 4) & 0xF, b2 & 0xF)
+    mnc = '%d' % (b3 & 0xF)
+    if (b2 >> 4) != 0xF:
+        mnc += '%d' % ((b2 >> 4) & 0xF)
+    return mcc, mnc
+
+
+def _dec_imei(hex8):
+    """Decode 8-byte IMEI (nibble-swapped, 15 digits)."""
+    h = re.sub(r'\s', '', hex8)[:16]
+    if len(h) < 16:
+        return ''
+    s = ''
+    for i in range(0, 15, 2):
+        b = int(h[i:i + 2], 16)
+        s += '%d%d' % (b & 0xF, (b >> 4) & 0xF)
+    return s[:15]
+
+
+def _decode_cmd(cmd_type, raw, qualifier):
+    """Decode a fetched proactive command into [{label, value}] pairs."""
+    if not raw:
+        return []
+    if cmd_type == 0x03:
+        idx = raw.find(b'\x84\x02\x01')
+        if idx >= 0 and idx + 3 < len(raw):
+            return [{'label': 'Interval', 'value': '%d s' % raw[idx + 3]}]
+        return []
+    if cmd_type == 0x05:
+        for tag in (0x99, 0x19):
+            idx = raw.find(bytes([tag]))
+            if idx >= 0 and idx + 1 < len(raw):
+                tlen = raw[idx + 1]
+                names = [EVENT_NAMES.get(b, 'Event 0x%02X' % b) for b in raw[idx + 2: idx + 2 + tlen]]
+                return [{'label': 'Events', 'value': ', '.join(names)}]
+        return []
+    if cmd_type == 0x13:
+        idx = raw.find(b'\x8b')
+        if idx >= 0 and idx + 1 < len(raw):
+            tlen = raw[idx + 1]
+            return [{'label': 'SMS TPDU', 'value': raw[idx + 2: idx + 2 + tlen].hex()}]
+        return []
+    if cmd_type == 0x21:
+        text = _parse_display_text(raw)
+        return [{'label': 'Text', 'value': text}] if text else []
+    if cmd_type == 0x24:
+        items = _parse_select_item(raw)
+        if items:
+            return [{'label': 'Items', 'value': ', '.join('%s. %s' % (it['id'], it['text']) for it in items)}]
+        return []
+    if cmd_type == 0x25:
+        items = _parse_setup_menu_items(raw)
+        if items:
+            return [{'label': 'Items', 'value': ', '.join('%s. %s' % (it['id'], it['text']) for it in items)}]
+        return []
+    if cmd_type == 0x26 and qualifier is not None:
+        name = PLI_QUALIFIER_NAMES.get(qualifier, 'Unknown')
+        return [{'label': 'Qualifier', 'value': '%s (0x%02X)' % (name, qualifier)}]
+    return [{'label': 'Data', 'value': raw.hex()}]
+
+
+def _decode_tr(type_hex, qual_hex, tr_hex):
+    """Decode the command-specific payload of a TERMINAL RESPONSE into
+    [{label, value}] pairs (empty list when the TR carried no data)."""
+    if not tr_hex:
+        return []
+    h = re.sub(r'\s', '', tr_hex)
+    try:
+        cmd_type = int(type_hex, 16) if type_hex else None
+    except ValueError:
+        return [{'label': 'Data', 'value': h}]
+    if cmd_type == 0x03 and len(h) >= 8 and h[0:2] == '84':
+        return [{'label': 'Interval', 'value': '%d s' % int(h[6:8], 16)}]
+    if cmd_type == 0x26 and qual_hex:
+        try:
+            qual = int(qual_hex, 16)
+        except ValueError:
+            qual = None
+        if qual in (0x00, 0x01, 0x03, 0x04, 0x05, 0x06, 0x08, 0x09, 0x0A, 0x0E):
+            v = h[4:] if len(h) >= 4 else ''
+            if qual == 0x00 and len(v) >= 10:
+                mcc, mnc = _dec_plmn(v[:6])
+                return [{'label': 'MCC', 'value': mcc}, {'label': 'MNC', 'value': mnc},
+                        {'label': 'LAC/TAC', 'value': v[6:10].upper()}]
+            if qual == 0x01 and len(v) >= 16:
+                return [{'label': 'IMEI', 'value': _dec_imei(v[:16])}]
+            if qual == 0x03 and len(v) >= 14:
+                yr = 2000 + int(v[0:2]) if int(v[0:2]) < 70 else 1900 + int(v[0:2])
+                mo, dy = int(v[2:4]), int(v[4:6])
+                hh, mm, ss = int(v[6:8]), int(v[8:10]), int(v[10:12])
+                tz = int(v[12:14], 16)
+                tz_sign = '-' if tz & 0x80 else '+'
+                tz_q = (tz & 0x3F) or 0
+                return [{'label': 'Date', 'value': '%04d-%02d-%02d' % (yr, mo, dy)},
+                        {'label': 'Time', 'value': '%02d:%02d:%02d' % (hh, mm, ss)},
+                        {'label': 'TZ offset', 'value': '%s%02d:%02d' % (tz_sign, tz_q // 4, (tz_q % 4) * 15)}]
+            if qual == 0x04 and len(v) >= 4:
+                try:
+                    lang = bytes.fromhex(v[:4]).decode('ascii')
+                except Exception:
+                    lang = v[:4]
+                return [{'label': 'Language', 'value': lang}]
+            if qual == 0x05 and len(v) >= 4:
+                return [{'label': 'ME Status', 'value': str(int(v[0:2], 16))},
+                        {'label': 'Timing Advance', 'value': str(int(v[2:4], 16))}]
+            if qual == 0x06 and len(v) >= 2:
+                tech = int(v[0:2], 16)
+                return [{'label': 'Access Technology',
+                         'value': '%s (%d)' % (ACCESSTECH_NAMES.get(tech, 'Unknown'), tech)}]
+            if qual == 0x08 and len(v) >= 16:
+                return [{'label': 'IMEISV', 'value': _dec_imei(v[:16]) + v[14:16].upper()}]
+            if qual == 0x09 and len(v) >= 2:
+                mode = int(v[0:2], 16)
+                return [{'label': 'Search Mode', 'value': 'Manual' if mode == 1 else ('Automatic' if mode == 0 else str(mode))}]
+            if qual == 0x0A and len(v) >= 2:
+                return [{'label': 'Charge state (%)', 'value': str(int(v[0:2], 16))}]
+            if qual == 0x0E:
+                techs = [int(v[i:i + 2], 16) for i in range(0, len(v), 2)]
+                return [{'label': 'Access Technologies',
+                         'value': ', '.join(ACCESSTECH_NAMES.get(t, 'Unknown') for t in techs)}]
+            return [{'label': 'Data', 'value': h}]
+    return [{'label': 'Data', 'value': h}]
+
+
+def _build_tr(scc, cmd_num, cmd_type, dev_src, dev_dst, cmd_qual):
+    """Build the TERMINAL RESPONSE TLV payload for a fetched command
+    (includes PLI dictionary data for PROVIDE LOCAL INFORMATION)."""
+    if cmd_type == 0x03:
+        return bytes([0x81, 0x03, cmd_num, cmd_type, 0x00,
+                      0x82, 0x02, dev_dst, dev_src,
+                      0x84, 0x02, 0x01, _POLL_INTERVAL,
+                      0x03, 0x01, 0x00])
+    base = bytes([0x81, 0x03, cmd_num, cmd_type, 0x00,
+                  0x82, 0x02, dev_dst, dev_src])
+    if cmd_type == 0x26 and cmd_qual is not None:
+        pli_hex = _PLI_DATA.get(cmd_qual, '')
+        if pli_hex:
+            base += bytes.fromhex(pli_hex)
+    return base + bytes([0x03, 0x01, 0x00])
+
+
+_RESULT_NAMES_BASIC = {
+    0x00: 'Command performed successfully',
+    0x01: 'Command performed with partial comprehension',
+    0x02: 'Command performed, with missing information',
+    0x03: 'REFUSED BY THE ME',
+    0x04: 'Command not understood by the ME',
+    0x05: 'Command not permitted by the user',
+    0x06: 'Command performed with modification',
+    0x20: 'Proactive SIM session terminated by the user',
+    0x21: 'Backward move in the proactive SIM session requested by the user',
+    0x22: 'No response from user',
+    0x23: 'Help information required by the user',
+    0x24: 'USSD or SS transaction terminated by the user',
+    0x25: 'Proactive SIM session terminated by the user',
+    0x26: 'Backward move in the proactive SIM session requested by the user',
+}
+
+_RESULT_NAMES_GENERAL = {
+    0x10: 'Command performed with additional information',
+    0x20: 'ME currently unable to process command',
+    0x21: 'Network currently unable to process command',
+    0x22: 'User did not accept the proactive command',
+    0x23: 'User cleared down call before connection or network release',
+    0x24: 'Action in contradiction with the current enforcement state',
+    0x25: 'Action in contradiction with the current timer state',
+    0x26: 'ME currently unable to process command',
+    0x27: 'User did not accept the proactive command',
+    0x28: 'User cleared down call before connection or network release',
+    0x29: 'Action in contradiction with the current enforcement state',
+    0x2A: 'Action in contradiction with the current timer state',
+    0x30: 'Command performed but partial understanding',
+    0x31: 'Command performed, with missing information',
+    0x32: 'REFUSED BY THE ME',
+    0x33: 'Command not understood by the ME',
+    0x34: 'Command not permitted by the user',
+    0x35: 'Command performed with modification',
+}
+
+def _tr_result_name(b, is_general):
+    table = _RESULT_NAMES_GENERAL if is_general else _RESULT_NAMES_BASIC
+    if b in table:
+        return table[b]
+    if 0x40 <= b <= 0x4F or 0x70 <= b <= 0x7F:
+        return 'Command performed with modification'
+    if 0x60 <= b <= 0x6F:
+        return 'Command performed with limited understanding'
+    return None
+
+
+def _extract_tr_result(tr_tlv):
+    """Return (tag, value) of the Result CTLV (tag 0x03 basic or 0x83 general)
+    from a TERMINAL RESPONSE payload, or None if absent."""
+    if not tr_tlv:
+        return None
+    off = 0
+    while off < len(tr_tlv) - 1:
+        tag, tlen = tr_tlv[off], tr_tlv[off + 1]
+        if tag in (0x03, 0x83) and off + 2 + tlen <= len(tr_tlv):
+            return (tag, tr_tlv[off + 2: off + 2 + tlen])
+        off += 2 + tlen
+    return None
+
+
+def _record_tr(entry, tr_tlv, tr_sw=None):
+    """Attach a sent TERMINAL RESPONSE to a log entry: payload hex, SW and
+    server-side decode. tr_sw may be omitted (pySim auto-handler) and filled
+    later by _LoggingApduTracer."""
+    if entry is None:
+        return
+    entry['tr_hex'] = _tr_data_only(tr_tlv).hex()
+    if tr_sw is not None:
+        entry['tr_sw'] = tr_sw
+    try:
+        result = _extract_tr_result(tr_tlv)
+        if result is not None:
+            tag, val = result
+            entry['tr_result'] = val.hex()
+            name = _tr_result_name(val[0], tag == 0x83)
+            if name:
+                entry['tr_result_name'] = name
+        entry['tr_decoded'] = _decode_tr(entry.get('type_hex'), entry.get('qualifier'), entry['tr_hex'])
+    except Exception:
+        entry['tr_decoded'] = []
+
+
 def _handle_card_disconnect():
     global _CARD_CONNECTED
     _poll_disable()
@@ -476,18 +793,27 @@ def _init_proactive_session():
     _PROACTIVE_SESSION_START = time.time()
 
 
-def _log_proactive(cmd_type, raw, qualifier=None):
+def _log_proactive(cmd_type, raw, qualifier=None, cmd_num=None):
+    global _PROACTIVE_ENTRY_ID
     if _PROACTIVE_SESSION_START is None:
         return
+    _PROACTIVE_ENTRY_ID += 1
     entry = {
+        'id': _PROACTIVE_ENTRY_ID,
         'type_hex': '%02x' % cmd_type,
         'type_name': PROACTIVE_TYPE_NAMES.get(cmd_type, 'UNKNOWN'),
         'elapsed': round(time.time() - _PROACTIVE_SESSION_START, 1),
         'bytes': len(raw) if raw else 0,
         'raw': raw.hex() if raw else None,
     }
+    if cmd_num is not None:
+        entry['cmd_num'] = cmd_num
     if qualifier is not None:
         entry['qualifier'] = '%02x' % qualifier
+    try:
+        entry['cmd_decoded'] = _decode_cmd(cmd_type, raw, qualifier)
+    except Exception:
+        entry['cmd_decoded'] = []
     _PROACTIVE_LOG.append(entry)
     return entry
 
@@ -635,31 +961,17 @@ def _handle_proactive_chain(scc, sw91, on_fetch=None):
         action = None
         if raw:
             cmd_num, cmd_type, dev_src, dev_dst, cmd_qual = _parse_proactive_header(raw)
-            entry = _log_proactive(cmd_type, raw, cmd_qual)
+            entry = _log_proactive(cmd_type, raw, cmd_qual, cmd_num)
         else:
             cmd_num, cmd_type, dev_src, dev_dst, cmd_qual = 1, 0, 0x83, 0x81, None
             entry = None
         if on_fetch:
             action = on_fetch(raw, cmd_num, cmd_type, dev_src, dev_dst)
         if action != 'pause':
-            if cmd_type == 0x03:
-                tr_tlv = bytes([0x81, 0x03, cmd_num, cmd_type, 0x00,
-                                0x82, 0x02, dev_dst, dev_src,
-                                0x84, 0x02, 0x01, _POLL_INTERVAL,
-                                0x03, 0x01, 0x00])
-            else:
-                base = bytes([0x81, 0x03, cmd_num, cmd_type, 0x00,
-                              0x82, 0x02, dev_dst, dev_src])
-                if cmd_type == 0x26 and cmd_qual is not None:
-                    pli_hex = _PLI_DATA.get(cmd_qual, '')
-                    if pli_hex:
-                        base += bytes.fromhex(pli_hex)
-                tr_tlv = base + bytes([0x03, 0x01, 0x00])
+            tr_tlv = _build_tr(scc, cmd_num, cmd_type, dev_src, dev_dst, cmd_qual)
             tr_rv = scc._tp.send_apdu('%s140000%02x%s' % (scc.cat_cla, len(tr_tlv), tr_tlv.hex()))
             sys.stderr.write('TR: cmd=%02x type=%02x -> %s %s\n' % (cmd_num, cmd_type, tr_rv[1], ('(%d bytes)' % len(tr_tlv))))
-            if entry:
-                entry['tr_hex'] = _tr_data_only(tr_tlv).hex()
-                entry['tr_sw'] = tr_rv[1]
+            _record_tr(entry, tr_tlv, tr_rv[1])
             sw = tr_rv[1]
             if sw == '9000':
                 sys.stderr.write('STATUS poll (chain ended)\n')
@@ -716,27 +1028,13 @@ def _send_terminal_profile(scc, tp_hex):
                     if menu:
                         sim_menu = menu
             if fdata and cmd_type:
-                entry = _log_proactive(cmd_type, raw, cmd_qual)
+                entry = _log_proactive(cmd_type, raw, cmd_qual, cmd_num)
             else:
                 entry = None
-            if cmd_type == 0x03:
-                tr_tlv = bytes([0x81, 0x03, cmd_num, cmd_type, 0x00,
-                                0x82, 0x02, dev_dst, dev_src,
-                                0x84, 0x02, 0x01, _POLL_INTERVAL,
-                                0x03, 0x01, 0x00])
-            else:
-                base = bytes([0x81, 0x03, cmd_num, cmd_type, 0x00,
-                              0x82, 0x02, dev_dst, dev_src])
-                if cmd_type == 0x26 and cmd_qual is not None:
-                    pli_hex = _PLI_DATA.get(cmd_qual, '')
-                    if pli_hex:
-                        base += bytes.fromhex(pli_hex)
-                tr_tlv = base + bytes([0x03, 0x01, 0x00])
+            tr_tlv = _build_tr(scc, cmd_num, cmd_type, dev_src, dev_dst, cmd_qual)
             tr_rv = scc._tp.send_apdu('%s140000%02x%s' % (scc.cat_cla, len(tr_tlv), tr_tlv.hex()))
             sys.stderr.write('TR(tp): cmd=%02x type=%02x -> %s\n' % (cmd_num, cmd_type, tr_rv[1]))
-            if entry:
-                entry['tr_hex'] = _tr_data_only(tr_tlv).hex()
-                entry['tr_sw'] = tr_rv[1]
+            _record_tr(entry, tr_tlv, tr_rv[1])
             sw = tr_rv[1]
             if sw == '9000':
                 sys.stderr.write('STATUS poll (tp chain ended)\n')
@@ -1348,6 +1646,12 @@ class PysimHandler(BaseHTTPRequestHandler):
             tr_hex = '%s140000%02x%s' % (scc.cat_cla, len(tr_data), tr_data.hex())
             tr_rv = scc._tp.send_apdu(tr_hex)
             sys.stderr.write('TR(menu): cmd=%02x type=%02x result=%02x -> %s\n' % (pd['cmd_num'], pd['cmd_type'], gr, tr_rv[1]))
+            for entry in reversed(_PROACTIVE_LOG):
+                if (entry.get('cmd_num') == pd['cmd_num']
+                        and entry.get('type_hex') == '%02x' % pd['cmd_type']
+                        and 'tr_hex' not in entry):
+                    _record_tr(entry, tr_data, tr_rv[1])
+                    break
             sw = tr_rv[1]
             resp = {'sw': sw}
             if result == 'cancel':

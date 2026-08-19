@@ -17,7 +17,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.7.0</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.8.0</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -41,7 +41,7 @@
 		<div class="flex justify-center gap-2 mb-3">
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-sub="sim" onclick="cApduSwitchSubtab('sim')">SIM RFM</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="usim" onclick="cApduSwitchSubtab('usim')">USIM RFM</button>
-			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ber" onclick="cApduSwitchSubtab('ber')">Expanded BER-TLV</button>
+			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ber" onclick="cApduSwitchSubtab('ber')">Expanded Script</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ram" onclick="cApduSwitchSubtab('ram')">RAM/GP</button>
 		</div>
 		<div id="c-apdu-sub-sim">
@@ -308,7 +308,7 @@
 			<div id="ber-rows" class="space-y-2"></div>
 		</div>
 
-		<button onclick="genBerTlv()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate BER-TLV">Generate BER-TLV</button>
+		<button onclick="genBerTlv()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate Expanded Script APDU">Generate Expanded Script APDU</button>
 		<textarea id="ber-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800 dark:text-slate-300"></textarea>
 		<button onclick="packToSp('ber-result')" id="ber-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
@@ -865,12 +865,12 @@
 		</div>
 		<div id="pysim-body" class="hidden">
 			<div class="flex gap-1 mb-2">
-				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-blue-600 text-white" data-pysim-sub="files" data-l10n="File manager">File manager</button>
-				<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="custom" data-l10n="Custom files">Custom files</button>
-			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd" data-l10n="pySim command line">pySim command line</button>
-			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu" data-l10n="Raw APDU">Raw APDU</button>
-			<button class="pysim-subtab px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="proactive">Proactive UICC</button>
-			<button id="stk-menu-btn" onclick="stkMenuOpen()" class="pysim-subtab px-3 py-1 text-xs rounded-full bg-emerald-600 text-white hover:bg-emerald-700" style="display:none">STK: <span id="stk-menu-title"></span></button>
+				<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-blue-600 text-white" data-pysim-sub="files" data-l10n="File manager">File manager</button>
+				<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="custom" data-l10n="Custom files">Custom files</button>
+			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd" data-l10n="pySim command line">pySim command line</button>
+			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu" data-l10n="Raw APDU">Raw APDU</button>
+			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="proactive">Proactive UICC</button>
+			<button id="stk-menu-btn" onclick="stkMenuOpen()" class="pysim-subtab px-3 py-1 text-sm rounded-full bg-emerald-600 text-white hover:bg-emerald-700" style="display:none">STK: <span id="stk-menu-title"></span></button>
 		</div>
 
 		<div id="pysim-sub-files">
@@ -934,25 +934,25 @@
 		<div id="pysim-sub-proactive" class="hidden">
 			<div class="flex gap-6">
 				<div>
-					<div class="mb-1 text-xs text-gray-500 dark:text-slate-400" data-l10n="STATUS and Polling">STATUS and Polling</div>
+					<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="STATUS and Polling">STATUS and Polling</div>
 					<div class="flex items-center gap-2 mb-3">
-						<button id="pli-status-btn" onclick="pysimStatusPoll()" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Send STATUS">Send STATUS</button>
-						<span class="text-[10px] text-gray-500 dark:text-slate-400">|</span>
-						<span class="text-[10px] text-gray-500 dark:text-slate-400" data-l10n="Polling">Polling</span>
-						<button id="pli-pause-btn" onclick="pysimPollToggle()" class="px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600">OFF</button>
-						<span id="pli-poll-stat" class="text-[10px] text-gray-400"></span>
+						<button id="pli-status-btn" onclick="pysimStatusPoll()" class="px-2.5 py-1 text-sm rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Send STATUS">Send STATUS</button>
+						<span class="text-xs text-gray-500 dark:text-slate-400">|</span>
+						<span class="text-xs text-gray-500 dark:text-slate-400" data-l10n="Polling">Polling</span>
+						<button id="pli-pause-btn" onclick="pysimPollToggle()" class="px-2.5 py-1 text-sm rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600">OFF</button>
+						<span id="pli-poll-stat" class="text-xs text-gray-400"></span>
 					</div>
-					<div class="mt-2 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
-					<div id="pysim-event-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
-					<div class="mt-4 mb-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
-					<div id="pysim-proactive-log" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+					<div class="mt-2 mb-2 text-sm text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
+					<div id="pysim-event-list" class="text-sm font-mono text-gray-600 dark:text-slate-400"></div>
+					<div class="mt-4 mb-2 text-sm text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
+					<div id="pysim-proactive-log" class="text-sm font-mono text-gray-600 dark:text-slate-400"></div>
 				</div>
 				<div>
 					<div class="flex justify-between items-center mb-2">
-						<span class="text-xs text-gray-500 dark:text-slate-400" data-l10n="PROVIDE LOCAL INFORMATION response data">PROVIDE LOCAL INFORMATION response data</span>
-						<button id="pli-save-btn" onclick="pysimPliSave()" class="px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
+						<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="PROVIDE LOCAL INFORMATION response data">PROVIDE LOCAL INFORMATION response data</span>
+						<button id="pli-save-btn" onclick="pysimPliSave()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
 					</div>
-					<div id="pysim-pli-dict" class="text-xs font-mono text-gray-600 dark:text-slate-400 max-h-[60vh] overflow-auto">
+					<div id="pysim-pli-dict" class="text-sm font-mono text-gray-600 dark:text-slate-400 max-h-[60vh] overflow-auto">
 						<span class="text-gray-400" data-l10n="Loading...">Loading...</span>
 					</div>
 				</div>
@@ -3909,7 +3909,7 @@ async function pysimEventsRender() {
 			html += '<div class="flex items-center gap-2 py-0.5"><span class="w-6 text-right text-gray-400">'
 				+ e.toString(16).padStart(2, '0').toUpperCase()
 				+ '</span> ' + esc(name)
-				+ '<button onclick="pysimEventSendForm(' + e + ')" class="ml-auto px-1.5 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + t('Send') + '</button></div>';
+				+ '<button onclick="pysimEventSendForm(' + e + ')" class="ml-auto px-2 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">' + t('Send') + '</button></div>';
 		});
 		el.innerHTML = html;
 	} catch (e) {
@@ -4148,6 +4148,32 @@ const CMD_QUALIFIER_SHORT = {
            0x16:'CAG', 0x17:'RejSlice'},
 };
 
+let _pysimLogExpanded = new Set();
+
+function pysimLogToggle(id) {
+	const panel = document.querySelector('[data-log-panel="' + id + '"]');
+	const tog = document.querySelector('[data-log-tog="' + id + '"]');
+	if (_pysimLogExpanded.has(id)) {
+		_pysimLogExpanded.delete(id);
+		if (panel) panel.classList.add('hidden');
+		if (tog) tog.textContent = '▶';
+	} else {
+		_pysimLogExpanded.add(id);
+		if (panel) panel.classList.remove('hidden');
+		if (tog) tog.textContent = '▼';
+	}
+}
+
+function pysimLogFields(decoded) {
+	if (!decoded || !decoded.length) return '';
+	let html = '';
+	decoded.forEach(f => {
+		html += '<div class="flex gap-1"><span class="text-gray-500 dark:text-slate-400 shrink-0">'
+			+ esc(f.label) + ':</span><span class="break-all">' + esc(f.value) + '</span></div>';
+	});
+	return html;
+}
+
 async function pysimProactiveLogRender() {
     const el = document.getElementById('pysim-proactive-log');
     el.innerHTML = '<span class="text-gray-400">' + t('Loading...') + '</span>';
@@ -4168,37 +4194,33 @@ async function pysimProactiveLogRender() {
                     if (qv) qual = ' [' + qv + ']';
                 }
             }
-            html += '<div>'
-                + '<div class="flex items-center gap-2 py-0.5">'
+            const expanded = _pysimLogExpanded.has(e.id);
+            html += '<div data-log-id="' + e.id + '" class="border-b border-gray-100 dark:border-slate-700/50">'
+                + '<div class="flex items-center gap-2 py-0.5 cursor-pointer select-none" onclick="pysimLogToggle(' + e.id + ')">'
                 + '<span class="w-12 text-right text-gray-400">' + e.elapsed + 's</span>'
                 + '<span class="font-mono text-gray-400">0x' + e.type_hex.toUpperCase() + '</span>'
                 + '<span class="truncate">' + esc(name) + '</span>'
-                + (qual ? '<span class="text-[10px] text-gray-500 dark:text-slate-400">' + esc(qual) + '</span>' : '')
-                + '</div>';
-            if (e.tr_hex) {
-                html += '<div class="text-[10px] pl-[5.5rem] text-gray-400 dark:text-slate-500">Response: ';
-                if (e.type_hex === '26' && e.qualifier) {
-                    const codec = PLI_CODECS[e.qualifier];
-                    if (codec && codec.decode) {
-                        const vals = codec.decode(e.tr_hex);
-                        if (vals) {
-                            const parts = [];
-                            codec.fields.forEach(f => {
-                                if (vals[f.id] !== undefined) parts.push(f.label + ': ' + vals[f.id]);
-                            });
-                            html += esc(parts.length ? parts.join(', ') : e.tr_hex);
-                        } else {
-                            html += esc(e.tr_hex);
-                        }
-                    } else {
-                        html += esc(e.tr_hex);
-                    }
-                } else {
-                    html += esc(e.tr_hex);
+                + (qual ? '<span class="text-xs text-gray-500 dark:text-slate-400">' + esc(qual) + '</span>' : '')
+                + '<span class="ml-auto text-gray-400" data-log-tog="' + e.id + '">' + (expanded ? '▼' : '▶') + '</span>'
+                + '</div>'
+                + '<div data-log-panel="' + e.id + '" class="' + (expanded ? '' : 'hidden') + ' ml-8 pl-2 border-l border-gray-300 dark:border-slate-600 mb-1 text-xs space-y-0.5">'
+                + '<div class="text-gray-500 dark:text-slate-400">' + t('Command') + ':</div>'
+                + pysimLogFields(e.cmd_decoded);
+            if (e.raw) html += '<input type="text" readonly value="' + esc(e.raw) + '" class="w-full max-w-md font-mono text-xs rounded border border-gray-300 dark:border-slate-600 px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400">';
+            html += '<div class="text-gray-500 dark:text-slate-400 mt-1">' + t('Response') + ':</div>';
+            if (e.tr_hex !== undefined) {
+                if (e.tr_result !== undefined) {
+                    html += '<div class="flex gap-1"><span class="text-gray-500 dark:text-slate-400 shrink-0">' + t('Result') + ':</span>'
+                        + '<span class="break-all">' + (e.tr_result_name ? esc(e.tr_result_name) + ' (' + esc(e.tr_result) + ')' : esc(e.tr_result)) + '</span></div>';
                 }
-                html += '</div>';
+                if (e.tr_hex) {
+                    html += pysimLogFields(e.tr_decoded);
+                    html += '<input type="text" readonly value="' + esc(e.tr_hex) + '" class="w-full max-w-md font-mono text-xs rounded border border-gray-300 dark:border-slate-600 px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400">';
+                }
+            } else {
+                html += '<div class="text-gray-400">' + t('No response yet') + '</div>';
             }
-            html += '</div>';
+            html += '</div></div>';
         });
         el.innerHTML = html;
     } catch (err) {
@@ -4405,12 +4427,12 @@ async function pysimPliRender() {
 			const hasCodec = !!PLI_CODECS[q.code];
 			html += '<div data-pli-row="' + q.code + '" class="py-0.5 border-b border-gray-200 dark:border-slate-700">'
 				+ '<div class="flex items-baseline gap-1.5">'
-				+ '<span class="w-6 shrink-0 text-right text-gray-400 text-[10px]">' + q.code + '</span>'
-				+ '<span class="flex-1 min-w-0 text-[11px] leading-snug">' + esc(q.name) + '</span>'
+				+ '<span class="w-6 shrink-0 text-right text-gray-400 text-xs">' + q.code + '</span>'
+				+ '<span class="flex-1 min-w-0 text-[13px] leading-snug">' + esc(q.name) + '</span>'
 				+ '</div>'
 				+ '<div class="flex items-center gap-1 mt-0.5 ml-8">'
 				+ '<input type="text" id="pli-v-' + q.code + '" value="' + esc(val) + '" placeholder="hex"'
-				+ ' class="flex-1 min-w-0 border border-gray-300 dark:border-slate-600 text-[10px] rounded px-1 py-0.5 dark:bg-slate-800 font-mono">';
+				+ ' class="flex-1 min-w-0 border border-gray-300 dark:border-slate-600 text-xs rounded px-1.5 py-1 dark:bg-slate-800 font-mono">';
 			if (hasCodec) {
 				html += '<span onclick="pysimPliDecodeRow(\'' + q.code + '\')" id="pli-tog-' + q.code + '"'
 					+ ' class="cursor-pointer select-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">▶</span>';
@@ -4443,7 +4465,7 @@ function pysimPliDecodeRow(code) {
 	if (hex) {
 		values = codec.decode(hex);
 		if (!values) {
-			panel.innerHTML = '<span class="text-[10px] text-red-500">Invalid hex</span>';
+			panel.innerHTML = '<span class="text-xs text-red-500">Invalid hex</span>';
 			panel.classList.remove('hidden');
 			const tog = document.getElementById('pli-tog-' + code);
 			if (tog) tog.textContent = '▼';
@@ -4454,9 +4476,9 @@ function pysimPliDecodeRow(code) {
 	let html = '<div class="space-y-1 mb-1">';
 	codec.fields.forEach(f => {
 		html += '<div class="flex items-center gap-1">'
-			+ '<span class="text-[10px] w-12 text-gray-500 dark:text-slate-400 truncate" title="' + esc(f.label) + '">' + esc(f.label) + '</span>';
+			+ '<span class="text-xs w-12 text-gray-500 dark:text-slate-400 truncate" title="' + esc(f.label) + '">' + esc(f.label) + '</span>';
 		if (f.type === 'select') {
-			html += '<select id="pli-d-' + code + '-' + f.id + '" class="text-[10px] border border-gray-300 dark:border-slate-600 rounded px-1 py-0.5 dark:bg-slate-800 w-36">';
+			html += '<select id="pli-d-' + code + '-' + f.id + '" class="text-xs border border-gray-300 dark:border-slate-600 rounded px-1.5 py-1 dark:bg-slate-800 w-40">';
 			f.opts.forEach(o => html += '<option value="' + o.v + '"' + (String(values[f.id]) === String(o.v) ? ' selected' : '') + '>' + esc(o.l) + '</option>');
 			html += '</select>';
 		} else {
@@ -4465,14 +4487,14 @@ function pysimPliDecodeRow(code) {
 				+ (f.pattern ? ' pattern="' + f.pattern + '"' : '')
 				+ (f.placeholder ? ' placeholder="' + f.placeholder + '"' : '')
 				+ (f.min !== undefined ? ' min="' + f.min + '" max="' + f.max + '"' : '')
-				+ ' class="text-[10px] border border-gray-300 dark:border-slate-600 rounded px-1 py-0.5 dark:bg-slate-800 w-32 font-mono">';
+				+ ' class="text-xs border border-gray-300 dark:border-slate-600 rounded px-1.5 py-1 dark:bg-slate-800 w-40 font-mono">';
 		}
 		html += '</div>';
 	});
 	html += '</div>';
 	html += '<div class="flex gap-1">'
-		+ '<button onclick="pysimPliApplyRow(\'' + code + '\')" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700">Apply</button>'
-		+ '<button onclick="var p=document.querySelector(\'[data-pli-panel=\\\'' + code + '\\\']\');p.classList.add(\'hidden\');p.innerHTML=\'\';var t=document.getElementById(\'pli-tog-' + code + '\');if(t)t.textContent=\'▶\'" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 dark:border-slate-600">Cancel</button>'
+		+ '<button onclick="pysimPliApplyRow(\'' + code + '\')" class="text-xs px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Apply</button>'
+		+ '<button onclick="var p=document.querySelector(\'[data-pli-panel=\\\'' + code + '\\\']\');p.classList.add(\'hidden\');p.innerHTML=\'\';var t=document.getElementById(\'pli-tog-' + code + '\');if(t)t.textContent=\'▶\'" class="text-xs px-2 py-1 rounded border border-gray-300 dark:border-slate-600">Cancel</button>'
 		+ '</div>';
 	panel.innerHTML = html;
 	panel.classList.remove('hidden');
@@ -4630,10 +4652,13 @@ const LANG_RU = {
 	'Pack into Secured packet': 'Упаковать в Secured packet',
 	'Convert': 'Конвертировать',
 	'Decode': 'Декодировать',
-	'Generate BER-TLV': 'Сгенерировать BER-TLV',
+	'Generate Expanded Script APDU': 'Сгенерировать Expanded Script APDU',
 	'Generate Secure Packet': 'Сгенерировать Secure Packet',
 	'Conversion': 'Конвертация',
 	'Command': 'Команда',
+	'Response': 'Ответ',
+	'Result': 'Результат',
+	'No response yet': 'Ответа пока нет',
 	'Start with SELECT': 'Начать с SELECT',
 	'SELECT method': 'Метод SELECT',
 	'Path (hex)': 'Путь (hex)',

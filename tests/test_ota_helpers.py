@@ -20,9 +20,15 @@ if str(PY_SIM) not in sys.path:
 
 from pysim_otaman_server.server import (
     _build_sms_tpdu,
+    _build_tr,
+    _decode_cmd,
     _decode_por,
+    _decode_tr,
+    _log_proactive,
     _ota_reference,
+    _record_tr,
     _spi_from_bytes,
+    _tr_data_only,
 )
 
 # Synthetic dummy key material (no real card keys).
@@ -212,6 +218,122 @@ class TestDecodePor(unittest.TestCase):
             self.assertIsNone(
                 _decode_por('02', '01', '15', '15', '0000000001', K, K, bad),
                 msg='expected None for %r' % bad)
+
+
+class TestProactiveDecode(unittest.TestCase):
+    """Server-side proactive command/TR decode helpers (v1.8.0 log feature)."""
+
+    def setUp(self):
+        import pysim_otaman_server.server as srv
+        srv._PROACTIVE_SESSION_START = 1234.0
+        srv._PLI_DATA[0x00] = '93055210011000'
+
+    def test_decode_cmd_poll_interval(self):
+        r = _decode_cmd(0x03, bytes.fromhex('d00d8103010300820283818402011e'), None)
+        self.assertEqual(r, [{'label': 'Interval', 'value': '30 s'}])
+
+    def test_decode_cmd_setup_event_list(self):
+        r = _decode_cmd(0x05, bytes.fromhex('d00c810301050082028381990101'), None)
+        self.assertEqual(r, [{'label': 'Events', 'value': 'Call connected'}])
+
+    def test_decode_cmd_send_short_message(self):
+        r = _decode_cmd(0x13, bytes.fromhex('d0158103011300820283818b0b916106152670f900a35f020101'), None)
+        self.assertEqual(r, [{'label': 'SMS TPDU', 'value': '916106152670f900a35f02'}])
+
+    def test_decode_cmd_pli_qualifier_name(self):
+        r = _decode_cmd(0x26, b'\xd0', 0x00)
+        self.assertTrue(r[0]['value'].startswith('Location Information (MCC, MNC, LAC/TAC, Cell ID)'))
+
+    def test_decode_cmd_empty_raw(self):
+        self.assertEqual(_decode_cmd(0x26, b'', None), [])
+        self.assertEqual(_decode_cmd(0x03, None, None), [])
+
+    def test_decode_tr_pli_location(self):
+        r = _decode_tr('26', '00', '93055210011000')
+        self.assertEqual(r, [
+            {'label': 'MCC', 'value': '250'},
+            {'label': 'MNC', 'value': '11'},
+            {'label': 'LAC/TAC', 'value': '1000'},
+        ])
+
+    def test_decode_tr_pli_imei(self):
+        r = _decode_tr('26', '01', '94082143658709214305')
+        self.assertEqual(r[0], {'label': 'IMEI', 'value': '123456789012345'})
+
+    def test_decode_tr_pli_access_technology(self):
+        r = _decode_tr('26', '06', 'bf0103')
+        self.assertEqual(r, [{'label': 'Access Technology', 'value': 'UTRAN (3)'}])
+
+    def test_decode_tr_pli_search_mode(self):
+        r = _decode_tr('26', '09', 'ad0101')
+        self.assertEqual(r, [{'label': 'Search Mode', 'value': 'Manual'}])
+
+    def test_decode_tr_poll_interval(self):
+        r = _decode_tr('03', None, '8402011e')
+        self.assertEqual(r, [{'label': 'Interval', 'value': '30 s'}])
+
+    def test_decode_tr_empty(self):
+        self.assertEqual(_decode_tr('26', '00', ''), [])
+
+    def test_tr_data_only_strips_boilerplate(self):
+        tr = bytes.fromhex('81030326008202818393055210011000030100')
+        self.assertEqual(_tr_data_only(tr).hex(), '93055210011000')
+
+    def test_build_and_record_tr(self):
+        entry = {'type_hex': '26', 'qualifier': '00'}
+        tr = _build_tr(None, 3, 0x26, 0x83, 0x81, 0x00)
+        _record_tr(entry, tr, '9000')
+        self.assertEqual(entry['tr_hex'], '93055210011000')
+        self.assertEqual(entry['tr_sw'], '9000')
+        self.assertEqual([f['label'] for f in entry['tr_decoded']], ['MCC', 'MNC', 'LAC/TAC'])
+
+    def test_record_tr_without_sw(self):
+        entry = {'type_hex': '26', 'qualifier': '00'}
+        _record_tr(entry, bytes.fromhex('93055210011000'))
+        self.assertNotIn('tr_sw', entry)
+        self.assertEqual(entry['tr_hex'], '93055210011000')
+
+    def test_log_proactive_fields(self):
+        entry = _log_proactive(0x26, b'\xd0', 0x00, 7)
+        self.assertEqual(entry['cmd_num'], 7)
+        self.assertEqual(entry['type_hex'], '26')
+        self.assertEqual(entry['qualifier'], '00')
+        self.assertEqual(entry['raw'], 'd0')
+        self.assertEqual(entry['cmd_decoded'][0]['label'], 'Qualifier')
+        self.assertIn('id', entry)
+
+    def test_log_proactive_malformed_raw(self):
+        entry = _log_proactive(0x21, bytes([0xD0, 0xFF]), 0x00)
+        self.assertEqual(entry['cmd_decoded'], [])
+
+    def test_log_proactive_no_cmd_num(self):
+        entry = _log_proactive(0x05, bytes.fromhex('990101'), None)
+        self.assertNotIn('cmd_num', entry)
+
+    def test_record_tr_basic_result(self):
+        entry = {'type_hex': '03', 'qualifier': None}
+        _record_tr(entry, bytes.fromhex('8103010300820281838402011e030100'))
+        self.assertEqual(entry['tr_result'], '00')
+        self.assertEqual(entry['tr_result_name'], 'Command performed successfully')
+        self.assertEqual(entry['tr_hex'], '8402011e')
+
+    def test_record_tr_general_result(self):
+        entry = {'type_hex': '26', 'qualifier': '00'}
+        _record_tr(entry, bytes.fromhex('8103032600820281839305521001100083022001'))
+        self.assertEqual(entry['tr_result'], '2001')
+        self.assertEqual(entry['tr_result_name'], 'ME currently unable to process command')
+        self.assertEqual(entry['tr_hex'], '93055210011000')
+
+    def test_record_tr_unknown_result(self):
+        entry = {'type_hex': '26', 'qualifier': '00'}
+        _record_tr(entry, bytes.fromhex('810303260082028181030107'))
+        self.assertEqual(entry['tr_result'], '07')
+        self.assertNotIn('tr_result_name', entry)
+
+    def test_record_tr_no_result_tlv(self):
+        entry = {'type_hex': '26', 'qualifier': '00'}
+        _record_tr(entry, bytes.fromhex('810303260082028181'))
+        self.assertNotIn('tr_result', entry)
 
 
 if __name__ == '__main__':

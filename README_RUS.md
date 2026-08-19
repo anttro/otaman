@@ -1,6 +1,6 @@
 # OTAMan — SIM OTA toolkit: PWA + локальный сервер карт
 
-OTAMan — автономный offline-PWA (HTML/JS) для создания APDU-команд (SIM, USIM, GlobalPlatform RAM), сборки защищённых пакетов SCP80 по ETSI TS 102 225 и построения BER-TLV скриптов по ETSI TS 102 226. В комплекте — [`pysim-otaman-server`](pysim_otaman_server/) — локальный HTTP-сервер поверх pySim для работы с картой: файловый менеджер, сырые APDU, меню SIM Toolkit и доставка OTA.
+OTAMan — автономный offline-PWA (HTML/JS) для создания APDU-команд (SIM, USIM, GlobalPlatform RAM), сборки защищённых пакетов SCP80 по ETSI TS 102 225 и построения Expanded Remote Application data format APDU по ETSI TS 102 226. В комплекте — [`pysim-otaman-server`](pysim_otaman_server/) — локальный HTTP-сервер поверх pySim для работы с картой: файловый менеджер, сырые APDU, меню SIM Toolkit и доставка OTA.
 
 **Демо:** [otaman.atroshin.ru](https://otaman.atroshin.ru) — только PWA, для экспериментов. Для функций картридера установите сервер (ниже).
 
@@ -93,7 +93,7 @@ CLA = `00` (ETSI TS 102 221). Те же команды, что и SIM, но SELE
 
 ---
 
-## Вкладка BER-TLV
+## Вкладка Expanded Script
 
 Построение Expanded Remote Application data format по ETSI TS 102 226 §5.2.1.
 

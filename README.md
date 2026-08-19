@@ -1,6 +1,6 @@
 # OTAMan — SIM OTA toolkit: PWA + local card server
 
-OTAMan is an offline HTML/JS PWA for building APDU commands (SIM, USIM, GlobalPlatform RAM), assembling SCP80 secured packets per ETSI TS 102 225, and constructing BER-TLV command scripts per ETSI TS 102 226. A bundled [`pysim-otaman-server`](pysim_otaman_server/) exposes a local HTTP API over pySim for live card operations: file manager, raw APDU, SIM Toolkit menu browsing, and OTA (SCP80) delivery.
+OTAMan is an offline HTML/JS PWA for building APDU commands (SIM, USIM, GlobalPlatform RAM), assembling SCP80 secured packets per ETSI TS 102 225, and constructing Expanded Remote Application data format APDU per ETSI TS 102 226. A bundled [`pysim-otaman-server`](pysim_otaman_server/) exposes a local HTTP API over pySim for live card operations: file manager, raw APDU, SIM Toolkit menu browsing, and OTA (SCP80) delivery.
 
 **Demo:** [otaman.atroshin.ru](https://otaman.atroshin.ru) — the PWA alone, for experimenting. Install the server (below) for card-reader functions.
 
@@ -93,7 +93,7 @@ CLA = `00` (ETSI TS 102 221). Same commands as SIM, but SELECT uses P1=09, P2=0C
 
 ---
 
-## BER-TLV Tab
+## Expanded Script Tab
 
 Builds Expanded Remote Application data format per ETSI TS 102 226 §5.2.1.
 
