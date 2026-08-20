@@ -2066,6 +2066,11 @@ function onBerTypeChange(sel) {
 		body.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
 	} else if (type === 'chaining') {
 		body.innerHTML = buildScriptChainingRow(row.dataset.berIdx);
+	} else if (type === 'error') {
+		body.innerHTML = buildErrorActionRow();
+		const actionType = body.querySelector('.error-action-type');
+		onErrorActionTypeChange(actionType);
+		updateBerRow(sel);
 	} else {
 		body.innerHTML = `<div class="flex gap-1 mb-1 flex-wrap">
 			<select class="ber-subtype text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onBerSubTypeChange(this)">
@@ -2142,26 +2147,14 @@ function onBerSubTypeChange(sel) {
 	const st = sel.value;
 	
 	if (st === 'action') {
-		const row = sel.closest('.ber-row');
-		const type = row.querySelector('.ber-type').value;
-		
-		if (type === 'error') {
-			body.innerHTML = buildErrorActionRow();
-			const actionType = body.querySelector('.error-action-type');
-			onErrorActionTypeChange(actionType);
-		} else {
-			body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
+		body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
 				<option value="81">81 (Session indication)</option>
 				<option value="82">82 (Early response)</option>
 			</select>`;
-		}
 	} else if (st === 'custom') {
 		body.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
 	} else {
-		const row = sel.closest('.ber-row');
-		const type = row.querySelector('.ber-type').value;
-		const allowed = type === 'error' ? ['display','tone'] : undefined;
-		body.innerHTML = buildBerPcHtml(allowed);
+		body.innerHTML = buildBerPcHtml();
 		const pc = body.querySelector('.ber-pc');
 		berPopulateDevices(pc);
 		onBerPcTypeChange(pc.querySelector('.ber-pc-type'));
