@@ -2775,7 +2775,10 @@ function parseChainingFlags(hex) {
 
 function parseActionRow(hex, tag) {
 	if (!hex || hex === '00') return [{label:'No action', hex:hex||'', desc:tag === '82' ? 'No action (82 00)' : ''}];
-	if (hex.length === 2) return [{label:'Action indicator', hex, desc:'Value ' + hex}];
+	if (hex.length === 2) {
+		const names = {'81':'Proactive session indication','82':'Early response'};
+		return [{label:'Action indicator', hex, desc:names[hex] || 'Value ' + hex}];
+	}
 	const tlvs = parseTlvList(hex);
 	if (tlvs.length > 0) {
 		const children = describeProactiveCommand(tlvs);
