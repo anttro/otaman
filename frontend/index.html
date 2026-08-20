@@ -43,6 +43,7 @@
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="usim" onclick="cApduSwitchSubtab('usim')">USIM RFM</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ber" onclick="cApduSwitchSubtab('ber')">Expanded Script</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ram" onclick="cApduSwitchSubtab('ram')">RAM/GP</button>
+			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="parse" onclick="cApduSwitchSubtab('parse')" data-l10n="C-APDU Parser">C-APDU Parser</button>
 		</div>
 		<div id="c-apdu-sub-sim">
 		<div class="flex gap-4 mb-3">
@@ -530,6 +531,14 @@
 		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
 		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<button onclick="packToSp('ram-result')" id="ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
+	</div>
+	<div id="c-apdu-sub-parse" class="hidden">
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="APDU hex">APDU hex</label>
+			<textarea id="parse-input" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="80E60C00 ..."></textarea>
+		</div>
+		<button onclick="parseHex()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Parse">Parse</button>
+		<div id="parse-output"></div>
 	</div>
 	</div>
 	<div class="w-1/4">
@@ -1025,7 +1034,7 @@ function cApduSwitchSubtab(name) {
 		btn.classList.toggle('text-gray-700', !active);
 		btn.classList.toggle('dark:text-slate-300', !active);
 	});
-	['sim', 'usim', 'ber', 'ram'].forEach(s => {
+	['sim', 'usim', 'ber', 'ram', 'parse'].forEach(s => {
 		const el = document.getElementById('c-apdu-sub-' + s);
 		if (el) el.classList.toggle('hidden', s !== name);
 	});
@@ -1033,7 +1042,7 @@ function cApduSwitchSubtab(name) {
 		updateSimUsimFields(name);
 		updateSimSelectMethod(name);
 	}
-	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp'}[name] || 'c-apdu');
+	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp', parse:'c-apdu'}[name] || 'c-apdu');
 }
 document.querySelectorAll('.tab-btn').forEach(btn => {
 	btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -2455,6 +2464,485 @@ function genBerTlv() {
 	}
 	document.getElementById('ber-result').value = result;
 	document.getElementById('ber-pack-btn').disabled = false;
+}
+
+// ===== C-APDU Parser =====
+const PARSE_INS = {
+	'A4': {name:'SELECT', data:'lc'},
+	'B0': {name:'READ BINARY', data:'le'},
+	'B2': {name:'READ RECORD(S)', data:'le'},
+	'DC': {name:'UPDATE RECORD', data:'lc'},
+	'D6': {name:'UPDATE BINARY', data:'lc'},
+	'0E': {name:'ERASE BINARY', data:'none'},
+	'44': {name:'ACTIVATE FILE', data:'none'},
+	'04': {name:'DEACTIVATE FILE', data:'none'},
+	'20': {name:'VERIFY', data:'lc'},
+	'24': {name:'CHANGE', data:'lc'},
+	'E6': {name:'INSTALL', data:'lc'},
+	'E8': {name:'LOAD', data:'lc'},
+	'E4': {name:'DELETE', data:'lc'},
+	'F2': {name:'GET STATUS', data:'lc'},
+	'CA': {name:'GET DATA', data:'none'},
+	'E2': {name:'STORE DATA', data:'lc'},
+	'F0': {name:'SET STATUS', data:'lc'},
+	'82': {name:'EXTERNAL AUTHENTICATE', data:'lc'},
+	'88': {name:'INTERNAL AUTHENTICATE', data:'lc'},
+};
+
+function parseBerLen(hex, i) {
+	const b = parseInt(hex.substr(i, 2), 16);
+	if (b < 128) return {len: b, consumed: 2};
+	const n = parseInt(hex.substr(i + 2, b * 2), 16);
+	return {len: n, consumed: 2 + b * 2};
+}
+
+function parseTlvList(hex) {
+	const out = [];
+	let i = 0;
+	while (i + 4 <= hex.length) {
+		const tag = hex.substr(i, 2);
+		let tagBytes = 2;
+		if ((parseInt(tag, 16) & 0x1F) === 0x1F) {
+			tagBytes = 4;
+			if (i + 4 > hex.length) break;
+		}
+		const r = parseBerLen(hex, i + tagBytes);
+		const len = r.len;
+		const consumed = tagBytes + r.consumed;
+		if (i + consumed + len * 2 > hex.length) break;
+		const value = hex.substr(i + consumed, len * 2);
+		const raw = hex.substr(i, consumed + len * 2);
+		out.push({tag, length: len, value, raw});
+		i += consumed + len * 2;
+	}
+	return out;
+}
+
+function baseCompTag(tag) {
+	const b = parseInt(tag, 16);
+	return (b >= 0x80 && b <= 0x9F) ? (b & 0x7F).toString(16).padStart(2, '0').toUpperCase() : tag;
+}
+
+function decodePrivileges(hex) {
+	if (hex.length < 2) return '';
+	const b1 = parseInt(hex.substr(0, 2), 16);
+	const parts = [];
+	if (b1 & 0x80) parts.push('Security Domain');
+	if (b1 & 0x40) parts.push('DAP Verification');
+	if (b1 & 0x20) parts.push('Delegated Management');
+	if (b1 & 0x10) parts.push('Card Lock');
+	if (b1 & 0x08) parts.push('Card Reset');
+	if (b1 & 0x04) parts.push('Global Registry');
+	if (b1 & 0x02) parts.push('CVM Management');
+	if (b1 & 0x01) parts.push('Mandated DAP Verification');
+	if (hex.length >= 4) {
+		const b2 = parseInt(hex.substr(2, 2), 16);
+		if (b2 & 0x80) parts.push('Global Lock');
+		if (b2 & 0x04) parts.push('Final Application');
+		if (b2 & 0x02) parts.push('Receipt Generation');
+	}
+	if (hex.length >= 6) {
+		const b3 = parseInt(hex.substr(4, 2), 16);
+		if (b3 & 0x80) parts.push('Contactless Activation');
+	}
+	return parts.join(', ') || 'None';
+}
+
+function gsm7Decode(octets) {
+	const bits = [];
+	for (const b of octets) {
+		for (let j = 0; j < 8; j++) bits.push((b >> j) & 1);
+	}
+	let out = '';
+	let escape = false;
+	for (let i = 0; i + 7 <= bits.length; i += 7) {
+		let septet = 0;
+		for (let j = 0; j < 7; j++) septet |= bits[i + j] << j;
+		if (escape) {
+			const ext = Object.entries(GSM7_EXT_MAP).find(([,v]) => v === septet);
+			out += ext ? ext[0] : '?';
+			escape = false;
+		} else if (septet === 0x1B) {
+			escape = true;
+		} else {
+			out += septet < GSM7_ALPHABET.length ? GSM7_ALPHABET[septet] : '?';
+		}
+	}
+	return out;
+}
+
+function decodeTextData(hex) {
+	if (!hex || hex.length < 2) return '?';
+	if (hex.length >= 4 && hex.length % 4 === 0) {
+		let allPrintable = true;
+		let ucs2 = '';
+		for (let i = 0; i < hex.length; i += 4) {
+			const cp = parseInt(hex.substr(i, 4), 16);
+			if (cp < 0x20 || cp > 0x10FFFF) { allPrintable = false; break; }
+			ucs2 += String.fromCodePoint(cp);
+		}
+		if (allPrintable && ucs2.length > 0) return ucs2;
+	}
+	try {
+		const bytes = new Uint8Array(hex.length / 2);
+		for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+		const gsm = gsm7Decode(bytes);
+		if (gsm.length > 0 && !gsm.includes('\uFFFD')) return gsm;
+	} catch (e) {}
+	return '?';
+}
+
+function describeToolkit(hex) {
+	const children = [];
+	if (!hex || hex.length < 2) return children;
+	let isUicc = true;
+	if (hex.length >= 2) {
+		const first = parseInt(hex.substr(0, 2), 16);
+		if (first <= 0x0F) isUicc = false;
+	}
+	let i = 0;
+	if (isUicc) {
+		children.push({label:'Priority', hex:hex.substr(i,2), desc:parseInt(hex.substr(i,2),16).toString()}); i += 2;
+		children.push({label:'Timers', hex:hex.substr(i,2), desc:parseInt(hex.substr(i,2),16).toString()}); i += 2;
+		children.push({label:'Text length', hex:hex.substr(i,2), desc:parseInt(hex.substr(i,2),16).toString()}); i += 2;
+		const menus = parseInt(hex.substr(i,2), 16); i += 2;
+		children.push({label:'Menu entries', hex:hex.substr(i-2,2), desc:menus.toString()});
+		for (let m = 0; m < menus && i + 4 <= hex.length; m++) {
+			children.push({label:'Menu pair '+(m+1), hex:hex.substr(i,4), desc:'Pos ' + parseInt(hex.substr(i,2),16) + ', ID ' + hex.substr(i+2,2)});
+			i += 4;
+		}
+		children.push({label:'Channels', hex:hex.substr(i,2), desc:parseInt(hex.substr(i,2),16).toString()}); i += 2;
+		if (i + 2 <= hex.length) {
+			const mslLen = parseInt(hex.substr(i,2), 16); i += 2;
+			if (mslLen > 0 && i + mslLen * 2 <= hex.length) {
+				children.push({label:'MSL', hex:hex.substr(i-2, 2+mslLen*2), desc:'Length ' + mslLen + ' value ' + hex.substr(i, mslLen*2)});
+				i += mslLen * 2;
+			} else {
+				children.push({label:'MSL', hex:hex.substr(i-2,2), desc:'No MSL'});
+			}
+		}
+		if (i + 2 <= hex.length) {
+			const tarLen = parseInt(hex.substr(i,2), 16); i += 2;
+			if (tarLen > 0 && i + tarLen * 2 <= hex.length) {
+				children.push({label:'TAR', hex:hex.substr(i-2, 2+tarLen*2), desc:hex.substr(i, tarLen*2)});
+				i += tarLen * 2;
+			} else {
+				children.push({label:'TAR', hex:hex.substr(i-2,2), desc:'No TAR'});
+			}
+		}
+		if (i + 2 <= hex.length) {
+			children.push({label:'Max services', hex:hex.substr(i,2), desc:parseInt(hex.substr(i,2),16).toString()});
+		}
+	} else {
+		const adLen = parseInt(hex.substr(i,2), 16); i += 2;
+		if (adLen > 0 && i + adLen * 2 <= hex.length) {
+			children.push({label:'Access Domain', hex:hex.substr(i-2, 2+adLen*2), desc:hex.substr(i, adLen*2)});
+			i += adLen * 2;
+		} else {
+			children.push({label:'Access Domain', hex:hex.substr(i-2,2), desc:'Empty'});
+		}
+		children.push({label:'Priority', hex:hex.substr(i,2), desc:parseInt(hex.substr(i,2),16).toString()}); i += 2;
+		children.push({label:'Timers', hex:hex.substr(i,2), desc:parseInt(hex.substr(i,2),16).toString()}); i += 2;
+		children.push({label:'Text length', hex:hex.substr(i,2), desc:parseInt(hex.substr(i,2),16).toString()}); i += 2;
+		const menus = parseInt(hex.substr(i,2), 16); i += 2;
+		children.push({label:'Menu entries', hex:hex.substr(i-2,2), desc:menus.toString()});
+		for (let m = 0; m < menus && i + 4 <= hex.length; m++) {
+			children.push({label:'Menu pair '+(m+1), hex:hex.substr(i,4), desc:'Pos ' + parseInt(hex.substr(i,2),16) + ', ID ' + hex.substr(i+2,2)});
+			i += 4;
+		}
+		children.push({label:'Channels', hex:hex.substr(i,2), desc:parseInt(hex.substr(i,2),16).toString()}); i += 2;
+		if (i + 2 <= hex.length) {
+			const mslLen = parseInt(hex.substr(i,2), 16); i += 2;
+			if (mslLen > 0 && i + mslLen * 2 <= hex.length) {
+				children.push({label:'MSL', hex:hex.substr(i-2, 2+mslLen*2), desc:'Length ' + mslLen + ' value ' + hex.substr(i, mslLen*2)});
+				i += mslLen * 2;
+			} else {
+				children.push({label:'MSL', hex:hex.substr(i-2,2), desc:'No MSL'});
+			}
+		}
+		if (i + 2 <= hex.length) {
+			const tarLen = parseInt(hex.substr(i,2), 16); i += 2;
+			if (tarLen > 0 && i + tarLen * 2 <= hex.length) {
+				children.push({label:'TAR', hex:hex.substr(i-2, 2+tarLen*2), desc:hex.substr(i, tarLen*2)});
+				i += tarLen * 2;
+			} else {
+				children.push({label:'TAR', hex:hex.substr(i-2,2), desc:'No TAR'});
+			}
+		}
+	}
+	return children;
+}
+
+function describeProactiveCommand(tlvs) {
+	const children = [];
+	for (const tlv of tlvs) {
+		const base = baseCompTag(tlv.tag);
+		let desc = '';
+		if (base === '01') {
+			const cmdNum = parseInt(tlv.value.substr(0, 2), 16);
+			const qual = tlv.value.substr(4, 2);
+			let typeName = 'Command #' + cmdNum;
+			for (const [k, arr] of Object.entries(BER_QUAL)) {
+				const found = arr.find(([v]) => v === qual);
+				if (found) { typeName += ', ' + k.toUpperCase() + ' qual ' + found[1]; break; }
+			}
+			desc = typeName;
+		} else if (base === '02') {
+			const src = tlv.value.substr(0, 2);
+			const dst = tlv.value.substr(2, 2);
+			const srcName = (BER_DEVICES.find(([v]) => v === src) || [])[1] || src;
+			const dstName = (BER_DEVICES.find(([v]) => v === dst) || [])[1] || dst;
+			desc = 'from ' + srcName + ' to ' + dstName;
+		} else if (base === '0D' || base === '8D') {
+			desc = decodeTextData(tlv.value);
+		} else if (base === '04' || base === '84') {
+			if (tlv.value.length >= 4) {
+				const unit = ['minutes','seconds','tenths'][parseInt(tlv.value.substr(0,2), 16)] || '?';
+				const val = parseInt(tlv.value.substr(2,2), 16);
+				desc = val + ' ' + unit;
+			}
+		} else if (base === '05' || base === '85') {
+			desc = 'Alpha ID: ' + tlv.value;
+		} else if (base === '0E' || base === '8E') {
+			const tone = tlv.value.substr(0, 2);
+			const toneName = (BER_TONES.find(([v]) => v === tone) || [])[1] || tone;
+			desc = 'Tone: ' + toneName;
+		} else if (base === '12' || base === '92') {
+			desc = 'File list: ' + tlv.value;
+		} else {
+			desc = tlv.value || '(empty)';
+		}
+		children.push({label:'TLV ' + tlv.tag + ' (' + baseCompTag(tlv.tag) + ')', hex:tlv.raw, desc});
+	}
+	return children;
+}
+
+function parseBerScript(hex) {
+	const rows = [];
+	let i = 0;
+	if (hex.startsWith('AA')) {
+		const r = parseBerLen(hex, 2);
+		i = 2 + r.consumed;
+	} else if (hex.startsWith('AE80')) {
+		i = 4;
+	} else {
+		return rows;
+	}
+	while (i < hex.length) {
+		if (hex.startsWith('0000', i)) break;
+		if (i + 4 > hex.length) break;
+		const tag = hex.substr(i, 2);
+		const r = parseBerLen(hex, i + 2);
+		const len = r.len;
+		const consumed = 2 + r.consumed;
+		if (i + consumed + len * 2 > hex.length) break;
+		const value = hex.substr(i + consumed, len * 2);
+		const raw = hex.substr(i, consumed + len * 2);
+		let label = 'Row ' + (rows.length + 1);
+		let children = [];
+		if (tag === '22') {
+			label = 'C-APDU';
+			children = [{label:'APDU', hex:value, desc:value}];
+		} else if (tag === '81') {
+			label = 'Immediate Action';
+			children = parseActionRow(value, '81');
+		} else if (tag === '82') {
+			label = 'Error Action';
+			children = parseActionRow(value, '82');
+		} else if (tag === '83') {
+			label = 'Script Chaining';
+			children = [{label:'Flags', hex:value.substr(0,2), desc:parseChainingFlags(value.substr(0,2))}];
+			if (value.length > 2) children.push({label:'Script ID', hex:value.substr(2), desc:value.substr(2)});
+		} else {
+			label = 'Row ' + (rows.length + 1) + ' (tag ' + tag + ')';
+		}
+		rows.push({label, hex:raw, desc:'', children});
+		i += consumed + len * 2;
+	}
+	if (i < hex.length && !hex.startsWith('0000', i)) {
+		rows.push({label:'Trailing (unrecognized)', hex:hex.substr(i), desc:hex.substr(i)});
+	}
+	return rows;
+}
+
+function parseChainingFlags(hex) {
+	if (hex === '01') return 'First';
+	if (hex === '11') return 'First, keep across reset';
+	if (hex === '02') return 'Intermediary (more to follow)';
+	if (hex === '03') return 'Intermediary (last)';
+	return hex;
+}
+
+function parseActionRow(hex, tag) {
+	if (!hex || hex === '00') return [{label:'No action', hex:hex||'', desc:tag === '82' ? 'No action (82 00)' : ''}];
+	if (hex.length === 2) return [{label:'Action indicator', hex, desc:'Value ' + hex}];
+	const tlvs = parseTlvList(hex);
+	if (tlvs.length > 0) {
+		const children = describeProactiveCommand(tlvs);
+		return [{label:'Proactive command', hex, desc:'', children}];
+	}
+	return [{label:'Raw', hex, desc:hex}];
+}
+
+function parseOneApdu(hex) {
+	if (hex.length < 10) return null;
+	const cla = hex.substr(0, 2);
+	const ins = hex.substr(2, 2);
+	const p1 = hex.substr(4, 2);
+	const p2 = hex.substr(6, 2);
+	const p3 = hex.substr(8, 2);
+	const insInfo = PARSE_INS[ins];
+	const children = [
+		{label:'CLA', hex:cla, desc:cla === '80' ? 'GP/RAM' : cla === 'A0' ? 'SIM' : 'UICC'},
+		{label:'INS', hex:ins, desc:insInfo ? insInfo.name : 'Unknown'},
+		{label:'P1', hex:p1, desc:''},
+		{label:'P2', hex:p2, desc:''},
+	];
+	if (insInfo && insInfo.data === 'le') {
+		children.push({label:'Le', hex:p3, desc:'Expected length: ' + parseInt(p3, 16)});
+	} else if (insInfo && insInfo.data === 'none') {
+		children.push({label:'P3', hex:p3, desc:'No data'});
+	} else {
+		const lc = parseInt(p3, 16);
+		children.push({label:'Lc', hex:p3, desc:'Data length: ' + lc});
+		if (lc > 0 && hex.length >= 10 + lc * 2) {
+			const data = hex.substr(10, lc * 2);
+			children.push({label:'Data', hex:data, desc:data});
+			if (hex.length > 10 + lc * 2) {
+				const le = hex.substr(10 + lc * 2, 2);
+				children.push({label:'Le', hex:le, desc:'Expected response length: ' + parseInt(le, 16)});
+			}
+		}
+	}
+	const totalLen = 10 + (children.find(c => c.label === 'Data') ? parseInt(children.find(c => c.label === 'Lc').hex, 16) * 2 : 0) + (children.find(c => c.label === 'Le (tail)') ? 2 : 0);
+	return {label:'APDU', hex:hex.substr(0, totalLen), desc:'', children};
+}
+
+function parseCompactApdus(hex) {
+	const apdus = [];
+	let i = 0;
+	let prevCla = '';
+	while (i + 4 <= hex.length) {
+		const first = hex.substr(i, 2);
+		const second = hex.substr(i + 2, 2);
+		let fullCla = '';
+		let fullIns = '';
+		let consumed = 0;
+		if ((first === '80' || first === 'A0' || first === '00') && PARSE_INS[second]) {
+			fullCla = first;
+			fullIns = second;
+			consumed = 2;
+		} else if (PARSE_INS[first] && prevCla && i > 0) {
+			fullCla = prevCla;
+			fullIns = first;
+			consumed = 0;
+		}
+		if (fullCla) {
+			const p3 = parseInt(hex.substr(i + 6 + consumed, 2), 16);
+			const dataType = PARSE_INS[fullIns].data;
+			let apduLen = 8;
+			if (dataType === 'lc') {
+				apduLen += p3 * 2;
+			}
+			if (i + consumed + apduLen <= hex.length) {
+				const apduHex = fullCla + hex.substr(i + consumed, apduLen);
+				const parsed = parseOneApdu(apduHex);
+				if (parsed) {
+					prevCla = fullCla;
+					parsed.hex = hex.substr(i, consumed + apduLen);
+					parsed.label = consumed === 0 ? 'APDU (implied CLA)' : 'APDU';
+					apdus.push(parsed);
+					i += consumed + apduLen;
+					continue;
+				}
+			}
+		}
+		apdus.push({label:'Unknown', hex:hex.substr(i, 2), desc:'Unrecognized'});
+		i += 2;
+	}
+	if (i < hex.length) {
+		apdus.push({label:'Trailing (unrecognized)', hex:hex.substr(i), desc:hex.substr(i)});
+	}
+	return apdus;
+}
+
+function parseHexTree(hex) {
+	const s = hex.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+	if (s.length % 2 !== 0) return {label:'Error', hex:'', desc:'Odd hex length'};
+	if (s.startsWith('AA') && s.length >= 4) {
+		const rows = parseBerScript(s);
+		return {label:'Expanded Script (AA)', hex:s, desc:'', children:rows};
+	}
+	if (s.startsWith('AE80')) {
+		const rows = parseBerScript(s);
+		return {label:'Expanded Script (AE80)', hex:s, desc:'', children:rows};
+	}
+	const apdus = parseCompactApdus(s);
+	return {label:'Compact C-APDU chain', hex:s, desc:'', children:apdus};
+}
+
+function renderTree(node, container) {
+	const div = document.createElement('div');
+	div.className = 'ml-3 border-l-2 border-gray-300 dark:border-slate-600 pl-2 mb-1';
+	const header = document.createElement('div');
+	header.className = 'flex gap-2 items-start py-0.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded';
+	if (node.children && node.children.length > 0) {
+		const toggle = document.createElement('span');
+		toggle.textContent = '▾';
+		toggle.className = 'text-xs text-gray-400 w-4 flex-shrink-0';
+		header.appendChild(toggle);
+		header.onclick = () => {
+			const body = div.querySelector('.tree-body');
+			if (body) {
+				body.classList.toggle('hidden');
+				toggle.textContent = body.classList.contains('hidden') ? '▸' : '▾';
+			}
+		};
+	} else {
+		const dot = document.createElement('span');
+		dot.textContent = '·';
+		dot.className = 'text-xs text-gray-300 w-4 flex-shrink-0';
+		header.appendChild(dot);
+	}
+	const label = document.createElement('span');
+	label.className = 'text-xs font-medium text-gray-700 dark:text-slate-300';
+	label.textContent = node.label;
+	header.appendChild(label);
+	if (node.hex) {
+		const hex = document.createElement('span');
+		hex.className = 'text-xs font-mono text-gray-500 dark:text-slate-400 ml-2';
+		hex.textContent = node.hex;
+		header.appendChild(hex);
+	}
+	if (node.desc) {
+		const desc = document.createElement('span');
+		desc.className = 'text-xs text-gray-600 dark:text-slate-400 ml-2';
+		desc.textContent = node.desc;
+		header.appendChild(desc);
+	}
+	div.appendChild(header);
+	if (node.children && node.children.length > 0) {
+		const body = document.createElement('div');
+		body.className = 'tree-body';
+		div.appendChild(body);
+		for (const child of node.children) {
+			renderTree(child, body);
+		}
+	}
+	container.appendChild(div);
+}
+
+function parseHex() {
+	const input = document.getElementById('parse-input');
+	const output = document.getElementById('parse-output');
+	const hex = input.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+	if (!hex || hex.length % 2 !== 0) {
+		output.innerHTML = '<div class="text-xs text-red-500">Invalid hex input</div>';
+		return;
+	}
+	const tree = parseHexTree(hex);
+	output.innerHTML = '';
+	renderTree(tree, output);
 }
 
 // ===== Response Parser =====
@@ -4933,6 +5421,7 @@ const LANG_RU = {
 	'Error: ciphering requires KIc key': 'Ошибка: ciphering requires KIc key',
 	'Error: MAC requires KID key': 'Ошибка: MAC requires KID key',
 	'Response parser': 'Парсер ответов',
+	'C-APDU Parser': 'Разбор C-APDU',
 	'Cards': 'Карты',
 	'Card reader': 'Картридер',
 	'Card presets are stored locally in your browser. JSON export/import buttons are below the card list.': 'Данные карт хранятся локально в браузере. Кнопки экспорта/импорта JSON — под списком карт.',
