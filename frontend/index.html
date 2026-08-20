@@ -2684,7 +2684,7 @@ function describeProactiveCommand(tlvs) {
 			let typeName = 'Command #' + cmdNum;
 			for (const [k, arr] of Object.entries(BER_QUAL)) {
 				const found = arr.find(([v]) => v === qual);
-				if (found) { typeName += ', ' + k.toUpperCase() + ' qual ' + found[1]; break; }
+				if (found) { typeName += ', ' + k.toUpperCase() + ' qual ' + qual + ' ' + found[1]; break; }
 			}
 			desc = typeName;
 		} else if (base === '02') {
