@@ -2905,18 +2905,18 @@ function renderTree(node, container) {
 		header.appendChild(dot);
 	}
 	const label = document.createElement('span');
-	label.className = 'text-xs font-medium text-gray-700 dark:text-slate-300';
+	label.className = 'text-sm font-medium text-gray-700 dark:text-slate-300';
 	label.textContent = node.label;
 	header.appendChild(label);
 	if (node.hex) {
 		const hex = document.createElement('span');
-		hex.className = 'text-xs font-mono text-gray-500 dark:text-slate-400 ml-2';
+		hex.className = 'text-sm font-mono text-gray-500 dark:text-slate-400 ml-2';
 		hex.textContent = node.hex;
 		header.appendChild(hex);
 	}
 	if (node.desc) {
 		const desc = document.createElement('span');
-		desc.className = 'text-xs text-gray-600 dark:text-slate-400 ml-2';
+		desc.className = 'text-sm text-gray-600 dark:text-slate-400 ml-2';
 		desc.textContent = node.desc;
 		header.appendChild(desc);
 	}
