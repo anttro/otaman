@@ -2094,7 +2094,7 @@ function buildErrorActionRow() {
 }
 
 function onErrorActionTypeChange(sel) {
-	const body = sel.nextElementSibling;
+	const body = sel.parentElement.nextElementSibling;
 	if (sel.value === 'proactive') {
 		body.innerHTML = buildBerPcHtml(['display','tone']);
 		const pc = body.querySelector('.ber-pc');
