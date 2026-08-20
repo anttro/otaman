@@ -1984,12 +1984,17 @@ function genSp() {
 const BER_TAGS = {'c-apdu':'22','immediate':'81','error':'82','chaining':'83'};
 const BER_QUAL = {
 	refresh: [
-		['00','Full file change notification'],
-		['01','File change notification'],
-		['02','UICC file change notification'],
-		['03','NAA application reset'],
-		['04','NAA session reset'],
-		['05','UICC reset']
+		['00','NAA Initialization and Full File Change Notification'],
+		['01','File Change Notification'],
+		['02','NAA Initialization and File Change Notification'],
+		['03','NAA Initialization'],
+		['04','UICC Reset'],
+		['05','NAA Application Reset (not for 2G SIM)'],
+		['06','NAA Session Reset (not for 2G SIM)'],
+		['07','Steering of Roaming'],
+		['08','Steering of Roaming for I-WLAN'],
+		['09','eUICC Profile State Change (eUICC only)'],
+		['0A','Application Update (eUICC only)']
 	],
 	display: [
 		['00','Normal priority'],
@@ -2063,76 +2068,47 @@ function onBerTypeChange(sel) {
 	updateBerRow(sel);
 }
 
-function buildErrorActionRow(rowIdx) {
-	return `
-	<div class="space-y-2">
-		<div class="flex gap-2 items-center">
-			<span class="text-xs text-gray-600 dark:text-slate-400">Action Type:</span>
-			<select class="error-action-type text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-700 dark:text-slate-300">
-				<option value="00">Immediate execution</option>
-				<option value="01">Delayed execution</option>
-				<option value="02">Conditional execution</option>
-			</select>
-		</div>
-
-		<div class="border border-gray-300 dark:border-slate-600 rounded p-2">
-			<div class="text-xs mb-2 font-medium text-gray-700 dark:text-slate-300">Trigger Conditions:</div>
-			
-			<div class="flex gap-2 mb-2 items-center">
-				<span class="text-xs text-gray-600 dark:text-slate-400">When:</span>
-				<select class="error-trigger-type text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-700 dark:text-slate-300">
-					<option value="any-sw">Any error</option>
-					<option value="specific-sw">Specific SW</option>
-					<option value="sw-range">SW range</option>
-					<option value="cmd-number">Specific command fails</option>
-				</select>
-			</div>
-
-			<div class="flex gap-2 items-center">
-				<span class="text-xs text-gray-600 dark:text-slate-400">SW Pattern:</span>
-				<input class="error-sw-mask font-mono text-xs w-16 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="XXXX" maxlength="4">
-				<span class="text-xs text-gray-500">=</span>
-				<input class="error-sw-value font-mono text-xs w-16 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="6A82" maxlength="4">
-				<span class="text-xs text-gray-400">(hex)</span>
-			</div>
-
-			<div class="flex gap-2 items-center mt-2">
-				<span class="text-xs text-gray-600 dark:text-slate-400">Command #:</span>
-				<input class="error-cmd-num text-xs w-10 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" type="number" min="1" max="255" placeholder="1">
-				<span class="text-xs text-gray-400">(optional)</span>
-			</div>
-
-			<div class="mt-2 text-xs text-gray-500 dark:text-slate-400">
-				Mask: <code class="error-sw-mask-display font-mono">FFFF</code>
-			</div>
-		</div>
-
-		<div class="border border-gray-300 dark:border-slate-600 rounded p-2">
-			<div class="text-xs mb-2 font-medium text-gray-700 dark:text-slate-300">Recovery Action:</div>
-			<select class="error-recovery-type text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onRecoveryTypeChange(this)">
-				<option value="none">None</option>
-				<option value="action">Action Indicator</option>
-				<option value="proactive" selected>Proactive Command</option>
-			</select>
-			<div class="error-recovery-body mt-1"></div>
-		</div>
-
-		<div class="flex gap-2 items-center">
-			<span class="text-xs text-gray-600 dark:text-slate-400">Retry Count:</span>
-			<input class="error-retry-count text-xs w-10 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" type="number" min="0" max="255" value="0">
-			<span class="text-xs text-gray-400">(0=no retry)</span>
-		</div>
-	</div>`;
+function buildErrorActionRow() {
+	return `<div class="flex gap-2 items-center">
+		<span class="text-xs text-gray-600 dark:text-slate-400">Error Action:</span>
+		<select class="error-action-type text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onErrorActionTypeChange(this)">
+			<option value="proactive" selected>Proactive command (DISPLAY TEXT / PLAY TONE)</option>
+			<option value="noaction">No action</option>
+			<option value="reference">Reference to EFRMA record</option>
+			<option value="custom">Custom hex</option>
+		</select>
+	</div>
+	<div class="error-action-body mt-2"></div>`;
 }
 
-function buildBerPcHtml() {
+function onErrorActionTypeChange(sel) {
+	const body = sel.nextElementSibling;
+	if (sel.value === 'proactive') {
+		body.innerHTML = buildBerPcHtml(['display','tone']);
+		const pc = body.querySelector('.ber-pc');
+		berPopulateDevices(pc);
+		onBerPcTypeChange(pc.querySelector('.ber-pc-type'));
+	} else if (sel.value === 'noaction') {
+		body.innerHTML = '<span class="text-xs text-gray-400 dark:text-slate-500">Emits <code class="font-mono">82 00</code> (no action)</span>';
+	} else if (sel.value === 'reference') {
+		body.innerHTML = `<div class="flex gap-2 items-center">
+			<span class="text-xs text-gray-600 dark:text-slate-400">EFRMA record ref:</span>
+			<input class="error-ref font-mono text-xs w-10 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" maxlength="2" placeholder="01" oninput="updateBerRow(this)">
+			<span class="text-xs text-gray-400">(01-7F)</span>
+		</div>`;
+	} else {
+		body.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
+	}
+	const row = sel.closest('.ber-row');
+	if (row) updateBerRow(sel);
+}
+
+function buildBerPcHtml(allowed = ['refresh','display','tone']) {
+	const typeOpts = {refresh:'REFRESH', display:'DISPLAY TEXT', tone:'PLAY TONE'};
 	return `<div class="ber-pc">
 		<div class="flex gap-1 mb-1 flex-wrap">
 			<select class="ber-pc-type text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" onchange="onBerPcTypeChange(this)">
-				<option value="refresh">REFRESH</option>
-				<option value="display">DISPLAY TEXT</option>
-				<option value="tone">PLAY TONE</option>
-				<option value="custom">Custom</option>
+				${allowed.map(t => `<option value="${t}">${typeOpts[t]}</option>`).join('')}
 			</select>
 			<span class="text-xs pt-1">#</span>
 			<input class="ber-pc-num text-xs w-10 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" type="number" min="1" max="255" value="1" onchange="updateBerRow(this)">
@@ -2149,25 +2125,6 @@ function buildBerPcHtml() {
 	</div>`;
 }
 
-function onRecoveryTypeChange(sel) {
-	const body = sel.nextElementSibling;
-	if (sel.value === 'action') {
-		body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
-			<option value="81">81 (Session indication)</option>
-			<option value="82">82 (Early response)</option>
-		</select>`;
-	} else if (sel.value === 'proactive') {
-		body.innerHTML = buildBerPcHtml();
-		const pc = body.querySelector('.ber-pc');
-		berPopulateDevices(pc);
-		onBerPcTypeChange(pc.querySelector('.ber-pc-type'));
-	} else {
-		body.innerHTML = '';
-	}
-	const row = sel.closest('.ber-row');
-	if (row) updateBerRow(sel);
-}
-
 function onBerSubTypeChange(sel) {
 	const body = sel.closest('.ber-sub-body') || sel.parentElement.querySelector('.ber-sub-body');
 	const st = sel.value;
@@ -2177,9 +2134,9 @@ function onBerSubTypeChange(sel) {
 		const type = row.querySelector('.ber-type').value;
 		
 		if (type === 'error') {
-			body.innerHTML = buildErrorActionRow(row.dataset.berIdx);
-			const recoveryType = body.querySelector('.error-recovery-type');
-			onRecoveryTypeChange(recoveryType);
+			body.innerHTML = buildErrorActionRow();
+			const actionType = body.querySelector('.error-action-type');
+			onErrorActionTypeChange(actionType);
 		} else {
 			body.innerHTML = `<select class="ber-action text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
 				<option value="81">81 (Session indication)</option>
@@ -2225,6 +2182,15 @@ function onBerPcTypeChange(sel) {
 		<div class="flex gap-1 items-center mt-1">
 			<span class="text-xs">Alpha ID:</span>
 			<input class="ber-pc-alpha flex-1 text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" placeholder="hex (tag 85)" oninput="updateBerRow(this)">
+		</div>
+		<div class="flex gap-1 items-center mt-1">
+			<label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400"><input type="checkbox" class="ber-pc-dur-enable" checked onchange="updateBerRow(this)"> Duration:</label>
+			<select class="ber-pc-dur-unit text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" onchange="updateBerRow(this)">
+				<option value="00">minutes</option>
+				<option value="01" selected>seconds</option>
+				<option value="02">tenths of seconds</option>
+			</select>
+			<input class="ber-pc-dur-val text-xs w-12 border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" type="number" min="1" max="255" value="30" onchange="updateBerRow(this)">
 		</div>`;
 	} else if (type === 'tone') {
 		fields.innerHTML = `<div class="flex gap-1 items-center">
@@ -2235,11 +2201,9 @@ function onBerPcTypeChange(sel) {
 		BER_TONES.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=v+' '+l;tsel.appendChild(o);});
 	} else if (type === 'refresh') {
 		fields.innerHTML = `<div class="flex gap-1 items-center">
-			<span class="text-xs">File list (tag 12):</span>
+			<span class="text-xs">File list (tag 92):</span>
 			<input class="ber-pc-flist flex-1 text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300 font-mono" placeholder="hex (optional)" oninput="updateBerRow(this)">
 		</div>`;
-	} else {
-		fields.innerHTML = `<input class="ber-hex w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-1 dark:bg-slate-700 dark:text-slate-300" placeholder="hex" oninput="updateBerRow(this)">`;
 	}
 	updateBerRow(sel);
 }
@@ -2280,74 +2244,36 @@ function genBerRowValue(row) {
 
 function genErrorActionValue(row, tag) {
 	const actionType = row.querySelector('.error-action-type');
-	const triggerType = row.querySelector('.error-trigger-type');
-	const maskInput = row.querySelector('.error-sw-mask');
-	const valueInput = row.querySelector('.error-sw-value');
-	const cmdNumInput = row.querySelector('.error-cmd-num');
-	const recoveryType = row.querySelector('.error-recovery-type');
-	const retryCount = row.querySelector('.error-retry-count');
-	
 	if (!actionType) return '';
+	const body = row.querySelector('.error-action-body');
+	if (!body) return '';
 	
-	let value = actionType.value;
-	
-	const cmdNum = cmdNumInput.value ? parseInt(cmdNumInput.value) : 0xFF;
-	if (triggerType.value === 'cmd-number') {
-		value += cmdNum.toString(16).padStart(2, '0').toUpperCase();
-	} else {
-		value += 'FF';
-	}
-	
-	let swMask = '0000';
-	let swValue = '0000';
-	
-	switch (triggerType.value) {
-		case 'any-sw':
-			swMask = '0000';
-			swValue = '0000';
-			break;
-		case 'specific-sw':
-			swMask = 'FFFF';
-			swValue = (valueInput.value || '').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0');
-			break;
-		case 'sw-range':
-			swMask = (maskInput.value || '').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0') || '6A00';
-			swValue = (valueInput.value || '').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0') || '6A82';
-			break;
-		case 'cmd-number':
-			swMask = '0000';
-			swValue = '0000';
-			break;
-	}
-	
-	value += swMask + swValue;
-	
-	if (recoveryType) {
-		const rt = recoveryType.value;
-		if (rt === 'proactive') {
-			const rv = genBerPcValue(recoveryType.parentElement, '81');
-			if (rv) value += rv.slice(2);
-		} else if (rt === 'action') {
-			const a = recoveryType.parentElement.querySelector('.ber-action');
-			if (a) value += '8101' + a.value;
+	switch (actionType.value) {
+		case 'proactive':
+			return genBerPcValue(body, tag);
+		case 'noaction':
+			return tag + '00';
+		case 'reference': {
+			const ref = (body.querySelector('.error-ref').value || '').replace(/[^0-9a-fA-F]/g, '');
+			const refNum = parseInt(ref, 16);
+			if (!ref || isNaN(refNum) || refNum < 0x01 || refNum > 0x7F) return '';
+			return tag + '01' + refNum.toString(16).padStart(2, '0').toUpperCase();
+		}
+		default: {
+			const hex = (body.querySelector('.ber-hex').value || '').replace(/[^0-9a-fA-F]/g, '');
+			if (!hex) return '';
+			return tag + berLenStr(hex.length / 2) + hex;
 		}
 	}
-	
-	const retry = parseInt(retryCount.value);
-	if (!isNaN(retry) && retry > 0) {
-		value += retry.toString(16).padStart(2, '0').toUpperCase();
-	}
-	
-	return tag + berLenStr(value.length/2) + value;
 }
 
 function buildScriptChainingRow(rowIdx, hint = '') {
 	return `
 	<div class="space-y-2">
-		<div class="flex gap-4 items-center">
+		<div class="flex gap-4 items-center flex-wrap">
 			<span class="text-xs font-medium text-gray-700 dark:text-slate-300">Position:</span>
 			<label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400">
-				<input type="radio" name="chaining-${rowIdx}" value="first" ${hint === 'first' ? 'checked' : ''} onchange="updateChainingFlags(${rowIdx})">
+				<input type="radio" name="chaining-${rowIdx}" value="first" ${hint === 'intermediary' ? '' : 'checked'} onchange="updateChainingFlags(${rowIdx})">
 				First Script
 			</label>
 			<label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400">
@@ -2357,6 +2283,10 @@ function buildScriptChainingRow(rowIdx, hint = '') {
 			<label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400">
 				<input type="checkbox" name="chaining-${rowIdx}-last" value="last" ${hint === 'last' ? 'checked' : ''} onchange="updateChainingFlags(${rowIdx})">
 				Also Last Script
+			</label>
+			<label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400">
+				<input type="checkbox" name="chaining-${rowIdx}-keep" value="keep" onchange="updateChainingFlags(${rowIdx})">
+				Keep chaining info across reset (RFM)
 			</label>
 		</div>
 
@@ -2383,10 +2313,14 @@ function buildScriptChainingRow(rowIdx, hint = '') {
 function updateChainingFlags(rowIdx) {
 	const first = document.querySelector(`input[name="chaining-${rowIdx}"][value="first"]`);
 	const intermediate = document.querySelector(`input[name="chaining-${rowIdx}"][value="intermediary"]`);
+	const lastCheckbox = document.querySelector(`input[name="chaining-${rowIdx}-last"]`);
+	const keepCheckbox = document.querySelector(`input[name="chaining-${rowIdx}-keep"]`);
 	if (first && intermediate) {
 		if (first.checked) intermediate.checked = false;
 		if (intermediate.checked) first.checked = false;
 	}
+	if (lastCheckbox) lastCheckbox.disabled = !!(first && first.checked);
+	if (keepCheckbox) keepCheckbox.disabled = !!(first && !first.checked);
 	updateBerRow(document.querySelector(`[data-ber-idx="${rowIdx}"] .ber-type`));
 }
 
@@ -2411,15 +2345,19 @@ function genScriptChainingValue(row, tag) {
 	const firstRadio = row.querySelector(`input[name="chaining-${rowIdx}"][value="first"]`);
 	const intermediateRadio = row.querySelector(`input[name="chaining-${rowIdx}"][value="intermediary"]`);
 	const lastCheckbox = row.querySelector(`input[name="chaining-${rowIdx}-last"]`);
+	const keepCheckbox = row.querySelector(`input[name="chaining-${rowIdx}-keep"]`);
 	const scriptIdInput = row.querySelector('.chaining-script-id');
 	const additionalInput = row.querySelector('.chaining-additional');
 	
-	let flags = 0;
-	if (firstRadio && firstRadio.checked) flags |= 0x01;
-	if (intermediateRadio && intermediateRadio.checked) flags |= 0x02;
-	if (lastCheckbox && lastCheckbox.checked) flags |= 0x04;
+	let flags = '';
+	if (firstRadio && firstRadio.checked) {
+		flags = (keepCheckbox && keepCheckbox.checked) ? '11' : '01';
+	} else if (intermediateRadio && intermediateRadio.checked) {
+		flags = (lastCheckbox && lastCheckbox.checked) ? '03' : '02';
+	}
+	if (!flags) return '';
 	
-	let value = flags.toString(16).padStart(2, '0').toUpperCase();
+	let value = flags;
 	
 	const scriptId = (scriptIdInput.value || '').replace(/[^0-9a-fA-F]/g, '');
 	if (scriptId) {
@@ -2444,7 +2382,7 @@ function genBerPcValue(row, tag) {
 	const dst = pc.querySelector('.ber-pc-dst').value;
 
 	let value = '8103' + cmdNum.toString(16).padStart(2,'0').toUpperCase();
-	const typeBytes = {refresh:'01',display:'21',tone:'31',custom:'00'};
+	const typeBytes = {refresh:'01',display:'21',tone:'20'};
 	value += (typeBytes[pct]||'00') + qual;
 	value += '8202' + src + dst;
 
@@ -2456,7 +2394,6 @@ function genBerPcValue(row, tag) {
 				const buf = [];
 				for (const c of text) { const cd=c.charCodeAt(0); buf.push((cd>>8)&0xFF,cd&0xFF); }
 				value += '8D' + berLenStr(buf.length) + buf.map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join('');
-				value += '04' + berLenStr(1) + '80';
 			} else {
 				try {
 					const septets = gsm7TextToSeptets(text);
@@ -2468,6 +2405,14 @@ function genBerPcValue(row, tag) {
 				}
 			}
 		}
+		const durEnable = pc.querySelector('.ber-pc-dur-enable');
+		if (durEnable && durEnable.checked) {
+			const durVal = parseInt(pc.querySelector('.ber-pc-dur-val').value);
+			if (!isNaN(durVal) && durVal >= 1 && durVal <= 255) {
+				const durUnit = pc.querySelector('.ber-pc-dur-unit').value;
+				value += '84' + berLenStr(2) + durUnit + durVal.toString(16).padStart(2,'0').toUpperCase();
+			}
+		}
 		const alpha = (pc.querySelector('.ber-pc-alpha').value||'').replace(/[^0-9a-fA-F]/g,'');
 		if (alpha) value += '85' + berLenStr(alpha.length/2) + alpha;
 	} else if (pct === 'tone') {
@@ -2475,10 +2420,7 @@ function genBerPcValue(row, tag) {
 		value += '8E01' + tone;
 	} else if (pct === 'refresh') {
 		const flist = (pc.querySelector('.ber-pc-flist').value||'').replace(/[^0-9a-fA-F]/g,'');
-		if (flist) value += '12' + berLenStr(flist.length/2) + flist;
-	} else {
-		const hex = (pc.querySelector('.ber-hex').value||'').replace(/[^0-9a-fA-F]/g,'');
-		if (hex) value += hex;
+		if (flist) value += '92' + berLenStr(flist.length/2) + flist;
 	}
 
 	return tag + berLenStr(value.length/2) + value;
@@ -2488,44 +2430,6 @@ function berLenStr(n) {
 	if (n < 128) return n.toString(16).padStart(2,'0').toUpperCase();
 	return '81' + n.toString(16).padStart(2,'0').toUpperCase();
 }
-
-function updateSwMaskDisplay(row) {
-	const triggerType = row.querySelector('.error-trigger-type');
-	if (!triggerType) return;
-	const maskInput = row.querySelector('.error-sw-mask');
-	const valueInput = row.querySelector('.error-sw-value');
-	const display = row.querySelector('.error-sw-mask-display');
-	
-	let mask = '0000';
-	
-	switch (triggerType.value) {
-		case 'any-sw':
-			mask = '0000';
-			break;
-		case 'specific-sw':
-			mask = 'FFFF';
-			break;
-		case 'sw-range':
-			mask = maskInput.value || '6A00';
-			break;
-		case 'cmd-number':
-			mask = '0000';
-			break;
-	}
-	
-	display.textContent = mask.toUpperCase();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-	document.addEventListener('change', (e) => {
-		if (e.target.classList.contains('error-trigger-type') || 
-		    e.target.classList.contains('error-sw-mask')) {
-			const row = e.target.closest('.ber-row');
-			if (row) updateSwMaskDisplay(row);
-			updateBerRow(e.target);
-		}
-	});
-});
 
 function genBerTlv() {
 	const fmt = document.getElementById('ber-format').value;

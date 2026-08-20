@@ -110,18 +110,18 @@
 	<p class="text-sm mb-3">Сборщик Immediate Action предлагает action indicator (<code class="font-mono text-sm">81</code>/<code class="font-mono text-sm">82</code>), структурированный сборщик проактивных команд (REFRESH, DISPLAY TEXT, PLAY TONE с авто-генерацией COMPREHENSION-TLV), или ручной hex-ввод.</p>
 
 	<h4 id="ber-error-action" class="font-medium mb-2 text-base">Error Action TLV (Tag 82)</h4>
-	<p class="text-sm mb-2">Условное восстановление при ошибках для graceful rollback:</p>
+	<p class="text-sm mb-2">Восстановление при ошибках по TS 102 226 §5.2.1.3 — одна из трёх форм:</p>
 	<ul class="text-sm list-disc pl-5 mb-2">
-		<li><strong>Тип действия:</strong> Немедленное (00), отложенное (01) или условное (02) выполнение</li>
-		<li><strong>Условия запуска:</strong> Сопоставление SW (любая ошибка, конкретный SW, диапазон SW, конкретная команда)</li>
-		<li><strong>Действие восстановления:</strong> Action Indicator (81 session indication / 82 early response) или проактивная команда (DISPLAY TEXT, PLAY TONE, REFRESH) для уведомления или отката</li>
-		<li><strong>Количество попыток:</strong> Число повторных попыток до отказа (0=без повтора)</li>
+		<li><strong>Проактивная команда:</strong> набор COMPREHENSION-TLV с DISPLAY TEXT или PLAY TONE (в Error Action допустимы только эти две, TS 102 226 Table 5.9)</li>
+		<li><strong>Без действия:</strong> <code class="font-mono text-sm">82 00</code></li>
+		<li><strong>Ссылка на запись EFRMA:</strong> <code class="font-mono text-sm">82 01 &lt;ref&gt;</code> с номером записи <code class="font-mono text-sm">01</code>–<code class="font-mono text-sm">7F</code></li>
+		<li><strong>Произвольный hex:</strong> произвольное значение TLV</li>
 	</ul>
 
 	<h4 id="ber-script-chaining" class="font-medium mb-2 text-base">Script Chaining TLV (Tag 83)</h4>
 	<p class="text-sm mb-2">Многопакетное выполнение скрипта с сохранением контекста:</p>
 	<ul class="text-sm list-disc pl-5 mb-2">
-		<li><strong>Флаги цепочки:</strong> Позиция First/Intermediary/Last Script (бит 0/1/2)</li>
+		<li><strong>Флаги цепочки:</strong> <code class="font-mono text-sm">01</code> первый скрипт (удалять инфо о цепочке при сбросе), <code class="font-mono text-sm">11</code> первый скрипт (сохранять инфо о цепочке при сбросе, только RFM), <code class="font-mono text-sm">02</code> последующий скрипт (будут ещё), <code class="font-mono text-sm">03</code> последующий скрипт (последний)</li>
 		<li><strong>Идентификатор скрипта:</strong> Корреляционный идентификатор между пакетами (1-4 байта hex, авто-инкремент подсказки)</li>
 		<li><strong>Дополнительные данные:</strong> Расширенная информация цепочки (опционально hex)</li>
 		<li><strong>Сохранение контекста:</strong> UICC сохраняет состояние безопасности/транзакции между пакетами</li>

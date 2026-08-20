@@ -110,18 +110,18 @@
 	<p class="text-sm mb-3">The Immediate Action builder offers an action indicator (<code class="font-mono text-sm">81</code>/<code class="font-mono text-sm">82</code>), a structured proactive command builder (REFRESH, DISPLAY TEXT, PLAY TONE with auto-generated COMPREHENSION-TLV objects), or a freeform hex input.</p>
 
 	<h4 id="ber-error-action" class="font-medium mb-2 text-base">Error Action TLV (Tag 82)</h4>
-	<p class="text-sm mb-2">Conditional error recovery for graceful rollback:</p>
+	<p class="text-sm mb-2">Error recovery per TS 102 226 §5.2.1.3 — one of three forms:</p>
 	<ul class="text-sm list-disc pl-5 mb-2">
-		<li><strong>Action Type:</strong> Immediate (00), delayed (01), or conditional (02) execution</li>
-		<li><strong>Trigger Conditions:</strong> SW pattern matching (any error, specific SW, SW range, specific command fails)</li>
-		<li><strong>Recovery Action:</strong> Action Indicator (81 session indication / 82 early response) or Proactive Command (DISPLAY TEXT, PLAY TONE, REFRESH) to notify user or fallback</li>
-		<li><strong>Retry Count:</strong> Number of retry attempts before giving up (0=no retry)</li>
+		<li><strong>Proactive command:</strong> COMPREHENSION-TLV set with DISPLAY TEXT or PLAY TONE (only these two are allowed in an Error Action, TS 102 226 Table 5.9)</li>
+		<li><strong>No action:</strong> <code class="font-mono text-sm">82 00</code></li>
+		<li><strong>Reference to EFRMA record:</strong> <code class="font-mono text-sm">82 01 &lt;ref&gt;</code> with record number <code class="font-mono text-sm">01</code>–<code class="font-mono text-sm">7F</code></li>
+		<li><strong>Custom hex:</strong> arbitrary TLV value</li>
 	</ul>
 
 	<h4 id="ber-script-chaining" class="font-medium mb-2 text-base">Script Chaining TLV (Tag 83)</h4>
 	<p class="text-sm mb-2">Multi-packet script execution with context preservation:</p>
 	<ul class="text-sm list-disc pl-5 mb-2">
-		<li><strong>Chaining Flags:</strong> First/Intermediary/Last Script position (bit 0/1/2)</li>
+		<li><strong>Chaining Flags:</strong> <code class="font-mono text-sm">01</code> first script (delete chaining info on reset), <code class="font-mono text-sm">11</code> first script (keep chaining info across reset, RFM only), <code class="font-mono text-sm">02</code> subsequent script (more to follow), <code class="font-mono text-sm">03</code> subsequent script (last)</li>
 		<li><strong>Script ID:</strong> Correlation identifier across packets (1-4 bytes hex, auto-increment hints provided)</li>
 		<li><strong>Additional Data:</strong> Extended chaining information (optional hex)</li>
 		<li><strong>Context Preservation:</strong> UICC keeps security/transaction state open across chained scripts</li>
