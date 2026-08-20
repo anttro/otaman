@@ -17,7 +17,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.8.0</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.8.1</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -379,7 +379,7 @@
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Toolkit mode">Toolkit mode</label>
 					<select id="ram-tk-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 						<option value="ca">SIM Toolkit (Tag CA)</option>
-						<option value="80">UICC Toolkit (Tag 80)</option>
+						<option value="ea">UICC Toolkit (Tag EA)</option>
 					</select>
 				</div>
 				<div class="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
@@ -438,6 +438,10 @@
 						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Access domain (hex)">Access domain (hex)</label>
 						<input id="ram-tk-ad" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
 					</div>
+					<div id="ram-tk-services-row">
+						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Max services">Max services</label>
+						<input id="ram-tk-services" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+					</div>
 				</div>
 			</div>
 		</div>
@@ -456,10 +460,11 @@
 		<div id="ram-enc-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Encryption">Encryption</label>
 			<select id="ram-enc" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="00">No encryption, last block</option>
-				<option value="40">No encryption, more blocks</option>
-				<option value="80">With encryption, last block</option>
-				<option value="C0">With encryption, more blocks</option>
+				<option value="00">No encryption, more blocks</option>
+				<option value="40">App-dependent encryption, more blocks</option>
+				<option value="80">No encryption, last block</option>
+				<option value="C0">App-dependent encryption, last block</option>
+				<option value="E0">With encryption, last block</option>
 			</select>
 		</div>
 		<div id="ram-del-mode-row" class="mb-3">
@@ -1082,7 +1087,7 @@ function updateSimSelectSection(mode) {
 }
 
 function updateP1P2Display(mode) {
-	const preset = mode === 'sim' ? {selP1: 0x00, selP2: 0x00} : {selP1: 0x09, selP2: 0x0C};
+	const preset = mode === 'sim' ? {selP1: 0x00, selP2: 0x00} : {selP1: 0x00, selP2: 0x0C};
 	const cmd = document.getElementById(mode + '-cmd').value;
 	if (cmd === 'select') {
 		document.getElementById(mode + '-p1').value = preset.selP1.toString(16).padStart(2, '0').toUpperCase();
@@ -1143,13 +1148,14 @@ function updateRamPriv() {
 function updateRamToolkit() {
 	const checked = document.getElementById('ram-toolkit-enable').checked;
 	document.getElementById('ram-toolkit-body').style.display = checked ? '' : 'none';
-	document.getElementById('ram-tk-ad-row').style.display =
-		document.getElementById('ram-tk-mode').value === 'ca' ? '' : 'none';
+	updateRamTkMode();
 }
-document.getElementById('ram-tk-mode').addEventListener('change', () => {
-	document.getElementById('ram-tk-ad-row').style.display =
-		document.getElementById('ram-tk-mode').value === 'ca' ? '' : 'none';
-});
+function updateRamTkMode() {
+	const isSim = document.getElementById('ram-tk-mode').value === 'ca';
+	document.getElementById('ram-tk-ad-row').style.display = isSim ? '' : 'none';
+	document.getElementById('ram-tk-services-row').style.display = isSim ? 'none' : '';
+}
+document.getElementById('ram-tk-mode').addEventListener('change', updateRamTkMode);
 
 // ===== GSM 7-bit alphabet =====
 const GSM7_ALPHABET = [
@@ -1372,7 +1378,7 @@ function buildSelectApdu(mode, preset, selInfo) {
 }
 
 function genSimUsim(mode) {
-	const preset = mode === 'sim' ? {cla: 0xA0, selP1: 0x00, selP2: 0x00} : {cla: 0x00, selP1: 0x09, selP2: 0x0C};
+	const preset = mode === 'sim' ? {cla: 0xA0, selP1: 0x00, selP2: 0x00} : {cla: 0x00, selP1: 0x00, selP2: 0x0C};
 	const cmd = document.getElementById(mode + '-cmd').value;
 	const doSelect = document.getElementById(mode + '-select').checked;
 	const selInfo = getSelValue(mode);
@@ -1506,33 +1512,39 @@ function genRam() {
 			const channels = parseInt(document.getElementById('ram-tk-channels').value) || 0;
 			const msl = document.getElementById('ram-tk-msl').value;
 			const tar = (document.getElementById('ram-tk-tar').value || '').replace(/[^0-9a-fA-F]/g, '');
-			const ad = (document.getElementById('ram-tk-ad').value || '').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2);
+			const adRaw = (document.getElementById('ram-tk-ad').value || '').replace(/[^0-9a-fA-F]/g, '');
+			const ad = adRaw.padStart(2, '0').slice(0, 2);
+			const services = parseInt(document.getElementById('ram-tk-services').value) || 0;
+			let menuPairs = '';
+			for (let i = 1; i <= menus; i++) {
+				if (i === 1) menuPairs += firstPos.toString(16).padStart(2, '0') + firstId;
+				else if (i === menus) menuPairs += lastPos.toString(16).padStart(2, '0') + lastId;
+				else menuPairs += '0000';
+			}
 			let tkPayload = '';
 			if (tkMode === 'ca') {
-				tkPayload = priority.toString(16).padStart(2, '0') +
+				tkPayload = (adRaw ? '01' + ad : '00') +
+					priority.toString(16).padStart(2, '0') +
 					timers.toString(16).padStart(2, '0') +
 					textLen.toString(16).padStart(2, '0') +
 					menus.toString(16).padStart(2, '0') +
-					firstPos.toString(16).padStart(2, '0') + firstId +
-					lastPos.toString(16).padStart(2, '0') + lastId +
+					menuPairs +
 					channels.toString(16).padStart(2, '0') +
 					'01' + msl +
-					(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00') +
-					'01' + ad;
-				const tkLen = (tkPayload.length / 2).toString(16);
-				dataField += 'CA' + tkLen + tkPayload;
+					(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00');
+				dataField += 'CA' + berLenStr(tkPayload.length / 2) + tkPayload;
 			} else {
 				tkPayload = priority.toString(16).padStart(2, '0') +
 					timers.toString(16).padStart(2, '0') +
 					textLen.toString(16).padStart(2, '0') +
 					menus.toString(16).padStart(2, '0') +
-					firstPos.toString(16).padStart(2, '0') + firstId +
-					lastPos.toString(16).padStart(2, '0') + lastId +
+					menuPairs +
 					channels.toString(16).padStart(2, '0') +
 					'01' + msl +
-					(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00');
-				const tkLen = (tkPayload.length / 2).toString(16);
-				dataField += '80' + tkLen + tkPayload;
+					(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00') +
+					services.toString(16).padStart(2, '0');
+				const innerTlv = '80' + berLenStr(tkPayload.length / 2) + tkPayload;
+				dataField += 'EA' + berLenStr(innerTlv.length / 2) + innerTlv;
 			}
 		}
 		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
@@ -1552,13 +1564,13 @@ function genRam() {
 	} else if (cmd === 'load') {
 		if (!ramData) { resultEl.value = 'Error: specify data'; return; }
 		const dataLen = (ramData.length / 2).toString(16).padStart(2, '0');
-		apdu = buildApdu(0x80, 0xE8, 0x00, blockNum, parseInt(dataLen, 16), ramData);
+		apdu = buildApdu(0x80, 0xE8, 0x80, blockNum, parseInt(dataLen, 16), ramData);
 	} else if (cmd === 'delete') {
 		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
 		const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
 		const dataField = '4F' + aidLen + aid;
 		const dataLen = (dataField.length / 2).toString(16).padStart(2, '0');
-		apdu = buildApdu(0x80, 0xE4, parseInt(delMode, 16), 0x00, parseInt(dataLen, 16), dataField);
+		apdu = buildApdu(0x80, 0xE4, 0x00, parseInt(delMode, 16), parseInt(dataLen, 16), dataField);
 	} else if (cmd === 'get-status') {
 		const gsP2 = document.getElementById('ram-gs-p2').value;
 		apdu = buildApdu(0x80, 0xF2, parseInt(gsMode, 16), parseInt(gsP2, 16), 0x02, '4F00');
@@ -4882,6 +4894,7 @@ const LANG_RU = {
 	'Byte 2': 'Байт 2',
 	'SIM/UICC Toolkit parameters': 'Параметры SIM/UICC Toolkit',
 	'Toolkit mode': 'Режим Toolkit',
+	'Max services': 'Максимум сервисов',
 	'Priority': 'Приоритет',
 	'Timers (max)': 'Таймеры (макс)',
 	'Menu text length': 'Длина текста меню',
