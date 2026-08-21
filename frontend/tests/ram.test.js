@@ -87,7 +87,7 @@ function genRamApdu() {
 
 test('UICC toolkit nested inside EA (m=2, services 0)', () => {
 	const apdu = genRamApdu();
-	assert.ok(apdu.includes('EA128010000000020101020200011603B0000100'), apdu);
+	assert.ok(apdu.includes('EA13801100000002010102020002011603B0000100'), apdu);
 });
 
 test('UICC m=1 emits single pair', () => {
@@ -111,7 +111,7 @@ test('UICC m=1 emits single pair', () => {
 	set('ram-tk-ad', '');
 	set('ram-tk-services', '0');
 	const apdu = genRamResult();
-	assert.ok(apdu.includes('EA10800E00000001010100011603B0000100'), apdu);
+	assert.ok(apdu.includes('EA11800F0000000101010002011603B0000100'), apdu);
 });
 
 test('UICC m=3 fills middle pair with 0000', () => {
@@ -135,7 +135,7 @@ test('UICC m=3 fills middle pair with 0000', () => {
 	set('ram-tk-ad', '');
 	set('ram-tk-services', '0');
 	const apdu = genRamResult();
-	assert.ok(apdu.includes('EA1480120000000301010000030300011603B0000100'), apdu);
+	assert.ok(apdu.includes('EA158013000000030101000003030002011603B0000100'), apdu);
 });
 
 test('UICC services 7 appended as final byte', () => {
@@ -159,7 +159,7 @@ test('UICC services 7 appended as final byte', () => {
 	set('ram-tk-ad', '');
 	set('ram-tk-services', '7');
 	const apdu = genRamResult();
-	assert.ok(apdu.includes('EA128010000000020101020200011603B0000107'), apdu);
+	assert.ok(apdu.includes('EA13801100000002010102020002011603B0000107'), apdu);
 });
 
 test('SIM (CA) access domain FIRST, no services byte', () => {
@@ -183,7 +183,7 @@ test('SIM (CA) access domain FIRST, no services byte', () => {
 	set('ram-tk-ad', '5A');
 	set('ram-tk-services', '0');
 	const apdu = genRamResult();
-	assert.ok(apdu.includes('CA11015A000000020101020200011603B00001'), apdu);
+	assert.ok(apdu.includes('EF14CA12015A00000002010102020002011603B00001'), apdu);
 });
 
 test('SIM (CA) blank access domain emits length byte 00', () => {
@@ -207,7 +207,7 @@ test('SIM (CA) blank access domain emits length byte 00', () => {
 	set('ram-tk-ad', '');
 	set('ram-tk-services', '0');
 	const apdu = genRamResult();
-	assert.ok(apdu.includes('CA1000000000020101020200011603B00001'), apdu);
+	assert.ok(apdu.includes('EF13CA110000000002010102020002011603B00001'), apdu);
 });
 
 test('SIM (CA) m=3, no TAR, blank access domain', () => {
@@ -231,7 +231,7 @@ test('SIM (CA) m=3, no TAR, blank access domain', () => {
 	set('ram-tk-ad', '');
 	set('ram-tk-services', '0');
 	const apdu = genRamResult();
-	assert.ok(apdu.includes('CA0F000000000301010000030300011600'), apdu);
+	assert.ok(apdu.includes('EF12CA1000000000030101000003030002011600'), apdu);
 });
 
 test('UICC m=60 uses long-form BER lengths (EA 81 87 / inner 81 84)', () => {
@@ -255,7 +255,7 @@ test('UICC m=60 uses long-form BER lengths (EA 81 87 / inner 81 84)', () => {
 	set('ram-tk-ad', '');
 	set('ram-tk-services', '0');
 	const apdu = genRamResult();
-	assert.ok(apdu.includes('EA8187808184'), apdu);
+	assert.ok(apdu.includes('EA8188808185'), apdu);
 });
 
 test('LOAD P1 fixed to 80 (last block)', () => {
