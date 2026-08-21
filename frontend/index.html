@@ -17,7 +17,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.8.1</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.0</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -2134,11 +2134,11 @@ const BER_QUAL = {
 	display: [
 		['00','Normal priority'],
 		['01','High priority'],
-		['80','Clear after delay']
+		['80','Wait for user to clear message']
 	],
 	tone: [
-		['00','Monotonous tone'],
-		['01','Alternating tone']
+		['00','Vibrate alert: up to terminal'],
+		['01','Vibrate alert with tone']
 	]
 };
 const BER_TONES = [
@@ -2473,7 +2473,7 @@ function genBerPcValue(row, tag) {
 		const enc = pc.querySelector('.ber-pc-enc').value;
 		if (text) {
 			if (enc === 'ucs2') {
-				const buf = [];
+				const buf = [0x08];
 				for (const c of text) { const cd=c.charCodeAt(0); buf.push((cd>>8)&0xFF,cd&0xFF); }
 				value += '8D' + berLenStr(buf.length) + buf.map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join('');
 			} else {
@@ -2481,9 +2481,9 @@ function genBerPcValue(row, tag) {
 					const septets = gsm7TextToSeptets(text);
 					const packed = gsm7Encode(septets);
 					const inner = Array.from(packed).map(b=>b.toString(16).padStart(2,'0').toUpperCase());
-					value += '8D' + berLenStr(inner.length) + inner.join('');
+					value += '8D' + berLenStr(inner.length + 1) + '00' + inner.join('');
 				} catch(e) {
-					value += '8D' + berLenStr(text.length) + text.split('').map(c=>c.charCodeAt(0).toString(16).padStart(2,'0').toUpperCase()).join('');
+					value += '8D' + berLenStr(text.length + 1) + '04' + text.split('').map(c=>c.charCodeAt(0).toString(16).padStart(2,'0').toUpperCase()).join('');
 				}
 			}
 		}
@@ -2552,6 +2552,7 @@ const PARSE_INS = {
 	'F0': {name:'SET STATUS', data:'lc'},
 	'82': {name:'EXTERNAL AUTHENTICATE', data:'lc'},
 	'88': {name:'INTERNAL AUTHENTICATE', data:'lc'},
+	'C0': {name:'GET RESPONSE', data:'le'},
 };
 
 function parseBerLen(hex, i) {
@@ -2638,6 +2639,31 @@ function gsm7Decode(octets) {
 
 function decodeTextData(hex) {
 	if (!hex || hex.length < 2) return '?';
+	const dcs = parseInt(hex.substr(0, 2), 16);
+	const rest = hex.substr(2);
+	if (dcs === 0x08 && rest.length >= 4 && rest.length % 4 === 0) {
+		let ucs2 = '';
+		for (let i = 0; i < rest.length; i += 4) {
+			const cp = parseInt(rest.substr(i, 4), 16);
+			if (cp < 0x20 || cp > 0x10FFFF) return '?';
+			ucs2 += String.fromCodePoint(cp);
+		}
+		if (ucs2.length > 0) return ucs2;
+	}
+	if (dcs === 0x00 || dcs === 0x04) {
+		try {
+			const bytes = new Uint8Array(rest.length / 2);
+			for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(rest.substr(i * 2, 2), 16);
+			if (dcs === 0x00) {
+				const gsm = gsm7Decode(bytes);
+				if (gsm.length > 0 && !gsm.includes('\uFFFD')) return gsm;
+			} else {
+				let s = '';
+				for (const b of bytes) { if (b < 0x20 || b > 0x7E) return '?'; s += String.fromCharCode(b); }
+				if (s.length > 0) return s;
+			}
+		} catch (e) {}
+	}
 	if (hex.length >= 4 && hex.length % 4 === 0) {
 		let allPrintable = true;
 		let ucs2 = '';
@@ -2745,11 +2771,18 @@ function describeProactiveCommand(tlvs) {
 		let desc = '';
 		if (base === '01') {
 			const cmdNum = parseInt(tlv.value.substr(0, 2), 16);
+			const typeByte = tlv.value.substr(2, 2);
 			const qual = tlv.value.substr(4, 2);
+			const typeKey = { '01': 'refresh', '21': 'display', '20': 'tone' }[typeByte];
+			const cmdName = { refresh: 'REFRESH', display: 'DISPLAY TEXT', tone: 'PLAY TONE' }[typeKey];
 			let typeName = 'Command #' + cmdNum;
-			for (const [k, arr] of Object.entries(BER_QUAL)) {
-				const found = arr.find(([v]) => v === qual);
-				if (found) { typeName += ', ' + k.toUpperCase() + ' qual ' + qual + ' ' + found[1]; break; }
+			if (typeKey && cmdName) {
+				const arr = BER_QUAL[typeKey];
+				const found = arr ? arr.find(([v]) => v === qual) : null;
+				if (found) typeName += ', ' + cmdName + ' qual ' + qual + ' ' + found[1];
+				else typeName += ', ' + cmdName + ' qual ' + qual;
+			} else {
+				typeName += ', type ' + typeByte + ' qual ' + qual;
 			}
 			desc = typeName;
 		} else if (base === '02') {
@@ -2841,6 +2874,10 @@ function parseChainingFlags(hex) {
 function parseActionRow(hex, tag) {
 	if (!hex || hex === '00') return [{label:'No action', hex:hex||'', desc:tag === '82' ? 'No action (82 00)' : ''}];
 	if (hex.length === 2) {
+		const val = parseInt(hex, 16);
+		if (val >= 0x01 && val <= 0x7F) {
+			return [{label:'Reference to EFRMA record', hex, desc:'Record 0x' + hex}];
+		}
 		const names = {'81':'Proactive session indication','82':'Early response'};
 		return [{label:'Action indicator', hex, desc:names[hex] || 'Value ' + hex}];
 	}
@@ -2861,7 +2898,7 @@ function parseOneApdu(hex) {
 	const p3 = hex.substr(8, 2);
 	const insInfo = PARSE_INS[ins];
 	const children = [
-		{label:'CLA', hex:cla, desc:cla === '80' ? 'GP/RAM' : cla === 'A0' ? 'SIM' : 'UICC'},
+		{label:'CLA', hex:cla, desc:cla === '80' ? 'GP/RAM' : cla === 'A0' ? 'SIM' : parseInt(cla,16) >= 0x84 && parseInt(cla,16) <= 0x87 ? 'GlobalPlatform (secure messaging)' : 'UICC'},
 		{label:'INS', hex:ins, desc:insInfo ? insInfo.name : 'Unknown'},
 		{label:'P1', hex:p1, desc:''},
 		{label:'P2', hex:p2, desc:''},

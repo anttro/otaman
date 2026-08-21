@@ -148,14 +148,14 @@ test('genBerPcValue DISPLAY TEXT GSM7 "HI"', () => {
 	pc.children.find(c => c.cls === 'ber-pc-enc').value = 'gsm7';
 	pc.children.find(c => c.cls === 'ber-pc-dur-enable').checked = false;
 	const val = genBerPcValue({ querySelector: (s) => s === '.ber-pc' ? pc : null }, '81');
-	assert.strictEqual(val, '810D8103012101820281828D02C824');
+	assert.strictEqual(val, '810E8103012101820281828D0300C824');
 });
 
 test('genBerPcValue DISPLAY TEXT UCS2 "HI" + 30s duration', () => {
 	const pc = buildPcHtml();
 	const val = genBerPcValue({ querySelector: (s) => s === '.ber-pc' ? pc : null }, '81');
 	// 81 13 8103 01 21 01 8202 81 82 8D 04 0048 0049 84 02 01 1E
-	assert.strictEqual(val, '81138103012101820281828D04004800498402011E');
+	assert.strictEqual(val, '81148103012101820281828D0508004800498402011E');
 });
 
 test('genBerPcValue duration disabled omits 84', () => {
@@ -208,7 +208,7 @@ test('genErrorActionValue proactive wraps proactive command', () => {
 	row.children[1].children.push(pc);
 	const val = genErrorActionValue(row, '82');
 	// DISPLAY TEXT UCS2 "HI" + 30s inside Error Action
-	assert.strictEqual(val, '82138103012101820281828D04004800498402011E');
+	assert.strictEqual(val, '82148103012101820281828D0508004800498402011E');
 });
 
 test('genScriptChainingValue first emits 01', () => {
