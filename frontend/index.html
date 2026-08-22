@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.1</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.2</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -62,6 +62,9 @@
 						<option value="deactivate-file">DEACTIVATE FILE</option>
 						<option value="verify">VERIFY PIN</option>
 						<option value="change">CHANGE PIN</option>
+						<option value="disable">DISABLE PIN</option>
+						<option value="enable">ENABLE PIN</option>
+						<option value="unblock">UNBLOCK PIN</option>
 					</select>
 				</div>
 
@@ -119,6 +122,17 @@
 				<div id="sim-offset-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Offset (hex)">Offset (hex)</label>
 					<input id="sim-offset" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
+				</div>
+
+				<div id="sim-act-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Target">Target</label>
+					<select id="sim-act-target" onchange="updateActFileInput('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+						<option value="current" data-l10n="Current EF (case 1)">Current EF (case 1)</option>
+						<option value="fid" data-l10n="By FID">By FID</option>
+						<option value="mfpath" data-l10n="Path from MF">Path from MF</option>
+						<option value="dfpath" data-l10n="Path from current DF">Path from current DF</option>
+					</select>
+					<input id="sim-act-file" class="mt-1.5 font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5 / 7FFF6FC5" style="display:none">
 				</div>
 
 				<div id="sim-le-row" class="mb-3">
@@ -198,6 +212,9 @@
 						<option value="deactivate-file">DEACTIVATE FILE</option>
 						<option value="verify">VERIFY PIN</option>
 						<option value="change">CHANGE PIN</option>
+						<option value="disable">DISABLE PIN</option>
+						<option value="enable">ENABLE PIN</option>
+						<option value="unblock">UNBLOCK PIN</option>
 					</select>
 				</div>
 
@@ -255,6 +272,17 @@
 				<div id="usim-offset-row" class="mb-3">
 					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Offset (hex)">Offset (hex)</label>
 					<input id="usim-offset" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
+				</div>
+
+				<div id="usim-act-row" class="mb-3">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Target">Target</label>
+					<select id="usim-act-target" onchange="updateActFileInput('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+						<option value="current" data-l10n="Current EF (case 1)">Current EF (case 1)</option>
+						<option value="fid" data-l10n="By FID">By FID</option>
+						<option value="mfpath" data-l10n="Path from MF">Path from MF</option>
+						<option value="dfpath" data-l10n="Path from current DF">Path from current DF</option>
+					</select>
+					<input id="usim-act-file" class="mt-1.5 font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5 / 7FFF6FC5" style="display:none">
 				</div>
 
 				<div id="usim-le-row" class="mb-3">
@@ -1104,7 +1132,7 @@ const BINARY_OPS = new Set(['update-binary', 'read-binary', 'erase-binary']);
 const READ_OPS = new Set(['read-record', 'read-binary']);
 const DATA_OPS = new Set(['update-record', 'update-binary']);
 const RECSIZE_OPS = new Set(['update-record']);
-const PIN_OPS = new Set(['verify', 'change']);
+const PIN_OPS = new Set(['verify', 'change', 'disable', 'enable', 'unblock']);
 
 function updateSimUsimFields(mode) {
 	if (!mode) return;
@@ -1115,9 +1143,15 @@ function updateSimUsimFields(mode) {
 	document.getElementById(mode + '-data-row').style.display = DATA_OPS.has(cmd) ? '' : 'none';
 	document.getElementById(mode + '-recsize-row').style.display = RECSIZE_OPS.has(cmd) ? '' : 'none';
 	document.getElementById(mode + '-pin-row').style.display = PIN_OPS.has(cmd) ? '' : 'none';
-	document.getElementById(mode + '-pin-val-row').style.display = cmd === 'verify' ? '' : 'none';
-	document.getElementById(mode + '-pin-old-row').style.display = cmd === 'change' ? '' : 'none';
-	document.getElementById(mode + '-pin-new-row').style.display = cmd === 'change' ? '' : 'none';
+	const pinValCmds = cmd === 'verify' || cmd === 'disable' || cmd === 'enable';
+	document.getElementById(mode + '-pin-val-row').style.display = pinValCmds ? '' : 'none';
+	const oldNewCmds = cmd === 'change' || cmd === 'unblock';
+	document.getElementById(mode + '-pin-old-row').style.display = oldNewCmds ? '' : 'none';
+	document.getElementById(mode + '-pin-new-row').style.display = oldNewCmds ? '' : 'none';
+	if (oldNewCmds) {
+		document.querySelector('#' + mode + '-pin-old-row label').textContent = cmd === 'unblock' ? 'Unblock PIN' : 'Old PIN';
+	}
+	document.getElementById(mode + '-act-row').style.display = (cmd === 'activate-file' || cmd === 'deactivate-file') ? '' : 'none';
 	if (cmd === 'select') {
 		document.getElementById(mode + '-select-checkbox-row').style.display = 'none';
 	} else {
@@ -1133,6 +1167,11 @@ function updateSimSelectMethod(mode) {
 	document.getElementById(mode + '-sel-path-row').style.display = method === 'path' ? '' : 'none';
 	document.getElementById(mode + '-sel-dfname-row').style.display = method === 'dfname' ? '' : 'none';
 	document.getElementById(mode + '-sel-chain-row').style.display = method === 'chain' ? '' : 'none';
+}
+
+function updateActFileInput(mode) {
+	const target = document.getElementById(mode + '-act-target').value;
+	document.getElementById(mode + '-act-file').style.display = target === 'current' ? 'none' : '';
 }
 
 function toggleSimOverride(mode) {
@@ -1178,8 +1217,14 @@ function updateP1P2Display(mode) {
 	} else if (cmd === 'read-binary' || cmd === 'update-binary' || cmd === 'erase-binary') {
 		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF;
 	} else if (cmd === 'activate-file' || cmd === 'deactivate-file') {
-		p1 = 0x00; p2 = 0x00;
-	} else if (cmd === 'verify' || cmd === 'change') {
+		const target = document.getElementById(mode + '-act-target').value;
+		if (target === 'current') {
+			p1 = 0x00; p2 = 0x00;
+		} else {
+			p1 = target === 'fid' ? 0x00 : (target === 'mfpath' ? 0x08 : 0x09);
+			p2 = 0x00;
+		}
+	} else if (cmd === 'verify' || cmd === 'change' || cmd === 'disable' || cmd === 'enable' || cmd === 'unblock') {
 		p1 = 0x00; p2 = parseInt(pin, 16);
 	} else {
 		p1 = 0x00; p2 = 0x00;
@@ -1417,6 +1462,9 @@ const OPS = {
 	'deactivate-file':   {ins: 0x04},
 	'verify':            {ins: 0x20},
 	'change':            {ins: 0x24},
+	'disable':           {ins: 0x26},
+	'enable':            {ins: 0x28},
+	'unblock':           {ins: 0x2C},
 };
 
 function getSelValue(mode) {
@@ -1513,13 +1561,23 @@ function genSimUsim(mode) {
 	} else if (cmd === 'erase-binary') {
 		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = 0x00;
 	} else if (cmd === 'activate-file' || cmd === 'deactivate-file') {
-		p1 = 0x00; p2 = 0x00; p3 = null;
-	} else if (cmd === 'verify') {
+		const target = document.getElementById(mode + '-act-target').value;
+		if (target === 'current') {
+			p1 = 0x00; p2 = 0x00; p3 = null;
+		} else {
+			const fileHex = (document.getElementById(mode + '-act-file').value || '').replace(/[^0-9a-fA-F]/g, '');
+			if (!fileHex || fileHex.length % 2 !== 0) { resultEl.value = 'Error: specify FID or path (even hex length)'; return; }
+			p1 = target === 'fid' ? 0x00 : (target === 'mfpath' ? 0x08 : 0x09);
+			p2 = 0x00;
+			p3 = fileHex.length / 2;
+			data = fileHex;
+		}
+	} else if (cmd === 'verify' || cmd === 'disable' || cmd === 'enable') {
 		const pinVal = document.getElementById(mode + '-pin-val').value || '';
 		if (!pinVal) { resultEl.value = 'Error: specify PIN value'; return; }
 		const pinHex = Array.from(pinVal).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').padEnd(16, 'F').slice(0, 16);
 		p1 = 0x00; p2 = parseInt(pin, 16); p3 = 0x08; data = pinHex;
-	} else if (cmd === 'change') {
+	} else if (cmd === 'change' || cmd === 'unblock') {
 		const oldPin = document.getElementById(mode + '-pin-old').value || '';
 		const newPin = document.getElementById(mode + '-pin-new').value || '';
 		if (!oldPin || !newPin) { resultEl.value = 'Error: specify old and new PIN'; return; }
@@ -5716,6 +5774,12 @@ const LANG_RU = {
 	'ELF AID (hex)': 'ELF AID (hex)',
 	'Module AID (hex)': 'AID модуля (hex)',
 	'Security level (P1)': 'Уровень безопасности (P1)',
+	'Target': 'Цель',
+	'Current EF (case 1)': 'Текущий EF (case 1)',
+	'By FID': 'По FID',
+	'Path from MF': 'Путь от MF',
+	'Path from current DF': 'Путь от текущего DF',
+	'Unblock PIN': 'Разблокировка PIN',
 	'Byte 1': 'Байт 1',
 	'Byte 2': 'Байт 2',
 	'SIM/UICC Toolkit parameters': 'Параметры SIM/UICC Toolkit',
