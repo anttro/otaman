@@ -1,10 +1,11 @@
-const CACHE = 'otaman-v11';
+const CACHE = 'otaman-v12';
 const URLS = [
   'index.html',
   'help.html',
   'help-ru.html',
   'style.css',
   'sim.png',
+  'favicon.svg',
   'icon-192.png',
   'icon-512.png',
   'manifest.json',
