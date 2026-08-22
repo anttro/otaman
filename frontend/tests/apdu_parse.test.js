@@ -140,7 +140,7 @@ test('INTERNAL AUTHENTICATE', () => {
 	assert.strictEqual(tree.children.length, 1);
 	const apdu = tree.children[0];
 	assert.strictEqual(apdu.label, 'APDU');
-	assert.ok(findNode(apdu, 'INS').desc.includes('INTERNAL AUTHENTICATE'));
+	assert.ok(findNode(apdu, 'INS').desc.includes('AUTHENTICATE'));
 	assert.ok(findNode(apdu, 'Data'));
 });
 
@@ -327,4 +327,36 @@ test('CLA 84-87 labeled GlobalPlatform secure messaging', () => {
 	const tree = parseHexTree('8482030010' + '00112233445566778899AABBCCDDEEFF');
 	const apdu = tree.children[0];
 	assert.strictEqual(findNode(apdu, 'CLA').desc, 'GlobalPlatform (secure messaging)');
+});
+test('New PARSE_INS labels decode (FETCH le, RESIZE D4, RETRIEVE CB, AUTH 89)', () => {
+	const fetchTree = parseHexTree('8012000020');
+	assert.ok(findNode(fetchTree.children[0], 'INS').desc.includes('FETCH'));
+	assert.ok(findNode(fetchTree.children[0], 'Le'));
+
+	const resizeTree = parseHexTree('80D4000004' + '00000FA0');
+	assert.ok(findNode(resizeTree.children[0], 'INS').desc.includes('RESIZE FILE'));
+	assert.strictEqual(findNode(resizeTree.children[0], 'Data').desc, '00000FA0');
+
+	const retrTree = parseHexTree('80CB000000');
+	assert.ok(findNode(retrTree.children[0], 'INS').desc.includes('RETRIEVE DATA'));
+
+	const authTree = parseHexTree('0089000008' + '0011223344556677');
+	assert.ok(findNode(authTree.children[0], 'INS').desc.includes('odd INS'));
+});
+
+test('READ BINARY SFI mode and offset descriptors', () => {
+	const sfi = parseHexTree('00B0830602');
+	const p1sfi = findNode(sfi.children[0], 'P1').desc;
+	assert.ok(p1sfi.includes('SFI') && p1sfi.includes('3'), p1sfi);
+	assert.strictEqual(findNode(sfi.children[0], 'P2').desc, 'offset low');
+
+	const off = parseHexTree('00B0010202');
+	assert.strictEqual(findNode(off.children[0], 'P1').desc, 'offset high');
+});
+
+test('SELECT P2 response field per ETSI b5-b3', () => {
+	const fcp = parseHexTree('00A40804047FFF6FC500');
+	assert.ok(findNode(fcp.children[0], 'P2').desc.includes('FCP'));
+	const none = parseHexTree('00A4000C026F3B');
+	assert.ok(findNode(none.children[0], 'P2').desc.includes('no response data'));
 });

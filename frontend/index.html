@@ -2544,16 +2544,42 @@ const PARSE_INS = {
 	'04': {name:'DEACTIVATE FILE', data:'none'},
 	'20': {name:'VERIFY', data:'lc'},
 	'24': {name:'CHANGE', data:'lc'},
+	'26': {name:'DISABLE PIN', data:'lc'},
+	'28': {name:'ENABLE PIN', data:'lc'},
+	'2C': {name:'UNBLOCK PIN', data:'lc'},
 	'E6': {name:'INSTALL', data:'lc'},
 	'E8': {name:'LOAD', data:'lc'},
+	'D4': {name:'RESIZE FILE', data:'lc'},
+	'E0': {name:'CREATE FILE', data:'lc'},
 	'E4': {name:'DELETE', data:'lc'},
 	'F2': {name:'GET STATUS', data:'lc'},
 	'CA': {name:'GET DATA', data:'none'},
+	'DA': {name:'PUT DATA', data:'lc'},
+	'CB': {name:'RETRIEVE DATA (GET DATA)', data:'le'},
+	'DB': {name:'SET DATA', data:'lc'},
+	'A2': {name:'SEARCH RECORD', data:'lc'},
+	'32': {name:'INCREASE', data:'lc'},
+	'84': {name:'GET CHALLENGE', data:'le'},
+	'88': {name:'AUTHENTICATE', data:'lc'},
+	'89': {name:'AUTHENTICATE (odd INS)', data:'lc'},
 	'E2': {name:'STORE DATA', data:'lc'},
 	'F0': {name:'SET STATUS', data:'lc'},
 	'82': {name:'EXTERNAL AUTHENTICATE', data:'lc'},
-	'88': {name:'INTERNAL AUTHENTICATE', data:'lc'},
 	'C0': {name:'GET RESPONSE', data:'le'},
+	'10': {name:'TERMINAL PROFILE', data:'lc'},
+	'C2': {name:'ENVELOPE', data:'lc'},
+	'12': {name:'FETCH', data:'le'},
+	'14': {name:'TERMINAL RESPONSE', data:'lc'},
+	'76': {name:'SUSPEND UICC', data:'lc'},
+	'AA': {name:'TERMINAL CAPABILITY', data:'lc'},
+	'73': {name:'MANAGE SECURE CHANNEL', data:'lc'},
+	'75': {name:'TRANSACT DATA', data:'lc'},
+	'78': {name:'GET IDENTITY', data:'le'},
+	'7A': {name:'EXCHANGE CAPABILITIES', data:'lc'},
+	'7C': {name:'MANAGE LSI', data:'lc'},
+	'50': {name:'INITIALIZE UPDATE', data:'lc'},
+	'D8': {name:'PUT KEY', data:'lc'},
+	'70': {name:'MANAGE CHANNEL', data:'none'},
 };
 
 function parseBerLen(hex, i) {
@@ -2905,13 +2931,17 @@ function describeP1P2(ins, p1, p2) {
 	let d1 = '', d2 = '';
 	if (ins === 'A4') {
 		d1 = {'00':'by FID','01':'child DF','03':'parent DF','04':'by DF name (AID)','08':'path from MF','09':'path from current DF'}[p1] || '';
-		const resp = (v2 >> 2) & 0x03;
+		const resp = (v2 >> 2) & 0x07;
 		if (resp === 0x01) d2 = 'return FCP template';
 		else if (resp === 0x03) d2 = 'no response data';
 		if (v1 === 0x04) {
 			const occName = {'00':'first or only occurrence','01':'last occurrence','10':'next occurrence','11':'previous occurrence'}[(v2 & 0x03).toString(2).padStart(2,'0')];
 			if (occName) d2 += (d2 ? ', ' : '') + occName;
 		}
+	} else if (ins === 'B0' || ins === 'D6') {
+		if (v1 & 0x80) d1 = 'SFI mode, SFI ' + (v1 & 0x1F);
+		else d1 = 'offset high';
+		d2 = 'offset low';
 	} else if (ins === 'B2' || ins === 'DC') {
 		const modeKey = (v2 & 0x07).toString(16).padStart(2, '0');
 		d2 = {'02':'next record','03':'previous record','04':'absolute/current'}[modeKey] || '';
@@ -3262,7 +3292,7 @@ const SW_MAP = {
 		'62F3': 'Warning: Response data available',
 		'63F1': 'Warning: More data expected',
 		'63F2': 'Warning: More data expected and proactive command pending',
-		'63CX': 'Verification failed, X retries remaining (SW2 & 0x0F = tries)',
+		'63CX': 'Verification failed, X retries remaining (SW2 & 0x0F = tries; X=0: no counter provided / blocked for VERIFY)',
 		'6400': 'No information given, state of NV memory unchanged',
 		'6500': 'No information given, state of NV memory changed',
 		'6581': 'Memory problem',
@@ -3285,7 +3315,10 @@ const SW_MAP = {
 		'6A84': 'Not enough memory space',
 		'6A86': 'Incorrect parameters P1-P2',
 		'6A87': 'Lc inconsistent with P1-P2',
+		'6A85': 'Nc inconsistent with TLV data object',
 		'6A88': 'Referenced data not found',
+		'6A89': 'File already exists',
+		'6A8A': 'DF name already exists',
 		'6B00': 'Wrong parameter(s) P1-P2',
 		'6D00': 'Instruction code not supported or invalid',
 		'6E00': 'Class not supported',
@@ -3296,7 +3329,7 @@ const SW_MAP = {
 		'9864': 'Minimum UICC suspension time is too long',
 	},
 	gp: {
-		'6310': 'More data available — send GET STATUS [next] (P2=42)',
+		'6310': 'More data available — issue GET STATUS [get next occurrence]',
 		'6581': 'Memory failure',
 		'6A80': 'Incorrect values in command data',
 		'6A81': 'Function not supported (card Life Cycle State is CARD_LOCKED)',
@@ -3313,7 +3346,8 @@ const SW_MAP = {
 		'6283': 'Warning: Card Life Cycle State is CARD_LOCKED',
 	},
 	uicc: {
-		'9100': 'Normal ending with proactive UICC command pending (SW2 = length of response data)',
+		'91XX': 'Normal ending with proactive UICC command pending (SW2 = length of response data)',
+		'9100': 'Normal ending with proactive UICC command pending (no response data)',
 		'92XX': 'Normal ending with ongoing data transfer session info',
 		'9300': 'SIM Application Toolkit is busy',
 		'62F1': 'More data available (ENVELOPE, RETRIEVE DATA, SET DATA)',
@@ -3381,10 +3415,11 @@ const SW_CMD_NAMES = {
 };
 
 const LIFECYCLE_MAP = {
-	'01': 'LOADED (ELF)',
+	'01': 'OP_READY (card) / LOADED (ELF)',
 	'03': 'INSTALLED',
 	'07': 'SELECTABLE',
-	'0F': 'PERSONALIZED (SD) / SECURED (card)',
+	'0F': 'SECURED (card)',
+	'1F': 'PERSONALIZED (SD)',
 	'7F': 'CARD_LOCKED',
 	'FF': 'TERMINATED',
 	'83': 'LOCKED (SD)',
