@@ -170,6 +170,34 @@ test('gsm7Decode unpacks "HI" from C824', () => {
 	assert.strictEqual(gsm7Decode(bytes), 'HI');
 });
 
+test('decodeTextData legacy UCS2 without DCS (regression: lead 00 is not a DCS)', () => {
+	assert.strictEqual(decodeTextData('00480049'), 'HI');
+});
+
+test('decodeTextData legacy Cyrillic UCS2 (uniform 04 high bytes)', () => {
+	assert.strictEqual(decodeTextData('041f04400438043204350442'), 'Привет');
+});
+
+test('decodeTextData DCS-prefixed UCS2 (08)', () => {
+	assert.strictEqual(decodeTextData('0800480049'), 'HI');
+});
+
+test('decodeTextData DCS-prefixed GSM7 packed (00)', () => {
+	assert.strictEqual(decodeTextData('00C824'), 'HI');
+});
+
+test('decodeTextData DCS-prefixed unpacked 8-bit (04)', () => {
+	assert.strictEqual(decodeTextData('04414243'), 'ABC');
+});
+
+test('decodeTextData explicit DCS 08 with malformed payload returns ?', () => {
+	assert.strictEqual(decodeTextData('0841'), '?');
+});
+
+test('decodePrivileges byte 2 b6 is Token Verification per GPC v2.3 Table 11-8', () => {
+	assert.ok(decodePrivileges('0020').includes('Token Verification'));
+});
+
 test('decodePrivileges', () => {
 	assert.ok(decodePrivileges('00').includes('None'));
 	assert.ok(decodePrivileges('80').includes('Security Domain'));

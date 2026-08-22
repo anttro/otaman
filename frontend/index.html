@@ -391,7 +391,7 @@
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="40" onchange="updateRamPriv()"> DAP Verification</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="40" onchange="updateRamPriv()"> Authorized Management</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="20" onchange="updateRamPriv()"> Delegated Management</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="20" onchange="updateRamPriv()"> Token Management</label>
+				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="20" onchange="updateRamPriv()"> Token Verification</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="10" onchange="updateRamPriv()"> Card Lock</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="10" onchange="updateRamPriv()"> Global Delete</label>
 				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="08" onchange="updateRamPriv()"> Card Terminate</label>
@@ -2137,8 +2137,8 @@ const BER_QUAL = {
 		['80','Wait for user to clear message']
 	],
 	tone: [
-		['00','Vibrate alert: up to terminal'],
-		['01','Vibrate alert with tone']
+		['00','Use of vibrate alert up to the terminal'],
+		['01','Vibrate alert, if available, with the tone']
 	]
 };
 const BER_TONES = [
@@ -2591,25 +2591,18 @@ function baseCompTag(tag) {
 
 function decodePrivileges(hex) {
 	if (hex.length < 2) return '';
-	const b1 = parseInt(hex.substr(0, 2), 16);
+	const names = [
+		['Security Domain', 'DAP Verification', 'Delegated Management', 'Card Lock', 'Card Terminate', 'Card Reset', 'CVM Management', 'Mandated DAP Verification'],
+		['Trusted Path', 'Authorized Management', 'Token Verification', 'Global Delete', 'Global Lock', 'Global Registry', 'Final Application', 'Global Service'],
+		['Receipt Generation', 'Ciphered Load File Data Block', 'Contactless Activation', 'Contactless Self-Activation'],
+	];
 	const parts = [];
-	if (b1 & 0x80) parts.push('Security Domain');
-	if (b1 & 0x40) parts.push('DAP Verification');
-	if (b1 & 0x20) parts.push('Delegated Management');
-	if (b1 & 0x10) parts.push('Card Lock');
-	if (b1 & 0x08) parts.push('Card Reset');
-	if (b1 & 0x04) parts.push('Global Registry');
-	if (b1 & 0x02) parts.push('CVM Management');
-	if (b1 & 0x01) parts.push('Mandated DAP Verification');
-	if (hex.length >= 4) {
-		const b2 = parseInt(hex.substr(2, 2), 16);
-		if (b2 & 0x80) parts.push('Global Lock');
-		if (b2 & 0x04) parts.push('Final Application');
-		if (b2 & 0x02) parts.push('Receipt Generation');
-	}
-	if (hex.length >= 6) {
-		const b3 = parseInt(hex.substr(4, 2), 16);
-		if (b3 & 0x80) parts.push('Contactless Activation');
+	for (let i = 0; i < Math.min(names.length, hex.length / 2); i++) {
+		const b = parseInt(hex.substr(i * 2, 2), 16);
+		for (let bit = 7; bit >= 0; bit--) {
+			const idx = 7 - bit;
+			if (b & (1 << bit) && names[i][idx]) parts.push(names[i][idx]);
+		}
 	}
 	return parts.join(', ') || 'None';
 }
@@ -2637,26 +2630,42 @@ function gsm7Decode(octets) {
 	return out;
 }
 
+function tryUcs2(hex) {
+	if (hex.length < 4 || hex.length % 4 !== 0) return null;
+	let out = '';
+	for (let i = 0; i < hex.length; i += 4) {
+		const cp = parseInt(hex.substr(i, 4), 16);
+		if (cp < 0x20 || cp > 0x10FFFF) return null;
+		out += String.fromCodePoint(cp);
+	}
+	return out;
+}
+
+function uniformHighBytes(hex) {
+	const first = hex.substr(0, 2);
+	for (let i = 4; i < hex.length; i += 4) {
+		if (hex.substr(i, 2) !== first) return false;
+	}
+	return true;
+}
+
 function decodeTextData(hex) {
 	if (!hex || hex.length < 2) return '?';
 	const dcs = parseInt(hex.substr(0, 2), 16);
 	const rest = hex.substr(2);
-	if (dcs === 0x08 && rest.length >= 4 && rest.length % 4 === 0) {
-		let ucs2 = '';
-		for (let i = 0; i < rest.length; i += 4) {
-			const cp = parseInt(rest.substr(i, 4), 16);
-			if (cp < 0x20 || cp > 0x10FFFF) return '?';
-			ucs2 += String.fromCodePoint(cp);
-		}
-		if (ucs2.length > 0) return ucs2;
+	if (dcs === 0x08) {
+		const ucs2 = tryUcs2(rest);
+		return ucs2 !== null ? ucs2 : '?';
 	}
 	if (dcs === 0x00 || dcs === 0x04) {
+		const full = tryUcs2(hex);
+		if (full !== null && hex.length >= 8 && uniformHighBytes(hex)) return full;
 		try {
 			const bytes = new Uint8Array(rest.length / 2);
 			for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(rest.substr(i * 2, 2), 16);
 			if (dcs === 0x00) {
 				const gsm = gsm7Decode(bytes);
-				if (gsm.length > 0 && !gsm.includes('\uFFFD')) return gsm;
+				if (gsm.length > 0) return gsm;
 			} else {
 				let s = '';
 				for (const b of bytes) { if (b < 0x20 || b > 0x7E) return '?'; s += String.fromCharCode(b); }
@@ -3198,7 +3207,7 @@ const LIFECYCLE_MAP = {
 
 const PRIVILEGE_NAMES = [
 	['Security Domain', 'DAP Verification', 'Delegated Management', 'Card Lock', 'Card Terminate', 'Card Reset', 'CVM Management', 'Mandated DAP Verification'],
-	['Trusted Path', 'Authorized Management', 'Token Management', 'Global Delete', 'Global Lock', 'Global Registry', 'Final Application', 'Global Service'],
+	['Trusted Path', 'Authorized Management', 'Token Verification', 'Global Delete', 'Global Lock', 'Global Registry', 'Final Application', 'Global Service'],
 	['Receipt Generation', 'Ciphered Load File Data Block', 'Contactless Activation', 'Contactless Self-Activation'],
 ];
 
