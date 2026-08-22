@@ -202,3 +202,129 @@ test('decodePrivileges', () => {
 	assert.ok(decodePrivileges('00').includes('None'));
 	assert.ok(decodePrivileges('80').includes('Security Domain'));
 });
+
+test('LV INSTALL [for install] decode with labeled fields and trailing Le', () => {
+	const tree = parseHexTree('80E60C0011000008A000000151000000010002C9000000');
+	const apdu = tree.children[0];
+	assert.ok(findNode(apdu, 'P1').desc.includes('for install + for make selectable'));
+	const elf = findNode(apdu, 'ELF AID');
+	assert.ok(elf);
+	assert.strictEqual(elf.desc, '(empty)');
+	assert.strictEqual(findNode(apdu, 'Application AID').desc, 'A000000151000000');
+	assert.strictEqual(findNode(apdu, 'Privileges').desc, 'None');
+	const params = findNode(apdu, 'Install parameters');
+	assert.ok(params.children.some(c => c.label.includes('C9')));
+	assert.strictEqual(findNode(apdu, 'Install token').desc, '(empty)');
+	assert.strictEqual(tree.children[1].label, 'Le');
+});
+
+test('Legacy TLV INSTALL falls back to raw Data node', () => {
+	const tree = parseHexTree('80E60C00214F08A000000151000000C70100EA13801100000002010102020002011603B0000100');
+	const apdu = tree.children[0];
+	const data = findNodes(apdu, 'Data');
+	assert.strictEqual(data.length, 1);
+	assert.ok(!data[0].children || !data[0].label.includes('ELF'));
+	assert.ok(findNode(apdu, 'P1').desc.includes('for install + for make selectable'));
+});
+
+test('Install parameters EF nesting exposes inner CA TLV', () => {
+	const tree = parseHexTree('80E60C0025000008A000000151000000010016C900EF12CA1000000000030101000003030002011600' + '00');
+	const apdu = tree.children[0];
+	const params = findNode(apdu, 'Install parameters');
+	assert.ok(params.children.some(c => c.label.includes('EF')));
+	const ef = params.children.find(c => c.label.includes('EF'));
+	assert.ok(ef.children.some(c => c.label.includes('CA')));
+});
+
+test('GET DATA case 2 renders P3 as Le', () => {
+	const tree = parseHexTree('80CA5F5000');
+	const apdu = tree.children[0];
+	assert.ok(findNode(apdu, 'Le'));
+	assert.ok(!findNode(apdu, 'Lc'));
+});
+
+test('GET DATA case 4 decodes Lc + tag list + Le', () => {
+	const tree = parseHexTree('80CA2F00025C0000');
+	const apdu = tree.children[0];
+	assert.ok(findNode(apdu, 'Lc'));
+	assert.strictEqual(findNode(apdu, 'Data').desc, 'Tag list: 5C00');
+	assert.ok(findNode(apdu, 'Le'));
+});
+
+test('SET STATUS raw AID data labeled', () => {
+	const tree = parseHexTree('80F0408008A000000151000000');
+	const apdu = tree.children[0];
+	assert.strictEqual(findNode(apdu, 'P1').desc, 'Application or SSD');
+	assert.strictEqual(findNode(apdu, 'P2').desc, 'LOCKED');
+	assert.ok(findNode(apdu, 'Data').desc.startsWith('AID (raw):'));
+});
+
+test('SET STATUS ISD card state label', () => {
+	const tree = parseHexTree('80F0807F00');
+	const apdu = tree.children[0];
+	assert.strictEqual(findNode(apdu, 'P1').desc, 'ISD');
+	assert.strictEqual(findNode(apdu, 'P2').desc, 'CARD_LOCKED');
+	assert.ok(!findNode(apdu, 'Data'));
+});
+
+test('Trailing single byte consumed as Le in compact chain', () => {
+	const tree = parseHexTree('A0A40000026F3BDC0102032B2F2D00');
+	const last = tree.children[tree.children.length - 1];
+	assert.strictEqual(last.label, 'Le');
+	assert.strictEqual(last.hex, '00');
+});
+
+test('ACTIVATE FILE case-1 (4 bytes)', () => {
+	const tree = parseHexTree('00440000');
+	const apdu = tree.children[0];
+	assert.strictEqual(apdu.hex, '00440000');
+	assert.strictEqual(apdu.desc, 'no data, no Le');
+	assert.ok(!findNode(apdu, 'P3'));
+	assert.ok(!findNode(apdu, 'Lc'));
+});
+
+test('ACTIVATE FILE legacy 5-byte empty-Lc form', () => {
+	const tree = parseHexTree('0044000000');
+	const apdu = tree.children[0];
+	assert.strictEqual(findNode(apdu, 'P3').desc, 'empty Lc (legacy form)');
+});
+
+test('ACTIVATE FILE with FID data', () => {
+	const tree = parseHexTree('00440000026F3B');
+	const apdu = tree.children[0];
+	assert.strictEqual(findNode(apdu, 'Data').desc, 'FID 6F3B');
+});
+
+test('READ RECORD next mode: P1 ignored note', () => {
+	const tree = parseHexTree('00B2000200');
+	const apdu = tree.children[0];
+	assert.strictEqual(findNode(apdu, 'P1').desc, 'ignored');
+	assert.ok(findNode(apdu, 'P2').desc.includes('next record'));
+});
+
+test('UPDATE RECORD absolute mode with record number', () => {
+	const tree = parseHexTree('00DC010404AABBCCDD');
+	const apdu = tree.children[0];
+	assert.strictEqual(findNode(apdu, 'P1').desc, 'record #1');
+	assert.strictEqual(findNode(apdu, 'P2').desc, 'absolute/current');
+});
+
+test('SELECT P1/P2 descriptors', () => {
+	const tree = parseHexTree('00A40804047FFF6FC500');
+	const apdu = tree.children[0];
+	assert.strictEqual(findNode(apdu, 'P1').desc, 'path from MF');
+	assert.ok(findNode(apdu, 'P2').desc.includes('FCP'));
+});
+
+test('Immediate Action EFRMA reference (01-7F)', () => {
+	const tree = parseHexTree('AA03810105');
+	const row = tree.children[0].children[0];
+	assert.strictEqual(row.label, 'Reference to EFRMA record');
+	assert.strictEqual(row.desc, 'Record 0x05');
+});
+
+test('CLA 84-87 labeled GlobalPlatform secure messaging', () => {
+	const tree = parseHexTree('8482030010' + '00112233445566778899AABBCCDDEEFF');
+	const apdu = tree.children[0];
+	assert.strictEqual(findNode(apdu, 'CLA').desc, 'GlobalPlatform (secure messaging)');
+});

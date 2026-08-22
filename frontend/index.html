@@ -17,7 +17,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.0</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.1</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -2849,7 +2849,7 @@ function parseBerScript(hex) {
 		let children = [];
 		if (tag === '22') {
 			label = 'C-APDU';
-			children = [{label:'APDU', hex:value, desc:value}];
+			children = parseCompactApdus(value);
 		} else if (tag === '81') {
 			label = 'Immediate Action';
 			children = parseActionRow(value, '81');
@@ -2898,22 +2898,177 @@ function parseActionRow(hex, tag) {
 	return [{label:'Raw', hex, desc:hex}];
 }
 
+function describeP1P2(ins, p1, p2) {
+	const v1 = parseInt(p1, 16);
+	const v2 = parseInt(p2, 16);
+	let d1 = '', d2 = '';
+	if (ins === 'A4') {
+		d1 = {'00':'by FID','01':'child DF','03':'parent DF','04':'by DF name (AID)','08':'path from MF','09':'path from current DF'}[p1] || '';
+		const resp = (v2 >> 2) & 0x03;
+		if (resp === 0x01) d2 = 'return FCP template';
+		else if (resp === 0x03) d2 = 'no response data';
+		if (v1 === 0x04) {
+			const occName = {'00':'first or only occurrence','01':'last occurrence','10':'next occurrence','11':'previous occurrence'}[(v2 & 0x03).toString(2).padStart(2,'0')];
+			if (occName) d2 += (d2 ? ', ' : '') + occName;
+		}
+	} else if (ins === 'B2' || ins === 'DC') {
+		const modeKey = (v2 & 0x07).toString(16).padStart(2, '0');
+		d2 = {'02':'next record','03':'previous record','04':'absolute/current'}[modeKey] || '';
+		const sfi = (v2 >> 3) & 0x1F;
+		if (sfi) d2 += (d2 ? ', ' : '') + 'SFI ' + sfi;
+		if ((v2 & 0x07) === 0x02 || (v2 & 0x07) === 0x03) d1 = v1 === 0 ? 'ignored' : 'record # (ignored)';
+		else if (v1 > 0) d1 = 'record #' + v1;
+	} else if (ins === 'F2') {
+		d1 = {'80':'ISD','40':'Applications incl. SSDs','20':'Executable Load Files','10':'ELFs and Modules'}[p1] || '';
+		d2 = {'02':'first/all, TLV format','03':'next, TLV format','00':'first/all, deprecated raw','01':'next, deprecated raw'}[p2] || '';
+	} else if (ins === 'E6') {
+		const roles = [];
+		if (v1 & 0x02) roles.push('for load');
+		if (v1 & 0x04) roles.push('for install');
+		if (v1 & 0x08) roles.push('for make selectable');
+		if (v1 & 0x10) roles.push('for extradition');
+		if (v1 & 0x20) roles.push('for personalization');
+		if (v1 & 0x40) roles.push('for registry update');
+		if (roles.length) d1 = roles.join(' + ');
+		if (v1 & 0x80) d1 = 'more INSTALL commands follow; ' + d1;
+	} else if (ins === 'F0') {
+		d1 = {'80':'ISD','40':'Application or SSD','60':'SD + associated apps'}[p1] || '';
+		if (p1 === '80') {
+			d2 = {'01':'OP_READY','07':'INITIALIZED','0F':'SECURED','7F':'CARD_LOCKED','FF':'TERMINATED'}[p2] || '';
+		} else {
+			d2 = {'00':'unlock (previous state)','80':'LOCKED'}[p2] || '';
+		}
+	} else if (ins === '20' || ins === '24') {
+		if (v2 >= 1 && v2 <= 8) d2 = 'PIN ref ' + v2;
+	}
+	return {d1, d2};
+}
+
+const RAM_PARAM_TAGS = {
+	'C9': 'Application Specific Parameters',
+	'C6': 'Volatile memory quotas',
+	'C7': 'Non-volatile memory quotas',
+	'C8': 'Non-volatile memory quotas (persistent)',
+	'CB': 'Global Services parameters',
+	'CF': 'Implicit selection parameters',
+	'B6': 'Token CRT',
+	'EF': 'System Specific Parameters (SIM)',
+	'EA': 'System Specific Parameters (UICC)',
+};
+
+function readLvField(hex, i) {
+	const r = parseBerLen(hex, i);
+	const total = r.consumed + r.len * 2;
+	if (i + total > hex.length) return null;
+	return {value: hex.substr(i + r.consumed, r.len * 2), consumed: total, lenHex: hex.substr(i + 1, r.consumed - 2)};
+}
+
+function walkInstallParams(value) {
+	const tlvs = parseTlvList(value);
+	if (tlvs.length === 0) return null;
+	return tlvs.map(tlv => {
+		const name = RAM_PARAM_TAGS[tlv.tag];
+		let children = null;
+		if ((tlv.tag === 'EA' || tlv.tag === 'EF') && tlv.value.length >= 4) {
+			children = parseTlvList(tlv.value).map(inner => ({
+				label: 'TLV ' + inner.tag + (inner.tag === '80' ? ' (Toolkit parameters)' : inner.tag === 'CA' ? ' (SIM Toolkit parameters)' : ''),
+				hex: inner.raw, desc: inner.value || '(empty)',
+			}));
+			if (!children.length) children = [{label:'Value', hex:tlv.value, desc:tlv.value}];
+		}
+		const node = {label: name ? 'Tag ' + tlv.tag + ' — ' + name : 'TLV ' + tlv.tag, hex: tlv.raw, desc: tlv.value || '(empty)'};
+		if (children) node.children = children;
+		return node;
+	});
+}
+
+function describeInstallDataLv(p1val, data) {
+	let fields;
+	if (p1val & 0x40) {
+		fields = ['SD AID', '(reserved)', 'Application AID', 'Privileges', 'RU parameters', 'RU token'];
+	} else if (p1val & 0x20) {
+		fields = ['(reserved)', '(reserved)', 'Application AID', 'Privileges', 'Personalization parameters', 'Personalization token'];
+	} else if (p1val & 0x10) {
+		fields = ['Target SD AID', '(reserved)', 'Application/ELF AID', '(reserved)', 'Extradition parameters', 'Extradition token'];
+	} else if ((p1val & 0x08) && !(p1val & 0x04)) {
+		fields = ['(reserved)', '(reserved)', 'Application AID', 'Privileges', 'MS parameters', 'MS token'];
+	} else if (p1val & 0x04) {
+		fields = ['ELF AID', 'Module AID', 'Application AID', 'Privileges', 'Install parameters', 'Install token'];
+	} else if (p1val & 0x02) {
+		fields = ['Load File AID', 'SD AID', 'LFDB hash', 'Load parameters', 'Load token'];
+	} else {
+		return null;
+	}
+	const nodes = [];
+	let i = 0;
+	for (const name of fields) {
+		if (i >= data.length) return null;
+		const f = readLvField(data, i);
+		if (!f) return null;
+		const node = {label: name, hex: f.lenHex + f.value, desc:''};
+		if (name === 'Privileges') node.desc = decodePrivileges(f.value);
+		else if (name.endsWith('parameters')) {
+			const walked = walkInstallParams(f.value);
+			node.children = walked || [{label:'Value', hex:f.value, desc:f.value}];
+			node.desc = f.value ? '' : '(empty)';
+		} else if (f.value) {
+			node.desc = f.value;
+		} else {
+			node.desc = '(empty)';
+		}
+		nodes.push(node);
+		i += f.consumed;
+	}
+	if (i !== data.length) return null;
+	return nodes;
+}
+
 function parseOneApdu(hex) {
-	if (hex.length < 10) return null;
+	const isActivateDeactivate = hex.length >= 4 && (hex.substr(2, 2) === '44' || hex.substr(2, 2) === '04');
+	if (hex.length < 10 && !(isActivateDeactivate && hex.length === 8)) return null;
 	const cla = hex.substr(0, 2);
 	const ins = hex.substr(2, 2);
 	const p1 = hex.substr(4, 2);
 	const p2 = hex.substr(6, 2);
 	const p3 = hex.substr(8, 2);
 	const insInfo = PARSE_INS[ins];
+	const labels = describeP1P2(ins, p1, p2);
 	const children = [
 		{label:'CLA', hex:cla, desc:cla === '80' ? 'GP/RAM' : cla === 'A0' ? 'SIM' : parseInt(cla,16) >= 0x84 && parseInt(cla,16) <= 0x87 ? 'GlobalPlatform (secure messaging)' : 'UICC'},
 		{label:'INS', hex:ins, desc:insInfo ? insInfo.name : 'Unknown'},
-		{label:'P1', hex:p1, desc:''},
-		{label:'P2', hex:p2, desc:''},
+		{label:'P1', hex:p1, desc:labels.d1},
+		{label:'P2', hex:p2, desc:labels.d2},
 	];
+	if (isActivateDeactivate && hex.length === 8) {
+		return {label:'APDU (case 1)', hex:hex, desc:'no data, no Le', children};
+	}
+	if (ins === 'CA') {
+		if (hex.length === 10) {
+			children.push({label:'Le', hex:p3, desc:'Expected length: ' + parseInt(p3, 16)});
+			return {label:'APDU', hex:hex, desc:'', children};
+		}
+		const lc = parseInt(p3, 16);
+		children.push({label:'Lc', hex:p3, desc:'Data length: ' + lc});
+		const data = hex.substr(10, lc * 2);
+		children.push({label:'Data', hex:data, desc:data.startsWith('5C') && data.length >= 4 ? 'Tag list: ' + data : data});
+		const restLen = hex.length - (10 + lc * 2);
+		if (restLen >= 2) children.push({label:'Le', hex:hex.substr(10 + lc * 2, 2), desc:'Expected length: ' + parseInt(hex.substr(10 + lc * 2, 2), 16)});
+		return {label:'APDU', hex:hex, desc:'', children};
+	}
 	if (insInfo && insInfo.data === 'le') {
 		children.push({label:'Le', hex:p3, desc:'Expected length: ' + parseInt(p3, 16)});
+	} else if (isActivateDeactivate && hex.length >= 10) {
+		if (parseInt(p3, 16) === 0 && hex.length === 10) {
+			children.push({label:'P3', hex:p3, desc:'empty Lc (legacy form)'});
+		} else {
+			const alc = parseInt(p3, 16);
+			children.push({label:'Lc', hex:p3, desc:'Data length: ' + alc});
+			if (alc > 0 && hex.length >= 10 + alc * 2) {
+				const adata = hex.substr(10, alc * 2);
+				const adesc = adata.length === 4 ? 'FID ' + adata : (adata.length > 4 && adata.length % 2 === 0 ? 'Path ' + adata : adata);
+				children.push({label:'Data', hex:adata, desc:adesc});
+			}
+		}
 	} else if (insInfo && insInfo.data === 'none') {
 		children.push({label:'P3', hex:p3, desc:'No data'});
 	} else {
@@ -2921,14 +3076,27 @@ function parseOneApdu(hex) {
 		children.push({label:'Lc', hex:p3, desc:'Data length: ' + lc});
 		if (lc > 0 && hex.length >= 10 + lc * 2) {
 			const data = hex.substr(10, lc * 2);
-			children.push({label:'Data', hex:data, desc:data});
+			let dataDesc = data;
+			let dataChildren = null;
+			if (ins === 'E6') {
+				const lv = describeInstallDataLv(parseInt(p1, 16), data);
+				if (lv) { dataDesc = ''; dataChildren = lv; }
+				else dataDesc = data;
+			} else if (ins === 'F0') {
+				if (p1 === '80') dataDesc = 'ignored for ISD';
+				else if (data.startsWith('4F') && data.length >= 4 && 2 + 2 + parseInt(data.substr(2, 2), 16) * 2 === data.length) dataDesc = 'Legacy 4F-TLV AID: ' + data.substr(4);
+				else dataDesc = 'AID (raw): ' + data;
+			}
+			const node = {label:'Data', hex:data, desc:dataDesc};
+			if (dataChildren) node.children = dataChildren;
+			children.push(node);
 			if (hex.length > 10 + lc * 2) {
 				const le = hex.substr(10 + lc * 2, 2);
 				children.push({label:'Le', hex:le, desc:'Expected response length: ' + parseInt(le, 16)});
 			}
 		}
 	}
-	const totalLen = 10 + (children.find(c => c.label === 'Data') ? parseInt(children.find(c => c.label === 'Lc').hex, 16) * 2 : 0) + (children.find(c => c.label === 'Le (tail)') ? 2 : 0);
+	const totalLen = hex.length;
 	return {label:'APDU', hex:hex.substr(0, totalLen), desc:'', children};
 }
 
@@ -2942,7 +3110,9 @@ function parseCompactApdus(hex) {
 		let fullCla = '';
 		let fullIns = '';
 		let consumed = 0;
-		if ((first === '80' || first === 'A0' || first === '00') && PARSE_INS[second]) {
+		const fb = parseInt(first, 16);
+		const knownCla = first === '80' || first === 'A0' || first === '00' || (fb >= 0x84 && fb <= 0x87);
+		if (knownCla && PARSE_INS[second]) {
 			fullCla = first;
 			fullIns = second;
 			consumed = 2;
@@ -2952,11 +3122,22 @@ function parseCompactApdus(hex) {
 			consumed = 0;
 		}
 		if (fullCla) {
-			const p3 = parseInt(hex.substr(i + 6 + consumed, 2), 16);
+			const p3Byte = parseInt(hex.substr(i + 6 + consumed, 2), 16);
 			const dataType = PARSE_INS[fullIns].data;
 			let apduLen = 8;
-			if (dataType === 'lc') {
-				apduLen += p3 * 2;
+			if (fullIns === 'CA') {
+				const remAvail = hex.length - (i + consumed);
+				if (p3Byte > 0 && remAvail >= p3Byte * 2 + 2) apduLen += p3Byte * 2 + 2;
+			} else if (fullIns === '44' || fullIns === '04') {
+				const avail = hex.length - i;
+				const p3Hex = avail >= consumed + 8 ? hex.substr(i + 6 + consumed, 2) : null;
+				if (p3Hex !== null) {
+					if (p3Byte > 0) apduLen += p3Byte * 2;
+				} else if (avail >= consumed + 6) {
+					apduLen -= 2;
+				}
+			} else if (dataType === 'lc') {
+				apduLen += p3Byte * 2;
 			}
 			if (i + consumed + apduLen <= hex.length) {
 				const apduHex = fullCla + hex.substr(i + consumed, apduLen);
@@ -2975,7 +3156,12 @@ function parseCompactApdus(hex) {
 		i += 2;
 	}
 	if (i < hex.length) {
-		apdus.push({label:'Trailing (unrecognized)', hex:hex.substr(i), desc:hex.substr(i)});
+		if (apdus.length > 0 && hex.length - i === 2) {
+			const leHex = hex.substr(i);
+			apdus.push({label:'Le', hex:leHex, desc:'Expected response length: ' + parseInt(leHex, 16)});
+		} else {
+			apdus.push({label:'Trailing (unrecognized)', hex:hex.substr(i), desc:hex.substr(i)});
+		}
 	}
 	return apdus;
 }
