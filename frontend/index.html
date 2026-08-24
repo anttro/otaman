@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.4</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.5</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -812,9 +812,10 @@
 		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate Secure Packet">Generate Secure Packet</button>
 		<button onclick="pysimVerifySp()" id="sp-verify-btn" class="hidden mb-3 px-5 py-2.5 bg-slate-600 text-white text-sm font-medium rounded hover:bg-slate-700" data-l10n="Verify vs pySim">Verify vs pySim</button>
 		<button onclick="pysimSendOta()" id="sp-send-btn" class="hidden mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Send to Card">Send to Card</button>
+		<div id="sp-por-status" class="mt-2 text-base font-semibold font-mono hidden"></div>
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
 		<div id="sp-send-result" class="mt-2 text-xs font-mono hidden"></div>
+		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
 	</div>
 
 	<div id="tab-response" class="tab-content hidden">
@@ -2180,7 +2181,9 @@ function genSp() {
 		packet.set(encrypted, 10);
 	}
 
-	resultEl.value = bytesToHex(packet);
+	// pySim encode_cmd parity: the 2-byte CPL prefix is transmitted only when
+	// ciphering is applied; unciphered packets start at CHL (v1.9.5).
+	resultEl.value = bytesToHex(ciphering ? packet : packet.subarray(2));
 }
 
 // ===== BER-TLV =====
@@ -4036,7 +4039,9 @@ async function pysimSendOta() {
 	if (!sp) { alert('No secured packet to send. Generate a secure packet first.'); return; }
 	const statusEl = document.getElementById('pysim-status');
 	const sendResultEl = document.getElementById('sp-send-result');
+	const porStatusEl = document.getElementById('sp-por-status');
 	sendResultEl.classList.add('hidden');
+	porStatusEl.classList.add('hidden');
 	statusEl.innerHTML = '<span class="text-gray-500">' + t('Sending OTA...') + '</span>';
 	try {
 		const data = await pysimFetch('/api/send-ota', { sp, ...spParams() });
@@ -4052,6 +4057,10 @@ async function pysimSendOta() {
 				msg += ' | PoR status: ' + por.response_status + ' (TAR ' + por.tar + ')';
 				if (por.cntr) msg += ' | PoR CNTR: ' + por.cntr;
 				if (por.decoded && por.decoded.last_status_word) msg += ' | last SW ' + por.decoded.last_status_word + ' ' + (por.decoded.last_response_data || '');
+				const okPor = por.response_status === 'por_ok';
+				porStatusEl.textContent = 'PoR: ' + por.response_status;
+				porStatusEl.classList.remove('hidden', okPor ? 'text-red-600' : 'text-green-600');
+				porStatusEl.classList.add(okPor ? 'text-green-600' : 'text-red-600');
 			}
 			sendResultEl.textContent = msg;
 			if (por && por.raw) {

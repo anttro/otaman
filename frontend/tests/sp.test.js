@@ -93,13 +93,13 @@ test('ciphered + CC SPI 16/01 (counter_must_be_higher, plaintext PoR)', () => {
 test('unciphered + CC SPI 02/09', () => {
 	assert.strictEqual(
 		makeRun({ 'sp-spi1': '02', 'sp-spi2-hex': '09' }),
-		'001D1502091515B0000000000000010085A8CA1A9828B0BB00A40000023F00');
+		'1502091515B0000000000000010085A8CA1A9828B0BB00A40000023F00');
 });
 
-test('unciphered packet uses CPL = octets from CHL to end (0x001d)', () => {
+test('unciphered packet starts at CHL, no CPL prefix (pySim parity)', () => {
 	const out = makeRun({ 'sp-spi1': '02', 'sp-spi2-hex': '09' });
-	assert.strictEqual(out.slice(0, 4), '001D');
-	assert.strictEqual(out.length, 62);
+	assert.strictEqual(out.slice(0, 2), '15');
+	assert.strictEqual(out.length, 58);
 });
 
 test('sysmocom public reference vector (spi1 04 / spi2 19, cntr=0)', () => {
@@ -169,7 +169,7 @@ test('AES unciphered + CC SPI 12/09 (counter higher)', () => {
 			'sp-kic-key': KIC_AES,
 			'sp-kid-key': KID_AES,
 		}),
-		'001D1512092222B0001100000000110029826122C7A0B79500A40004023F00');
+		'1512092222B0001100000000110029826122C7A0B79500A40004023F00');
 });
 
 test('AES ciphered + CC SPI 1E/19 (counter +1)', () => {
