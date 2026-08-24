@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.2</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.3</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -921,8 +921,12 @@
 				<tbody id="cards-tbody"></tbody>
 			</table>
 		</div>
-		<div class="mt-3">
+		<input type="file" id="cards-file" accept=".json,application/json" class="hidden" onchange="cardsImportFile(this)">
+		<div class="flex flex-wrap gap-2 mt-2">
 			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
+			<button onclick="cardsExportFile()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export to file">Export to file</button>
+			<button onclick="document.getElementById('cards-file').click()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import from file">Import from file</button>
+			<button onclick="cardsImportField()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Paste & import">Paste &amp; import</button>
 			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
 		</div>
 		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
@@ -997,9 +1001,13 @@
 				<button onclick="pysimCustomAdd()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
 			</div>
 			<div id="pysim-cf-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
-			<div class="flex gap-2 mt-2">
-				<button onclick="pysimCustomExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">Export as JSON</button>
-				<button onclick="pysimCustomImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">Import JSON from clipboard</button>
+		<input type="file" id="pysim-cf-file" accept=".json,application/json" class="hidden" onchange="pysimCustomImportFile(this)">
+			<div class="flex flex-wrap gap-2 mt-2">
+				<button onclick="pysimCustomExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
+				<button onclick="pysimCustomExportFile()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export to file">Export to file</button>
+				<button onclick="document.getElementById('pysim-cf-file').click()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import from file">Import from file</button>
+				<button onclick="pysimCustomImportField()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Paste & import">Paste &amp; import</button>
+				<button onclick="pysimCustomImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
 			</div>
 			<textarea id="pysim-cf-io" class="hidden mt-2 w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800" rows="6"></textarea>
 		</div>
@@ -4291,9 +4299,22 @@ function cardsExport() {
 	el.select();
 }
 
-async function cardsImport() {
+function downloadJson(name, obj) {
+	const blob = new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'});
+	const a = document.createElement('a');
+	a.href = URL.createObjectURL(blob);
+	a.download = name;
+	a.click();
+	URL.revokeObjectURL(a.href);
+}
+
+function cardsExportFile() {
+	downloadJson('otaman-cards.json', cards);
+}
+
+async function cardsImport(text) {
 	try {
-		const text = await navigator.clipboard.readText();
+		if (text == null) text = await navigator.clipboard.readText();
 		const imported = JSON.parse(text);
 		if (!Array.isArray(imported)) throw new Error('Expected an array');
 		let added = 0;
@@ -4322,6 +4343,25 @@ async function cardsImport() {
 	} catch (e) {
 		alert('Import error: ' + e.message);
 	}
+}
+
+function cardsImportFile(input) {
+	const file = input.files && input.files[0];
+	input.value = '';
+	if (!file) return;
+	const reader = new FileReader();
+	reader.onload = () => cardsImport(reader.result);
+	reader.readAsText(file);
+}
+
+function cardsImportField() {
+	const el = document.getElementById('cards-io');
+	const val = el.value.trim();
+	if (!el.classList.contains('hidden') && val.startsWith('[')) { cardsImport(val); return; }
+	el.value = '';
+	el.placeholder = 'Paste JSON array here, then press Paste & import again';
+	el.classList.remove('hidden');
+	el.focus();
 }
 
 // ===== pysim sub-tabs =====
@@ -5706,9 +5746,13 @@ function pysimCustomExport() {
 	el.select();
 }
 
-async function pysimCustomImport() {
+function pysimCustomExportFile() {
+	downloadJson('otaman-custom-files.json', pysimCustomFiles);
+}
+
+async function pysimCustomImport(text) {
 	try {
-		const text = await navigator.clipboard.readText();
+		if (text == null) text = await navigator.clipboard.readText();
 		const imported = JSON.parse(text);
 		if (!Array.isArray(imported)) throw new Error('Expected an array');
 		let added = 0;
@@ -5734,6 +5778,25 @@ async function pysimCustomImport() {
 	} catch (e) {
 		alert('Import error: ' + e.message);
 	}
+}
+
+function pysimCustomImportFile(input) {
+	const file = input.files && input.files[0];
+	input.value = '';
+	if (!file) return;
+	const reader = new FileReader();
+	reader.onload = () => pysimCustomImport(reader.result);
+	reader.readAsText(file);
+}
+
+function pysimCustomImportField() {
+	const el = document.getElementById('pysim-cf-io');
+	const val = el.value.trim();
+	if (!el.classList.contains('hidden') && val.startsWith('[')) { pysimCustomImport(val); return; }
+	el.value = '';
+	el.placeholder = 'Paste JSON array here, then press Paste & import again';
+	el.classList.remove('hidden');
+	el.focus();
 }
 
 // Init custom files
@@ -5833,6 +5896,9 @@ const LANG_RU = {
 	'Card presets are stored locally in your browser. JSON export/import buttons are below the card list.': 'Данные карт хранятся локально в браузере. Кнопки экспорта/импорта JSON — под списком карт.',
 	'Add': 'Добавить',
 	'Export as JSON': 'Экспорт в JSON',
+	'Export to file': 'Экспорт в файл',
+	'Import from file': 'Импорт из файла',
+	'Paste & import': 'Вставить и импортировать',
 	'Import JSON from clipboard': 'Импорт JSON из буфера',
 	'Name': 'Имя',
 	'ICCID': 'ICCID',
