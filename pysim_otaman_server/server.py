@@ -18,7 +18,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.3'
+VERSION = '1.9.4'
 
 
 # Static file serving (the PWA lives in <repo>/frontend, served by this server
@@ -334,7 +334,12 @@ def _decode_por(spi1, spi2, kic, kid, cntr_hex, kic_key_hex, kid_key_hex, respon
     out = {
         'response_status': str(res['response_status']),
         'tar': res['tar'].hex().upper(),
+        'cntr': res['cntr'].hex().upper(),
         'pcntr': res['pcntr'],
+        'rpl': res['rpl'],
+        'rhl': res['rhl'],
+        'cc_rc': res['cc_rc'].hex(),
+        'raw': response_hex,
     }
     
     # Try ExpandedRemoteResponse first (TS 102 226 §5.2.2)
@@ -1825,6 +1830,10 @@ class PysimHandler(BaseHTTPRequestHandler):
                     max_chunk = 130
                     chunks = [sp_bytes[i:i+max_chunk] for i in range(0, len(sp_bytes), max_chunk)]
                     total = len(chunks)
+                    sys.stderr.write('OTA SEND: SPI %s %s KIc %s KID %s TAR %s CNTR %s LEN %dB CHUNKS %d\n' % (
+                        body.get('spi1', ''), body.get('spi2', ''), body.get('kic', ''),
+                        body.get('kid', ''), body.get('tar', ''), body.get('cntr', ''),
+                        len(sp_bytes), total))
                     last_data = None
                     last_sw = None
                     for i, chunk in enumerate(chunks):
@@ -1836,20 +1845,34 @@ class PysimHandler(BaseHTTPRequestHandler):
                         last_sw = sw
                         if sw != '9000' and not sw.startswith('91'):
                             resp = {'success': False, 'sw': sw, 'error': 'ENVELOPE failed at chunk %d' % (i + 1)}
+                            sys.stderr.write('OTA SEND FAILED: chunk %d SW %s\n' % (i + 1, sw))
                             break
                     else:
                         resp = {'success': True, 'sw': last_sw, 'response_data': last_data if last_data else None}
+                        por_src = 'envelope'
                         por_hex = resp['response_data']
                         if submit_handler and submit_handler.submit_tpdu_hex:
                             tpdu_b = bytes.fromhex(submit_handler.submit_tpdu_hex)
                             idx = tpdu_b.find(b'\x02\x71\x00')
                             if idx >= 0:
                                 por_hex = tpdu_b[idx:].hex()
+                                por_src = 'sms-submit'
                         por = _decode_por(body.get('spi1', ''), body.get('spi2', ''), body.get('kic', ''),
                                           body.get('kid', ''), body.get('cntr', ''), body.get('kicKey', ''),
                                           body.get('kidKey', ''), por_hex)
                         if por:
                             resp['por'] = por
+                            extra = ''
+                            if por.get('decoded'):
+                                extra = ' (compact: %s cmd, last SW %s)' % (por['decoded'].get('number_of_commands', '?'),
+                                                                            por['decoded'].get('last_status_word', '?'))
+                            sys.stderr.write('OTA PoR[%s]: status=%s TAR=%s CNTR=%s PCNTR=%s RPL=%s RHL=%s%s\n' % (
+                                por_src, por.get('response_status'), por.get('tar'), por.get('cntr'),
+                                por.get('pcntr'), por.get('rpl'), por.get('rhl'), extra))
+                        elif por_hex:
+                            sys.stderr.write('OTA PoR[%s]: undecodable raw=%s\n' % (por_src, str(por_hex)[:64]))
+                        else:
+                            sys.stderr.write('OTA PoR[%s]: none\n' % por_src)
                 finally:
                     if submit_handler and hasattr(scc, '_tp'):
                         scc._tp.proactive_handler = old_proactive

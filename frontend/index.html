@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.3</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.4</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -814,6 +814,7 @@
 		<button onclick="pysimSendOta()" id="sp-send-btn" class="hidden mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Send to Card">Send to Card</button>
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
+		<div id="sp-send-result" class="mt-2 text-xs font-mono hidden"></div>
 	</div>
 
 	<div id="tab-response" class="tab-content hidden">
@@ -2068,7 +2069,7 @@ function genSp() {
 	const kicHex = document.getElementById('sp-kic-hex').value;
 	const kidHex = document.getElementById('sp-kid-hex').value;
 	const tarHex = (document.getElementById('sp-tar').value || '').replace(/[^0-9a-fA-F]/g, '').padEnd(6, '0').slice(0, 6);
-	const cntrHex = (document.getElementById('sp-cntr').value || '').replace(/[^0-9a-fA-F]/g, '').padEnd(10, '0').slice(0, 10);
+	const cntrHex = (document.getElementById('sp-cntr').value || '').replace(/[^0-9a-fA-F]/g, '').padStart(10, '0').slice(0, 10);
 	const kicKeyHex = (document.getElementById('sp-kic-key').value || '').replace(/[^0-9a-fA-F]/g, '');
 	const kidKeyHex = (document.getElementById('sp-kid-key').value || '').replace(/[^0-9a-fA-F]/g, '');
 	const padByte = parseInt(document.getElementById('sp-padding').value, 16);
@@ -4034,6 +4035,8 @@ async function pysimSendOta() {
 	const sp = document.getElementById('sp-result').value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
 	if (!sp) { alert('No secured packet to send. Generate a secure packet first.'); return; }
 	const statusEl = document.getElementById('pysim-status');
+	const sendResultEl = document.getElementById('sp-send-result');
+	sendResultEl.classList.add('hidden');
 	statusEl.innerHTML = '<span class="text-gray-500">' + t('Sending OTA...') + '</span>';
 	try {
 		const data = await pysimFetch('/api/send-ota', { sp, ...spParams() });
@@ -4047,13 +4050,32 @@ async function pysimSendOta() {
 			const por = data.por;
 			if (por && por.response_status) {
 				msg += ' | PoR status: ' + por.response_status + ' (TAR ' + por.tar + ')';
+				if (por.cntr) msg += ' | PoR CNTR: ' + por.cntr;
 				if (por.decoded && por.decoded.last_status_word) msg += ' | last SW ' + por.decoded.last_status_word + ' ' + (por.decoded.last_response_data || '');
 			}
+			sendResultEl.textContent = msg;
+			if (por && por.raw) {
+				const rawLine = document.createElement('div');
+				rawLine.className = 'break-all';
+				rawLine.textContent = 'raw PoR: ' + por.raw;
+				sendResultEl.appendChild(rawLine);
+			}
+			sendResultEl.classList.remove('hidden', 'text-red-600');
+			sendResultEl.classList.add('text-green-600');
 			statusEl.innerHTML = '<span class="text-green-600">' + esc(msg) + '</span>';
 		} else {
-			statusEl.innerHTML = '<span class="text-red-500">OTA failed: ' + (data.error || 'SW: ' + data.sw) + '</span>';
+			let msg = 'OTA failed';
+			if (data.error) msg += ': ' + data.error;
+			if (data.sw) msg += (data.error ? ' | ' : ': ') + 'SW ' + data.sw;
+			sendResultEl.textContent = msg;
+			sendResultEl.classList.remove('hidden', 'text-green-600');
+			sendResultEl.classList.add('text-red-600');
+			statusEl.innerHTML = '<span class="text-red-500">' + esc(msg) + '</span>';
 		}
 	} catch (e) {
+		sendResultEl.textContent = 'Error: ' + e.message;
+		sendResultEl.classList.remove('hidden', 'text-green-600');
+		sendResultEl.classList.add('text-red-600');
 		statusEl.innerHTML = '<span class="text-red-500">Error: ' + esc(e.message) + '</span>';
 	}
 }

@@ -202,6 +202,30 @@ class TestDecodePor(unittest.TestCase):
         self.assertEqual(r['response_status'], 'por_ok')
         self.assertEqual(r['decoded']['last_status_word'], '612f')
 
+    def test_complete_field_report(self):
+        """All parsed PoR fields are surfaced verbatim (v1.9.4)."""
+        raw = '027100000e0ab000110000000000000001612f'
+        r = _decode_por('06', '01', '35', '35', '0000000001', KIC3, KID3, raw)
+        self.assertEqual(r['response_status'], 'por_ok')
+        self.assertEqual(r['tar'], 'B00011')
+        self.assertEqual(r['cntr'], '0000000000')
+        self.assertEqual(r['pcntr'], 0)
+        self.assertEqual(r['rpl'], 14)
+        self.assertEqual(r['rhl'], 10)
+        self.assertEqual(r['cc_rc'], '')
+        self.assertEqual(r['raw'], raw)
+        self.assertNotIn('cntr_low', str(r))
+
+    def test_cntr_low_fields(self):
+        r = _decode_por('02', '01', '15', '15', '0000000001', K, K,
+                        '027100000b0ab0000000000000070002')
+        self.assertEqual(r['response_status'], 'cntr_low')
+        self.assertEqual(r['tar'], 'B00000')
+        self.assertEqual(r['cntr'], '0000000007')
+        self.assertEqual(r['rpl'], 11)
+        self.assertEqual(r['rhl'], 10)
+        self.assertIsNone(r.get('decoded'))
+
     def test_sysmocom_bad_cc_returns_none(self):
         r = _decode_por('06', '09', '35', '35', '0000000001', KIC3, KID3,
                         '027100001612b000110000000000000055f47118381175fb02612f')
