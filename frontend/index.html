@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.5</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.6</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -99,7 +99,7 @@
 					</div>
 					<div id="sim-sel-chain-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="FID chain (comma-separated)">FID chain (comma-separated)</label>
-						<input id="sim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F00,6F3A">
+						<input id="sim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F00,2FE2,C0">
 					</div>
 					</div>
 				</div>
@@ -235,13 +235,23 @@
 							<option value="chain">ADF RFM chain</option>
 						</select>
 					</div>
+					<div id="usim-sel-silent-row" class="mb-3">
+						<label class="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+							<input id="usim-sel-silent" type="checkbox" onchange="updateP1P2Display('usim')" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800">
+							Silent (P2=0C, no FCP returned)
+						</label>
+					</div>
 					<div id="usim-sel-fid-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (2 bytes)</label>
-						<input id="usim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
+						<input id="usim-sel-fid" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
 					</div>
 					<div id="usim-sel-path-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Path (hex)">Path (hex)</label>
-						<input id="usim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="7FFF6FC5">
+						<input id="usim-sel-path" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="7FFF6FC5">
+						<div class="flex gap-4 mt-1.5 text-sm text-gray-700 dark:text-slate-300">
+							<label class="flex items-center gap-1.5"><input type="radio" name="usim-sel-base" value="mf" checked onchange="updateP1P2Display('usim')" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800"> from MF</label>
+							<label class="flex items-center gap-1.5"><input type="radio" name="usim-sel-base" value="df" onchange="updateP1P2Display('usim')" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800"> from current DF</label>
+						</div>
 					</div>
 					<div id="usim-sel-dfname-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
@@ -249,7 +259,7 @@
 					</div>
 					<div id="usim-sel-chain-row" class="mb-3">
 						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="FID chain (comma-separated)">FID chain (comma-separated)</label>
-						<input id="usim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F00,6F3A">
+						<input id="usim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F00,2FE2,C0">
 					</div>
 					</div>
 				</div>
@@ -767,7 +777,7 @@
 		<div class="flex gap-2 mb-3">
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">TAR (3 bytes)</label>
-				<input id="sp-tar" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
+				<input id="sp-tar" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
 			</div>
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Card presets">Card presets</label>
@@ -779,7 +789,7 @@
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Counter (5 bytes)</label>
 				<div class="flex gap-1 items-center">
 					<button type="button" onclick="spCntrAdjust(-1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">−</button>
-					<input id="sp-cntr" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
+					<input id="sp-cntr" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
 					<button type="button" onclick="spCntrAdjust(1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">+</button>
 				</div>
 			</div>
@@ -788,17 +798,17 @@
 		<div class="flex gap-2 mb-3">
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KIc Key (hex)</label>
-				<textarea id="sp-kic-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
+				<textarea id="sp-kic-key" rows="2" oninput="spInvalidate()" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
 			</div>
 			<div class="flex-1">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KID Key (hex)</label>
-				<textarea id="sp-kid-key" rows="2" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
+				<textarea id="sp-kid-key" rows="2" oninput="spInvalidate()" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="16 bytes key"></textarea>
 			</div>
 		</div>
 
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Padding byte</label>
-			<select id="sp-padding" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+			<select id="sp-padding" onchange="spInvalidate()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="00" selected>00 (TS 102 225 default)</option>
 				<option value="FF">FF</option>
 			</select>
@@ -806,7 +816,7 @@
 
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">APDU (hex)</label>
-			<textarea id="sp-apdu" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
+			<textarea id="sp-apdu" rows="3" oninput="spInvalidate()" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
 		</div>
 
 		<button onclick="genSp()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate Secure Packet">Generate Secure Packet</button>
@@ -1198,19 +1208,22 @@ function updateSimSelectSection(mode) {
 }
 
 function updateP1P2Display(mode) {
-	const preset = mode === 'sim' ? {selP1: 0x00, selP2: 0x00} : {selP1: 0x00, selP2: 0x0C};
+	const preset = mode === 'sim' ? {selP1: 0x00, selP2: 0x00} : {selP1: 0x00, selP2: 0x04};
 	const cmd = document.getElementById(mode + '-cmd').value;
 	if (cmd === 'select') {
 		const method = document.getElementById(mode + '-sel-method').value;
+		const silent = mode === 'usim' && !!document.getElementById('usim-sel-silent').checked;
+		const p2Base = silent ? 0x0C : preset.selP2;
 		let p1, p2;
 		if (method === 'fid' || method === 'chain') {
-			p1 = preset.selP1; p2 = preset.selP2;
+			p1 = preset.selP1; p2 = p2Base;
 		} else if (method === 'path') {
-			p1 = 0x08; p2 = mode === 'sim' ? 0x00 : 0x04;
+			p1 = (mode === 'usim' && document.querySelector('input[name="usim-sel-base"]:checked')?.value === 'df') ? 0x09 : 0x08;
+			p2 = mode === 'sim' ? 0x00 : p2Base;
 		} else if (method === 'dfname') {
-			p1 = 0x04; p2 = mode === 'sim' ? 0x00 : 0x04;
+			p1 = 0x04; p2 = mode === 'sim' ? 0x00 : p2Base;
 		} else {
-			p1 = preset.selP1; p2 = preset.selP2;
+			p1 = preset.selP1; p2 = p2Base;
 		}
 		document.getElementById(mode + '-p1').value = p1.toString(16).padStart(2, '0').toUpperCase();
 		document.getElementById(mode + '-p2').value = p2.toString(16).padStart(2, '0').toUpperCase();
@@ -1452,14 +1465,6 @@ function buildSelect(cla, p1, p2, fid) {
 	return buildApdu(cla, 0xA4, p1, p2, 0x02, data);
 }
 
-function buildOpNoCla(ins, p1, p2, p3, data) {
-	let s = ins.toString(16).padStart(2, '0').toUpperCase() +
-		p1.toString(16).padStart(2, '0').toUpperCase() +
-		p2.toString(16).padStart(2, '0').toUpperCase();
-	if (p3 !== null && p3 !== undefined) s += p3.toString(16).padStart(2, '0').toUpperCase();
-	if (data) s += data.toUpperCase();
-	return s;
-}
 
 const OPS = {
 	'select':            {ins: 0xA4},
@@ -1494,33 +1499,52 @@ function getSelValue(mode) {
 function buildSelectApdu(mode, preset, selInfo) {
 	const isSim = preset.cla === 0xA0;
 	if (!selInfo || !selInfo.value) return '';
+	// USIM response control: FCP request (P2=04 + Le) vs silent hop (P2=0C, no Le)
+	const silent = !isSim && !!document.getElementById('usim-sel-silent').checked;
+	const p2 = silent ? 0x0C : preset.selP2;
+	const le = (!isSim && !silent) ? '00' : null;
 	if (selInfo.type === 'fid') {
 		if (selInfo.value.length !== 4) return '';
-		return buildSelect(preset.cla, preset.selP1, preset.selP2, selInfo.value);
+		let apdu = buildSelect(preset.cla, preset.selP1, p2, selInfo.value);
+		if (le) apdu += le;
+		return apdu;
 	} else if (selInfo.type === 'path') {
 		if (selInfo.value.length < 2 || selInfo.value.length % 2 !== 0) return '';
 		const p3 = selInfo.value.length / 2;
-		const p2 = isSim ? 0x00 : 0x04;
-		let apdu = buildApdu(preset.cla, 0xA4, 0x08, p2, p3, selInfo.value);
-		if (!isSim) apdu += '00';
+		let p1 = isSim ? 0x08 : (document.querySelector('input[name="usim-sel-base"]:checked')?.value === 'df' ? 0x09 : 0x08);
+		let apdu = buildApdu(preset.cla, 0xA4, p1, p2, p3, selInfo.value);
+		if (le) apdu += le;
 		return apdu;
 	} else if (selInfo.type === 'dfname') {
 		if (selInfo.value.length < 2) return '';
 		const p3 = selInfo.value.length / 2;
-		const p2 = isSim ? 0x00 : 0x04;
 		let apdu = buildApdu(preset.cla, 0xA4, 0x04, p2, p3, selInfo.value);
-		if (!isSim) apdu += '00';
+		if (le) apdu += le;
 		return apdu;
 	} else if (selInfo.type === 'chain') {
-		const fids = selInfo.value.split(',').map(f => f.trim().replace(/[^0-9a-fA-F]/g, '')).filter(f => f.length === 4);
-		if (fids.length === 0) return '';
-		return fids.map(fid => buildSelect(preset.cla, preset.selP1, preset.selP2, fid)).join('');
+		const tokens = selInfo.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
+		let out = '';
+		for (const tok of tokens) {
+			// 'C0' or 'C0:NN' - GET RESPONSE hop (Le defaults to '00')
+			const gr = /^c0(?::([0-9a-fA-F]{1,2}))?$/i.exec(tok);
+			if (gr) {
+				const leByte = parseInt(gr[1] || '00', 16);
+				out += buildApdu(preset.cla, 0xC0, 0x00, 0x00, leByte, '');
+				continue;
+			}
+			const fid = tok.replace(/[^0-9a-fA-F]/g, '');
+			if (fid.length !== 4) continue;
+			let apdu = buildSelect(preset.cla, preset.selP1, p2, fid);
+			if (le) apdu += le;
+			out += apdu;
+		}
+		return out;
 	}
 	return '';
 }
 
 function genSimUsim(mode) {
-	const preset = mode === 'sim' ? {cla: 0xA0, selP1: 0x00, selP2: 0x00} : {cla: 0x00, selP1: 0x00, selP2: 0x0C};
+	const preset = mode === 'sim' ? {cla: 0xA0, selP1: 0x00, selP2: 0x00} : {cla: 0x00, selP1: 0x00, selP2: 0x04};
 	const cmd = document.getElementById(mode + '-cmd').value;
 	const doSelect = document.getElementById(mode + '-select').checked;
 	const selInfo = getSelValue(mode);
@@ -1605,7 +1629,9 @@ function genSimUsim(mode) {
 	if (doSelect) {
 		const selectApdu = buildSelectApdu(mode, preset, selInfo);
 		if (selectApdu) {
-			apdu = selectApdu + buildOpNoCla(op.ins, p1, p2, p3, data);
+			// full CLA on every command - scripted secured-packet streams must be
+			// self-delimiting; implied-CLA fragments desync the card's parser
+			apdu = selectApdu + buildApdu(preset.cla, op.ins, p1, p2, p3, data);
 		} else {
 			apdu = buildApdu(preset.cla, op.ins, p1, p2, p3, data);
 		}
@@ -1867,12 +1893,17 @@ function spCntrAdjust(delta) {
 	val = Math.max(0, val + delta);
 	el.value = val.toString(16).padStart(10, '0').toUpperCase();
 }
+function spInvalidate() {
+	document.getElementById('sp-result').value = '';
+}
+
 function updateSp() {
 	document.getElementById('sp-spi1-hex').value = document.getElementById('sp-spi1').value;
 	const spi2Base = parseInt(document.getElementById('sp-spi2').value, 16);
 	const sm = parseInt(document.getElementById('sp-spi2-sm').value, 16);
 	const spi2Byte = spi2Base | (sm << 5);
 	document.getElementById('sp-spi2-hex').value = spi2Byte.toString(16).padStart(2, '0').toUpperCase();
+	spInvalidate();
 }
 function updateSpKic() {
 	const idx = parseInt(document.getElementById('sp-kic-idx').value, 16);
@@ -1880,6 +1911,7 @@ function updateSpKic() {
 	const byte = (idx << 4) | alg;
 	document.getElementById('sp-kic-hex').value = byte.toString(16).padStart(2, '0').toUpperCase();
 	updateKeyPlaceholder('kic', alg & 0x0F);
+	spInvalidate();
 }
 function updateSpKid() {
 	const idx = parseInt(document.getElementById('sp-kid-idx').value, 16);
@@ -1887,6 +1919,7 @@ function updateSpKid() {
 	const byte = (idx << 4) | alg;
 	document.getElementById('sp-kid-hex').value = byte.toString(16).padStart(2, '0').toUpperCase();
 	updateKeyPlaceholder('kid', alg & 0x0F);
+	spInvalidate();
 }
 function updateKeyPlaceholder(prefix, algNib) {
 	const keyLen = {1: 8, 2: 16, 5: 16, 9: 24, 0xD: 8}[algNib] || 8;
@@ -3352,6 +3385,21 @@ const SW_MAP = {
 		'9000': 'Normal ending of command',
 		'61XX': 'Send GET RESPONSE (Le = SW2)',
 		'6CXX': 'Repeat command with Le = SW2',
+		// TS 51.011 §9.4 SIM-specific families
+		'9200': 'Command successful after internal update retry routine',
+		'9240': 'Memory problem',
+		'9400': 'No EF selected',
+		'9402': 'Out of range (invalid address)',
+		'9404': 'File ID not found / pattern not found',
+		'9408': 'File inconsistent with the command',
+		'9802': 'No CHV initialized',
+		'9804': 'Access condition not fulfilled / CHV verification failed, attempts left / authentication failed',
+		'9808': 'In contradiction with CHV status',
+		'9810': 'In contradiction with invalidation status',
+		'9840': 'CHV verification failed - no attempt left; CHV blocked; UNBLOCK blocked',
+		'9850': 'Increase cannot be performed, max value reached',
+		'9EXX': 'SIM data download error (SW2 = length)',
+		'9FXX': 'Response data available (SW2 = N bytes) - send GET RESPONSE',
 		'6200': 'Warning: No information given, NV memory unchanged',
 		'6281': 'Warning: Part of returned data may be corrupted',
 		'6282': 'Warning: End of file/record reached before reading Le bytes',
@@ -4061,6 +4109,14 @@ async function pysimSendOta() {
 				porStatusEl.textContent = 'PoR: ' + por.response_status;
 				porStatusEl.classList.remove('hidden', okPor ? 'text-red-600' : 'text-green-600');
 				porStatusEl.classList.add(okPor ? 'text-green-600' : 'text-red-600');
+				if (okPor) {
+					// packet was accepted and executed - advance the counter so the
+					// same secured packet can never be sent twice (v1.9.6)
+					const cntrEl = document.getElementById('sp-cntr');
+					cntrEl.value = ((parseInt(cntrEl.value, 16) || 0) + 1)
+						.toString(16).toUpperCase().padStart(10, '0').slice(-10);
+					document.getElementById('sp-result').value = '';
+				}
 			}
 			sendResultEl.textContent = msg;
 			if (por && por.raw) {
@@ -4319,6 +4375,7 @@ function cardsApply(idx) {
 	document.getElementById('sp-cntr').value = c.cntr;
 	document.getElementById('sp-kic-key').value = c.kicKey;
 	document.getElementById('sp-kid-key').value = c.kidKey;
+	spInvalidate();
 	updateSp();
 	genSp();
 }

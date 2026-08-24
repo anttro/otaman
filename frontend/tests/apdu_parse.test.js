@@ -360,3 +360,25 @@ test('SELECT P2 response field per ETSI b5-b3', () => {
 	const none = parseHexTree('00A4000C026F3B');
 	assert.ok(findNode(none.children[0], 'P2').desc.includes('no response data'));
 });
+
+test('live RFM captures decode (silent hop / implied CLA / SIM chain)', () => {
+	// capture line 1 head: silent relative hop 09/0C
+	const t1 = parseHexTree('00A4090C026F46');
+	const a1 = t1.children[0];
+	assert.ok(findNode(a1, 'P1').desc.includes('path from current DF'));
+	assert.ok(findNode(a1, 'P2').desc.includes('no response data'));
+	assert.strictEqual(findNode(a1, 'Data').desc, '6F46');
+
+	// capture line 2: silent hop + READ RECORD as implied-CLA continuation
+	const t2 = parseHexTree('00A4090C026FC5B2010414');
+	assert.strictEqual(t2.children.length, 2);
+	assert.strictEqual(t2.children[1].label, 'APDU (implied CLA)');
+	assert.ok(findNode(t2.children[1], 'INS').desc.includes('READ RECORD'));
+
+	// capture line 3: SIM chained FID selects + UPDATE RECORD (34 x FF)
+	const t3 = parseHexTree('A0A40000023F00A0A40000027F20A0A40000026FC5A0DC010422' + 'FF'.repeat(34));
+	assert.strictEqual(t3.children.length, 4);
+	assert.strictEqual(t3.children[3].label, 'APDU');
+	assert.ok(findNode(t3.children[3], 'INS').desc.includes('UPDATE RECORD'));
+	assert.ok(findNode(t3.children[3], 'Lc').desc.includes('34'));
+});

@@ -31,16 +31,17 @@ class StubEl {
 }
 
 const els = {};
+let usimBase = 'mf';
 const doc = {
 	getElementById: (id) => {
 		if (!els[id]) els[id] = new StubEl();
 		return els[id];
 	},
-	querySelector: () => new StubEl(),
+	querySelector: (sel) => (sel.includes('usim-sel-base') ? { value: usimBase } : null),
 };
 global.document = doc;
 
-const FNS = ['buildApdu', 'buildOpNoCla', 'buildSelect', 'getSelValue', 'buildSelectApdu',
+const FNS = ['buildApdu', 'buildSelect', 'getSelValue', 'buildSelectApdu',
 	'updateSimUsimFields', 'updateP1P2Display', 'genSimUsim', 'OPS'];
 let code = '';
 for (const f of FNS) {
@@ -54,11 +55,13 @@ for (const f of FNS) {
 code += '\nvar SIM_PRESETS = {};';
 eval(code);
 
+
 function set(id, v) { els[id] = Object.assign(new StubEl(), { value: v }); }
 function setChecked(id, v) { els[id] = Object.assign(new StubEl(), { checked: v }); }
 
 function setup(mode, opts) {
 	for (const k of Object.keys(els)) delete els[k];
+	usimBase = opts.base || 'mf';
 	set(mode + '-cmd', opts.cmd);
 	setChecked(mode + '-select', !!opts.doSelect);
 	set(mode + '-sel-method', opts.selMethod || 'fid');
@@ -78,6 +81,8 @@ function setup(mode, opts) {
 	set(mode + '-pin-new', opts.pinNew || '');
 	set(mode + '-act-target', opts.actTarget || 'current');
 	set(mode + '-act-file', opts.actFile || '');
+	els['usim-sel-silent'] = Object.assign(new StubEl(), { checked: !!opts.silent });
+	els[mode + '-select'] = Object.assign(new StubEl(), { checked: !!opts.doSelect });
 	set(mode + '-override', '');
 	els[mode + '-result'] = new StubEl();
 	els[mode + '-pack-btn'] = new StubEl();
@@ -140,8 +145,49 @@ test('READ RECORD next mode forces P1=00', () => {
 	assert.strictEqual(apdu, '00B2000220');
 });
 
-test('SELECT by FID USIM: P2=0C, no Le', () => {
+test('SELECT by FID USIM: P2=04 requests FCP, Le=00', () => {
 	const apdu = setup('usim', { cmd: 'select', selMethod: 'fid', fid: '6FC5' });
+	assert.strictEqual(apdu, '00A40004026FC500');
+});
+
+test('USIM chain: every hop requests FCP (04 + Le)', () => {
+	const apdu = setup('usim', { cmd: 'select', selMethod: 'chain', chain: '3F00,2FE2' });
+	assert.strictEqual(apdu, '00A40004023F000000A40004022FE200');
+});
+
+test('SIM chain with GET RESPONSE hop', () => {
+	const apdu = setup('sim', { cmd: 'select', selMethod: 'chain', chain: '3F00,2FE2,C0' });
+	assert.strictEqual(apdu, 'A0A40000023F00A0A40000022FE2A0C0000000');
+});
+
+test('GET RESPONSE hop with explicit Le (C0:NN)', () => {
+	const apdu = setup('usim', { cmd: 'select', selMethod: 'chain', chain: 'C0:0F' });
+	assert.strictEqual(apdu, '00C000000F');
+});
+
+test('silent path select + READ RECORD keeps full CLA (live PNN read)', () => {
+	const apdu = setup('usim', {
+		cmd: 'read-record', selMethod: 'path', base: 'df', silent: true, doSelect: true,
+		path: '6FC5', record: '1', recMode: '04', le: '14',
+	});
+	assert.strictEqual(apdu, '00A4090C026FC500B2010414');
+});
+
+test('select + READ BINARY emits explicit CLA on second command', () => {
+	const apdu = setup('usim', {
+		cmd: 'read-binary', selMethod: 'path', base: 'df', silent: true, doSelect: true,
+		path: '6FC5', offset: '0000', le: '0A',
+	});
+	assert.strictEqual(apdu, '00A4090C026FC500B000000A');
+});
+
+test('USIM silent path-from-current-DF hop (live RFM idiom 09/0C)', () => {
+	const apdu = setup('usim', { cmd: 'select', selMethod: 'path', path: '6F46', base: 'df', silent: true });
+	assert.strictEqual(apdu, '00A4090C026F46');
+});
+
+test('USIM silent FID select (P2=0C, no Le)', () => {
+	const apdu = setup('usim', { cmd: 'select', selMethod: 'fid', fid: '6FC5', silent: true });
 	assert.strictEqual(apdu, '00A4000C026FC5');
 });
 

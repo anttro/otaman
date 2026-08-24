@@ -54,7 +54,7 @@ Returns server version for compatibility checking.
 
 **Example response:**
 ```json
-{"version": "1.9.5"}
+{"version": "1.9.6"}
 ```
 
 ### `GET /api/status`

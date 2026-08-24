@@ -1,4 +1,4 @@
-const CACHE = 'otaman-v16';
+const CACHE = 'otaman-v17';
 const URLS = [
   'index.html',
   'help.html',
