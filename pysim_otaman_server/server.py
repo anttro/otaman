@@ -18,7 +18,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.6'
+VERSION = '1.9.7'
 
 
 # Static file serving (the PWA lives in <repo>/frontend, served by this server

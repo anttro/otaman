@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.6</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.7</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -4085,12 +4085,12 @@ async function pysimSendOta() {
 	}
 	const sp = document.getElementById('sp-result').value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
 	if (!sp) { alert('No secured packet to send. Generate a secure packet first.'); return; }
-	const statusEl = document.getElementById('pysim-status');
 	const sendResultEl = document.getElementById('sp-send-result');
 	const porStatusEl = document.getElementById('sp-por-status');
-	sendResultEl.classList.add('hidden');
+	sendResultEl.classList.remove('hidden', 'text-red-600', 'text-green-600');
+	sendResultEl.classList.add('text-gray-500');
+	sendResultEl.textContent = t('Sending OTA...');
 	porStatusEl.classList.add('hidden');
-	statusEl.innerHTML = '<span class="text-gray-500">' + t('Sending OTA...') + '</span>';
 	try {
 		const data = await pysimFetch('/api/send-ota', { sp, ...spParams() });
 		if (data.success) {
@@ -4125,23 +4125,20 @@ async function pysimSendOta() {
 				rawLine.textContent = 'raw PoR: ' + por.raw;
 				sendResultEl.appendChild(rawLine);
 			}
-			sendResultEl.classList.remove('hidden', 'text-red-600');
+			sendResultEl.classList.remove('hidden', 'text-red-600', 'text-gray-500');
 			sendResultEl.classList.add('text-green-600');
-			statusEl.innerHTML = '<span class="text-green-600">' + esc(msg) + '</span>';
 		} else {
 			let msg = 'OTA failed';
 			if (data.error) msg += ': ' + data.error;
 			if (data.sw) msg += (data.error ? ' | ' : ': ') + 'SW ' + data.sw;
 			sendResultEl.textContent = msg;
-			sendResultEl.classList.remove('hidden', 'text-green-600');
+			sendResultEl.classList.remove('hidden', 'text-green-600', 'text-gray-500');
 			sendResultEl.classList.add('text-red-600');
-			statusEl.innerHTML = '<span class="text-red-500">' + esc(msg) + '</span>';
 		}
 	} catch (e) {
 		sendResultEl.textContent = 'Error: ' + e.message;
-		sendResultEl.classList.remove('hidden', 'text-green-600');
+		sendResultEl.classList.remove('hidden', 'text-green-600', 'text-gray-500');
 		sendResultEl.classList.add('text-red-600');
-		statusEl.innerHTML = '<span class="text-red-500">Error: ' + esc(e.message) + '</span>';
 	}
 }
 
