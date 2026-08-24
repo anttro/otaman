@@ -34,4 +34,4 @@ fi
 
 echo "Starting pysim-otaman-server on http://127.0.0.1:8080"
 echo "Press Ctrl+C to stop."
-$SERVER --http-port 8080 $READER_ARGS --log-requests --apdu-trace
+$SERVER --http-port 8080 $READER_ARGS
