@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.8</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.9</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -30,9 +30,8 @@
 
 	<div class="flex gap-1 mb-4 border-b border-gray-300 dark:border-slate-600">
 		<button class="tab-btn active px-4 py-1.5 text-sm rounded-t bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-tab="c-apdu">C-APDU</button>
-		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="sp">Secured Packet</button>
+		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="scp80">SCP80</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="response" data-l10n="Response parser">Response parser</button>
-		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="cards" data-l10n="Cards">Cards</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="pysim" data-l10n="Card reader">Card reader</button>
 	</div>
 
@@ -672,7 +671,12 @@
 		</div>
 	</div>
 
-	<div id="tab-sp" class="tab-content hidden">
+		<div id="tab-scp80" class="tab-content hidden">
+		<div class="flex gap-2 mb-3">
+			<button class="scp80-subtab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-scp80-sub="sp" onclick="scp80SwitchSubtab('sp')" data-l10n="Secured packet">Secured packet</button>
+			<button class="scp80-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-scp80-sub="cards" onclick="scp80SwitchSubtab('cards')" data-l10n="Cards">Cards</button>
+		</div>
+		<div id="scp80-sub-sp">
 		<div class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SPI1 (Security Parameter Indicator)</label>
 			<div class="flex gap-2 items-center">
@@ -826,6 +830,54 @@
 		<textarea id="sp-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
 		<div id="sp-send-result" class="mt-2 text-xs font-mono hidden"></div>
 		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
+
+		</div>
+		<div id="scp80-sub-cards" class="hidden">
+		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="Card presets are stored locally in your browser. JSON export/import buttons are below the card list.">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
+		<div class="flex gap-2 mb-3">
+			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
+			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="ICCID (optional)">
+			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
+		</div>
+		<div class="flex gap-2 mb-3 flex-wrap">
+			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
+			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
+			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
+			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
+			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="ISD TAR" maxlength="6">
+			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
+		</div>
+		<div class="flex gap-2 mb-3">
+			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
+			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
+		</div>
+		<div id="cards-list" class="overflow-x-auto">
+			<table class="w-full text-sm">
+				<thead><tr>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Name">Name</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="ICCID">ICCID</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KIc</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KID</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI1</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI2</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">TAR</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Cntr">Cntr</th>
+					<th class="border-b border-gray-200 dark:border-slate-700"></th>
+				</tr></thead>
+				<tbody id="cards-tbody"></tbody>
+			</table>
+		</div>
+		<input type="file" id="cards-file" accept=".json,application/json" class="hidden" onchange="cardsImportFile(this)">
+		<div class="flex flex-wrap gap-2 mt-2">
+			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
+			<button onclick="cardsExportFile()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export to file">Export to file</button>
+			<button onclick="document.getElementById('cards-file').click()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import from file">Import from file</button>
+			<button onclick="cardsImportField()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Paste & import">Paste &amp; import</button>
+			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
+		</div>
+		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
+
+		</div>
 	</div>
 
 	<div id="tab-response" class="tab-content hidden">
@@ -898,53 +950,7 @@
 		<div id="resp-output" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800 whitespace-pre-wrap" style="min-height:100px"></div>
 	</div>
 
-	<div id="tab-cards" class="tab-content hidden">
-		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="Card presets are stored locally in your browser. JSON export/import buttons are below the card list.">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
-		<div class="flex gap-2 mb-3">
-			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
-			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="ICCID (optional)">
-			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
-		</div>
-		<div class="flex gap-2 mb-3 flex-wrap">
-			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
-			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
-			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
-			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
-			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="ISD TAR" maxlength="6">
-			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
-		</div>
-		<div class="flex gap-2 mb-3">
-			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
-			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
-		</div>
-		<div id="cards-list" class="overflow-x-auto">
-			<table class="w-full text-sm">
-				<thead><tr>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Name">Name</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="ICCID">ICCID</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KIc</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KID</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI1</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI2</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">TAR</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Cntr">Cntr</th>
-					<th class="border-b border-gray-200 dark:border-slate-700"></th>
-				</tr></thead>
-				<tbody id="cards-tbody"></tbody>
-			</table>
-		</div>
-		<input type="file" id="cards-file" accept=".json,application/json" class="hidden" onchange="cardsImportFile(this)">
-		<div class="flex flex-wrap gap-2 mt-2">
-			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
-			<button onclick="cardsExportFile()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export to file">Export to file</button>
-			<button onclick="document.getElementById('cards-file').click()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import from file">Import from file</button>
-			<button onclick="cardsImportField()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Paste & import">Paste &amp; import</button>
-			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
-		</div>
-		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
-	</div>
-
-	<div id="tab-pysim" class="tab-content hidden">
+		<div id="tab-pysim" class="tab-content hidden">
 		<div id="pysim-connect-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Server URL">Server URL</label>
 			<div class="flex gap-2 items-center">
@@ -1116,10 +1122,26 @@ function switchTab(name) {
 	active.classList.remove('bg-gray-200', 'text-gray-700', 'dark:bg-slate-700', 'dark:text-slate-300');
 	active.classList.add('bg-blue-600', 'text-white', 'dark:bg-blue-500', 'dark:text-white');
 	if (name === 'c-apdu') cApduSwitchSubtab('sim');
-	else if (name === 'sp') setHelpAnchor('secured-packet');
+	else if (name === 'scp80') setHelpAnchor(scp80HelpAnchor);
 	else if (name === 'response') setHelpAnchor('response-parser');
-	else if (name === 'cards') setHelpAnchor('cards');
 	else if (name === 'pysim') setHelpAnchor(pysimHelpAnchor);
+}
+
+let scp80HelpAnchor = 'secured-packet';
+function scp80SwitchSubtab(name) {
+	document.querySelectorAll('.scp80-subtab').forEach(btn => {
+		const isActive = btn.dataset.scp80Sub === name;
+		btn.classList.toggle('bg-blue-600', isActive);
+		btn.classList.toggle('text-white', isActive);
+		btn.classList.toggle('bg-gray-200', !isActive);
+		btn.classList.toggle('dark:bg-slate-700', !isActive);
+		btn.classList.toggle('text-gray-700', !isActive);
+		btn.classList.toggle('dark:text-slate-300', !isActive);
+	});
+	document.getElementById('scp80-sub-sp').classList.toggle('hidden', name !== 'sp');
+	document.getElementById('scp80-sub-cards').classList.toggle('hidden', name !== 'cards');
+	scp80HelpAnchor = { sp: 'secured-packet', cards: 'cards' }[name] || 'secured-packet';
+	setHelpAnchor(scp80HelpAnchor);
 }
 
 function cApduSwitchSubtab(name) {
@@ -1884,7 +1906,8 @@ function genConvert() {
 function packToSp(sourceId) {
 	const val = document.getElementById(sourceId).value;
 	if (!val) return;
-	switchTab('sp');
+	switchTab('scp80');
+	scp80SwitchSubtab('sp');
 	document.getElementById('sp-apdu').value = val;
 }
 function spCntrAdjust(delta) {
