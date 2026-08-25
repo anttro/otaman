@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.9</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.10</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -678,7 +678,14 @@
 		</div>
 		<div id="scp80-sub-sp">
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SPI1 (Security Parameter Indicator)</label>
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Card presets">Card presets</label>
+				<select id="sp-card-sel" onchange="cardsApply(this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+					<option value="" data-l10n="— Select card —">— Select card —</option>
+				</select>
+		</div>
+
+		<div class="flex gap-2 mb-3">
+<div class="flex-1">			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SPI1 (Security Parameter Indicator)</label>
 			<div class="flex gap-2 items-center">
 				<select id="sp-spi1" onchange="updateSp()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="00">00 — No security</option>
@@ -694,9 +701,8 @@
 				</select>
 				<input id="sp-spi1-hex" readonly class="w-16 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-2 bg-gray-100 dark:bg-slate-800 text-center" value="06">
 			</div>
-		</div>
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SPI2 (PoR settings)</label>
+			</div>
+<div class="flex-1">			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SPI2 (PoR settings)</label>
 			<div class="flex gap-2 items-center">
 				<select id="sp-spi2" onchange="updateSp()" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="00" selected>00 — No PoR, no security</option>
@@ -714,10 +720,11 @@
 				</select>
 				<input id="sp-spi2-hex" readonly class="w-16 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-2 bg-gray-100 dark:bg-slate-800 text-center" value="00">
 			</div>
+			</div>
 		</div>
 
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KIc (Ciphering Key Identifier)</label>
+		<div class="flex gap-2 mb-3">
+<div class="flex-1">			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KIc (Ciphering Key Identifier)</label>
 			<div class="flex gap-2 items-center">
 				<select id="sp-kic-idx" onchange="updateSpKic()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="0">Implicit (0)</option>
@@ -746,9 +753,8 @@
 				</select>
 				<input id="sp-kic-hex" readonly class="w-12 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-2 bg-gray-100 dark:bg-slate-800 text-center" value="15">
 			</div>
-		</div>
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KID (MAC Key Identifier)</label>
+			</div>
+<div class="flex-1">			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">KID (MAC Key Identifier)</label>
 			<div class="flex gap-2 items-center">
 				<select id="sp-kid-idx" onchange="updateSpKid()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 					<option value="0">Implicit (0)</option>
@@ -776,26 +782,6 @@
 				</select>
 				<input id="sp-kid-hex" readonly class="w-12 font-mono border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-2 bg-gray-100 dark:bg-slate-800 text-center" value="15">
 			</div>
-		</div>
-
-		<div class="flex gap-2 mb-3">
-			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">TAR (3 bytes)</label>
-				<input id="sp-tar" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
-			</div>
-			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Card presets">Card presets</label>
-				<select id="sp-card-sel" onchange="cardsApply(this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-					<option value="" data-l10n="— Select card —">— Select card —</option>
-				</select>
-			</div>
-			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Counter (5 bytes)</label>
-				<div class="flex gap-1 items-center">
-					<button type="button" onclick="spCntrAdjust(-1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">−</button>
-					<input id="sp-cntr" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
-					<button type="button" onclick="spCntrAdjust(1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">+</button>
-				</div>
 			</div>
 		</div>
 
@@ -810,12 +796,25 @@
 			</div>
 		</div>
 
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Padding byte</label>
+		<div class="flex gap-2 mb-3">
+<div class="flex-1">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">TAR (3 bytes)</label>
+				<input id="sp-tar" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
+			</div>
+			<div class="flex-1">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Counter (5 bytes)</label>
+				<div class="flex gap-1 items-center">
+					<button type="button" onclick="spCntrAdjust(-1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">−</button>
+					<input id="sp-cntr" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
+					<button type="button" onclick="spCntrAdjust(1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">+</button>
+				</div>
+			</div>
+<div class="flex-1">			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Padding byte</label>
 			<select id="sp-padding" onchange="spInvalidate()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 				<option value="00" selected>00 (TS 102 225 default)</option>
 				<option value="FF">FF</option>
 			</select>
+			</div>
 		</div>
 
 		<div class="mb-3">
