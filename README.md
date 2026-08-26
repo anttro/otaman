@@ -274,9 +274,9 @@ Optional TLV objects appended to the INSTALL data field:
 
 ---
 
-## Secured Packet Tab
+## SCP80 Tab — Secured Packet
 
-Assembles secured packets per ETSI TS 102 225.
+The **SCP80** top-level tab groups SCP80-related views, switched by two pills: **Secured Packet** (this section) and **Cards**. Assembles secured packets per ETSI TS 102 225.
 
 ### Packet structure
 
