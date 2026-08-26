@@ -18,7 +18,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.11'
+VERSION = '1.9.12'
 
 
 # Static file serving (the PWA lives in <repo>/frontend, served by this server
@@ -885,9 +885,11 @@ def _reset_proactive_log():
 
 
 def _send_status(scc):
-    """STATUS (F2) with correct P3 per card type: SIM=0x23, UICC=0x00."""
+    """STATUS (F2) with correct P3 per card type: SIM=0x23, UICC=0x00.
+    P2=0C mirrors phone behavior - no FCP of the selected DF returned
+    (plain F2 00 00 would echo the FCP, which is unnecessary overhead)."""
     p3 = '23' if scc.cat_cla == 'a0' else '00'
-    return scc._tp.send_apdu('%sf20000%s' % (scc.cat_cla, p3))
+    return scc._tp.send_apdu('%sf2000c%s' % (scc.cat_cla, p3))
 
 
 def _send_event_download(scc, event_type, event_data=None):
