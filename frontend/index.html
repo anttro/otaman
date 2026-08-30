@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.12</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.17</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -616,8 +616,8 @@
 			</select>
 		</div>
 		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
-		<textarea id="ram-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		<button onclick="packToSp('ram-result')" id="ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
+		<textarea id="ram-apdu-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		<button onclick="packToSp('ram-apdu-result')" id="ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 	<div id="c-apdu-sub-parse" class="hidden">
 		<div class="mb-3">
@@ -675,6 +675,7 @@
 		<div class="flex gap-2 mb-3">
 			<button class="scp80-subtab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-scp80-sub="sp" onclick="scp80SwitchSubtab('sp')" data-l10n="Secured packet">Secured packet</button>
 			<button class="scp80-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-scp80-sub="cards" onclick="scp80SwitchSubtab('cards')" data-l10n="Cards">Cards</button>
+			<button class="scp80-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-scp80-sub="ram" onclick="scp80SwitchSubtab('ram')" data-l10n="RAM">RAM</button>
 		</div>
 		<div id="scp80-sub-sp">
 		<div class="mb-3">
@@ -876,6 +877,61 @@
 		</div>
 		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
 
+		</div>
+		<div id="scp80-sub-ram" class="hidden">
+			<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="RAM operations perform atomic GlobalPlatform commands over SCP80. Card keys are taken from the saved preset.">RAM operations perform atomic GlobalPlatform commands over SCP80. Card keys are taken from the saved preset.</p>
+
+			<div class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Card preset">Card preset</label>
+				<select id="ram-card-sel" onchange="ramApplyCard(this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+					<option value="" data-l10n="— Select card —">— Select card —</option>
+				</select>
+			</div>
+
+			<div class="mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Operation">Operation</label>
+				<select id="ram-op" onchange="ramOpChanged()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+					<option value="explore" data-l10n="Explore Card (all GP data)">Explore Card (all GP data)</option>
+					<option value="delete" data-l10n="Delete (DELETE)">Delete (DELETE)</option>
+					<option value="install-cap" data-l10n="Install Package (.cap file)">Install Package (.cap file)</option>
+				</select>
+			</div>
+
+			<div id="ram-del-params" class="hidden mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="AID to delete (hex)">AID to delete (hex)</label>
+				<input id="ram-del-aid" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000003000000" maxlength="32">
+				<label class="flex items-center gap-2 mt-2">
+					<input type="checkbox" id="ram-del-related"> <span class="text-sm" data-l10n="Delete related objects">Delete related objects</span>
+				</label>
+			</div>
+
+			<div id="ram-install-params" class="hidden mb-3">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="CAP file (max 48 kB)">CAP file (max 48 kB)</label>
+				<input type="file" id="ram-cap-file" accept=".cap,.zip" class="w-full text-sm text-gray-600 dark:text-slate-300">
+				<div id="ram-cap-info" class="text-xs text-gray-500 mt-1 hidden"></div>
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300 mt-2" data-l10n="SD AID (empty = ISD)">SD AID (empty = ISD)</label>
+				<input id="ram-sd-aid" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000003000000" maxlength="32">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300 mt-2" data-l10n="Install parameters (hex, optional)">Install parameters (hex, optional)</label>
+				<input id="ram-install-params-hex" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="C9 TLV">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300 mt-2" data-l10n="STK parameters (hex, optional)">STK parameters (hex, optional)</label>
+				<input id="ram-stk-params" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="CA TLV">
+				<label class="flex items-center gap-2 mt-2">
+					<input type="checkbox" id="ram-make-sel" checked> <span class="text-sm" data-l10n="Make selectable">Make selectable</span>
+				</label>
+			</div>
+
+			<button onclick="ramExecute()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Execute">Execute</button>
+
+			<div id="ram-progress" class="hidden mb-3">
+				<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-400">
+					<div class="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+					<span id="ram-progress-text" data-l10n="Working...">Working...</span>
+				</div>
+			</div>
+
+			<div id="ram-result" class="mt-2 text-base font-semibold font-mono hidden"></div>
+			<div id="ram-explorer" class="mt-2 text-xs font-mono hidden"></div>
+			<div id="ram-steps" class="mt-2 text-xs font-mono whitespace-pre-wrap hidden"></div>
 		</div>
 	</div>
 
@@ -1139,8 +1195,10 @@ function scp80SwitchSubtab(name) {
 	});
 	document.getElementById('scp80-sub-sp').classList.toggle('hidden', name !== 'sp');
 	document.getElementById('scp80-sub-cards').classList.toggle('hidden', name !== 'cards');
+	document.getElementById('scp80-sub-ram').classList.toggle('hidden', name !== 'ram');
 	if (name === 'cards') cardsRender();
-	scp80HelpAnchor = { sp: 'secured-packet', cards: 'cards' }[name] || 'secured-packet';
+	if (name === 'ram') ramRender();
+	scp80HelpAnchor = { sp: 'secured-packet', cards: 'cards', ram: 'ram' }[name] || 'secured-packet';
 	setHelpAnchor(scp80HelpAnchor);
 }
 
@@ -1681,7 +1739,7 @@ function genRam() {
 	const ssMode = parseInt(document.getElementById('ram-ss-mode').value, 16);
 	const ssState = parseInt(document.getElementById('ram-ss-state').value, 16);
 
-	const resultEl = document.getElementById('ram-result');
+	const resultEl = document.getElementById('ram-apdu-result');
 
 	const INSTALL_P1 = {
 		'install-load': 0x02,
@@ -4172,6 +4230,493 @@ async function pysimSendOta() {
 	}
 }
 
+// ===== SCP80/RAM pill =====
+// Atomic GlobalPlatform Remote Application Management over SCP80.
+// Simple ops (GET DATA / GET STATUS / DELETE) build the GP APDU locally and
+// reuse /api/send-ota. Install Package sends the .cap hex to /api/ram-install
+// which orchestrates INSTALL[for load] -> LOAD x N -> INSTALL[for install].
+
+function ramRender() {
+	// populate the card preset selector from the in-memory cards[] array
+	const sel = document.getElementById('ram-card-sel');
+	if (!sel) return;
+	sel.innerHTML = '<option value="" data-l10n="— Select card —">— Select card —</option>';
+	cards.forEach((c, i) => {
+		const opt = document.createElement('option');
+		opt.value = i;
+		opt.textContent = c.name || ('Card ' + i);
+		sel.appendChild(opt);
+	});
+	ramOpChanged();
+}
+
+function ramApplyCard(idx) {
+	// copy the selected card preset into the SP form fields so that
+	// getRamSpParams() picks up the right SPI/KIc/KID/TAR/CNTR/keys
+	cardsApply(idx);
+}
+
+function ramOpChanged() {
+	const op = document.getElementById('ram-op').value;
+	document.getElementById('ram-del-params').classList.toggle('hidden', op !== 'delete');
+	document.getElementById('ram-install-params').classList.toggle('hidden', op !== 'install-cap');
+}
+
+function ramShowProgress(text) {
+	const el = document.getElementById('ram-progress');
+	el.classList.remove('hidden');
+	document.getElementById('ram-progress-text').textContent = text;
+}
+
+function ramHideProgress() {
+	document.getElementById('ram-progress').classList.add('hidden');
+}
+
+function ramClearResults() {
+	document.getElementById('ram-result').classList.add('hidden');
+	document.getElementById('ram-explorer').classList.add('hidden');
+	document.getElementById('ram-explorer').innerHTML = '';
+	document.getElementById('ram-steps').classList.add('hidden');
+	document.getElementById('ram-steps').textContent = '';
+}
+
+// Read a File as a hex string via FileReader (client-side, no upload)
+function ramReadFileHex(file) {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => {
+			const bytes = new Uint8Array(reader.result);
+			let hex = '';
+			for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, '0');
+			resolve(hex.toUpperCase());
+		};
+		reader.onerror = () => reject(new Error('Failed to read file'));
+		reader.readAsArrayBuffer(file);
+	});
+}
+
+// Collect SP params from the SP form (populated by ramApplyCard -> cardsApply)
+function getRamSpParams() {
+	return {
+		spi1: document.getElementById('sp-spi1').value,
+		spi2: document.getElementById('sp-spi2').value,
+		kic: document.getElementById('sp-kic-hex').value,
+		kid: document.getElementById('sp-kid-hex').value,
+		tar: (document.getElementById('sp-tar').value || '000000').replace(/[^0-9a-fA-F]/g, ''),
+		cntr: (document.getElementById('sp-cntr').value || '0000000001').replace(/[^0-9a-fA-F]/g, ''),
+		kicKey: (document.getElementById('sp-kic-key').value || '').replace(/[^0-9a-fA-F]/g, ''),
+		kidKey: (document.getElementById('sp-kid-key').value || '').replace(/[^0-9a-fA-F]/g, ''),
+	};
+}
+
+function ramIncrementCntr(cntr) {
+	let v = (parseInt(cntr, 16) || 0) + 1;
+	return v.toString(16).toUpperCase().padStart(10, '0').slice(-10);
+}
+
+function ramSaveCntr(cntr) {
+	const el = document.getElementById('sp-cntr');
+	el.value = cntr;
+	const selIdx = parseInt(document.getElementById('ram-card-sel').value, 10);
+	if (!isNaN(selIdx) && cards[selIdx]) {
+		cards[selIdx].cntr = cntr;
+		cardsSave();
+		cardsRender();
+		ramRender();
+	}
+}
+
+// Send a single GP APDU wrapped in SCP80 via /api/send-ota
+async function ramSendOta(apduHex, sp) {
+	// RAM operations: send raw GP command + SCP80 params; server handles SCP80 wrapping
+	// Caller controls SPI2: 0x01 = PoR via ENVELOPE response, 0x21 = PoR via SMS-SUBMIT
+	const body = Object.assign({}, sp, { apdu: apduHex, sp: '', includeCpi: true });
+	const res = await fetch('/api/send-ota', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body),
+	});
+	return await res.json();
+}
+
+// ===== Raw parsers for GET STATUS responses (P2=00 format) =====
+// Raw format: consecutive <aid_len><AID><lifecycle><privileges> entries (no tag wrappers).
+// Per GP Card Spec Table 11-33: AID is length-prefixed, lifecycle is 1 byte,
+// privileges is 1 byte (bitmask).
+function ramParseAppStatus(hex) {
+	const out = [];
+	let i = 0;
+	const s = (hex || '').toUpperCase();
+	while (i + 6 <= s.length) {
+		const aidLen = parseInt(s.substr(i, 2), 16);
+		if (aidLen < 1 || i + 2 + aidLen * 2 + 4 > s.length) break;
+		const aid = s.substr(i + 2, aidLen * 2);
+		i += 2 + aidLen * 2;
+		const lifecycle = s.substr(i, 2); i += 2;
+		const privileges = s.substr(i, 2); i += 2;
+		out.push({ type: 'app', aid: aid.toUpperCase(), lifecycle, privileges });
+	}
+	return out;
+}
+
+// ELF raw format (P2=00): <aid_len><AID><lifecycle> per entry.
+// Some cards may append version/module data but it's not guaranteed in raw mode.
+function ramParseElfStatus(hex) {
+	const out = [];
+	let i = 0;
+	const s = (hex || '').toUpperCase();
+	while (i + 6 <= s.length) {
+		const aidLen = parseInt(s.substr(i, 2), 16);
+		if (aidLen < 1 || i + 2 + aidLen * 2 + 2 > s.length) break;
+		const aid = s.substr(i + 2, aidLen * 2);
+		i += 2 + aidLen * 2;
+		const lifecycle = s.substr(i, 2); i += 2;
+		out.push({ type: 'elf', aid: aid.toUpperCase(), lifecycle });
+	}
+	return out;
+}
+
+// Parse the '84' module-AID list (concatenated 4F<len><aid> TLVs) into an array
+function ramParseModuleAids(hex) {
+	const out = [];
+	let j = 0;
+	const s = hex || '';
+	while (j + 4 <= s.length) {
+		const t = s.substr(j, 2);
+		const l = parseInt(s.substr(j + 2, 2), 16);
+		const v = s.substr(j + 4, l * 2);
+		j += 4 + l * 2;
+		if (t === '4F') out.push(v.toUpperCase());
+	}
+	return out;
+}
+
+// GET DATA FF21 response: 81 app count, 82 free NV (3B), 83 free volatile (2B)
+function ramParseGetMemory(hex) {
+	const s = (hex || '').toUpperCase();
+	if (!s.startsWith('FF21')) return null;
+	let i = 6;  // Skip FF21 (4 bytes) + length byte (1 byte) = start at first tag
+	const out = {};
+	while (i + 4 <= s.length) {
+		const t = s.substr(i, 2);
+		const l = parseInt(s.substr(i + 2, 2), 16);
+		const v = s.substr(i + 4, l * 2);
+		i += 4 + l * 2;
+		if (t === '81') out.appCount = parseInt(v, 16);
+		else if (t === '82') out.freeNV = parseInt(v, 16);
+		else if (t === '83') out.freeV = parseInt(v, 16);
+	}
+	return out;
+}
+
+// ===== Lifecycle / privilege formatting =====
+const RAM_LIFECYCLE = {
+	'01': 'OP_READY', '07': 'SELECTABLE', '0F': 'PERSONALIZED',
+	'03': 'INSTALLED', '1F': 'SD_PERSONALIZED', '7F': 'LOCKED',
+	'FF': 'TERMINATED',
+};
+function ramFmtLifecycle(hex) {
+	return RAM_LIFECYCLE[hex] || ('0x' + hex);
+}
+
+// Decode GP Card Spec privileges TLV (tag C5) into human-readable strings
+function ramFmtPrivileges(hex) {
+	const p = hex || '';
+	if (!p) return '(none)';
+	const bytes = p.match(/.{2}/g) || [];
+	const privs = [];
+	const b1 = parseInt(bytes[0] || '00', 16);
+	if (b1 & 0x01) privs.push('Card Lock');
+	if (b1 & 0x02) privs.push('Card Terminate');
+	if (b1 & 0x04) privs.push('Card Reset');
+	if (b1 & 0x08) privs.push('Cum Deletion Ctr');
+	if (b1 & 0x10) privs.push('GSM Card Binding');
+	if (b1 & 0x20) privs.push('Default Selected');
+	if (b1 & 0x40) privs.push('Global PIN');
+	const b2 = parseInt(bytes[1] || '00', 16);
+	if (b2 & 0x01) privs.push('Mandated DAP');
+	if (b2 & 0x02) privs.push('Security Domain');
+	if (b2 & 0x04) privs.push('DAP Verification');
+	if (b2 & 0x08) privs.push('Delegated Mgmt');
+	if (b2 & 0x10) privs.push('RFM');
+	if (b2 & 0x20) privs.push('CFM');
+	const b3 = parseInt(bytes[2] || '00', 16);
+	if (b3 & 0x01) privs.push('Receipt Gen');
+	if (b3 & 0x02) privs.push('Ciphered Load');
+	if (b3 & 0x04) privs.push('Delegated Perso');
+	if (b3 & 0x08) privs.push('Trusted Path');
+	if (b3 & 0x10) privs.push('Authorized Mgmt');
+	return privs.length ? privs.join(', ') : '(none)';
+}
+
+// Merge ELF-module entries (P1=10, carry module AIDs) into ELF entries (P1=40)
+function ramMergeElfData(elfs, modules) {
+	const byAid = {};
+	elfs.forEach(e => { if (e.aid) byAid[e.aid] = e; });
+	modules.forEach(m => {
+		if (m.aid && byAid[m.aid]) {
+			if (m.moduleAids && m.moduleAids.length) byAid[m.aid].moduleAids = m.moduleAids;
+		} else if (m.aid) {
+			elfs.push(m);
+		}
+	});
+	return elfs;
+}
+
+// Render the full explorer result as structured HTML
+function ramRenderExploreHtml(mem, isd, apps, elfs) {
+	let html = '';
+	if (mem && (mem.appCount != null || mem.freeNV != null || mem.freeV != null)) {
+		html += '<div class="mb-4 p-3 bg-gray-50 dark:bg-slate-800 rounded">';
+		html += '<div class="font-semibold text-sm mb-1" data-l10n="Memory (GET DATA FF21)">Memory (GET DATA FF21)</div>';
+		html += '<div>Applications: ' + (mem.appCount != null ? mem.appCount : '?') + '</div>';
+		html += '<div>Free NV: ' + (mem.freeNV != null ? mem.freeNV + ' B' : '?') + '</div>';
+		html += '<div>Free Volatile: ' + (mem.freeV != null ? mem.freeV + ' B' : '?') + '</div>';
+		html += '</div>';
+	}
+	if (isd && isd.length) {
+		html += '<div class="mb-4">';
+		html += '<div class="font-semibold text-sm mb-1" data-l10n="ISD">ISD</div>';
+		isd.forEach(o => {
+			html += '<div class="mb-1 pl-2 border-l-2 border-blue-400">';
+			html += '<div>AID: ' + (o.aid || '?') + '</div>';
+			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
+			if (o.privileges) html += '<div>Privileges: ' + ramFmtPrivileges(o.privileges) + ' (' + o.privileges + ')</div>';
+			if (o.sdAid) html += '<div>SD AID: ' + o.sdAid + '</div>';
+			html += '</div>';
+		});
+		html += '</div>';
+	}
+	if (apps && apps.length) {
+		html += '<div class="mb-4">';
+		html += '<div class="font-semibold text-sm mb-1" data-l10n="Applications">Applications</div>';
+		apps.forEach(o => {
+			html += '<div class="mb-1 pl-2 border-l-2 border-green-400">';
+			html += '<div>AID: ' + (o.aid || '?') + '</div>';
+			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
+			if (o.privileges) html += '<div>Privileges: ' + ramFmtPrivileges(o.privileges) + ' (' + o.privileges + ')</div>';
+			if (o.implicitSel) html += '<div>Implicit sel: ' + o.implicitSel + '</div>';
+			if (o.elfAid) html += '<div>ELF AID: ' + o.elfAid + '</div>';
+			if (o.sdAid) html += '<div>SD AID: ' + o.sdAid + '</div>';
+			html += '</div>';
+		});
+		html += '</div>';
+	}
+	if (elfs && elfs.length) {
+		html += '<div class="mb-4">';
+		html += '<div class="font-semibold text-sm mb-1" data-l10n="Executable Load Files">Executable Load Files</div>';
+		elfs.forEach(o => {
+			html += '<div class="mb-1 pl-2 border-l-2 border-purple-400">';
+			html += '<div>AID: ' + (o.aid || '?') + '</div>';
+			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
+			if (o.version) html += '<div>Version: ' + o.version + '</div>';
+			if (o.moduleAids && o.moduleAids.length) {
+				html += '<div>Module AIDs:</div>';
+				o.moduleAids.forEach(m => { html += '<div class="pl-4">- ' + m + '</div>'; });
+			}
+			if (o.sdAid) html += '<div>SD AID: ' + o.sdAid + '</div>';
+			html += '</div>';
+		});
+		html += '</div>';
+	}
+	return html;
+}
+
+// ===== Operation handlers =====
+async function ramExplore(sp) {
+	const resultEl = document.getElementById('ram-result');
+	const explorerEl = document.getElementById('ram-explorer');
+	const stepsEl = document.getElementById('ram-steps');
+	let cntr = sp.cntr;
+	const errors = [];
+	const mem = { appCount: null, freeNV: null, freeV: null };
+	const isd = [], apps = [], elfs = [], modules = [];
+
+	async function paginate(p1, collector, parser, label) {
+		// Chain GET STATUS + GET RESPONSE into a single SCP80 payload.
+		// The card's SCP80 layer executes both: GET STATUS returns 61XX,
+		// then GET RESPONSE fetches the data — the PoR captures the final
+		// result (9000 + response data) without the frontend handling 61XX.
+		// ELF queries (P1=20/10) use SPI2=0x21 (PoR via SMS-SUBMIT) because
+		// ELF data won't fit in the ENVELOPE response.
+		const isElf = (p1 === '20' || p1 === '10');
+		const spi2 = isElf ? '21' : '01';
+		let p2 = '00';
+		let guard = 0;
+		while (guard++ < 32) {
+			const apdu = '80F2' + p1 + p2 + '024F0000' + 'C0000000';
+			ramShowProgress(label + ' P1=' + p1 + ' P2=' + p2 + '...');
+			const res = await ramSendOta(apdu, Object.assign({}, sp, { cntr, spi2 }));
+			cntr = ramIncrementCntr(cntr);
+			if (!res.success || !res.por || res.por.response_status !== 'por_ok') {
+				const errorMsg = res.por ? res.por.response_status : (res.error || 'no data');
+				errors.push(label + ': ' + errorMsg);
+				return;
+			}
+			const data = res.por.decoded ? res.por.decoded.last_response_data : '';
+			const sw = res.por.decoded ? res.por.decoded.last_status_word : '';
+			// Defensive: 61XX means more data available (shouldn't happen with
+			// chained GET RESPONSE, but handle it if the card responds this way).
+			if (sw && sw.startsWith('61')) {
+				if (data) {
+					const parsed61 = parser(data);
+					if (parsed61.length) collector.push(...parsed61);
+				}
+				p2 = '01';
+				continue;
+			}
+			if (sw === '6F00') break;
+			if (!data) {
+				if (sw !== '9000') errors.push(label + ': (no data) — SW ' + sw);
+				break;
+			}
+			const parsed = parser(data);
+			if (!parsed.length) break;
+			collector.push(...parsed);
+			if (sw === '9000') break;
+			p2 = '01';
+		}
+	}
+
+	 ramShowProgress('GET DATA FF21 (memory)...');
+	try {
+		const memRes = await ramSendOta('80CAFF2100', Object.assign({}, sp, { spi2: '01' }));
+		cntr = ramIncrementCntr(cntr);
+		if (memRes.success && memRes.por && memRes.por.response_status === 'por_ok') {
+			const data = memRes.por.decoded ? memRes.por.decoded.last_response_data : '';
+			if (!data) {
+				errors.push('Memory: (no data)');
+			} else {
+				const m = ramParseGetMemory(data);
+				if (m) Object.assign(mem, m);
+			}
+		} else {
+			const errorMsg = memRes.por ? memRes.por.response_status : (memRes.error || 'no data');
+			errors.push('Memory: ' + errorMsg);
+		}
+	} catch (e) {
+		errors.push('Memory: ' + e.message);
+	}
+
+	// 2-5. GET STATUS for ISD / Apps / ELFs / ELF modules
+	// P1 per GP Card Spec v2.3.1 table 11-33:
+	//   80=ISD, 40=Applications, 20=Executable Load Files (ELFs), 10=ELF+modules
+	await paginate('80', isd, ramParseAppStatus, 'ISD');
+	await paginate('40', apps, ramParseAppStatus, 'Apps');
+	await paginate('20', elfs, ramParseElfStatus, 'ELFs');
+	await paginate('10', modules, ramParseElfStatus, 'ELF Modules');
+
+	ramMergeElfData(elfs, modules);
+	ramSaveCntr(cntr);
+	ramHideProgress();
+
+	if (errors.length) {
+		resultEl.textContent = 'Partial — ' + errors.join('; ');
+		resultEl.classList.remove('hidden', 'text-green-600'); resultEl.classList.add('text-red-600');
+		stepsEl.classList.remove('hidden');
+		stepsEl.textContent = errors.join('\n');
+	} else {
+		resultEl.textContent = 'OK — ' + isd.length + ' ISD, ' + apps.length + ' apps, ' + elfs.length + ' ELFs' + (mem.freeNV ? ', ' + mem.freeNV + ' free NV' : '');
+		resultEl.classList.remove('hidden', 'text-red-600'); resultEl.classList.add('text-green-600');
+	}
+
+	const html = ramRenderExploreHtml(mem, isd, apps, elfs);
+	explorerEl.innerHTML = html || '(no data)';
+	explorerEl.classList.remove('hidden');
+}
+
+async function ramDelete(sp) {
+	const aid = (document.getElementById('ram-del-aid').value || '').replace(/[^0-9a-fA-F]/g, '');
+	if (!aid) { alert('Enter AID to delete'); return; }
+	const related = document.getElementById('ram-del-related').checked;
+	const p2 = related ? '80' : '00';
+	const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
+	const apdu = '80E400' + p2 + (2 + aid.length / 2) + '4F' + aidLen + aid;
+	const res = await ramSendOta(apdu, sp);
+	const resultEl = document.getElementById('ram-result');
+	const stepsEl = document.getElementById('ram-steps');
+	if (!res.success || !res.por || res.por.response_status !== 'por_ok') {
+		resultEl.textContent = 'Failed: ' + (res.por ? res.por.response_status : res.error || res.sw);
+		resultEl.classList.remove('hidden', 'text-green-600'); resultEl.classList.add('text-red-600');
+		return;
+	}
+	ramSaveCntr(ramIncrementCntr(sp.cntr));
+	const sw = res.por.decoded ? res.por.decoded.last_status_word : '';
+	stepsEl.classList.remove('hidden');
+	stepsEl.textContent = 'DELETE ' + aid + ' -> ' + sw;
+	resultEl.textContent = 'OK';
+	resultEl.classList.remove('hidden', 'text-red-600'); resultEl.classList.add('text-green-600');
+}
+
+async function ramInstallCap(sp) {
+	const fileInput = document.getElementById('ram-cap-file');
+	const file = fileInput.files[0];
+	if (!file) { alert('Select a .cap file'); return; }
+	if (file.size > 48 * 1024) { alert('CAP file exceeds 48 kB limit'); return; }
+
+	ramShowProgress('Reading CAP file...');
+	const capHex = await ramReadFileHex(file);
+	ramShowProgress('Sending to server for install...');
+
+	const body = {
+		cap_hex: capHex,
+		sd_aid: (document.getElementById('ram-sd-aid').value || '').replace(/[^0-9a-fA-F]/g, ''),
+		install_params: (document.getElementById('ram-install-params-hex').value || '').replace(/[^0-9a-fA-F]/g, ''),
+		stk_params: (document.getElementById('ram-stk-params').value || '').replace(/[^0-9a-fA-F]/g, ''),
+		make_selectable: document.getElementById('ram-make-sel').checked,
+		spi1: sp.spi1, spi2: '01', kic: sp.kic, kid: sp.kid,
+		tar: sp.tar, cntr: sp.cntr, kicKey: sp.kicKey, kidKey: sp.kidKey,
+	};
+
+	const res = await fetch('/api/ram-install', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body),
+	});
+	const data = await res.json();
+
+	ramHideProgress();
+	const resultEl = document.getElementById('ram-result');
+	const stepsEl = document.getElementById('ram-steps');
+	stepsEl.classList.remove('hidden');
+
+	let txt = '';
+	(data.steps || []).forEach((s, idx) => {
+		const mark = s.por_status === 'por_ok' ? '✅' : '❌';
+		txt += mark + ' Step ' + (idx + 1) + ': ' + s.name + ' — ' + s.por_status + ' (SW ' + s.sw + ')\n';
+	});
+	stepsEl.textContent = txt;
+
+	if (data.success) {
+		ramSaveCntr(data.final_cntr);
+		resultEl.textContent = 'Install OK — load_file_aid=' + data.load_file_aid + ' module_aid=' + data.module_aid;
+		resultEl.classList.remove('hidden', 'text-red-600'); resultEl.classList.add('text-green-600');
+	} else {
+		resultEl.textContent = 'Install FAILED at step: ' + data.failed_step + (data.error ? ' (' + data.error + ')' : '');
+		resultEl.classList.remove('hidden', 'text-green-600'); resultEl.classList.add('text-red-600');
+	}
+}
+
+async function ramExecute() {
+	ramClearResults();
+	const op = document.getElementById('ram-op').value;
+	const sp = getRamSpParams();
+	if (!sp.kicKey || !sp.kidKey) {
+		alert('Select a card preset with keys first (RAM subtab → Card preset)');
+		return;
+	}
+	try {
+		if (op === 'explore') await ramExplore(sp);
+		else if (op === 'delete') await ramDelete(sp);
+		else if (op === 'install-cap') await ramInstallCap(sp);
+	} catch (e) {
+		const resultEl = document.getElementById('ram-result');
+		resultEl.textContent = 'Error: ' + e.message;
+		resultEl.classList.remove('hidden', 'text-green-600'); resultEl.classList.add('text-red-600');
+		ramHideProgress();
+	}
+}
+
 // ===== STK Menu Browser =====
 let stkMenuStack = [];
 
@@ -4400,6 +4945,7 @@ function cardsApply(idx) {
 	document.getElementById('sp-spi2-hex').value = c.spi2;
 	document.getElementById('sp-kic-hex').value = c.kic;
 	document.getElementById('sp-kid-hex').value = c.kid;
+	document.getElementById('sp-tar').value = c.tar || 'B00001';
 	document.getElementById('sp-cntr').value = c.cntr;
 	document.getElementById('sp-kic-key').value = c.kicKey;
 	document.getElementById('sp-kid-key').value = c.kidKey;

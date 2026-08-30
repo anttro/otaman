@@ -59,7 +59,7 @@ function setChecked(id, v) { el(id).checked = v; }
 
 function genRamResult() {
 	genRam();
-	return els['ram-result'].value;
+	return els['ram-apdu-result'].value;
 }
 
 function genRamApdu() {

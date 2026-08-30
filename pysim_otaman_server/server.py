@@ -18,7 +18,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.12'
+VERSION = '1.9.17'
 
 
 # Static file serving (the PWA lives in <repo>/frontend, served by this server
@@ -344,6 +344,7 @@ def _decode_por(spi1, spi2, kic, kid, cntr_hex, kic_key_hex, kid_key_hex, respon
     
     # Try ExpandedRemoteResponse first (TS 102 226 §5.2.2)
     if res.response_status == 'por_ok' and len(res['secured_data']):
+        expanded_response_data = ''
         try:
             from construct import Struct, Int8ub, Bytes, GreedyBytes, Optional, Array, this
             ExpandedRemoteResponse = Struct(
@@ -381,17 +382,20 @@ def _decode_por(spi1, spi2, kic, kid, cntr_hex, kic_key_hex, kid_key_hex, respon
                     response_data['is_first'] = resp.chaining_context.is_first == 0x01
                     response_data['is_last'] = resp.chaining_context.is_last == 0x01
                 out['responses'].append(response_data)
+            if expanded.response_count > 0 and expanded.responses[0].response_data:
+                expanded_response_data = b2h(expanded.responses[0].response_data).upper()
         except Exception:
-            # Fallback to CompactRemoteResp
-            if dec is not None:
-                out['response_type'] = 'compact'
-                out['decoded'] = {
-                    'number_of_commands': dec.number_of_commands,
-                    'last_status_word': str(dec.last_status_word),
-                    'last_response_data': str(dec.last_response_data),
-                }
-            else:
-                out['response_type'] = 'none'
+            pass
+        if dec is not None:
+            out['response_type'] = 'compact'
+            # Use compact parser's last_response_data; expanded parser gives wrong results for compact format
+            out['decoded'] = {
+                'number_of_commands': dec.number_of_commands,
+                'last_status_word': str(dec.last_status_word),
+                'last_response_data': str(dec.last_response_data),
+            }
+        else:
+            out['response_type'] = 'none'
     elif dec is not None:
         out['response_type'] = 'compact'
         out['decoded'] = {
@@ -1017,7 +1021,7 @@ def _handle_proactive_chain(scc, sw91, on_fetch=None):
     while sw.startswith('91'):
         fetch_len = int(sw[2:], 16) if len(sw) == 4 else 0x100
         rv = scc._tp.send_apdu('%s120000%02x' % (scc.cat_cla, fetch_len))
-        sys.stderr.write('FETCH(%s): %s -> %s\n' % (fetch_len, rv[0][:80] if rv[0] else '(none)', rv[1]))
+        sys.stderr.write('FETCH(%s): %s -> %s\n' % (fetch_len, rv[0] if rv[0] else '(none)', rv[1]))
         fdata, sw = rv[0], rv[1]
         raw = bytes.fromhex(fdata) if fdata else None
         action = None
@@ -1812,6 +1816,7 @@ class PysimHandler(BaseHTTPRequestHandler):
             body = self._read_body()
             self._log_req(body)
             sp = body.get('sp', '')
+            apdu = body.get('apdu', '')
             scc = self.server.scc
             if not scc:
                 self._send_json({'error': _err('reader_not_init', lang)}, 503)
@@ -1819,7 +1824,22 @@ class PysimHandler(BaseHTTPRequestHandler):
                 return
             include_cpi = body.get('includeCpi', True)
             try:
-                sp_bytes = bytes.fromhex(sp)
+                if apdu:
+                    # RAM operation: SCP80-wrap the raw GP command
+                    spi1 = body.get('spi1', '16')
+                    spi2 = body.get('spi2', '01')
+                    kic = body.get('kic', '25')
+                    kid = body.get('kid', '25')
+                    tar = body.get('tar', '000000')
+                    cntr = body.get('cntr', '')
+                    kic_key = body.get('kicKey', '')
+                    kid_key = body.get('kidKey', '')
+                    sp_hex, _ = _ota_reference(spi1, spi2, kic, kid, tar, cntr, apdu, kic_key, kid_key)
+                    sp_bytes = bytes.fromhex(sp_hex)
+                else:
+                    # Regular SCP80: use pre-built secured packet
+                    sp_hex = sp
+                    sp_bytes = bytes.fromhex(sp_hex)
                 spi2_val = int(body.get('spi2', '00'), 16)
                 por_in_submit = bool(spi2_val & 0x20)
                 submit_handler = None
@@ -1836,12 +1856,13 @@ class PysimHandler(BaseHTTPRequestHandler):
                         body.get('spi1', ''), body.get('spi2', ''), body.get('kic', ''),
                         body.get('kid', ''), body.get('tar', ''), body.get('cntr', ''),
                         len(sp_bytes), total))
+                    sys.stderr.write('RAM C-APDU: %s\n' % apdu if apdu else sp)
+                    sys.stderr.write('RAM SECURED-PACKET: %s\n' % sp_hex)
                     last_data = None
                     last_sw = None
                     for i, chunk in enumerate(chunks):
                         tpdu = _build_sms_tpdu(chunk.hex(), total, i + 1, oa_number=self.server.sms_oa,
-                                               include_cpi=include_cpi) if total > 1 else _build_sms_tpdu(sp, oa_number=self.server.sms_oa,
-                                                                                                            include_cpi=include_cpi)
+                                               include_cpi=include_cpi)
                         data, sw = _send_envelope(tpdu, scc, sm_sc=self.server.sms_sc, submit_handler=submit_handler)
                         last_data = data
                         last_sw = sw
@@ -1862,17 +1883,25 @@ class PysimHandler(BaseHTTPRequestHandler):
                         por = _decode_por(body.get('spi1', ''), body.get('spi2', ''), body.get('kic', ''),
                                           body.get('kid', ''), body.get('cntr', ''), body.get('kicKey', ''),
                                           body.get('kidKey', ''), por_hex)
+                        # Check for SPI2=0x21 (PoR required) but got 9000 with no PoR → card refuses PoR
+                        is_ram = bool(apdu)
+                        por_required = bool(spi2_val & 0x01)
+                        no_por_received = not por_hex and not (submit_handler and submit_handler.submit_tpdu_hex)
+                        if is_ram and por_required and last_sw == '9000' and no_por_received:
+                            sys.stderr.write('WARNING: Card refused to return PoR - ENVELOPE returned 9000 with no response data\n')
+                        sys.stderr.write('RAM RESPONSE-PACKET: %s\n' % (por_hex if por_hex else 'empty'))
                         if por:
                             resp['por'] = por
                             extra = ''
                             if por.get('decoded'):
                                 extra = ' (compact: %s cmd, last SW %s)' % (por['decoded'].get('number_of_commands', '?'),
                                                                             por['decoded'].get('last_status_word', '?'))
+                                sys.stderr.write('RAM R-APDU: %s\n' % por['decoded'].get('last_response_data', ''))
                             sys.stderr.write('OTA PoR[%s]: status=%s TAR=%s CNTR=%s PCNTR=%s RPL=%s RHL=%s%s\n' % (
                                 por_src, por.get('response_status'), por.get('tar'), por.get('cntr'),
                                 por.get('pcntr'), por.get('rpl'), por.get('rhl'), extra))
                         elif por_hex:
-                            sys.stderr.write('OTA PoR[%s]: undecodable raw=%s\n' % (por_src, str(por_hex)[:64]))
+                            sys.stderr.write('OTA PoR[%s]: undecodable raw=%s\n' % (por_src, str(por_hex)))
                         else:
                             sys.stderr.write('OTA PoR[%s]: none\n' % por_src)
                 finally:

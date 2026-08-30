@@ -30,6 +30,7 @@ connect and warns if versions are incompatible.
 | `/api/apdu` | POST | Raw APDU send |
 | `/api/help` | POST | pySim help for a given command |
 | `/api/send-ota` | POST | SCP80 OTA secured packet delivery |
+| `/api/ram-install` | POST | Install a Java Card `.cap` file via SCP80 (INSTALL[for load] → LOAD ×N → INSTALL[for install]) |
 | `/api/sp-verify` | POST | Verify secured packet against pySim reference |
 | `/api/menu` | GET | Current STK menu (title + items + active) |
 | `/api/menu-select` | POST | ENVELOPE(Menu Selection) with item_id |
@@ -139,6 +140,60 @@ fetched via a proactive command (FETCH). The response contains the
 same `por` structure if decoding succeeds.
 
 The SPI2 `por_in_submit` bit (0x20) selects submit-mode PoR.
+
+### `POST /api/ram-install`
+
+Install a Java Card `.cap` file on the card via GlobalPlatform commands (INSTALL[for load] → LOAD ×N → INSTALL[for install (+ make selectable)]) wrapped in SCP80 secured packets. Each step is sent via ENVELOPE and its PoR is checked; the sequence aborts on the first PoR error. Requires pySim with `pySim.javacard.CapFile` and `pySim.global_platform` available on the server.
+
+**Request body:**
+```json
+{
+  "cap_hex": "DECAFFED...",
+  "sd_aid": "A000000003000000",
+  "install_params": "C90000",
+  "stk_params": "",
+  "nv_quota": 0,
+  "volatile_quota": 0,
+  "make_selectable": true,
+  "spi1": "0E", "spi2": "01",
+  "kic": "15", "kid": "15",
+  "tar": "000000",
+  "cntr": "0000000001",
+  "kicKey": "D6FCC023...",
+  "kidKey": "1B07E7E0..."
+}
+```
+
+| Field | Req | Description |
+|---|---|---|
+| `cap_hex` | yes | Even-length hex of the `.cap` file (zipped Java Card CAP), max 48 kB (98304 hex chars) |
+| `sd_aid` | no | Security Domain AID for INSTALL[for load]; empty → default ISD `A000000003000000` |
+| `install_params` | no | Hex C9 TLV install parameters; if empty, `gen_install_parameters()` is used with the quota/stk params |
+| `stk_params` | no | Hex CA TLV (TS 102 226 §8.2.1.3.2.1) for SIM toolkit app-specific params |
+| `nv_quota` / `volatile_quota` | no | Integer memory quotas (bytes) for `gen_install_parameters()` |
+| `make_selectable` | no | If true (default), final INSTALL uses P1=`0C` (install + make selectable) |
+
+**Response (success):**
+```json
+{"success": true, "failed_step": null,
+ "steps": [{"name": "install_for_load", "apdu": "80E60200...", "por_status": "por_ok", "sw": "9000"},
+           {"name": "load_0", "apdu": "80E80000...", "por_status": "por_ok", "sw": "9000"},
+           {"name": "install_for_install", "apdu": "80E60C00...", "por_status": "por_ok", "sw": "9000"}],
+ "final_cntr": "0000000004",
+ "load_file_aid": "A000000003000000",
+ "module_aid": "A000000003000000",
+ "application_aid": "A000000003000000"}
+```
+
+**Response (failure):**
+```json
+{"success": false, "failed_step": "load_1",
+ "steps": [{"name": "install_for_load", "por_status": "por_ok", "sw": "9000"},
+           {"name": "load_1", "por_status": "rc_error", "sw": null}],
+ "error": "..."}
+```
+
+The `steps` array contains one entry per GP command. `final_cntr` is the counter value after all successful steps (use it to update the card preset). The response is not streamed — all steps run server-side before the JSON is returned.
 
 ### `POST /api/sp-verify`
 
