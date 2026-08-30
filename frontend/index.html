@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.18</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.19</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -3667,9 +3667,9 @@ function parseTLV(hex) {
 	let i = 0;
 	while (i < hex.length) {
 		let tag = hex.substr(i, 2); i += 2;
-		if (tag >= '1F' && tag <= '7F') { tag += hex.substr(i, 2); i += 2; }
-		else if (tag >= '9F' && tag <= 'BF') { tag += hex.substr(i, 2); i += 2; }
-		else if (tag >= 'DF' && tag <= 'FF') { tag += hex.substr(i, 2); i += 2; }
+		const firstByte = parseInt(tag, 16);
+		// Multi-byte tags: bits 4-0 of first byte are 0x1F (ISO 7816)
+		if ((firstByte & 0x1F) === 0x1F) { tag += hex.substr(i, 2); i += 2; }
 		let lenByte = parseInt(hex.substr(i, 2), 16); i += 2;
 		let len;
 		if (lenByte < 0x80) { len = lenByte; }
@@ -3677,7 +3677,8 @@ function parseTLV(hex) {
 		else if (lenByte === 0x82) { len = parseInt(hex.substr(i, 4), 16); i += 4; }
 		else { len = lenByte; }
 		const value = hex.substr(i, len * 2); i += len * 2;
-		const isConstructed = parseInt(tag, 16) >= 0xA0 && parseInt(tag, 16) < 0xC0;
+		// Constructed if bit 5 of first tag byte is set (ISO 7816)
+		const isConstructed = (firstByte & 0x20) !== 0;
 		const children = isConstructed ? parseTLV(value) : null;
 		tags.push({ tag, len, value, children, isConstructed });
 	}
@@ -4339,39 +4340,109 @@ async function ramSendOta(apduHex, sp) {
 	return await res.json();
 }
 
-// ===== Raw parsers for GET STATUS responses (P2=00 format) =====
-// Raw format: consecutive <aid_len><AID><lifecycle><privileges> entries (no tag wrappers).
-// Per GP Card Spec Table 11-33: AID is length-prefixed, lifecycle is 1 byte,
-// privileges is 1 byte (bitmask).
+// ===== TLV parsers for GET STATUS responses (P2=02 format) =====
+// P2=02 wraps each entry in an 'E3' GP Registry Data template containing TLV tags.
+// Fallback: if the card only supports P2=00 (raw format), raw parsers are used.
+function _parseE3Entry(hex) {
+	const children = parseTLV(hex || '');
+	const r = {};
+	for (const c of children) {
+		if (c.tag === '4F') r.aid = c.value.toUpperCase();
+		else if (c.tag === '9F70') r.lifecycle = c.value.toUpperCase();
+		else if (c.tag === 'C5') r.privileges = c.value.toUpperCase();
+		else if (c.tag === 'CE') r.version = c.value.toUpperCase();
+		else if (c.tag === 'CC') r.sdAid = c.value.toUpperCase();
+		else if (c.tag === 'C4') r.elfAid = c.value.toUpperCase();
+		else if (c.tag === 'CF') r.implicitSel = c.value.toUpperCase();
+		else if (c.tag === '84') r.moduleAids = ramParseModuleAids(c.value);
+	}
+	return r;
+}
+
+// Raw format (P2=00): ISD uses pure AID length, Apps use combined length (AID+lifecycle).
+// Heuristic: length > 8 means combined (AID = length-1 bytes, lifecycle inside length).
+function _parseRawAppEntry(hex, i) {
+	const rawLen = parseInt(hex.substr(i, 2), 16);
+	if (rawLen < 1 || i + 2 + rawLen * 2 + 2 > hex.length) return null;
+	const aidLen = rawLen > 8 ? rawLen - 1 : rawLen;
+	const aid = hex.substr(i + 2, aidLen * 2).toUpperCase();
+	let j = i + 2 + rawLen * 2;
+	const lifecycle = hex.substr(j, 2).toUpperCase(); j += 2;
+	const privileges = hex.substr(j, 2).toUpperCase(); j += 2;
+	return { aid, lifecycle, privileges, next: j };
+}
+
+// Raw format (P2=00): ELF header then trailing bytes with module entries.
+// P1=20: <ELF_header> <00> <module_entries separated by 00>
+// P1=10: <ELF_header> <version(2B)> <SD_AID> <module_entries...>
+// In both, a module entry starts with 0x10 (len=16) followed by 15-byte AID + lifecycle.
+// Scan for 0x10 markers, advance past each full entry to avoid AID-internal false positives.
+function _parseRawElfEntry(hex, i) {
+	const aidLen = parseInt(hex.substr(i, 2), 16);
+	if (aidLen < 1 || i + 2 + aidLen * 2 + 2 > hex.length) return null;
+	const aid = hex.substr(i + 2, aidLen * 2).toUpperCase();
+	let j = i + 2 + aidLen * 2;
+	const lifecycle = hex.substr(j, 2).toUpperCase(); j += 2;
+	// Scan: when 0x10 found, validate 15-byte AID follows, then advance past full entry
+	const moduleAids = [];
+	const seen = new Set();
+	while (j + 32 <= hex.length) {
+		const tag = parseInt(hex.substr(j, 2), 16);
+		if (tag === 0x10) {
+			const modAid = hex.substr(j + 2, 30).toUpperCase();
+			if (!seen.has(modAid)) { seen.add(modAid); moduleAids.push(modAid); }
+			j += 32; // skip marker(1) + AID(15), continue past lifecycle+appCount
+		} else {
+			j += 2;
+		}
+	}
+	return { aid, lifecycle, moduleAids: moduleAids.length ? moduleAids : undefined, next: j };
+}
+
 function ramParseAppStatus(hex) {
+	const s = (hex || '').toUpperCase();
+	if (!s) return [];
+	// TLV format (P2=02): E3 templates with structured tags
+	if (s.length >= 4 && s.substr(0, 2) === 'E3') {
+		const tlvs = parseTLV(s);
+		return tlvs.filter(t => t.tag === 'E3').map(t => {
+			const r = _parseE3Entry(t.value);
+			r.type = 'app';
+			return r;
+		}).filter(r => r.aid);
+	}
+	// Raw format (P2=00 fallback): consecutive <aid_len><AID><lifecycle><privileges>
 	const out = [];
 	let i = 0;
-	const s = (hex || '').toUpperCase();
 	while (i + 6 <= s.length) {
-		const aidLen = parseInt(s.substr(i, 2), 16);
-		if (aidLen < 1 || i + 2 + aidLen * 2 + 4 > s.length) break;
-		const aid = s.substr(i + 2, aidLen * 2);
-		i += 2 + aidLen * 2;
-		const lifecycle = s.substr(i, 2); i += 2;
-		const privileges = s.substr(i, 2); i += 2;
-		out.push({ type: 'app', aid: aid.toUpperCase(), lifecycle, privileges });
+		const r = _parseRawAppEntry(s, i);
+		if (!r) break;
+		out.push({ type: 'app', ...r });
+		i = r.next;
 	}
 	return out;
 }
 
-// ELF raw format (P2=00): <aid_len><AID><lifecycle> per entry.
-// Some cards may append version/module data but it's not guaranteed in raw mode.
 function ramParseElfStatus(hex) {
+	const s = (hex || '').toUpperCase();
+	if (!s) return [];
+	// TLV format (P2=02): E3 templates with structured tags
+	if (s.length >= 4 && s.substr(0, 2) === 'E3') {
+		const tlvs = parseTLV(s);
+		return tlvs.filter(t => t.tag === 'E3').map(t => {
+			const r = _parseE3Entry(t.value);
+			r.type = 'elf';
+			return r;
+		}).filter(r => r.aid);
+	}
+	// Raw format (P2=00 fallback): consecutive <aid_len><AID><lifecycle>
 	const out = [];
 	let i = 0;
-	const s = (hex || '').toUpperCase();
 	while (i + 6 <= s.length) {
-		const aidLen = parseInt(s.substr(i, 2), 16);
-		if (aidLen < 1 || i + 2 + aidLen * 2 + 2 > s.length) break;
-		const aid = s.substr(i + 2, aidLen * 2);
-		i += 2 + aidLen * 2;
-		const lifecycle = s.substr(i, 2); i += 2;
-		out.push({ type: 'elf', aid: aid.toUpperCase(), lifecycle });
+		const r = _parseRawElfEntry(s, i);
+		if (!r) break;
+		out.push({ type: 'elf', ...r });
+		i = r.next;
 	}
 	return out;
 }
@@ -4380,13 +4451,13 @@ function ramParseElfStatus(hex) {
 function ramParseModuleAids(hex) {
 	const out = [];
 	let j = 0;
-	const s = hex || '';
+	const s = (hex || '').toUpperCase();
 	while (j + 4 <= s.length) {
 		const t = s.substr(j, 2);
 		const l = parseInt(s.substr(j + 2, 2), 16);
 		const v = s.substr(j + 4, l * 2);
 		j += 4 + l * 2;
-		if (t === '4F') out.push(v.toUpperCase());
+		if (t === '4F') out.push(v);
 	}
 	return out;
 }
@@ -4449,7 +4520,9 @@ function ramFmtPrivileges(hex) {
 	return privs.length ? privs.join(', ') : '(none)';
 }
 
-// Merge ELF-module entries (P1=10, carry module AIDs) into ELF entries (P1=40)
+// Merge ELF-module entries (P1=10, carry module AIDs) into ELF entries (P1=20).
+// With TLV format (P2=02), module AIDs come from tag '84' inside E3 templates.
+// With raw format (P2=00), module AIDs are not available in the response.
 function ramMergeElfData(elfs, modules) {
 	const byAid = {};
 	elfs.forEach(e => { if (e.aid) byAid[e.aid] = e; });
@@ -4541,40 +4614,57 @@ async function ramExplore(sp) {
 		// ELF data won't fit in the ENVELOPE response.
 		const isElf = (p1 === '20' || p1 === '10');
 		const spi2 = isElf ? '21' : '01';
-		let p2 = '00';
-		let guard = 0;
-		while (guard++ < 32) {
-			const apdu = '80F2' + p1 + p2 + '024F0000' + 'C0000000';
-			ramShowProgress(label + ' P1=' + p1 + ' P2=' + p2 + '...');
-			const res = await ramSendOta(apdu, Object.assign({}, sp, { cntr, spi2 }));
-			cntr = ramIncrementCntr(cntr);
-			if (!res.success || !res.por || res.por.response_status !== 'por_ok') {
-				const errorMsg = res.por ? res.por.response_status : (res.error || 'no data');
-				errors.push(label + ': ' + errorMsg);
-				return;
-			}
-			const data = res.por.decoded ? res.por.decoded.last_response_data : '';
-			const sw = res.por.decoded ? res.por.decoded.last_status_word : '';
-			// Defensive: 61XX means more data available (shouldn't happen with
-			// chained GET RESPONSE, but handle it if the card responds this way).
-			if (sw && sw.startsWith('61')) {
-				if (data) {
-					const parsed61 = parser(data);
-					if (parsed61.length) collector.push(...parsed61);
+		// Try TLV format (P2=02) first for structured data; fall back to raw
+		// (P2=00) if the card doesn't support TLV GET STATUS.
+		for (const p2Init of ['02', '00']) {
+			let p2 = p2Init;
+			let guard = 0;
+			let tlvFailed = false;
+			while (guard++ < 32) {
+				// P2=02: no data field (card returns all tags). P2=00: Lc=02 TagList=4F00 (ignored by card).
+				const dataField = p2 === '02' ? '' : '024F0000';
+				const apdu = '80F2' + p1 + p2 + dataField + 'C0000000';
+				ramShowProgress(label + ' P1=' + p1 + ' P2=' + p2 + '...');
+				const res = await ramSendOta(apdu, Object.assign({}, sp, { cntr, spi2 }));
+				cntr = ramIncrementCntr(cntr);
+				if (!res.success || !res.por || res.por.response_status !== 'por_ok') {
+					const errorMsg = res.por ? res.por.response_status : (res.error || 'no data');
+					errors.push(label + ': ' + errorMsg);
+					tlvFailed = true;
+					break;
 				}
+			const data = res.por.decoded ? res.por.decoded.last_response_data : '';
+			const sw = (res.por.decoded ? res.por.decoded.last_status_word : '').toUpperCase();
+				// If first attempt with P2=02 gets an unsupported error, retry with P2=00.
+				if (guard === 1 && p2Init === '02' && (sw === '6A86' || sw === '6A88')) {
+					tlvFailed = true;
+					break;
+				}
+				// Defensive: 61XX means more data available (shouldn't happen with
+				// chained GET RESPONSE, but handle it if the card responds this way).
+				if (sw && sw.startsWith('61')) {
+					if (data) {
+						const parsed61 = parser(data);
+						if (parsed61.length) collector.push(...parsed61);
+					}
+					p2 = '01';
+					continue;
+				}
+				if (sw === '6F00') { tlvFailed = true; break; }
+				if (!data) {
+					if (sw !== '9000') {
+						errors.push(label + ': (no data) — SW ' + sw);
+						tlvFailed = true;
+					}
+					break;
+				}
+				const parsed = parser(data);
+				if (!parsed.length) break;
+				collector.push(...parsed);
+				if (sw === '9000') break;
 				p2 = '01';
-				continue;
 			}
-			if (sw === '6F00') break;
-			if (!data) {
-				if (sw !== '9000') errors.push(label + ': (no data) — SW ' + sw);
-				break;
-			}
-			const parsed = parser(data);
-			if (!parsed.length) break;
-			collector.push(...parsed);
-			if (sw === '9000') break;
-			p2 = '01';
+			if (!tlvFailed) break;
 		}
 	}
 

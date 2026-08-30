@@ -18,7 +18,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.18'
+VERSION = '1.9.19'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -352,7 +352,7 @@ def _decode_por(spi1, spi2, kic, kid, cntr_hex, kic_key_hex, kid_key_hex, respon
         'pcntr': res['pcntr'],
         'rpl': res['rpl'],
         'rhl': res['rhl'],
-        'cc_rc': res['cc_rc'].hex(),
+        'cc_rc': res['cc_rc'].hex().upper(),
         'raw': response_hex,
     }
     
@@ -1352,11 +1352,11 @@ class PysimHandler(BaseHTTPRequestHandler):
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path == '/api/pli-qualifiers':
-            qualifiers = [{'code': '%02x' % q, 'name': PLI_QUALIFIER_NAMES[q]} for q in PLI_QUALIFIER_NAMES]
+            qualifiers = [{'code': '%02X' % q, 'name': PLI_QUALIFIER_NAMES[q]} for q in PLI_QUALIFIER_NAMES]
             self._send_json(qualifiers)
             self._log_resp(qualifiers)
         elif self.path == '/api/pli-dict':
-            resp = {('%02x' % q): v for q, v in _PLI_DATA.items()}
+            resp = {('%02X' % q): v for q, v in _PLI_DATA.items()}
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path == '/api/poll-status':
@@ -1890,7 +1890,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                                 _PLI_DATA[code] = v
                         except (ValueError, KeyError):
                             pass
-            resp = {('%02x' % q): v for q, v in _PLI_DATA.items()}
+            resp = {('%02X' % q): v for q, v in _PLI_DATA.items()}
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path == '/api/poll-toggle':
