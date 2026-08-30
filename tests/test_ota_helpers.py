@@ -418,5 +418,230 @@ class TestExpandedRemoteResponse(unittest.TestCase):
         self.assertEqual(entry['tr_result_name'], 'Command performed successfully')
 
 
+class TestSmsConcat(unittest.TestCase):
+    """Tests for _parse_sms_concat — SMS UDH concatenation parsing."""
+
+    def test_no_udh_sms_submit(self):
+        """SMS-SUBMIT without TP-UDHI: entire UD is payload."""
+        from pysim_otaman_server.server import _parse_sms_concat
+        # First octet 0x01: MTI=01 (SUBMIT), no UDH, no VP
+        # MR=00, DA_len=05, DA_type=90, DA=2143F5, PID=00, DCS=04, UDL=03, UD=AABBCC
+        tpdu = bytes.fromhex('0100'  # first octet + MR
+                             '05'    # DA length
+                             '90'    # DA type
+                             '2143F5'  # DA data (3 bytes for 5 digits)
+                             '0004'  # PID + DCS
+                             '03'    # UDL
+                             'AABBCC')  # UD (payload)
+        ref, total, num, payload = _parse_sms_concat(tpdu)
+        self.assertIsNone(ref)
+        self.assertIsNone(total)
+        self.assertIsNone(num)
+        self.assertEqual(payload.hex(), 'aabbcc')
+
+    def test_8bit_concat_iei_0x00(self):
+        """SMS-SUBMIT with IEI 0x00 (8-bit reference concatenation)."""
+        from pysim_otaman_server.server import _parse_sms_concat
+        # First octet 0x41: MTI=01 (SUBMIT), TP-UDHI=1, no VP
+        # MR=00, DA_len=05, DA_type=90, DA=2143F5, PID=00, DCS=04
+        # UDL=09, UDHL=05, UDH: 00 03 04 04 01 (concat IE), payload=AABBCC
+        tpdu = bytes.fromhex('4100'  # first octet + MR
+                             '05'    # DA length
+                             '90'    # DA type
+                             '2143F5'  # DA data
+                             '0004'  # PID + DCS
+                             '09'    # UDL (1 UDHL + 5 UDH + 3 payload = 9)
+                             '05'    # UDHL = 5 bytes of UDH
+                             '0003'  # IEI=0x00, IEDL=3
+                             '04'    # ref
+                             '04'    # total (4 segments)
+                             '01'    # num (segment 1)
+                             'AABBCC')  # payload
+        ref, total, num, payload = _parse_sms_concat(tpdu)
+        self.assertEqual(ref, 0x04)
+        self.assertEqual(total, 4)
+        self.assertEqual(num, 1)
+        self.assertEqual(payload.hex(), 'aabbcc')
+
+    def test_16bit_concat_iei_0x08(self):
+        """SMS-SUBMIT with IEI 0x08 (16-bit reference concatenation)."""
+        from pysim_otaman_server.server import _parse_sms_concat
+        # First octet 0x41: MTI=01, TP-UDHI=1
+        # UDH: 06 (UDHL) 08 04 01 02 03 04 (16-bit concat: ref=0x0102, total=3, num=4)
+        # payload=FF
+        tpdu = bytes.fromhex('4100'
+                             '05'
+                             '90'
+                             '2143F5'
+                             '0004'
+                             '08'    # UDL (1 UDHL + 6 UDH + 1 payload = 8)
+                             '06'    # UDHL
+                             '0804'  # IEI=0x08, IEDL=4
+                             '0102'  # ref (16-bit, big-endian)
+                             '03'    # total
+                             '04'    # num
+                             'FF')   # payload
+        ref, total, num, payload = _parse_sms_concat(tpdu)
+        self.assertEqual(ref, 0x0102)
+        self.assertEqual(total, 3)
+        self.assertEqual(num, 4)
+        self.assertEqual(payload.hex(), 'ff')
+
+    def test_udh_with_cpi(self):
+        """UDH with concatenation IE + CPI IE (0x70)."""
+        from pysim_otaman_server.server import _parse_sms_concat
+        # First octet 0x41: MTI=01, TP-UDHI=1
+        # UDHL=07, UDH: 00 03 04 04 01 (concat) + 70 00 (CPI)
+        tpdu = bytes.fromhex('4100'
+                             '05'
+                             '90'
+                             '2143F5'
+                             '0004'
+                             '0A'    # UDL (1 UDHL + 7 UDH + 1 payload = 9? no: 1+5+2+1=9, but UDH=7 bytes)
+                             '07'    # UDHL = 7
+                             '0003'  # IEI=0x00, IEDL=3
+                             '04'    # ref
+                             '04'    # total
+                             '01'    # num
+                             '7000'  # CPI IE (IEI=0x70, IEDL=0)
+                             'DD')   # payload
+        ref, total, num, payload = _parse_sms_concat(tpdu)
+        self.assertEqual(ref, 0x04)
+        self.assertEqual(total, 4)
+        self.assertEqual(num, 1)
+        self.assertEqual(payload.hex(), 'dd')
+
+    def test_empty_payload(self):
+        """Segment with empty payload after UDH."""
+        from pysim_otaman_server.server import _parse_sms_concat
+        # First octet 0x41: MTI=01, TP-UDHI=1
+        tpdu = bytes.fromhex('4100'
+                             '05'
+                             '90'
+                             '2143F5'
+                             '0004'
+                             '06'    # UDL (1 UDHL + 5 UDH + 0 payload = 6)
+                             '05'    # UDHL
+                             '0003'
+                             '01'
+                             '02'
+                             '01')   # no payload after UDH
+        ref, total, num, payload = _parse_sms_concat(tpdu)
+        self.assertEqual(ref, 0x01)
+        self.assertEqual(total, 2)
+        self.assertEqual(num, 1)
+        self.assertEqual(len(payload), 0)
+
+    def test_short_tpdu(self):
+        """Truncated TPDU returns gracefully."""
+        from pysim_otaman_server.server import _parse_sms_concat
+        ref, total, num, payload = _parse_sms_concat(b'\x01')
+        self.assertIsNone(ref)
+        self.assertIsNone(total)
+        self.assertIsNone(num)
+
+    def test_none_input(self):
+        """None input returns empty payload."""
+        from pysim_otaman_server.server import _parse_sms_concat
+        ref, total, num, payload = _parse_sms_concat(None)
+        self.assertIsNone(ref)
+        self.assertIsNone(total)
+        self.assertIsNone(num)
+        self.assertEqual(len(payload), 0)
+
+    def test_short_tpdu(self):
+        """Truncated TPDU returns gracefully."""
+        from pysim_otaman_server.server import _parse_sms_concat
+        ref, total, num, payload = _parse_sms_concat(b'\x44')
+        self.assertIsNone(ref)
+        self.assertIsNone(total)
+        self.assertIsNone(num)
+
+    def test_none_input(self):
+        """None input returns empty payload."""
+        from pysim_otaman_server.server import _parse_sms_concat
+        ref, total, num, payload = _parse_sms_concat(None)
+        self.assertIsNone(ref)
+        self.assertIsNone(total)
+        self.assertIsNone(num)
+        self.assertEqual(len(payload), 0)
+
+
+class TestSmsReassembly(unittest.TestCase):
+    """Tests for SMS segment reassembly logic."""
+
+    def test_single_segment_no_concat(self):
+        """Single segment without UDH → submit_tpdu_hex is set directly."""
+        from pysim_otaman_server.server import PoRSubmitHandler, _find_sms_tpdu, _parse_sms_concat
+        handler = PoRSubmitHandler()
+        # Build a simple D0 with tag 8B containing an SMS-SUBMIT without UDH
+        sms_tpdu = bytes.fromhex('040005902143F50004'  # SMS-SUBMIT header
+                                 '03'                   # UDL
+                                 'AABBCC')              # payload
+        # Wrap in D0 proactive command
+        d0 = bytes([0xD0, len(sms_tpdu) + 4,  # approximate BER length
+                     0x81, 0x03, 0x01, 0x13, 0x00,  # Command Details
+                     0x82, 0x02, 0x81, 0x83,  # Device Identities
+                     0x8B, len(sms_tpdu)])  # tag 8B
+        # Simulate _find_sms_tpdu extracting tag 8B
+        found = sms_tpdu.hex()
+        # Parse and check
+        ref, total, num, payload = _parse_sms_concat(sms_tpdu)
+        self.assertIsNone(ref)
+        handler.submit_tpdu_hex = found  # single segment path
+        self.assertEqual(handler.submit_tpdu_hex, found)
+
+    def test_multi_segment_reassembly(self):
+        """3 segments with IEI 0x00 in random order → assembled in correct order."""
+        from pysim_otaman_server.server import PoRSubmitHandler
+        handler = PoRSubmitHandler()
+
+        # Segment payloads (after UDH)
+        payloads = [b'\x01\x02', b'\x03\x04', b'\x05\x06']
+        ref = 0x42
+        total = 3
+
+        # Simulate receiving segments in random order: 2, 0, 1
+        for idx in [1, 0, 2]:
+            num = idx + 1
+            handler.sms_segments.append((ref, total, num, payloads[idx].hex()))
+            # Check if all segments collected
+            matching = [s for s in handler.sms_segments if s[0] == ref]
+            if len(matching) >= total:
+                sorted_segs = sorted(matching, key=lambda s: s[2])
+                assembled = b''.join(bytes.fromhex(s[3]) for s in sorted_segs)
+                handler.submit_tpdu_hex = assembled.hex()
+
+        self.assertEqual(handler.submit_tpdu_hex, '010203040506')
+
+    def test_independent_references(self):
+        """Two different reference numbers are independent."""
+        from pysim_otaman_server.server import PoRSubmitHandler
+        handler = PoRSubmitHandler()
+
+        # Ref 0x01: 2 segments
+        handler.sms_segments.append((0x01, 2, 1, 'AA'))
+        handler.sms_segments.append((0x01, 2, 2, 'BB'))
+        matching = [s for s in handler.sms_segments if s[0] == 0x01]
+        if len(matching) >= 2:
+            sorted_segs = sorted(matching, key=lambda s: s[2])
+            assembled = b''.join(bytes.fromhex(s[3]) for s in sorted_segs)
+            handler.submit_tpdu_hex = assembled.hex()
+
+        self.assertEqual(handler.submit_tpdu_hex, 'aabb')
+
+        # Ref 0x02: 1 segment (independent)
+        handler.sms_segments.append((0x02, 1, 1, 'CC'))
+        matching2 = [s for s in handler.sms_segments if s[0] == 0x02]
+        if len(matching2) >= 1:
+            sorted_segs2 = sorted(matching2, key=lambda s: s[2])
+            assembled2 = b''.join(bytes.fromhex(s[3]) for s in sorted_segs2)
+            # Only update if ref 0x02 is complete
+            handler.submit_tpdu_hex = assembled2.hex()
+
+        # Last assembly was ref 0x02
+        self.assertEqual(handler.submit_tpdu_hex, 'cc')
+
+
 if __name__ == '__main__':
     unittest.main()

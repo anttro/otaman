@@ -18,7 +18,9 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.17'
+VERSION = '1.9.18'
+
+MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
 
 # Static file serving (the PWA lives in <repo>/frontend, served by this server
@@ -250,7 +252,19 @@ def _send_envelope(tpdu_hex, scc, sm_sc='12345678912', submit_handler=None):
     elif sw.startswith('91'):
         def _capture_sms_tpdu(raw, cmd_num, cmd_type, dev_src, dev_dst):
             if submit_handler:
-                submit_handler.submit_tpdu_hex = _find_sms_tpdu(raw)
+                tpdu_hex = _find_sms_tpdu(raw)
+                if tpdu_hex:
+                    ref, total, num, payload = _parse_sms_concat(bytes.fromhex(tpdu_hex))
+                    if total is not None and num is not None:
+                        submit_handler.sms_segments.append((ref, total, num, payload.hex()))
+                        matching = [s for s in submit_handler.sms_segments if s[0] == ref]
+                        if len(matching) >= total:
+                            sorted_segs = sorted(matching, key=lambda s: s[2])
+                            assembled = b''.join(bytes.fromhex(s[3]) for s in sorted_segs)
+                            submit_handler.submit_tpdu_hex = assembled.hex()
+                            sys.stderr.write('SMS concat: assembled %d segments (ref=%s)\n' % (total, ref))
+                    else:
+                        submit_handler.submit_tpdu_hex = tpdu_hex
         _handle_proactive_chain(scc, sw, _capture_sms_tpdu)
         data, sw = '', '9000'
     if sw == '9000' and submit_handler and not submit_handler.submit_tpdu_hex:
@@ -413,10 +427,13 @@ class PoRSubmitHandler(ProactiveHandler):
     """Captures the SMS-SUBMIT TPDU from a SendShortMessage proactive command
     issued by the SIM in response to PoR-in-submit (SPI2 bit 0x20).
     The 91XX path in _send_envelope scans the FETCH response directly for
-    the SMS_TPDU child (tag 0x8B) and populates submit_tpdu_hex."""
+    the SMS_TPDU child (tag 0x8B) and populates submit_tpdu_hex.
+    Supports concatenated SMS: when UDH contains IEI 0x00 or 0x08, segments
+    are accumulated and reassembled once all parts arrive."""
     def __init__(self):
         super().__init__()
         self.submit_tpdu_hex = None
+        self.sms_segments = []  # [(ref, total, num, payload_hex), ...]
 
 
 class _DefaultProactiveHandler(ProactiveHandler):
@@ -972,6 +989,85 @@ def _find_sms_tpdu(raw):
             if tag == 0x8B and tlen >= 1:
                 return val.hex()
     return None
+
+
+def _calc_ud_offset(tpdu):
+    """Calculate the offset of TP-UD (User Data) within an SMS TPDU.
+    Handles SMS-SUBMIT (MTI=01) and SMS-DELIVER (MTI=00)."""
+    first_octet = tpdu[0]
+    mti = first_octet & 0x03
+    vpf = (first_octet >> 3) & 0x03
+    if mti == 0x01:
+        # SMS-SUBMIT: 1 + 1(MR) + 1(DA_len) + 1(DA_type) + ceil(DA_len/2) + 1(PID) + 1(DCS) [+7 if VPF]
+        if len(tpdu) < 3:
+            return None
+        da_len_digits = tpdu[2]
+        da_data_bytes = (da_len_digits + 1) // 2
+        off = 1 + 1 + 1 + 1 + da_data_bytes + 1 + 1
+        if vpf in (0x01, 0x02):  # relative or absolute
+            off += 7
+        if off >= len(tpdu):
+            return None
+        return off + 1  # skip UDL byte
+    elif mti == 0x00:
+        # SMS-DELIVER: 1 + 1(OA_len) + ceil(OA_len/2) + 1(PID) + 1(DCS) + 7(SCTS)
+        if len(tpdu) < 2:
+            return None
+        oa_len_digits = tpdu[1]
+        oa_data_bytes = (oa_len_digits + 1) // 2
+        off = 1 + 1 + oa_data_bytes + 1 + 1 + 7
+        if off >= len(tpdu):
+            return None
+        return off + 1  # skip UDL byte
+    return None
+
+
+def _parse_sms_concat(tpdu_bytes):
+    """Parse an SMS TPDU for UDH concatenation info and payload.
+    Returns (ref, total, num, payload_bytes) or (None, None, None, payload_bytes) if no concat."""
+    if not tpdu_bytes or len(tpdu_bytes) < 2:
+        return None, None, None, tpdu_bytes or b''
+
+    first_octet = tpdu_bytes[0]
+    udhi = bool(first_octet & 0x40)
+
+    ud_offset = _calc_ud_offset(tpdu_bytes)
+    if ud_offset is None or ud_offset >= len(tpdu_bytes):
+        return None, None, None, tpdu_bytes
+
+    if not udhi:
+        # No UDH — entire UD is the payload
+        return None, None, None, tpdu_bytes[ud_offset:]
+
+    # TP-UDHI is set: UD starts with UDHL
+    udhl = tpdu_bytes[ud_offset]
+    udh_start = ud_offset + 1
+    udh_end = udh_start + udhl
+    if udh_end > len(tpdu_bytes):
+        return None, None, None, tpdu_bytes[ud_offset:]
+
+    # Walk UDH IEs looking for concatenation
+    ref = None
+    total = None
+    num = None
+    ie_off = udh_start
+    while ie_off + 2 <= udh_end:
+        iei = tpdu_bytes[ie_off]
+        iedl = tpdu_bytes[ie_off + 1]
+        if ie_off + 2 + iedl > udh_end:
+            break
+        if iei == 0x00 and iedl == 3:
+            ref = tpdu_bytes[ie_off + 2]
+            total = tpdu_bytes[ie_off + 3]
+            num = tpdu_bytes[ie_off + 4]
+        elif iei == 0x08 and iedl == 4:
+            ref = (tpdu_bytes[ie_off + 2] << 8) | tpdu_bytes[ie_off + 3]
+            total = tpdu_bytes[ie_off + 4]
+            num = tpdu_bytes[ie_off + 5]
+        ie_off += 2 + iedl
+
+    payload = tpdu_bytes[ud_offset + 1 + udhl:]  # payload after UDH
+    return ref, total, num, payload
 
 
 def _parse_display_text(raw):
@@ -1856,54 +1952,58 @@ class PysimHandler(BaseHTTPRequestHandler):
                         body.get('spi1', ''), body.get('spi2', ''), body.get('kic', ''),
                         body.get('kid', ''), body.get('tar', ''), body.get('cntr', ''),
                         len(sp_bytes), total))
-                    sys.stderr.write('RAM C-APDU: %s\n' % apdu if apdu else sp)
-                    sys.stderr.write('RAM SECURED-PACKET: %s\n' % sp_hex)
-                    last_data = None
-                    last_sw = None
-                    for i, chunk in enumerate(chunks):
-                        tpdu = _build_sms_tpdu(chunk.hex(), total, i + 1, oa_number=self.server.sms_oa,
-                                               include_cpi=include_cpi)
-                        data, sw = _send_envelope(tpdu, scc, sm_sc=self.server.sms_sc, submit_handler=submit_handler)
-                        last_data = data
-                        last_sw = sw
-                        if sw != '9000' and not sw.startswith('91'):
-                            resp = {'success': False, 'sw': sw, 'error': 'ENVELOPE failed at chunk %d' % (i + 1)}
-                            sys.stderr.write('OTA SEND FAILED: chunk %d SW %s\n' % (i + 1, sw))
-                            break
+                    if total > MAX_ENVELOPE_SEGMENTS:
+                        resp = {'success': False, 'error': 'Secured packet too large: %d segments (max %d)' % (total, MAX_ENVELOPE_SEGMENTS)}
+                        sys.stderr.write('OTA SEND FAILED: %d segments exceeds max %d\n' % (total, MAX_ENVELOPE_SEGMENTS))
                     else:
-                        resp = {'success': True, 'sw': last_sw, 'response_data': last_data if last_data else None}
-                        por_src = 'envelope'
-                        por_hex = resp['response_data']
-                        if submit_handler and submit_handler.submit_tpdu_hex:
-                            tpdu_b = bytes.fromhex(submit_handler.submit_tpdu_hex)
-                            idx = tpdu_b.find(b'\x02\x71\x00')
-                            if idx >= 0:
-                                por_hex = tpdu_b[idx:].hex()
-                                por_src = 'sms-submit'
-                        por = _decode_por(body.get('spi1', ''), body.get('spi2', ''), body.get('kic', ''),
-                                          body.get('kid', ''), body.get('cntr', ''), body.get('kicKey', ''),
-                                          body.get('kidKey', ''), por_hex)
-                        # Check for SPI2=0x21 (PoR required) but got 9000 with no PoR → card refuses PoR
-                        is_ram = bool(apdu)
-                        por_required = bool(spi2_val & 0x01)
-                        no_por_received = not por_hex and not (submit_handler and submit_handler.submit_tpdu_hex)
-                        if is_ram and por_required and last_sw == '9000' and no_por_received:
-                            sys.stderr.write('WARNING: Card refused to return PoR - ENVELOPE returned 9000 with no response data\n')
-                        sys.stderr.write('RAM RESPONSE-PACKET: %s\n' % (por_hex if por_hex else 'empty'))
-                        if por:
-                            resp['por'] = por
-                            extra = ''
-                            if por.get('decoded'):
-                                extra = ' (compact: %s cmd, last SW %s)' % (por['decoded'].get('number_of_commands', '?'),
-                                                                            por['decoded'].get('last_status_word', '?'))
-                                sys.stderr.write('RAM R-APDU: %s\n' % por['decoded'].get('last_response_data', ''))
-                            sys.stderr.write('OTA PoR[%s]: status=%s TAR=%s CNTR=%s PCNTR=%s RPL=%s RHL=%s%s\n' % (
-                                por_src, por.get('response_status'), por.get('tar'), por.get('cntr'),
-                                por.get('pcntr'), por.get('rpl'), por.get('rhl'), extra))
-                        elif por_hex:
-                            sys.stderr.write('OTA PoR[%s]: undecodable raw=%s\n' % (por_src, str(por_hex)))
+                        sys.stderr.write('RAM C-APDU: %s\n' % apdu if apdu else sp)
+                        sys.stderr.write('RAM SECURED-PACKET: %s\n' % sp_hex)
+                        last_data = None
+                        last_sw = None
+                        for i, chunk in enumerate(chunks):
+                            tpdu = _build_sms_tpdu(chunk.hex(), total, i + 1, oa_number=self.server.sms_oa,
+                                                   include_cpi=include_cpi)
+                            data, sw = _send_envelope(tpdu, scc, sm_sc=self.server.sms_sc, submit_handler=submit_handler)
+                            last_data = data
+                            last_sw = sw
+                            if sw != '9000' and not sw.startswith('91'):
+                                resp = {'success': False, 'sw': sw, 'error': 'ENVELOPE failed at chunk %d' % (i + 1)}
+                                sys.stderr.write('OTA SEND FAILED: chunk %d SW %s\n' % (i + 1, sw))
+                                break
                         else:
-                            sys.stderr.write('OTA PoR[%s]: none\n' % por_src)
+                            resp = {'success': True, 'sw': last_sw, 'response_data': last_data if last_data else None}
+                            por_src = 'envelope'
+                            por_hex = resp['response_data']
+                            if submit_handler and submit_handler.submit_tpdu_hex:
+                                tpdu_b = bytes.fromhex(submit_handler.submit_tpdu_hex)
+                                idx = tpdu_b.find(b'\x02\x71\x00')
+                                if idx >= 0:
+                                    por_hex = tpdu_b[idx:].hex()
+                                    por_src = 'sms-submit'
+                            por = _decode_por(body.get('spi1', ''), body.get('spi2', ''), body.get('kic', ''),
+                                              body.get('kid', ''), body.get('cntr', ''), body.get('kicKey', ''),
+                                              body.get('kidKey', ''), por_hex)
+                            # Check for SPI2=0x21 (PoR required) but got 9000 with no PoR → card refuses PoR
+                            is_ram = bool(apdu)
+                            por_required = bool(spi2_val & 0x01)
+                            no_por_received = not por_hex and not (submit_handler and submit_handler.submit_tpdu_hex)
+                            if is_ram and por_required and last_sw == '9000' and no_por_received:
+                                sys.stderr.write('WARNING: Card refused to return PoR - ENVELOPE returned 9000 with no response data\n')
+                            sys.stderr.write('RAM RESPONSE-PACKET: %s\n' % (por_hex if por_hex else 'empty'))
+                            if por:
+                                resp['por'] = por
+                                extra = ''
+                                if por.get('decoded'):
+                                    extra = ' (compact: %s cmd, last SW %s)' % (por['decoded'].get('number_of_commands', '?'),
+                                                                                por['decoded'].get('last_status_word', '?'))
+                                    sys.stderr.write('RAM R-APDU: %s\n' % por['decoded'].get('last_response_data', ''))
+                                sys.stderr.write('OTA PoR[%s]: status=%s TAR=%s CNTR=%s PCNTR=%s RPL=%s RHL=%s%s\n' % (
+                                    por_src, por.get('response_status'), por.get('tar'), por.get('cntr'),
+                                    por.get('pcntr'), por.get('rpl'), por.get('rhl'), extra))
+                            elif por_hex:
+                                sys.stderr.write('OTA PoR[%s]: undecodable raw=%s\n' % (por_src, str(por_hex)))
+                            else:
+                                sys.stderr.write('OTA PoR[%s]: none\n' % por_src)
                 finally:
                     if submit_handler and hasattr(scc, '_tp'):
                         scc._tp.proactive_handler = old_proactive
