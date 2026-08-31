@@ -10,10 +10,14 @@ VENV_DIR="$SCRIPT_DIR/.venv"
 
 # Auto-detect reader
 READER_ARGS=""
-if command -v pcscd > /dev/null 2>&1 && pgrep -x pcscd > /dev/null 2>&1; then
-    READER_ARGS="-p 0"
-elif [ -e /dev/ttyUSB0 ]; then
-    READER_ARGS="-d /dev/ttyUSB0"
+if command -v pcscd > /dev/null 2>&1; then
+    # Give pcscd a moment if it's not running yet (USB enumeration delay)
+    if ! pgrep -x pcscd > /dev/null 2>&1 && ! pgrep -x pcscd.bin > /dev/null 2>&1; then
+        sleep 1
+    fi
+    if pgrep -x pcscd > /dev/null 2>&1 || pgrep -x pcscd.bin > /dev/null 2>&1; then
+        READER_ARGS="-p 0"
+    fi
 fi
 
 SERVER=""

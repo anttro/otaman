@@ -56,6 +56,23 @@ def main():
     rs = None
     sim_menu = None
     event_list = None
+    # Auto-detect PC/SC reader if none was explicitly specified.
+    # Handles late pcscd startup and USB enumeration delays.
+    if opts.pcsc_dev is None and opts.pcsc_regex is None:
+        try:
+            from smartcard.System import readers
+            for attempt in range(3):
+                r = readers()
+                if r:
+                    sys.stderr.write('INIT: PC/SC reader detected: %s\n' % r[0])
+                    opts.pcsc_dev = 0
+                    break
+                if attempt < 2:
+                    sys.stderr.write('INIT: no PC/SC readers found, retrying in 2s...\n')
+                    time.sleep(2)
+        except Exception:
+            pass  # smartcard module not available or pcscd unreachable
+
     try:
         kwargs = {}
         if opts.apdu_trace:
