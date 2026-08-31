@@ -18,7 +18,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.19'
+VERSION = '1.9.21'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -2138,6 +2138,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 install_params_hex = body.get('install_params', '').replace(' ', '')
                 stk_params_hex = body.get('stk_params', '').replace(' ', '')
                 make_selectable = body.get('make_selectable', True)
+                privileges_hex = body.get('privileges', '').replace(' ', '') or '00'
 
                 steps = []
                 include_cpi = body.get('includeCpi', True)
@@ -2228,7 +2229,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 # Step 3: INSTALL [for install]
                 sys.stderr.write('RAM-INSTALL: Step 3 — INSTALL [for install]\n')
                 instance_aid = module_aid
-                privileges = '00'
+                privileges = privileges_hex
                 inst_params = install_params_hex if install_params_hex else 'C900'
                 if stk_params_hex:
                     inst_params += stk_params_hex

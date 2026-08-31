@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.19</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.21</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -401,7 +401,7 @@
 			</select>
 		</div>
 		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Application / Instance AID (hex)</label>
 			<input id="ram-aid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
 		</div>
 		<div id="ram-sdaid-row" class="mb-3">
@@ -409,11 +409,11 @@
 			<input id="ram-sdaid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
 		</div>
 		<div id="ram-elfaid-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">ELF AID (hex)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Load File AID / Package AID (hex)</label>
 			<input id="ram-elfaid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
 		</div>
 		<div id="ram-modaid-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Module AID (hex)</label>
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Executable Module AID / Applet Class AID (hex)</label>
 			<input id="ram-modaid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
 		</div>
 		<div id="ram-priv-row" class="mb-3">
@@ -902,9 +902,114 @@
 				<div id="ram-cap-info" class="text-xs text-gray-500 mt-1 hidden"></div>
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300 mt-2" data-l10n="SD AID (empty = ISD)">SD AID (empty = ISD)</label>
 				<input id="ram-sd-aid" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000003000000" maxlength="32">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300 mt-2" data-l10n="Install parameters (hex, optional)">Install parameters (hex, optional)</label>
+				<div id="rc-priv-row" class="mb-3 mt-2">
+				<div class="flex items-center gap-3 mb-2">
+					<label class="text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Privileges">Privileges</label>
+					<input id="rc-priv" readonly class="font-mono w-20 border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 bg-gray-100 dark:bg-slate-800" value="00">
+				</div>
+				<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+					<div class="font-medium text-gray-700 dark:text-slate-300 mb-1" data-l10n="Byte 1">Byte 1</div>
+					<div class="font-medium text-gray-700 dark:text-slate-300 mb-1" data-l10n="Byte 2">Byte 2</div>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b1" value="80" onchange="updateRcPriv()"> Security Domain</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b2" value="80" onchange="updateRcPriv()"> Trusted Path</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b1" value="40" onchange="updateRcPriv()"> DAP Verification</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b2" value="40" onchange="updateRcPriv()"> Authorized Management</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b1" value="20" onchange="updateRcPriv()"> Delegated Management</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b2" value="20" onchange="updateRcPriv()"> Token Verification</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b1" value="10" onchange="updateRcPriv()"> Card Lock</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b2" value="10" onchange="updateRcPriv()"> Global Delete</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b1" value="08" onchange="updateRcPriv()"> Card Terminate</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b2" value="08" onchange="updateRcPriv()"> Global Lock</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b1" value="04" onchange="updateRcPriv()"> Card Reset</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b2" value="04" onchange="updateRcPriv()"> Global Registry</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b1" value="02" onchange="updateRcPriv()"> CVM Management</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b1" value="01" onchange="updateRcPriv()"> Mandated DAP Verification</label>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b2" value="02" onchange="updateRcPriv()"> Final Application</label>
+					<div></div>
+					<label class="flex items-center gap-1"><input type="checkbox" class="rc-priv-b3" value="80" onchange="updateRcPriv()"> Receipt Generation</label>
+				</div>
+			</div>
+			<div id="rc-toolkit-row" class="mb-3">
+				<div class="mb-2">
+					<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
+						<input id="rc-toolkit-enable" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateRcToolkit()">
+						SIM/UICC Toolkit parameters
+					</label>
+				</div>
+				<div id="rc-toolkit-body" class="hidden">
+					<div class="mb-3">
+						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Toolkit mode">Toolkit mode</label>
+						<select id="rc-tk-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+							<option value="ca">SIM Toolkit (Tag CA)</option>
+							<option value="ea">UICC Toolkit (Tag EA)</option>
+						</select>
+					</div>
+					<div class="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Priority">Priority</label>
+							<input id="rc-tk-priority" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Timers (max)">Timers (max)</label>
+							<input id="rc-tk-timers" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Menu text length">Menu text length</label>
+							<input id="rc-tk-textlen" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Menu items">Menu items</label>
+							<input id="rc-tk-menus" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="First menu position">First menu position</label>
+							<input id="rc-tk-firstpos" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="First menu ID (hex)">First menu ID (hex)</label>
+							<input id="rc-tk-firstid" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Last menu position">Last menu position</label>
+							<input id="rc-tk-lastpos" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Last menu ID (hex)">Last menu ID (hex)</label>
+							<input id="rc-tk-lastid" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Channels (max)">Channels (max)</label>
+							<input id="rc-tk-channels" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">MSL (SPI1, hex)</label>
+							<select id="rc-tk-msl" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+								<option value="00">00 — no verification</option>
+								<option value="11">11 — RC/CC/DS</option>
+								<option value="12">12 — RC/DS/CC</option>
+								<option value="15">15 — RC/DS/CC + MAC</option>
+								<option value="16" selected>16 — RC/DS/CC + MAC + Cipher</option>
+								<option value="19">19 — RC/DS/CC + MAC + Cipher + DS</option>
+							</select>
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">TAR (3 bytes)</label>
+							<input id="rc-tk-tar" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
+						</div>
+						<div id="rc-tk-ad-row">
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Access domain (hex)">Access domain (hex)</label>
+							<input id="rc-tk-ad" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
+						</div>
+						<div id="rc-tk-services-row">
+							<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Max services">Max services</label>
+							<input id="rc-tk-services" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+					</div>
+				</div>
+			</div>
+			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Install parameters (hex, optional)">Install parameters (hex, optional)</label>
 				<input id="ram-install-params-hex" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="C9 TLV">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300 mt-2" data-l10n="STK parameters (hex, optional)">STK parameters (hex, optional)</label>
+				<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400 mt-2" data-l10n="STK parameters (hex, optional)">STK parameters (hex, optional)</label>
 				<input id="ram-stk-params" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="CA TLV">
 				<label class="flex items-center gap-2 mt-2">
 					<input type="checkbox" id="ram-make-sel" checked> <span class="text-sm" data-l10n="Make selectable">Make selectable</span>
@@ -1372,6 +1477,97 @@ function updateRamTkMode() {
 	document.getElementById('ram-tk-services-row').style.display = isSim ? 'none' : '';
 }
 document.getElementById('ram-tk-mode').addEventListener('change', updateRamTkMode);
+
+function updateRcPriv() {
+	let b1 = 0, b2 = 0, b3 = 0;
+	document.querySelectorAll('.rc-priv-b1:checked').forEach(cb => b1 |= parseInt(cb.value, 16));
+	document.querySelectorAll('.rc-priv-b2:checked').forEach(cb => b2 |= parseInt(cb.value, 16));
+	document.querySelectorAll('.rc-priv-b3:checked').forEach(cb => b3 |= parseInt(cb.value, 16));
+	let hex = b1.toString(16).padStart(2, '0').toUpperCase();
+	hex += b2.toString(16).padStart(2, '0').toUpperCase();
+	if (b3) hex += b3.toString(16).padStart(2, '0').toUpperCase();
+	document.getElementById('rc-priv').value = hex;
+}
+
+function updateRcToolkit() {
+	const checked = document.getElementById('rc-toolkit-enable').checked;
+	document.getElementById('rc-toolkit-body').classList.toggle('hidden', !checked);
+	updateRcTkMode();
+	updateStkParamsHex();
+}
+function updateRcTkMode() {
+	const isSim = document.getElementById('rc-tk-mode').value === 'ca';
+	document.getElementById('rc-tk-ad-row').style.display = isSim ? '' : 'none';
+	document.getElementById('rc-tk-services-row').style.display = isSim ? 'none' : '';
+}
+document.getElementById('rc-tk-mode').addEventListener('change', () => { updateRcTkMode(); updateStkParamsHex(); });
+
+function buildRcToolkitParams() {
+	if (!document.getElementById('rc-toolkit-enable').checked) return '';
+	const tkMode = document.getElementById('rc-tk-mode').value;
+	const priority = parseInt(document.getElementById('rc-tk-priority').value) || 0;
+	const timers = parseInt(document.getElementById('rc-tk-timers').value) || 0;
+	const textLen = parseInt(document.getElementById('rc-tk-textlen').value) || 0;
+	const menus = parseInt(document.getElementById('rc-tk-menus').value) || 0;
+	const firstPos = parseInt(document.getElementById('rc-tk-firstpos').value) || 0;
+	const firstId = (document.getElementById('rc-tk-firstid').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2) || '00';
+	const lastPos = parseInt(document.getElementById('rc-tk-lastpos').value) || 0;
+	const lastId = (document.getElementById('rc-tk-lastid').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2) || '00';
+	const channels = parseInt(document.getElementById('rc-tk-channels').value) || 0;
+	const msl = document.getElementById('rc-tk-msl').value;
+	const tar = (document.getElementById('rc-tk-tar').value || '').replace(/[^0-9a-fA-F]/g, '');
+	const adRaw = (document.getElementById('rc-tk-ad').value || '').replace(/[^0-9a-fA-F]/g, '');
+	const ad = adRaw.padStart(2, '0').slice(0, 2);
+	const services = parseInt(document.getElementById('rc-tk-services').value) || 0;
+
+	if (tar && tar.length % 6 !== 0) return null;
+	if (parseInt(firstId, 16) > 0x7F || parseInt(lastId, 16) > 0x7F) return null;
+
+	let menuPairs = '';
+	for (let i = 1; i <= menus; i++) {
+		if (i === 1) menuPairs += firstPos.toString(16).padStart(2, '0') + firstId;
+		else if (i === menus) menuPairs += lastPos.toString(16).padStart(2, '0') + lastId;
+		else menuPairs += '0000';
+	}
+
+	const mslField = msl === '00' ? '00' : '0201' + msl;
+
+	let tkPayload = '';
+	if (tkMode === 'ca') {
+		tkPayload = (adRaw ? '01' + ad : '00') +
+			priority.toString(16).padStart(2, '0') +
+			timers.toString(16).padStart(2, '0') +
+			textLen.toString(16).padStart(2, '0') +
+			menus.toString(16).padStart(2, '0') +
+			menuPairs +
+			channels.toString(16).padStart(2, '0') +
+			mslField +
+			(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00');
+		const caTlv = 'CA' + berLenStr(tkPayload.length / 2) + tkPayload;
+		return 'EF' + berLenStr(caTlv.length / 2) + caTlv;
+	} else {
+		tkPayload = priority.toString(16).padStart(2, '0') +
+			timers.toString(16).padStart(2, '0') +
+			textLen.toString(16).padStart(2, '0') +
+			menus.toString(16).padStart(2, '0') +
+			menuPairs +
+			channels.toString(16).padStart(2, '0') +
+			mslField +
+			(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00') +
+			services.toString(16).padStart(2, '0');
+		const innerTlv = '80' + berLenStr(tkPayload.length / 2) + tkPayload;
+		return 'EA' + berLenStr(innerTlv.length / 2) + innerTlv;
+	}
+}
+
+function updateStkParamsHex() {
+	const tk = buildRcToolkitParams();
+	document.getElementById('ram-stk-params').value = tk || '';
+}
+
+function updateInstallParamsHex() {
+	document.getElementById('ram-install-params-hex').value = 'C900';
+}
 
 // ===== GSM 7-bit alphabet =====
 const GSM7_ALPHABET = [
@@ -4251,6 +4447,10 @@ function ramApplyCard(idx) {
 function ramOpChanged() {
 	const op = document.getElementById('ram-op').value;
 	document.getElementById('ram-install-params').classList.toggle('hidden', op !== 'install-cap');
+	if (op !== 'explore') {
+		document.getElementById('ram-explorer').classList.add('hidden');
+		document.getElementById('ram-explorer').innerHTML = '';
+	}
 }
 
 function ramShowProgress(text) {
@@ -4539,7 +4739,7 @@ function ramRenderExploreHtml(mem, isd, apps, elfs) {
 	}
 	if (isd && isd.length) {
 		html += '<div class="mb-4">';
-		html += '<div class="font-semibold text-sm mb-1" data-l10n="ISD">ISD</div>';
+		html += '<div class="font-semibold text-sm mb-1" data-l10n="ISD (Issuer Security Domain)">ISD (Issuer Security Domain)</div>';
 		isd.forEach(o => {
 			html += '<div class="mb-1 pl-2 border-l-2 border-blue-400">';
 			html += '<div>AID: ' + (o.aid || '?') + '</div>';
@@ -4552,10 +4752,10 @@ function ramRenderExploreHtml(mem, isd, apps, elfs) {
 	}
 	if (apps && apps.length) {
 		html += '<div class="mb-4">';
-		html += '<div class="font-semibold text-sm mb-1" data-l10n="Applications">Applications</div>';
+		html += '<div class="font-semibold text-sm mb-1" data-l10n="Applications / Applet Instances">Applications / Applet Instances</div>';
 		apps.forEach(o => {
 			html += '<div class="mb-1 pl-2 border-l-2 border-green-400">';
-			html += '<div>AID: ' + (o.aid || '?');
+			html += '<div>Application / Instance AID: ' + (o.aid || '?');
 			if (o.aid) {
 				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', false)" class="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400" data-l10n="Delete">Delete</button>';
 			}
@@ -4563,7 +4763,7 @@ function ramRenderExploreHtml(mem, isd, apps, elfs) {
 			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
 			if (o.privileges) html += '<div>Privileges: ' + ramFmtPrivileges(o.privileges) + ' (' + o.privileges + ')</div>';
 			if (o.implicitSel) html += '<div>Implicit sel: ' + o.implicitSel + '</div>';
-			if (o.elfAid) html += '<div>ELF AID: ' + o.elfAid + '</div>';
+			if (o.elfAid) html += '<div>Load File AID / Package AID: ' + o.elfAid + '</div>';
 			if (o.sdAid) html += '<div>SD AID: ' + o.sdAid + '</div>';
 			html += '</div>';
 		});
@@ -4571,19 +4771,19 @@ function ramRenderExploreHtml(mem, isd, apps, elfs) {
 	}
 	if (elfs && elfs.length) {
 		html += '<div class="mb-4">';
-		html += '<div class="font-semibold text-sm mb-1" data-l10n="Executable Load Files">Executable Load Files</div>';
+		html += '<div class="font-semibold text-sm mb-1" data-l10n="Executable Load Files (ELFs) / Packages">Executable Load Files (ELFs) / Packages</div>';
 		elfs.forEach(o => {
 			html += '<div class="mb-1 pl-2 border-l-2 border-purple-400">';
-			html += '<div>AID: ' + (o.aid || '?');
+			html += '<div>Load File AID / Package AID: ' + (o.aid || '?');
 			if (o.aid) {
 				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', false)" class="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400" data-l10n="Delete">Delete</button>';
-				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', true)" class="ml-1 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded hover:bg-red-300 dark:bg-red-900/50 dark:text-red-300" data-l10n="Delete All">Delete All</button>';
+				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', true)" class="ml-1 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400" data-l10n="Delete All">Delete All</button>';
 			}
 			html += '</div>';
 			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
 			if (o.version) html += '<div>Version: ' + o.version + '</div>';
 			if (o.moduleAids && o.moduleAids.length) {
-				html += '<div>Module AIDs:</div>';
+				html += '<div>Executable Module AIDs / Applet Class AIDs:</div>';
 				o.moduleAids.forEach(m => { html += '<div class="pl-4">- ' + m + '</div>'; });
 			}
 			if (o.sdAid) html += '<div>SD AID: ' + o.sdAid + '</div>';
@@ -4757,6 +4957,7 @@ async function ramInstallCap(sp) {
 	const body = {
 		cap_hex: capHex,
 		sd_aid: (document.getElementById('ram-sd-aid').value || '').replace(/[^0-9a-fA-F]/g, ''),
+		privileges: (document.getElementById('rc-priv').value || '00').replace(/[^0-9a-fA-F]/g, ''),
 		install_params: (document.getElementById('ram-install-params-hex').value || '').replace(/[^0-9a-fA-F]/g, ''),
 		stk_params: (document.getElementById('ram-stk-params').value || '').replace(/[^0-9a-fA-F]/g, ''),
 		make_selectable: document.getElementById('ram-make-sel').checked,
@@ -5038,8 +5239,14 @@ function cardsApply(idx) {
 	if (!c) return;
 	document.getElementById('sp-spi1').value = c.spi1;
 	document.getElementById('sp-spi2-hex').value = c.spi2;
-	document.getElementById('sp-kic-hex').value = c.kic;
-	document.getElementById('sp-kid-hex').value = c.kid;
+	const kicByte = parseInt(c.kic, 16);
+	document.getElementById('sp-kic-idx').value = ((kicByte >> 4) & 0x0F).toString(16).toUpperCase();
+	document.getElementById('sp-kic-alg').value = (kicByte & 0x0F).toString(16).padStart(2, '0');
+	updateSpKic();
+	const kidByte = parseInt(c.kid, 16);
+	document.getElementById('sp-kid-idx').value = ((kidByte >> 4) & 0x0F).toString(16).toUpperCase();
+	document.getElementById('sp-kid-alg').value = (kidByte & 0x0F).toString(16).padStart(2, '0');
+	updateSpKid();
 	document.getElementById('sp-tar').value = c.tar || 'B00001';
 	document.getElementById('sp-cntr').value = c.cntr;
 	document.getElementById('sp-kic-key').value = c.kicKey;
@@ -6591,8 +6798,9 @@ const LANG_RU = {
 	'PIN value': 'Значение PIN',
 	'Old PIN': 'Старый PIN',
 	'New PIN': 'Новый PIN',
-	'ELF AID (hex)': 'ELF AID (hex)',
-	'Module AID (hex)': 'AID модуля (hex)',
+	'Application / Instance AID (hex)': 'AID приложения / экземпляра (hex)',
+	'Load File AID / Package AID (hex)': 'AID Load File / пакета (hex)',
+	'Executable Module AID / Applet Class AID (hex)': 'AID исполняемого модуля / класса апплета (hex)',
 	'Security level (P1)': 'Уровень безопасности (P1)',
 	'Target': 'Цель',
 	'Current EF (case 1)': 'Текущий EF (case 1)',
@@ -6663,6 +6871,12 @@ const LANG_RU = {
 	'Remove': 'Удалить',
 	'Delete': 'Удалить',
 	'Delete All': 'Удалить все',
+	'ISD (Issuer Security Domain)': 'ISD (домен безопасности эмитента)',
+	'Applications / Applet Instances': 'Приложения / экземпляры апплетов',
+	'Executable Load Files (ELFs) / Packages': 'Исполняемые файлы загрузки (ELF) / пакеты',
+	'Application / Instance AID:': 'AID приложения / экземпляра:',
+	'Load File AID / Package AID:': 'AID Load File / пакета:',
+	'Executable Module AIDs / Applet Class AIDs:': 'AID исполняемых модулей / классов апплетов:',
 	'No cards defined.': 'Карты не заданы.',
 	'Card presets': 'Выбор карты',
 	'— Select card —': '— Выберите карту —',

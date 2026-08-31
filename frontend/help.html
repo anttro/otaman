@@ -201,9 +201,12 @@
 
 
 <section class="mb-10">
-	<h2 id="secured-packet" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">3. SCP80 tab — Secured Packet</h2>
-	<p class="mb-3">The <strong>SCP80</strong> top-level tab groups the SCP80-related views. It is switched by two pills: <strong>Secured Packet</strong> (this section) and <strong>Cards</strong> (section 5). Assembles SCP80 secured packets per ETSI TS 102 225.</p>
-	<h3 id="packet-structure" class="text-lg font-medium mb-2">Packet structure</h3>
+	<h2 id="scp80" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">3. SCP80 tab</h2>
+	<p class="mb-3">The <strong>SCP80</strong> top-level tab groups the SCP80-related views. It is switched by three pills: <strong>Secured Packet</strong>, <strong>Cards</strong>, and <strong>RAM</strong>. Assembles SCP80 secured packets per ETSI TS 102 225.</p>
+
+	<h3 id="secured-packet" class="text-lg font-medium mb-2">3.1 Secured Packet</h3>
+	<p class="mb-2">Builds SCP80 secured packets per ETSI TS 102 225.</p>
+	<h4 id="packet-structure" class="font-medium mb-1">Packet structure</h4>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Field</th><th class="text-left py-1 px-2">Size</th><th class="text-left py-1 px-2">Description</th></tr></thead>
 		<tbody>
@@ -221,7 +224,7 @@
 			<tr><td class="py-1 px-2 font-mono">Secured Data</td><td class="py-1 px-2">var.</td><td class="py-1 px-2">Padded APDU (encrypted if required)</td></tr>
 		</tbody>
 	</table>
-	<h3 id="packet-crypto" class="text-lg font-medium mb-2">Crypto</h3>
+	<h4 id="packet-crypto" class="font-medium mb-1">Crypto</h4>
 	<ul class="list-disc list-inside text-sm space-y-1">
 		<li><strong>3DES-CBC</strong> encryption (zero ICV), 8/16/24-byte keys &mdash; deprecated since Rel-18, still supported for backwards compatibility</li>
 		<li><strong>AES-CBC</strong> encryption (zero ICV, zero-padded to 16), 16/24/32-byte keys (TS 102 225 &sect;5.1.2, KIc <code class="font-mono text-sm">x2</code>)</li>
@@ -232,21 +235,8 @@
 	</ul>
 	<p class="text-sm mb-3">A &ldquo;Verify vs pySim&rdquo; button cross-checks the assembled packet against pySim&rsquo;s reference <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. A &ldquo;Send to Card&rdquo; button delivers it via SMS-PP-DOWNLOAD ENVELOPE (when connected to the server).</p>
 
-
-<section class="mb-10">
-	<h2 id="response-parser" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Response parser tab</h2>
-	<p class="mb-3">Decodes a raw command response: pick the command that was sent, enter the SW (e.g. <code class="font-mono text-sm">9000</code>) and the response data hex, then press <strong>Decode</strong>.</p>
-	<ul class="list-disc list-inside text-sm space-y-1">
-		<li><strong>Command</strong> — SIM/USIM group (SELECT, STATUS, READ/UPDATE, PIN ops, CAT commands like TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, &hellip;) or RAM/GP group (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP commands).</li>
-		<li><strong>SW decode</strong> — status words resolved against generic, UICC (TS 102 221), and GlobalPlatform maps, with context auto-detected.</li>
-		<li><strong>Privilege decode</strong> — GET DATA / INSTALL response payloads decode the privilege bytes into human-readable flags.</li>
-		<li><strong>Response data</strong> — raw hex rendered and interpreted per command (e.g. SELECT FCP templates).</li>
-	</ul>
-
-
-<section class="mb-10">
-	<h2 id="cards" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. SCP80 tab — Cards</h2>
-	<p class="mb-3">The second pill of the <strong>SCP80</strong> tab. Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet view can auto-fill keys and parameters.</p>
+	<h3 id="cards" class="text-lg font-medium mb-2">3.2 Cards</h3>
+	<p class="mb-2">Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet view can auto-fill keys and parameters.</p>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Field</th><th class="text-left py-1 px-2">Description</th></tr></thead>
 		<tbody>
@@ -261,31 +251,63 @@
 	</table>
 	<p class="text-sm mb-3"><strong>Export as JSON</strong> / <strong>Import JSON from clipboard</strong> share presets. The selected card preset auto-fills the Secured Packet form.</p>
 
+	<h3 id="ram" class="text-lg font-medium mb-2">3.3 RAM</h3>
+	<p class="mb-2">Delivers Remote Application Management operations as SCP80 secured packets via SMS-PP-DOWNLOAD ENVELOPE. The card must support SCP03 (AES or 3DES). A saved card preset from the <strong>Cards</strong> sub-tab provides the SPI, keys, TAR, and counter.</p>
+
+	<h4 id="ram-operations" class="font-medium mb-1">Operations</h4>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Operation</th><th class="text-left py-1 px-2">Description</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Explore Card (all GP data)</td><td class="py-1 px-2">Queries GET STATUS for ISD, Applications, ELFs, and ELF Modules, plus GET DATA FF21 for memory info. Results appear in an explorer view with per-item <strong>Delete</strong> buttons.</td></tr>
+			<tr><td class="py-1 px-2">Install Package (.cap file)</td><td class="py-1 px-2">Sends a <code class="font-mono text-sm">.cap</code> file to the card via the server: INSTALL[for load] &rarr; LOAD &times;N &rarr; INSTALL[for install (+make selectable)].</td></tr>
+		</tbody>
+	</table>
+
+	<h4 id="ram-explorer" class="font-medium mb-1">Explorer View</h4>
+	<p class="text-sm mb-2">After &ldquo;Explore Card&rdquo; runs, the explorer displays:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>ISD</strong> &mdash; AID, lifecycle, privileges (no delete; the ISD cannot be removed)</li>
+		<li><strong>Applications</strong> &mdash; AID, lifecycle, privileges, associated ELF/SD. Each has a <strong>Delete</strong> button (GP <code class="font-mono text-sm">DELETE</code> by AID).</li>
+		<li><strong>Executable Load Files</strong> &mdash; AID, lifecycle, version, module AIDs. Each has <strong>Delete</strong> (ELF only) and <strong>Delete All</strong> (cascade: ELF + modules + installed Applications, P2=<code class="font-mono text-sm">0x80</code>) buttons.</li>
+	</ul>
+	<p class="text-sm mb-3">Delete confirms via a browser prompt before sending the GP <code class="font-mono text-sm">DELETE</code> command via SCP80. The explorer auto-refreshes after a successful deletion.</p>
+
 
 <section class="mb-10">
-	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Card reader (pySim) tab</h2>
+	<h2 id="response-parser" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Response parser tab</h2>
+	<p class="mb-3">Decodes a raw command response: pick the command that was sent, enter the SW (e.g. <code class="font-mono text-sm">9000</code>) and the response data hex, then press <strong>Decode</strong>.</p>
+	<ul class="list-disc list-inside text-sm space-y-1">
+		<li><strong>Command</strong> — SIM/USIM group (SELECT, STATUS, READ/UPDATE, PIN ops, CAT commands like TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, &hellip;) or RAM/GP group (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP commands).</li>
+		<li><strong>SW decode</strong> — status words resolved against generic, UICC (TS 102 221), and GlobalPlatform maps, with context auto-detected.</li>
+		<li><strong>Privilege decode</strong> — GET DATA / INSTALL response payloads decode the privilege bytes into human-readable flags.</li>
+		<li><strong>Response data</strong> — raw hex rendered and interpreted per command (e.g. SELECT FCP templates).</li>
+	</ul>
+
+
+<section class="mb-10">
+	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Card reader (pySim) tab</h2>
 	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations. Sub-tabs: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>, and <strong>Proactive UICC</strong>.</p>
 
-	<h3 id="file-manager" class="text-lg font-medium mb-2">6.1 File manager</h3>
+	<h3 id="file-manager" class="text-lg font-medium mb-2">5.1 File manager</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Read</strong> — reads the selected file (auto-detects transparent vs record files)</li>
 		<li><strong>Edit</strong> — modify hex data, <strong>Save</strong> to write back</li>
 		<li><strong>Raw / Decoded</strong> — toggle between hex dump and pySim-decoded JSON</li>
 	</ul>
 
-	<h3 id="custom-files" class="text-lg font-medium mb-2">6.2 Custom files</h3>
+	<h3 id="custom-files" class="text-lg font-medium mb-2">5.2 Custom files</h3>
 	<p class="text-sm mb-3">Add files that pySim&rsquo;s model does not cover. Persists in <code class="font-mono text-sm">localStorage</code>; JSON export/import.</p>
 
-	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">6.3 pySim command line</h3>
+	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">5.3 pySim command line</h3>
 	<p class="text-sm mb-3">Execute any pySim-shell command with usage hints (300&nbsp;ms) and autocomplete.</p>
 
-	<h3 id="raw-apdu" class="text-lg font-medium mb-2">6.4 Raw APDU</h3>
+	<h3 id="raw-apdu" class="text-lg font-medium mb-2">5.4 Raw APDU</h3>
 	<p class="text-sm mb-3">Send an arbitrary APDU and view the raw response.</p>
 
-	<h3 id="proactive-uicc" class="text-lg font-medium mb-2">6.5 Proactive UICC</h3>
+	<h3 id="proactive-uicc" class="text-lg font-medium mb-2">5.5 Proactive UICC</h3>
 	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session: subscribed events, the proactive command log, the PROVIDE LOCAL INFORMATION data dictionary, and STATUS polling.</p>
 
-	<h4 id="subscribed-events" class="font-medium mb-1">6.5.1 Subscribed events (SET UP EVENT LIST)</h4>
+	<h4 id="subscribed-events" class="font-medium mb-1">5.5.1 Subscribed events (SET UP EVENT LIST)</h4>
 	<p class="text-sm mb-2">The events the card monitors. Each event has a <strong>Send</strong> button that opens a form specific to the event type:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>No-data events</strong> (User Activity, Idle Screen, Data Available, &hellip;) — one-click notification</li>
@@ -295,10 +317,10 @@
 	</ul>
 	<p class="text-sm mb-3">Sending an event uses <code class="font-mono text-sm">ENVELOPE(Event Download)</code> per TS 102 223 / TS 131 111.</p>
 
-	<h4 id="proactive-log" class="font-medium mb-1">6.5.2 Proactive command log</h4>
+	<h4 id="proactive-log" class="font-medium mb-1">5.5.2 Proactive command log</h4>
 	<p class="text-sm mb-2">Chronological list of fetched proactive commands. Each row shows the elapsed time, type code, name, and a decoded qualifier (for commands that have one). Commands with response data show a <code class="font-mono text-sm">Response:</code> line with the TERMINAL RESPONSE bytes (boilerplate TLVs stripped); PROVIDE LOCAL INFORMATION responses are decoded using the PLI data dictionary decoders.</p>
 
-	<h4 id="pli-dict" class="font-medium mb-1">6.5.3 PROVIDE LOCAL INFORMATION data dictionary</h4>
+	<h4 id="pli-dict" class="font-medium mb-1">5.5.3 PROVIDE LOCAL INFORMATION data dictionary</h4>
 	<p class="text-sm mb-2">Editable hex values for all 22 PLI qualifiers (TS 102 223 &sect;8.6 + TS 131 111). Ten qualifiers have inline decode/encode forms:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
@@ -308,10 +330,10 @@
 	</ul>
 	<p class="text-sm mb-3">Values persist server-side until restart. When the card issues PLI, the server injects the dictionary values into the TERMINAL RESPONSE.</p>
 
-	<h4 id="status-polling" class="font-medium mb-1">6.5.4 STATUS polling</h4>
+	<h4 id="status-polling" class="font-medium mb-1">5.5.4 STATUS polling</h4>
 	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
 
-	<h3 id="usage-scenarios" class="text-lg font-medium mb-2">6.6 Usage scenarios</h3>
+	<h3 id="usage-scenarios" class="text-lg font-medium mb-2">5.6 Usage scenarios</h3>
 
 	<h4 id="scenario-a" class="font-medium mb-1">Scenario A &mdash; Working with files not in pySim&rsquo;s model (Custom files)</h4>
 	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
@@ -349,10 +371,10 @@
 
 
 <section class="mb-10">
-	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Server installation</h2>
+	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Server installation</h2>
 	<p class="mb-3">Live card operations (Card reader tab, Proactive UICC, OTA delivery) require the local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — a small HTTP server bundled with OTAMan that wraps pySim, talks to the reader over PC/SC or serial, and also serves the PWA itself (open <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
 
-	<h3 id="prerequisites" class="text-lg font-medium mb-2">7.1 Prerequisites</h3>
+	<h3 id="prerequisites" class="text-lg font-medium mb-2">6.1 Prerequisites</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Python 3.8+</strong> with <code class="font-mono text-sm">pip</code></li>
 		<li><strong>Git</strong></li>
@@ -360,20 +382,20 @@
 		<li><strong>Windows only</strong> — use <strong>Python 3.10&ndash;3.13</strong> (3.13 recommended): <code class="font-mono text-sm">pyscard</code> (the PC/SC driver wrapper) ships precompiled wheels for these versions. On Python 3.9 / 3.14 pip builds <code class="font-mono text-sm">pyscard</code> from source, which requires Microsoft C++ Build Tools (&ldquo;Desktop development with C++&rdquo;). The SMPP bridge (<code class="font-mono text-sm">smpp.twisted3</code>) is intentionally not installed on Windows, so no C++ Build Tools are needed for Python 3.10&ndash;3.13.</li>
 	</ul>
 
-	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Quick start — Linux / macOS</h3>
+	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">6.2 Quick start — Linux / macOS</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 chmod +x setup.sh start.sh
 ./setup.sh          # creates .venv, installs pysim + server (run once)
 ./start.sh          # starts the server (serves PWA + API, auto-detects reader)</pre>
 
-	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">7.3 Quick start — Windows</h3>
+	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">6.3 Quick start — Windows</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 setup.bat           # creates .venv, installs pysim + server (run once)
 start.bat           # starts the server (serves PWA + API)</pre>
 
-	<h3 id="helper-scripts" class="text-lg font-medium mb-2">7.4 Helper scripts</h3>
+	<h3 id="helper-scripts" class="text-lg font-medium mb-2">6.4 Helper scripts</h3>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Script</th><th class="text-left py-1 px-2">Purpose</th></tr></thead>
 		<tbody>
@@ -382,7 +404,7 @@ start.bat           # starts the server (serves PWA + API)</pre>
 		</tbody>
 	</table>
 
-	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">7.5 Reader auto-detection (<code class="font-mono text-sm">start.sh</code>)</h3>
+	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">6.5 Reader auto-detection (<code class="font-mono text-sm">start.sh</code>)</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>PC/SC (Linux)</strong> — if the <code class="font-mono text-sm">pcscd</code> daemon is running, passes <code class="font-mono text-sm">-p 0</code></li>
 		<li><strong>Serial (Linux)</strong> — if <code class="font-mono text-sm">/dev/ttyUSB0</code> exists, passes <code class="font-mono text-sm">-d /dev/ttyUSB0</code></li>
@@ -390,7 +412,7 @@ start.bat           # starts the server (serves PWA + API)</pre>
 	</ul>
 	<p class="text-sm mb-3">If no reader is detected, the server starts without reader arguments and shows &ldquo;Reader: none&rdquo;. The card can be initialized later via the <strong>Equip</strong> button in the Card reader tab.</p>
 
-	<h3 id="manual-install" class="text-lg font-medium mb-2">7.6 Manual installation</h3>
+	<h3 id="manual-install" class="text-lg font-medium mb-2">6.6 Manual installation</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3"># Create and activate a venv
 python3 -m venv .venv
 source .venv/bin/activate   # Linux/macOS
@@ -409,7 +431,7 @@ pysim-otaman-server --http-port 8080</pre>
 
 
 <section class="mb-10">
-	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">8. Version compatibility</h2>
+	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Version compatibility</h2>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (OTAMan)</th><th class="text-left py-1 px-2">Server</th><th class="text-left py-1 px-2">Status</th></tr></thead>
 		<tbody>

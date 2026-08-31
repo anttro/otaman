@@ -201,9 +201,12 @@
 
 
 <section class="mb-10">
-	<h2 id="secured-packet" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">3. Вкладка SCP80 — Secured Packet</h2>
-	<p class="mb-3">Верхнеуровневая вкладка <strong>SCP80</strong> объединяет разделы, связанные с SCP80. Переключение — двумя переключателями: <strong>Secured Packet</strong> (этот раздел) и <strong>Cards</strong> (раздел 5). Собирает защищённые пакеты SCP80 по ETSI TS 102 225.</p>
-	<h3 id="packet-structure" class="text-lg font-medium mb-2">Структура пакета</h3>
+	<h2 id="scp80" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">3. Вкладка SCP80</h2>
+	<p class="mb-3">Верхнеуровневая вкладка <strong>SCP80</strong> объединяет разделы, связанные с SCP80. Переключение — тремя переключателями: <strong>Secured Packet</strong>, <strong>Cards</strong> и <strong>RAM</strong>. Собирает защищённые пакеты SCP80 по ETSI TS 102 225.</p>
+
+	<h3 id="secured-packet" class="text-lg font-medium mb-2">3.1 Secured Packet</h3>
+	<p class="mb-2">Собирает защищённые пакеты SCP80 по ETSI TS 102 225.</p>
+	<h4 id="packet-structure" class="font-medium mb-1">Структура пакета</h4>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Поле</th><th class="text-left py-1 px-2">Размер</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
 		<tbody>
@@ -221,7 +224,7 @@
 			<tr><td class="py-1 px-2 font-mono">Secured Data</td><td class="py-1 px-2">пер.</td><td class="py-1 px-2">APDU (с шифрованием при необходимости)</td></tr>
 		</tbody>
 	</table>
-	<h3 id="packet-crypto" class="text-lg font-medium mb-2">Крипто</h3>
+	<h4 id="packet-crypto" class="font-medium mb-1">Крипто</h4>
 	<ul class="list-disc list-inside text-sm space-y-1">
 		<li><strong>3DES-CBC</strong> шифрование (нулевой ICV), ключи 8/16/24 байта &mdash; устарело с Rel-18, но поддерживается для обратной совместимости</li>
 		<li><strong>AES-CBC</strong> шифрование (нулевой ICV, дополнение нулями до 16), ключи 16/24/32 байта (TS 102 225 &sect;5.1.2, KIc <code class="font-mono text-sm">x2</code>)</li>
@@ -232,20 +235,46 @@
 	</ul>
 	<p class="text-sm mb-3">Кнопка &laquo;Verify vs pySim&raquo; сверяет собранный пакет с эталонной реализацией <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. Кнопка &laquo;Send to Card&raquo; доставляет пакет через ENVELOPE SMS-PP-DOWNLOAD (при подключении к серверу).</p>
 
+	<h3 id="cards" class="text-lg font-medium mb-2">3.2 Cards</h3>
+	<p class="mb-2">Хранит предустановки карт локально в браузере (<code class="font-mono text-sm">localStorage</code>), чтобы представление Secured Packet могло автоматически подставлять ключи и параметры.</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Поле</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Понятная метка</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Опциональный идентификатор карты</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Индикаторы ключа и алгоритма (например, 15 = индекс 1, 3DES-CBC2; x2 = AES)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Счётчик повторов (5 байт)</td></tr>
+			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex-символа (ключи 8/16/24 байта 3DES) или 32/48/64 hex-символа (ключи 16/24/32 байта AES)</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-3"><strong>Export as JSON</strong> / <strong>Import JSON from clipboard</strong> для обмена предустановками. Выбранная предустановка автоматически заполняет форму Secured Packet.</p>
+
+	<h3 id="ram" class="text-lg font-medium mb-2">3.3 RAM</h3>
+	<p class="mb-2">Выполняет операции удалённого управления приложениями (Remote Application Management) как защищённые пакеты SCP80 через SMS-PP-DOWNLOAD ENVELOPE. Карта должна поддерживать SCP03 (AES или 3DES). Предустановка карты из подвкладки <strong>Cards</strong> обеспечивает SPI, ключи, TAR и счётчик.</p>
+
+	<h4 id="ram-operations" class="font-medium mb-1">Операции</h4>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Операция</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Explore Card (all GP data)</td><td class="py-1 px-2">Запрос GET STATUS для ISD, приложений, ELF и модулей ELF, а также GET DATA FF21 для информации о памяти. Результаты отображаются в обзоре с кнопками <strong>Delete</strong> для каждого элемента.</td></tr>
+			<tr><td class="py-1 px-2">Install Package (.cap file)</td><td class="py-1 px-2">Отправка <code class="font-mono text-sm">.cap</code> файла на карту через сервер: INSTALL[for load] &rarr; LOAD &times;N &rarr; INSTALL[for install (+make selectable)].</td></tr>
+		</tbody>
+	</table>
+
+	<h4 id="ram-explorer" class="font-medium mb-1">Обзор карты (Explorer View)</h4>
+	<p class="text-sm mb-2">После выполнения &laquo;Explore Card&raquo; отображается:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>ISD</strong> &mdash; AID, жизненный цикл, привилегии (без удаления; ISD нельзя удалить)</li>
+		<li><strong>Приложения</strong> &mdash; AID, жизненный цикл, привилегии, связанный ELF/SD. Каждое имеет кнопку <strong>Delete</strong> (GP <code class="font-mono text-sm">DELETE</code> по AID).</li>
+		<li><strong>Executable Load Files</strong> &mdash; AID, жизненный цикл, версии, AID модулей. Каждый имеет <strong>Delete</strong> (только ELF) и <strong>Delete All</strong> (каскадное: ELF + модули + установленные приложения, P2=<code class="font-mono text-sm">0x80</code>).</li>
+	</ul>
+	<p class="text-sm mb-3">Удаление подтверждается через диалог браузера перед отправкой команды GP <code class="font-mono text-sm">DELETE</code> через SCP80. Обзор автоматически обновляется после успешного удаления.</p>
+
 
 <section class="mb-10">
 	<h2 id="response-parser" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Вкладка Response parser</h2>
-	<p class="mb-3">Декодирование ответа команды: выберите отправленную команду, введите SW (например, <code class="font-mono text-sm">9000</code>) и данные ответа в hex, затем нажмите <strong>Decode</strong>.</p>
-	<ul class="list-disc list-inside text-sm space-y-1">
-		<li><strong>Команда</strong> — группа SIM/USIM (SELECT, STATUS, READ/UPDATE, операции с PIN, CAT-команды TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, &hellip;) или группа RAM/GP (INSTALL, LOAD, DELETE, GET/STORE DATA, аутентификация, команды SCP).</li>
-		<li><strong>Декодирование SW</strong> — статусные слова по картам generic, UICC (TS 102 221) и GlobalPlatform с автоопределением контекста.</li>
-		<li><strong>Декодирование привилегий</strong> — байты привилегий из ответов GET DATA / INSTALL в читаемые флаги.</li>
-		<li><strong>Данные ответа</strong> — hex с интерпретацией по команде (например, шаблоны FCP из SELECT).</li>
-	</ul>
-
-
-<section class="mb-10">
-	<h2 id="cards" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Вкладка SCP80 — Cards</h2>
 	<p class="mb-3">Второй переключатель вкладки <strong>SCP80</strong>. Хранит предустановки карт локально в браузере (<code class="font-mono text-sm">localStorage</code>), чтобы представление Secured Packet могло автоматически подставлять ключи и параметры.</p>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Поле</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
@@ -263,29 +292,29 @@
 
 
 <section class="mb-10">
-	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Вкладка Card reader (pySim)</h2>
+	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Вкладка Card reader (pySim)</h2>
 	<p class="mb-3">Подключение к локальному <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> для работы с картой. Подвкладки: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong> и <strong>Proactive UICC</strong>.</p>
 
-	<h3 id="file-manager" class="text-lg font-medium mb-2">6.1 File manager</h3>
+	<h3 id="file-manager" class="text-lg font-medium mb-2">5.1 File manager</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Read</strong> — чтение файла (автоопределение transparent/record)</li>
 		<li><strong>Edit</strong> — изменить hex-данные, <strong>Save</strong> для записи</li>
 		<li><strong>Raw / Decoded</strong> — переключение между hex-дампом и декодированным JSON</li>
 	</ul>
 
-	<h3 id="custom-files" class="text-lg font-medium mb-2">6.2 Custom files</h3>
+	<h3 id="custom-files" class="text-lg font-medium mb-2">5.2 Custom files</h3>
 	<p class="text-sm mb-3">Добавление файлов, не покрытых моделью pySim. Сохраняется в <code class="font-mono text-sm">localStorage</code>; экспорт/импорт JSON.</p>
 
-	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">6.3 pySim command line</h3>
+	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">5.3 pySim command line</h3>
 	<p class="text-sm mb-3">Выполнение любых команд pySim-shell с подсказками (300&nbsp;мс) и автодополнением.</p>
 
-	<h3 id="raw-apdu" class="text-lg font-medium mb-2">6.4 Raw APDU</h3>
+	<h3 id="raw-apdu" class="text-lg font-medium mb-2">5.4 Raw APDU</h3>
 	<p class="text-sm mb-3">Отправка произвольного APDU и просмотр ответа.</p>
 
-	<h3 id="proactive-uicc" class="text-lg font-medium mb-2">6.5 Proactive UICC</h3>
+	<h3 id="proactive-uicc" class="text-lg font-medium mb-2">5.5 Proactive UICC</h3>
 	<p class="text-sm mb-3">Работа с сессией Card Application Toolkit: подписанные события, журнал проактивных команд, словарь данных PROVIDE LOCAL INFORMATION и опрос STATUS.</p>
 
-	<h4 id="subscribed-events" class="font-medium mb-1">6.5.1 Подписанные события (SET UP EVENT LIST)</h4>
+	<h4 id="subscribed-events" class="font-medium mb-1">5.5.1 Подписанные события (SET UP EVENT LIST)</h4>
 	<p class="text-sm mb-2">События, которые отслеживает карта. У каждого события есть кнопка <strong>Send</strong>, открывающая форму, специфичную для типа события:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>События без данных</strong> (User Activity, Idle Screen, Data Available, &hellip;) — уведомление в один клик</li>
@@ -295,10 +324,10 @@
 	</ul>
 	<p class="text-sm mb-3">Отправка события использует <code class="font-mono text-sm">ENVELOPE(Event Download)</code> по TS 102 223 / TS 131 111.</p>
 
-	<h4 id="proactive-log" class="font-medium mb-1">6.5.2 Журнал проактивных команд</h4>
+	<h4 id="proactive-log" class="font-medium mb-1">5.5.2 Журнал проактивных команд</h4>
 	<p class="text-sm mb-2">Хронологический список извлечённых проактивных команд. Каждая строка показывает время, код типа, имя и декодированный квалификатор (для команд, у которых он есть). Для команд с данными ответа показывается строка <code class="font-mono text-sm">Response:</code> с байтами TERMINAL RESPONSE (без служебных TLV); ответы PROVIDE LOCAL INFORMATION декодируются через словарь данных PLI.</p>
 
-	<h4 id="pli-dict" class="font-medium mb-1">6.5.3 Словарь данных PROVIDE LOCAL INFORMATION</h4>
+	<h4 id="pli-dict" class="font-medium mb-1">5.5.3 Словарь данных PROVIDE LOCAL INFORMATION</h4>
 	<p class="text-sm mb-2">Редактируемые hex-значения для всех 22 квалификаторов PLI (TS 102 223 &sect;8.6 + TS 131 111). У десяти квалификаторов есть встроенные формы декодирования/кодирования:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
@@ -308,10 +337,10 @@
 	</ul>
 	<p class="text-sm mb-3">Значения хранятся на сервере до перезапуска. Когда карта выдаёт PLI, сервер вставляет значения словаря в TERMINAL RESPONSE.</p>
 
-	<h4 id="status-polling" class="font-medium mb-1">6.5.4 Опрос STATUS</h4>
+	<h4 id="status-polling" class="font-medium mb-1">5.5.4 Опрос STATUS</h4>
 	<p class="text-sm mb-3">Кнопка <strong>Send STATUS</strong> отправляет STATUS (F2) вручную. Переключатель <strong>Polling</strong> включает фоновый опрос: после настраиваемого интервала бездействия (аргумент сервера <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;с, по умолчанию 30&nbsp;с) сервер отправляет STATUS и обрабатывает любую ожидающую проактивную команду. При извлечении карты опрос останавливается, а состояние карты сбрасывается.</p>
 
-	<h3 id="usage-scenarios" class="text-lg font-medium mb-2">6.6 Сценарии использования</h3>
+	<h3 id="usage-scenarios" class="text-lg font-medium mb-2">5.6 Сценарии использования</h3>
 
 	<h4 id="scenario-a" class="font-medium mb-1">Сценарий A &mdash; Работа с файлами, не входящими в модель pySim (Custom files)</h4>
 	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
@@ -349,10 +378,10 @@
 
 
 <section class="mb-10">
-	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Установка сервера</h2>
+	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Установка сервера</h2>
 	<p class="mb-3">Для работы с картой (вкладка Card reader, Proactive UICC, доставка OTA) нужен локальный <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — встроенный в OTAMan HTTP-сервер, оборачивающий pySim, работающий с ридером через PC/SC или serial и раздающий сам PWA (откройте <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
 
-	<h3 id="prerequisites" class="text-lg font-medium mb-2">7.1 Требования</h3>
+	<h3 id="prerequisites" class="text-lg font-medium mb-2">6.1 Требования</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Python 3.8+</strong> с <code class="font-mono text-sm">pip</code></li>
 		<li><strong>Git</strong></li>
@@ -360,20 +389,20 @@
 		<li><strong>Только Windows</strong> — используйте <strong>Python 3.10&ndash;3.13</strong> (рекомендуется 3.13): <code class="font-mono text-sm">pyscard</code> (обёртка драйвера PC/SC) поставляет готовые wheels для этих версий. На Python 3.9 / 3.14 pip собирает <code class="font-mono text-sm">pyscard</code> из исходников, для чего требуются Microsoft C++ Build Tools (&laquo;Desktop development with C++&raquo;). Мост SMPP (<code class="font-mono text-sm">smpp.twisted3</code>) на Windows намеренно не устанавливается, поэтому для Python 3.10&ndash;3.13 C++ Build Tools не нужны.</li>
 	</ul>
 
-	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Быстрый старт — Linux / macOS</h3>
+	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">6.2 Быстрый старт — Linux / macOS</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 chmod +x setup.sh start.sh
 ./setup.sh          # создаёт .venv, устанавливает pysim + сервер (однократно)
 ./start.sh          # запускает сервер (PWA + API, автоопределение ридера)</pre>
 
-	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">7.3 Быстрый старт — Windows</h3>
+	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">6.3 Быстрый старт — Windows</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 setup.bat           # создаёт .venv, устанавливает pysim + сервер (однократно)
 start.bat           # запускает сервер (PWA + API)</pre>
 
-	<h3 id="helper-scripts" class="text-lg font-medium mb-2">7.4 Вспомогательные скрипты</h3>
+	<h3 id="helper-scripts" class="text-lg font-medium mb-2">6.4 Вспомогательные скрипты</h3>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Скрипт</th><th class="text-left py-1 px-2">Назначение</th></tr></thead>
 		<tbody>
@@ -382,7 +411,7 @@ start.bat           # запускает сервер (PWA + API)</pre>
 		</tbody>
 	</table>
 
-	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">7.5 Автоопределение ридера (<code class="font-mono text-sm">start.sh</code>)</h3>
+	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">6.5 Автоопределение ридера (<code class="font-mono text-sm">start.sh</code>)</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>PC/SC (Linux)</strong> — если запущен демон <code class="font-mono text-sm">pcscd</code>, передаёт <code class="font-mono text-sm">-p 0</code></li>
 		<li><strong>Serial (Linux)</strong> — если существует <code class="font-mono text-sm">/dev/ttyUSB0</code>, передаёт <code class="font-mono text-sm">-d /dev/ttyUSB0</code></li>
@@ -390,7 +419,7 @@ start.bat           # запускает сервер (PWA + API)</pre>
 	</ul>
 	<p class="text-sm mb-3">Если ридер не обнаружен, сервер запускается без аргументов и показывает &laquo;Reader: none&raquo;. Карту можно инициализировать позже кнопкой <strong>Equip</strong> на вкладке Card reader.</p>
 
-	<h3 id="manual-install" class="text-lg font-medium mb-2">7.6 Ручная установка</h3>
+	<h3 id="manual-install" class="text-lg font-medium mb-2">6.6 Ручная установка</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3"># Создать и активировать venv
 python3 -m venv .venv
 source .venv/bin/activate   # Linux/macOS
@@ -409,7 +438,7 @@ pysim-otaman-server --http-port 8080</pre>
 
 
 <section class="mb-10">
-	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">8. Совместимость версий</h2>
+	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Совместимость версий</h2>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (OTAMan)</th><th class="text-left py-1 px-2">Сервер</th><th class="text-left py-1 px-2">Статус</th></tr></thead>
 		<tbody>

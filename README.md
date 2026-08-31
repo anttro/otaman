@@ -31,15 +31,19 @@ npm run build
 
 ## Interface
 
-Five tabs, each with a form and a "Generate" button.
+Four top-level tabs: **C-APDU**, **SCP80**, **Response parser**, **Card reader**. The C-APDU and SCP80 tabs each have sub-tabs.
 
 ---
 
-## SIM RFM Tab
+## C-APDU tab
+
+Builds command APDUs (C-APDUs). Five sub-tabs cover different card generations and command sets.
+
+### SIM RFM
 
 CLA = `A0` (GSM 11.11 / ISO 7816-4).
 
-### Commands
+#### Commands
 
 | Command | INS | Description |
 |---|---|---|
@@ -54,56 +58,48 @@ CLA = `A0` (GSM 11.11 / ISO 7816-4).
 | VERIFY PIN | 20 | Verify PIN1 or PIN2 |
 | CHANGE PIN | 24 | Change PIN1 or PIN2 |
 
-### SELECT methods
+#### SELECT methods
 
 | Method | P1 | P2 | Input |
 |---|---|---|---|
-| По FID | 00 | 00 | 2-byte FID (4 hex) |
-| По полному пути от MF | 08 | 00 | Full path hex from MF |
-| По DF name / AID | 04 | 00 | AID (application ID) |
-| ADF RFM цепочка | 00 | 00 | Comma-separated FIDs, each selected in turn |
+| By FID | 00 | 00 | 2-byte FID (4 hex) |
+| By full path from MF | 08 | 00 | Full path hex from MF |
+| By DF name / AID | 04 | 00 | AID (application ID) |
+| ADF RFM chain | 00 | 00 | Comma-separated FIDs, each selected in turn |
 
-### Options
+#### Options
 
-- **Начать с SELECT** — checkbox to prepend a SELECT command before the operation. When unchecked, the operation is sent standalone with CLA.
-- **Режим выборки (P2)** — for record commands: Absolute (04), Next (06), Previous (02).
-- **Размер записи** — pad/truncate data to the specified byte count.
-- **Переопределить P1/P2** — checkbox to enable manual override of P1/P2 bytes.
+- **Start with SELECT** — checkbox to prepend a SELECT command before the operation. When unchecked, the operation is sent standalone with CLA.
+- **Selection mode (P2)** — for record commands: Absolute (04), Next (06), Previous (02).
+- **Record size** — pad/truncate data to the specified byte count.
+- **Allow P1/P2 editing** — checkbox to enable manual override of P1/P2 bytes.
 
-### Conversion sidebar
-
-A conversion panel is embedded in the right-hand column, supporting IMSI, MSISDN, ICCID, SPN, PLMN, and Nibble swap conversions.
-
-### References
+#### References
 
 - ISO/IEC 7816-4: Organization, security and commands for interchange
 - ETSI TS 102 226: Remote APDU structure for UICC based applications
 - GSM 11.11: SIM-ME Interface
 
----
-
-## USIM RFM Tab
+### USIM RFM
 
 CLA = `00` (ETSI TS 102 221). Same commands as SIM, but SELECT uses P1=09, P2=0C (by FID from current directory).
 
-### References
+#### References
 
 - ETSI TS 102 221: UICC-Terminal Interface; Physical and Logical Characteristics
 - ETSI TS 102 226: Remote APDU structure for UICC based applications
 
----
-
-## Expanded Script Tab
+### Expanded Script
 
 Builds Expanded Remote Application data format per ETSI TS 102 226 §5.2.1.
 
-### Format
+#### Format
 
 Two encoding variants:
 - **Definite (AA)**: `AA` + length + Command TLVs
 - **Indefinite (AE)**: `AE` + `80` + Command TLVs + `00 00`
 
-### Command TLVs
+#### Command TLVs
 
 | Type | Tag | Description |
 |---|---|---|
@@ -112,7 +108,7 @@ Two encoding variants:
 | Error Action | 82 | Proactive command on error |
 | Script Chaining | 83 | Chaining data for multi-packet scripts |
 
-### Immediate Action builder
+#### Immediate Action builder
 
 When the type is set to Immediate Action, the tool provides a structured builder for:
 
@@ -122,54 +118,17 @@ When the type is set to Immediate Action, the tool provides a structured builder
 
 Error Action supports the same builder (DISPLAY TEXT, PLAY TONE).
 
-### References
+#### References
 
 - ETSI TS 102 226 V13.0.0 §5.2.1: Expanded Remote Application data format
 - ETSI TS 102 223: Card Application Toolkit (CAT) — proactive command structure
 - ETSI TS 101 220: BER-TLV tag assignments
 
----
+### RAM/GP
 
-## RAM Tab
+CLA = `80` (GlobalPlatform Card Specification v2.3.1). Remote Application Management commands for card content management.
 
-CLA = `80` (GlobalPlatform Card Specification v2.3.1). Remote Application Management operations for card content management over SCP80.
-
-All RAM operations are delivered as SCP80 secured packets (ETSI TS 102 225) via SMS-PP-DOWNLOAD ENVELOPE. The card must support SCP03 (AES or 3DES) for secure transport.
-
-### Card Preset
-
-Select a saved card configuration from the **Card preset** dropdown. Each preset stores:
-
-| Field | Description |
-|---|---|
-| SPI1 / SPI2 | Security level and PoR settings |
-| KIc / KID key | Encryption and MAC key hex |
-| KIc / KID index | Key version number |
-| TAR | Toolkit Application Reference (3 bytes) |
-| Counter (CNTR) | 10-digit hex replay counter, auto-incremented after each successful SCP80 send |
-
-Card presets are managed in the **SCP80 → Cards** subtab (see below). If no preset is selected, the RAM tab warns and refuses to execute.
-
-### Operations
-
-The RAM subtab offers two operations selected from the **Operation** dropdown:
-
-| Operation | Description |
-|---|---|
-| **Explore Card (all GP data)** | Queries GET STATUS for ISD, Applications, ELFs, and ELF Modules, plus GET DATA FF21 for memory info. Results appear in an explorer view with per-item **Delete** buttons. |
-| **Install Package (.cap file)** | Sends a `.cap` file to the card via the server: INSTALL\[for load\] → LOAD ×N → INSTALL\[for install (+make selectable)\]. |
-
-### Explorer View
-
-After "Explore Card" runs, the explorer view displays:
-
-- **ISD** — AID, lifecycle, privileges (no delete; the ISD cannot be removed)
-- **Applications** — AID, lifecycle, privileges, associated ELF/SD. Each has a **Delete** button (GP `DELETE` by AID).
-- **Executable Load Files** — AID, lifecycle, version, module AIDs. Each has **Delete** (ELF only) and **Delete All** (cascade: ELF + modules + installed Applications, P2=0x80) buttons.
-
-Delete confirms via a browser prompt before sending the GP `DELETE` command via SCP80. The explorer auto-refreshes after a successful deletion.
-
-### GP Commands Reference
+#### GP Commands Reference
 
 | Command | INS | P1 | Description |
 |---|---|---|---|
@@ -187,7 +146,7 @@ Delete confirms via a browser prompt before sending the GP `DELETE` command via 
 | EXTERNAL AUTHENTICATE | 82 | 00 | SCP host authentication |
 | INTERNAL AUTHENTICATE | 88 | 00 | Card challenge-response |
 
-### INSTALL [for install] — Privilege Builder
+#### INSTALL [for install] — Privilege Builder
 
 Tag `C7` in the INSTALL data field. Built from 3 privilege bytes (GP spec Tables 11-7, 11-8, 11-9):
 
@@ -218,7 +177,7 @@ Tag `C7` in the INSTALL data field. Built from 3 privilege bytes (GP spec Tables
 |---|---|
 | b8 | Receipt Generation |
 
-### INSTALL [for install] — SIM/UICC Toolkit Parameters
+#### INSTALL [for install] — SIM/UICC Toolkit Parameters
 
 Optional TLV objects appended to the INSTALL data field:
 
@@ -235,7 +194,7 @@ Optional TLV objects appended to the INSTALL data field:
 | 16 | RC/DS/CC + MAC + Cipher |
 | 19 | RC/DS/CC + MAC + Cipher + DS |
 
-### GET STATUS P1 values
+#### GET STATUS P1 values
 
 | Value | Meaning |
 |---|---|
@@ -244,7 +203,7 @@ Optional TLV objects appended to the INSTALL data field:
 | 20 | Executable Load Files |
 | 10 | ELF and their Executable Modules |
 
-### GET STATUS P2 values
+#### GET STATUS P2 values
 
 | Value | Meaning |
 |---|---|
@@ -253,7 +212,7 @@ Optional TLV objects appended to the INSTALL data field:
 | 00 | First/all, old format (deprecated) |
 | 02 | Next, old format (deprecated) |
 
-### GET DATA tag values
+#### GET DATA tag values
 
 | Tag | Data Object |
 |---|---|
@@ -271,14 +230,14 @@ Optional TLV objects appended to the INSTALL data field:
 | 7F21 | Certificate (SD public key) |
 | 5031 | Certificate info (EF.OD) |
 
-### DELETE P1 values
+#### DELETE P1 values
 
 | Value | Meaning |
 |---|---|
 | 00 | By AID |
 | 80 | Delete associated objects |
 
-### STORE DATA P1 values
+#### STORE DATA P1 values
 
 | Value | Meaning |
 |---|---|
@@ -287,7 +246,7 @@ Optional TLV objects appended to the INSTALL data field:
 | 80 | Last block, encrypted |
 | C0 | More blocks, encrypted |
 
-### SET STATUS parameters
+#### SET STATUS parameters
 
 **P1 (Status Type)**:
 | Value | Target |
@@ -302,18 +261,68 @@ Optional TLV objects appended to the INSTALL data field:
 | 00 | Unlock (return to previous state) |
 | 80 | Lock (LOCKED state) |
 
-### References
+#### References
 
 - GlobalPlatform Card Specification v2.3.1 (GPC_Spec_v2.3.1): Commands, Privileges, TLV structures
 - ETSI TS 102 226 V13.0.0 §8.2.1.3.2: SIM/UICC Toolkit parameters, MSL, TAR, Access Domain
 
+### Conversion (SIM/USIM sidebars)
+
+Value encoding conversions embedded in the SIM RFM and USIM RFM tabs.
+
+#### IMSI → EF.IMSI
+
+Per TS 31.102 §4.2.3. Encodes a 15-digit IMSI into the 9-byte EF.IMSI format:
+- Byte 0: number of subsequent bytes (8)
+- Odd/even indicator nibble in the last byte
+- BCD digits, swapped nibble pairs per identity
+
+Input: 15 decimal digits. Output: 18 hex characters.
+
+#### MSISDN → BCD
+
+Strips leading `+`, pads odd length with `f`, swaps nibble pairs.
+
+#### ICCID → hex
+
+Swaps nibble pairs of the ICCID string.
+
+#### Provider Name → SPN
+
+Per 3GPP TS 31.102 §4.2.5 (EF_SPN). Three encoding paths:
+
+1. **GSM 7-bit packed** (all chars in GSM 7-bit default alphabet): prefix `01`, DCS byte (spare bits), packed septets, 0xFF padding to 16 bytes.
+2. **UCS2 non-BMP** (emoji / chars > U+FFFF): prefix `00`, DCS `80`, UTF-16BE, 0xFF padding to 16 bytes.
+3. **UCS2 BMP non-GSM7** (Cyrillic, etc.): prefix `00`, DCS `81`, base byte, per-char offsets, 0xFF padding to 16 bytes.
+
+GSM 7-bit alphabet per 3GPP TS 23.038. Full extension table supported.
+
+#### PLMN → EF_PLMNsel / PLMNwAcT
+
+Per TS 31.102 §4.2.3. 3-byte BCD encoding for PLMN, plus optional 2-byte Access Technology selector.
+
+#### Nibble swap
+
+Swaps nibble pairs of an even-length hex string.
+
+#### References
+
+- 3GPP TS 31.102: Characteristics of the USIM Application
+- 3GPP TS 23.038: Alphabets and language information
+- ETSI TS 102 225: Secured packet structure for (U)SIM toolkit
+- pySim: enc_imsi() implementation
+
 ---
 
-## SCP80 Tab — Secured Packet
+## SCP80 tab
 
-The **SCP80** top-level tab groups SCP80-related views, switched by two pills: **Secured Packet** (this section) and **Cards**. Assembles secured packets per ETSI TS 102 225.
+The **SCP80** top-level tab groups SCP80-related views, switched by three pills: **Secured Packet**, **Cards**, and **RAM**. Assembles secured packets per ETSI TS 102 225.
 
-### Packet structure
+### Secured Packet
+
+Builds SCP80 secured packets per ETSI TS 102 225.
+
+#### Packet structure
 
 | Field | Size | Description |
 |---|---|---|
@@ -330,7 +339,7 @@ The **SCP80** top-level tab groups SCP80-related views, switched by two pills: *
 | RC/CC/DS | 8 | Cryptographic Checksum / MAC |
 | Secured Data | variable | Padded APDU (encrypted if required) |
 
-### SPI1 (Security Level)
+#### SPI1 (Security Level)
 
 SPI1 bit layout (TS 102 225 §5.1.1): `b8–b6` padding, `b5–b4` counter, `b3` ciphering, `b2–b1` RC/CC/DS.
 
@@ -350,7 +359,7 @@ SPI1 bit layout (TS 102 225 §5.1.1): `b8–b6` padding, `b5–b4` counter, `b3`
 > **AES requires `b5 b4 = 10` (higher) or `11` (+1)** per TS 102 225 §5.1.2 and §5.1.3.1.
 > The 3DES values `00/01/02/06` (no counter) remain valid for 3DES only.
 
-### SPI2 (PoR settings)
+#### SPI2 (PoR settings)
 
 | Value | Mode | Security | Cipher |
 |---|---|---|---|
@@ -363,7 +372,7 @@ SPI1 bit layout (TS 102 225 §5.1.1): `b8–b6` padding, `b5–b4` counter, `b3`
 | 02 | PoR on error | None | No |
 | 06 | PoR on error | RC | No |
 
-### Crypto
+#### Crypto
 
 - **3DES-CBC** encryption (zero ICV), supporting 8, 16, and 24 byte keys — deprecated since Rel-18, still supported for backwards compatibility
 - **AES-CBC** encryption (zero ICV, zero-padded to 16), supporting 16, 24, and 32 byte keys (TS 102 225 §5.1.2, KIc `x2`)
@@ -371,14 +380,7 @@ SPI1 bit layout (TS 102 225 §5.1.1): `b8–b6` padding, `b5–b4` counter, `b3`
 - **AES-CMAC** (NIST SP 800-38B, truncated to 8 octets) for the AES cryptographic checksum (TS 102 225 §5.1.3.1, KID `x2`)
 - Padding byte configurable (`00` per TS 102 225 default, or `FF`)
 
-### References
-
-- ETSI TS 102 225 V18.1.0: Secured packet structure for UICC based applications
-- ETSI TS 102 226: Remote APDU structure for UICC based applications
-- ISO 9797-1: MAC algorithms
-- NIST SP 800-38B: CMAC
-
-### PoR (Proof of Reception)
+#### PoR (Proof of Reception)
 
 PoR confirms the card received and executed the secured packet. Two modes:
 
@@ -389,9 +391,24 @@ PoR confirms the card received and executed the secured packet. Two modes:
 
 Delivery PoR (SPI2 `01`) is simpler — the card returns the PoR directly in the ENVELOPE response. Submit PoR (SPI2 `21`) is used when the card cannot respond inline (e.g. during ELF operations where the ENVELOPE response space is limited).
 
-### Cards Subtab
+#### References
 
-The **Cards** pill in the SCP80 tab manages saved card configurations (presets). Each preset stores the cryptographic keys, SPI settings, TAR, and replay counter needed for SCP80 operations.
+- ETSI TS 102 225 V18.1.0: Secured packet structure for UICC based applications
+- ETSI TS 102 226: Remote APDU structure for UICC based applications
+- ISO 9797-1: MAC algorithms
+- NIST SP 800-38B: CMAC
+
+### Cards
+
+Stores saved card configurations (presets). Each preset stores the cryptographic keys, SPI settings, TAR, and replay counter needed for SCP80 operations.
+
+| Field | Description |
+|---|---|
+| SPI1 / SPI2 | Security level and PoR settings |
+| KIc / KID key | Encryption and MAC key hex |
+| KIc / KID index | Key version number |
+| TAR | Toolkit Application Reference (3 bytes) |
+| Counter (CNTR) | 10-digit hex replay counter, auto-incremented after each successful SCP80 send |
 
 **Add a card:** fill in the name, SPI1/SPI2, KIc/KID keys and indices, TAR, and click **Add**. The card appears in the list and becomes available in the RAM tab's **Card preset** dropdown.
 
@@ -401,57 +418,41 @@ The **Cards** pill in the SCP80 tab manages saved card configurations (presets).
 
 **Counter:** the 10-digit hex counter (CNTR) is auto-incremented after each successful SCP80 send (both manual Secured Packet sends and RAM operations). The updated counter is saved back to the preset automatically.
 
----
+### RAM
 
-## Conversion (SIM/USIM sidebars)
+All RAM operations are delivered as SCP80 secured packets (ETSI TS 102 225) via SMS-PP-DOWNLOAD ENVELOPE. The card must support SCP03 (AES or 3DES) for secure transport.
 
-Value encoding conversions embedded in the SIM RFM and USIM RFM tabs.
+Select a saved card configuration from the **Card preset** dropdown. If no preset is selected, the RAM tab warns and refuses to execute.
 
-### IMSI → EF.IMSI
+The RAM subtab offers two operations selected from the **Operation** dropdown:
 
-Per TS 31.102 §4.2.3. Encodes a 15-digit IMSI into the 9-byte EF.IMSI format:
-- Byte 0: number of subsequent bytes (8)
-- Odd/even indicator nibble in the last byte
-- BCD digits, swapped nibble pairs per identity
+| Operation | Description |
+|---|---|
+| **Explore Card (all GP data)** | Queries GET STATUS for ISD, Applications, ELFs, and ELF Modules, plus GET DATA FF21 for memory info. Results appear in an explorer view with per-item **Delete** buttons. |
+| **Install Package (.cap file)** | Sends a `.cap` file to the card via the server: INSTALL\[for load\] → LOAD ×N → INSTALL\[for install (+make selectable)\]. |
 
-Input: 15 decimal digits. Output: 18 hex characters.
+#### Explorer View
 
-### MSISDN → BCD
+After "Explore Card" runs, the explorer view displays:
 
-Strips leading `+`, pads odd length with `f`, swaps nibble pairs.
+- **ISD** — AID, lifecycle, privileges (no delete; the ISD cannot be removed)
+- **Applications** — AID, lifecycle, privileges, associated ELF/SD. Each has a **Delete** button (GP `DELETE` by AID).
+- **Executable Load Files** — AID, lifecycle, version, module AIDs. Each has **Delete** (ELF only) and **Delete All** (cascade: ELF + modules + installed Applications, P2=0x80) buttons.
 
-### ICCID → hex
-
-Swaps nibble pairs of the ICCID string.
-
-### Provider Name → SPN
-
-Per 3GPP TS 31.102 §4.2.5 (EF_SPN). Three encoding paths:
-
-1. **GSM 7-bit packed** (all chars in GSM 7-bit default alphabet): prefix `01`, DCS byte (spare bits), packed septets, 0xFF padding to 16 bytes.
-2. **UCS2 non-BMP** (emoji / chars > U+FFFF): prefix `00`, DCS `80`, UTF-16BE, 0xFF padding to 16 bytes.
-3. **UCS2 BMP non-GSM7** (Cyrillic, etc.): prefix `00`, DCS `81`, base byte, per-char offsets, 0xFF padding to 16 bytes.
-
-GSM 7-bit alphabet per 3GPP TS 23.038. Full extension table supported.
-
-### PLMN → EF_PLMNsel / PLMNwAcT
-
-Per TS 31.102 §4.2.3. 3-byte BCD encoding for PLMN, plus optional 2-byte Access Technology selector.
-
-### Nibble swap
-
-Swaps nibble pairs of an even-length hex string.
-
-### References
-
-- 3GPP TS 31.102: Characteristics of the USIM Application
-- 3GPP TS 23.038: Alphabets and language information
-- ETSI TS 102 225: Secured packet structure for (U)SIM toolkit
-- pySim: enc_imsi() implementation
+Delete confirms via a browser prompt before sending the GP `DELETE` command via SCP80. The explorer auto-refreshes after a successful deletion.
 
 ---
 
+## Response parser tab
 
+Decodes a raw command response: pick the command that was sent, enter the SW (e.g. `9000`) and the response data hex, then press **Decode**.
+
+- **Command** — SIM/USIM group (SELECT, STATUS, READ/UPDATE, PIN ops, CAT commands like TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, ...) or RAM/GP group (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP commands).
+- **SW decode** — status words resolved against generic, UICC (TS 102 221), and GlobalPlatform maps, with context auto-detected.
+- **Privilege decode** — GET DATA / INSTALL response payloads decode the privilege bytes into human-readable flags.
+- **Response data** — raw hex rendered and interpreted per command (e.g. SELECT FCP templates).
+
+---
 
 ## Card Reader (pySim integration)
 
@@ -480,11 +481,9 @@ Custom files persist in `localStorage` across sessions. Export/import as JSON fo
 
 ### Proactive UICC Pill
 
-The **Proactive UICC** sub-tab in the Card Reader provides real-time CAT session
-interaction:
+The **Proactive UICC** sub-tab in the Card Reader provides real-time CAT session interaction:
 
-**Subscribed Events** — the card's SET UP EVENT LIST is displayed with per-event
-**Send** buttons. Clicking opens a form specific to the event type:
+**Subscribed Events** — the card's SET UP EVENT LIST is displayed with per-event **Send** buttons. Clicking opens a form specific to the event type:
 
 - **No-data events** (User Activity, Idle Screen, etc.) — single-click confirmation
 - **Location Status** — dropdown for Normal / Limited / No service
@@ -495,13 +494,9 @@ interaction:
   technology selection, and 53-cause unified rejection cause code dropdown
   covering EMM, GMM, 5GMM, and LU causes
 
-**Proactive Command Log** — chronological list of proactive commands encountered
-(seconds elapsed, type code, name, byte count). Covers SET UP MENU, SET UP EVENT
-LIST, POLL INTERVAL, DISPLAY TEXT, SELECT ITEM, and PROVIDE LOCAL INFORMATION.
+**Proactive Command Log** — chronological list of proactive commands encountered (seconds elapsed, type code, name, byte count). Covers SET UP MENU, SET UP EVENT LIST, POLL INTERVAL, DISPLAY TEXT, SELECT ITEM, and PROVIDE LOCAL INFORMATION.
 
-**PLI Data Dictionary** — editable per-qualifier hex values for all 22 PROVIDE
-LOCAL INFORMATION qualifiers (TS 102 223 + TS 131 111). 10 qualifiers have
-inline decode/encode forms (▶ toggle):
+**PLI Data Dictionary** — editable per-qualifier hex values for all 22 PROVIDE LOCAL INFORMATION qualifiers (TS 102 223 + TS 131 111). 10 qualifiers have inline decode/encode forms (toggle):
 
 | Code | Decoded fields |
 |------|--------------|
@@ -516,13 +511,13 @@ inline decode/encode forms (▶ toggle):
 | 0A | Battery charge (%) |
 | 0E | Multiple Access Technologies (comma-list) |
 
-Values persist on the server until restart. Apply → hex updates; Save → POSTs to
-server. The server will use these values to populate TERMINAL RESPONSE data for
-future PLI proactive commands.
+Values persist on the server until restart. Apply → hex updates; Save → POSTs to server. The server will use these values to populate TERMINAL RESPONSE data for future PLI proactive commands.
 
 ### Command Hints
 
 Type a command name in the **pySim command line** input. Usage hints appear as a tooltip after 300ms. Command autocomplete suggestions appear above the input.
+
+---
 
 ## PWA
 
