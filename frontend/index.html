@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.21</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.22</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -888,12 +888,15 @@
 				</select>
 			</div>
 
-			<div class="mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Operation">Operation</label>
-				<select id="ram-op" onchange="ramOpChanged()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-        <option value="explore" data-l10n="Explore Card (all GP data)">Explore Card (all GP data)</option>
-        <option value="install-cap" data-l10n="Install Package (.cap file)">Install Package (.cap file)</option>
-				</select>
+			<div class="mb-3 flex gap-2 items-end">
+				<div class="flex-1">
+					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Operation">Operation</label>
+					<select id="ram-op" onchange="ramOpChanged()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+						<option value="explore" data-l10n="Explore Card (all GP data)">Explore Card (all GP data)</option>
+						<option value="install-cap" data-l10n="Install Package (.cap file)">Install Package (.cap file)</option>
+					</select>
+				</div>
+				<button onclick="ramExecute()" class="px-5 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Execute">Execute</button>
 			</div>
 
 			<div id="ram-install-params" class="hidden mb-3">
@@ -1015,8 +1018,6 @@
 					<input type="checkbox" id="ram-make-sel" checked> <span class="text-sm" data-l10n="Make selectable">Make selectable</span>
 				</label>
 			</div>
-
-			<button onclick="ramExecute()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Execute">Execute</button>
 
 			<div id="ram-progress" class="hidden mb-3">
 				<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-400">
@@ -6879,7 +6880,11 @@ const LANG_RU = {
 	'Executable Module AIDs / Applet Class AIDs:': 'AID исполняемых модулей / классов апплетов:',
 	'No cards defined.': 'Карты не заданы.',
 	'Card presets': 'Выбор карты',
+	'Card preset': 'Пресет карты',
 	'— Select card —': '— Выберите карту —',
+	'Operation': 'Операция',
+	'Explore Card (all GP data)': 'Обзор карты (все данные GP)',
+	'Install Package (.cap file)': 'Установка пакета (.cap файл)',
 	'Server URL': 'URL сервера',
 	'Connect': 'Подключиться',
 	'To access local card reader, you need pysim-otaman-server running locally.': 'Для доступа к локальному картридеру необходим запущенный pysim-otaman-server.',
