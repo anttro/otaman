@@ -134,6 +134,22 @@ Error Action supports the same builder (DISPLAY TEXT, PLAY TONE).
 
 CLA = `80` (GlobalPlatform Card Specification v2.3.1). Remote Application Management operations for card content management over SCP80.
 
+All RAM operations are delivered as SCP80 secured packets (ETSI TS 102 225) via SMS-PP-DOWNLOAD ENVELOPE. The card must support SCP03 (AES or 3DES) for secure transport.
+
+### Card Preset
+
+Select a saved card configuration from the **Card preset** dropdown. Each preset stores:
+
+| Field | Description |
+|---|---|
+| SPI1 / SPI2 | Security level and PoR settings |
+| KIc / KID key | Encryption and MAC key hex |
+| KIc / KID index | Key version number |
+| TAR | Toolkit Application Reference (3 bytes) |
+| Counter (CNTR) | 10-digit hex replay counter, auto-incremented after each successful SCP80 send |
+
+Card presets are managed in the **SCP80 → Cards** subtab (see below). If no preset is selected, the RAM tab warns and refuses to execute.
+
 ### Operations
 
 The RAM subtab offers two operations selected from the **Operation** dropdown:
@@ -361,6 +377,29 @@ SPI1 bit layout (TS 102 225 §5.1.1): `b8–b6` padding, `b5–b4` counter, `b3`
 - ETSI TS 102 226: Remote APDU structure for UICC based applications
 - ISO 9797-1: MAC algorithms
 - NIST SP 800-38B: CMAC
+
+### PoR (Proof of Reception)
+
+PoR confirms the card received and executed the secured packet. Two modes:
+
+| SPI2 (bit 5) | Mode | Description |
+|---|---|---|
+| `0x00` | Delivery PoR | PoR is returned in the ENVELOPE response SW+data |
+| `0x20` | Submit PoR | PoR is sent back as an SMS-SUBMIT via a proactive FETCH command |
+
+Delivery PoR (SPI2 `01`) is simpler — the card returns the PoR directly in the ENVELOPE response. Submit PoR (SPI2 `21`) is used when the card cannot respond inline (e.g. during ELF operations where the ENVELOPE response space is limited).
+
+### Cards Subtab
+
+The **Cards** pill in the SCP80 tab manages saved card configurations (presets). Each preset stores the cryptographic keys, SPI settings, TAR, and replay counter needed for SCP80 operations.
+
+**Add a card:** fill in the name, SPI1/SPI2, KIc/KID keys and indices, TAR, and click **Add**. The card appears in the list and becomes available in the RAM tab's **Card preset** dropdown.
+
+**Edit a card:** click a card in the list, modify fields, click **Save**.
+
+**Delete a card:** select a card, click **Delete**. Removes the preset from `localStorage`.
+
+**Counter:** the 10-digit hex counter (CNTR) is auto-incremented after each successful SCP80 send (both manual Secured Packet sends and RAM operations). The updated counter is saved back to the preset automatically.
 
 ---
 

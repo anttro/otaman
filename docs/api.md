@@ -32,7 +32,6 @@ connect and warns if versions are incompatible.
 | `/api/send-ota` | POST | SCP80 OTA secured packet delivery |
 | `/api/ram-install` | POST | Install a Java Card `.cap` file via SCP80 (INSTALL[for load] → LOAD ×N → INSTALL[for install]) |
 | `/api/sp-verify` | POST | Verify secured packet against pySim reference |
-| `/api/ram-install` | POST | Install a Java Card `.cap` file via SCP80 (INSTALL[for load] → LOAD ×N → INSTALL[for install]) |
 | `/api/menu` | GET | Current STK menu (title + items + active) |
 | `/api/menu-select` | POST | ENVELOPE(Menu Selection) with item_id |
 | `/api/menu-respond` | POST | TERMINAL RESPONSE for paused STK command |
