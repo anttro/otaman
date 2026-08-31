@@ -206,6 +206,74 @@ def _encode_scts(dt=None):
     ])
 
 
+def _lv(hex_str):
+    """Length-prefix a hex string (1-byte length)."""
+    n = len(hex_str) // 2
+    return '%02x%s' % (n, hex_str)
+
+
+def _ber_len(n):
+    """BER-TLV length encoding."""
+    if n < 0x80:
+        return '%02x' % n
+    elif n < 0x100:
+        return '81%02x' % n
+    else:
+        return '82%04x' % n
+
+
+def _cap_parse(cap_hex):
+    """Parse a .cap file (as hex string) and return (loadfile_aid, module_aid, loadfile_data) as hex strings.
+
+    The .cap file is a ZIP archive containing nested .cap component files.
+    We extract the Header (for package AID / Load File AID) and Applet component
+    (for applet AID / Module AID), then concatenate all components for the loadfile data.
+    """
+    import zipfile, io, struct
+
+    cap_bytes = bytes.fromhex(cap_hex)
+    zf = zipfile.ZipFile(io.BytesIO(cap_bytes))
+    components = {}
+    for name in zf.namelist():
+        if name.lower().endswith('.cap') and not name.lower().endswith('.capx'):
+            key = name.split('/')[-1].removesuffix('.cap')
+            components[key] = zf.read(name)
+    zf.close()
+
+    if 'Header' not in components:
+        raise ValueError('.cap file missing Header component')
+    if 'Applet' not in components:
+        raise ValueError('.cap file missing Applet component')
+
+    # Header component: tag(1) size(2) magic(4) minor(1) major(1) flags(1) package(minor(1) major(1) aid(LV))
+    hdr = components['Header']
+    magic = struct.unpack('>I', hdr[3:7])[0]
+    if magic != 0xDECAFFED:
+        raise ValueError('Invalid .cap Header magic: 0x%08X (expected 0xDECAFFED)' % magic)
+    aid_len = hdr[12]
+    loadfile_aid = hdr[13:13 + aid_len].hex().upper()
+
+    # Applet component: tag(1) size(2) count(1) [aid_len(1) aid(N) install_offset(2)]*
+    app = components['Applet']
+    num_applets = app[3]
+    if num_applets < 1:
+        raise ValueError('.cap file has no applets')
+    off = 4
+    aid_len2 = app[off]
+    module_aid = app[off + 1:off + 1 + aid_len2].hex().upper()
+
+    # Concatenate all components for the loadfile (GP spec order)
+    order = ['Header', 'Directory', 'Import', 'Applet', 'Class', 'Method',
+             'StaticField', 'Export', 'ConstantPool', 'RefLocation', 'Descriptor']
+    loadfile_parts = []
+    for comp in order:
+        if comp in components:
+            loadfile_parts.append(components[comp])
+    loadfile_data = b''.join(loadfile_parts).hex().upper()
+
+    return loadfile_aid, module_aid, loadfile_data
+
+
 def _build_sms_tpdu(chunk_hex, chunk_total=1, chunk_num=1, oa_number='12345', include_cpi=True):
     chunk = bytes.fromhex(chunk_hex)
     # TS 23.040 UDH: first octet is UDHL, then the information elements.
@@ -2037,6 +2105,151 @@ class PysimHandler(BaseHTTPRequestHandler):
                 self._send_json(resp)
                 self._log_resp(resp)
             except Exception as e:
+                err = {'success': False, 'error': str(e)}
+                self._send_json(err, 500)
+                self._log_resp(err)
+        elif self.path == '/api/ram-install':
+            body = self._read_body()
+            self._log_req(body)
+            scc = self.server.scc
+            if not scc:
+                self._send_json({'error': _err('reader_not_init', lang)}, 503)
+                self._log_resp({'error': _err('reader_not_init', lang)})
+                return
+            try:
+                cap_hex = body.get('cap_hex', '').replace(' ', '')
+                if not cap_hex:
+                    self._send_json({'error': 'No cap_hex provided'}, 400)
+                    return
+
+                # Parse .cap file
+                loadfile_aid, module_aid, loadfile_data = _cap_parse(cap_hex)
+
+                # SCP80 params
+                spi1 = body.get('spi1', '16')
+                spi2 = body.get('spi2', '01')
+                kic = body.get('kic', '25')
+                kid = body.get('kid', '25')
+                tar = body.get('tar', '000000')
+                cntr = body.get('cntr', '00000000')
+                kic_key = body.get('kicKey', '')
+                kid_key = body.get('kidKey', '')
+                sd_aid = body.get('sd_aid', '').replace(' ', '')
+                install_params_hex = body.get('install_params', '').replace(' ', '')
+                stk_params_hex = body.get('stk_params', '').replace(' ', '')
+                make_selectable = body.get('make_selectable', True)
+
+                steps = []
+                include_cpi = body.get('includeCpi', True)
+                spi2_val = int(spi2, 16)
+                por_in_submit = bool(spi2_val & 0x20)
+
+                def _send_gp_apdu(apdu_hex, step_name):
+                    nonlocal cntr
+                    sp_hex, _ = _ota_reference(spi1, spi2, kic, kid, tar, cntr, apdu_hex, kic_key, kid_key)
+                    sp_bytes = bytes.fromhex(sp_hex)
+                    max_chunk = 130
+                    chunks = [sp_bytes[i:i + max_chunk] for i in range(0, len(sp_bytes), max_chunk)]
+                    submit_handler = None
+                    old_proactive = None
+                    if por_in_submit and hasattr(scc, '_tp'):
+                        submit_handler = PoRSubmitHandler()
+                        old_proactive = scc._tp.proactive_handler
+                        scc._tp.proactive_handler = submit_handler
+                    try:
+                        last_data = None
+                        last_sw = None
+                        for i, chunk in enumerate(chunks):
+                            tpdu = _build_sms_tpdu(chunk.hex(), len(chunks), i + 1,
+                                                   oa_number=self.server.sms_oa, include_cpi=include_cpi)
+                            data, sw = _send_envelope(tpdu, scc, sm_sc=self.server.sms_sc,
+                                                      submit_handler=submit_handler)
+                            last_data = data
+                            last_sw = sw
+                            if sw != '9000' and not sw.startswith('91'):
+                                steps.append({'name': step_name, 'por_status': 'envelope_error', 'sw': sw})
+                                sys.stderr.write('RAM-INSTALL: %s ENVELOPE failed SW %s\n' % (step_name, sw))
+                                return False
+                        # Decode PoR
+                        por_src = 'envelope'
+                        por_hex = last_data
+                        if submit_handler and submit_handler.submit_tpdu_hex:
+                            tpdu_b = bytes.fromhex(submit_handler.submit_tpdu_hex)
+                            idx = tpdu_b.find(b'\x02\x71\x00')
+                            if idx >= 0:
+                                por_hex = tpdu_b[idx:].hex()
+                                por_src = 'sms-submit'
+                        por = _decode_por(spi1, spi2, kic, kid, cntr, kic_key, kid_key, por_hex)
+                        por_status = 'unknown'
+                        if por and por.get('decoded'):
+                            ps = por['decoded'].get('response_status', '')
+                            por_status = 'por_ok' if ps == '9100' else 'por_error_%s' % ps
+                            sys.stderr.write('RAM-INSTALL: %s PoR[%s] status=%s\n' % (step_name, por_src, ps))
+                        elif last_sw == '9000' and not por_hex:
+                            por_status = 'no_por'
+                        steps.append({'name': step_name, 'por_status': por_status, 'sw': last_sw})
+                        # Increment counter
+                        cntr = '%010X' % ((int(cntr, 16) + 1) % (2 ** 32))
+                        return True
+                    finally:
+                        if submit_handler and hasattr(scc, '_tp'):
+                            scc._tp.proactive_handler = old_proactive
+
+                # Step 1: INSTALL [for load]
+                sys.stderr.write('RAM-INSTALL: Step 1 — INSTALL [for load] loadfile_aid=%s\n' % loadfile_aid)
+                ifl_data = _lv(loadfile_aid) + _lv(sd_aid) + '00' + '00' + '00'
+                ifl_apdu = '80E60200%02X%s00' % (len(ifl_data) // 2, ifl_data)
+                if not _send_gp_apdu(ifl_apdu, 'INSTALL [for load]'):
+                    resp = {'success': False, 'steps': steps, 'failed_step': len(steps),
+                            'error': 'INSTALL [for load] failed', 'load_file_aid': loadfile_aid, 'module_aid': module_aid}
+                    self._send_json(resp)
+                    self._log_resp(resp)
+                    return
+
+                # Step 2: LOAD blocks
+                loadfile_tlv = 'C4' + _ber_len(len(loadfile_data) // 2) + loadfile_data
+                block_size = 240
+                total_bytes = len(loadfile_tlv) // 2
+                blocks = [loadfile_tlv[i * 2:(i + block_size) * 2] for i in range(0, (total_bytes + block_size - 1) // block_size)]
+                sys.stderr.write('RAM-INSTALL: Step 2 — LOAD %d bytes in %d blocks\n' % (total_bytes, len(blocks)))
+                for block_idx, block in enumerate(blocks):
+                    is_last = (block_idx == len(blocks) - 1)
+                    p1 = 0x80 if is_last else 0x00
+                    p2 = block_idx % 256
+                    load_apdu = '80E8%02X%02X%02X%s00' % (p1, p2, len(block) // 2, block)
+                    if not _send_gp_apdu(load_apdu, 'LOAD (%d/%d)' % (block_idx + 1, len(blocks))):
+                        resp = {'success': False, 'steps': steps, 'failed_step': len(steps),
+                                'error': 'LOAD block %d failed' % (block_idx + 1),
+                                'load_file_aid': loadfile_aid, 'module_aid': module_aid}
+                        self._send_json(resp)
+                        self._log_resp(resp)
+                        return
+
+                # Step 3: INSTALL [for install]
+                sys.stderr.write('RAM-INSTALL: Step 3 — INSTALL [for install]\n')
+                instance_aid = module_aid
+                privileges = '00'
+                inst_params = install_params_hex if install_params_hex else 'C900'
+                if stk_params_hex:
+                    inst_params += stk_params_hex
+                p1_install = 0x0C if make_selectable else 0x04
+                ifi_data = _lv(loadfile_aid) + _lv(module_aid) + _lv(instance_aid) + _lv(privileges) + _lv(inst_params) + '00'
+                ifi_apdu = '80E6%02X00%02X%s00' % (p1_install, len(ifi_data) // 2, ifi_data)
+                if not _send_gp_apdu(ifi_apdu, 'INSTALL [for install]'):
+                    resp = {'success': False, 'steps': steps, 'failed_step': len(steps),
+                            'error': 'INSTALL [for install] failed', 'load_file_aid': loadfile_aid, 'module_aid': module_aid}
+                    self._send_json(resp)
+                    self._log_resp(resp)
+                    return
+
+                resp = {'success': True, 'steps': steps, 'load_file_aid': loadfile_aid,
+                        'module_aid': module_aid, 'final_cntr': cntr}
+                sys.stderr.write('RAM-INSTALL: Complete — loadfile_aid=%s module_aid=%s cntr=%s\n' % (
+                    loadfile_aid, module_aid, cntr))
+                self._send_json(resp)
+                self._log_resp(resp)
+            except Exception as e:
+                sys.stderr.write('RAM-INSTALL error: %s\n' % e)
                 err = {'success': False, 'error': str(e)}
                 self._send_json(err, 500)
                 self._log_resp(err)

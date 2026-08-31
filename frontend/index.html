@@ -891,18 +891,9 @@
 			<div class="mb-3">
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Operation">Operation</label>
 				<select id="ram-op" onchange="ramOpChanged()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-					<option value="explore" data-l10n="Explore Card (all GP data)">Explore Card (all GP data)</option>
-					<option value="delete" data-l10n="Delete (DELETE)">Delete (DELETE)</option>
-					<option value="install-cap" data-l10n="Install Package (.cap file)">Install Package (.cap file)</option>
+        <option value="explore" data-l10n="Explore Card (all GP data)">Explore Card (all GP data)</option>
+        <option value="install-cap" data-l10n="Install Package (.cap file)">Install Package (.cap file)</option>
 				</select>
-			</div>
-
-			<div id="ram-del-params" class="hidden mb-3">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="AID to delete (hex)">AID to delete (hex)</label>
-				<input id="ram-del-aid" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000003000000" maxlength="32">
-				<label class="flex items-center gap-2 mt-2">
-					<input type="checkbox" id="ram-del-related"> <span class="text-sm" data-l10n="Delete related objects">Delete related objects</span>
-				</label>
 			</div>
 
 			<div id="ram-install-params" class="hidden mb-3">
@@ -4259,7 +4250,6 @@ function ramApplyCard(idx) {
 
 function ramOpChanged() {
 	const op = document.getElementById('ram-op').value;
-	document.getElementById('ram-del-params').classList.toggle('hidden', op !== 'delete');
 	document.getElementById('ram-install-params').classList.toggle('hidden', op !== 'install-cap');
 }
 
@@ -4565,7 +4555,11 @@ function ramRenderExploreHtml(mem, isd, apps, elfs) {
 		html += '<div class="font-semibold text-sm mb-1" data-l10n="Applications">Applications</div>';
 		apps.forEach(o => {
 			html += '<div class="mb-1 pl-2 border-l-2 border-green-400">';
-			html += '<div>AID: ' + (o.aid || '?') + '</div>';
+			html += '<div>AID: ' + (o.aid || '?');
+			if (o.aid) {
+				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', false)" class="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400" data-l10n="Delete">Delete</button>';
+			}
+			html += '</div>';
 			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
 			if (o.privileges) html += '<div>Privileges: ' + ramFmtPrivileges(o.privileges) + ' (' + o.privileges + ')</div>';
 			if (o.implicitSel) html += '<div>Implicit sel: ' + o.implicitSel + '</div>';
@@ -4580,7 +4574,12 @@ function ramRenderExploreHtml(mem, isd, apps, elfs) {
 		html += '<div class="font-semibold text-sm mb-1" data-l10n="Executable Load Files">Executable Load Files</div>';
 		elfs.forEach(o => {
 			html += '<div class="mb-1 pl-2 border-l-2 border-purple-400">';
-			html += '<div>AID: ' + (o.aid || '?') + '</div>';
+			html += '<div>AID: ' + (o.aid || '?');
+			if (o.aid) {
+				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', false)" class="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400" data-l10n="Delete">Delete</button>';
+				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', true)" class="ml-1 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded hover:bg-red-300 dark:bg-red-900/50 dark:text-red-300" data-l10n="Delete All">Delete All</button>';
+			}
+			html += '</div>';
 			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
 			if (o.version) html += '<div>Version: ' + o.version + '</div>';
 			if (o.moduleAids && o.moduleAids.length) {
@@ -4715,14 +4714,20 @@ async function ramExplore(sp) {
 	explorerEl.classList.remove('hidden');
 }
 
-async function ramDelete(sp) {
-	const aid = (document.getElementById('ram-del-aid').value || '').replace(/[^0-9a-fA-F]/g, '');
-	if (!aid) { alert('Enter AID to delete'); return; }
-	const related = document.getElementById('ram-del-related').checked;
-	const p2 = related ? '80' : '00';
+async function ramDeleteFromExplorer(aid, withCascade) {
+	const sp = getRamSpParams();
+	if (!sp.kicKey || !sp.kidKey) {
+		alert('Select a card preset with keys first (RAM subtab → Card preset)');
+		return;
+	}
+	const label = withCascade ? 'DELETE (cascade)' : 'DELETE';
+	if (!confirm(label + ' — AID: ' + aid + '?')) return;
+	const p2 = withCascade ? '80' : '00';
 	const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
-	const apdu = '80E400' + p2 + (2 + aid.length / 2) + '4F' + aidLen + aid;
+	const apdu = '80E400' + p2 + _ber_len(2 + aid.length / 2) + '4F' + aidLen + aid;
+	ramShowProgress(label + ' ' + aid + '...');
 	const res = await ramSendOta(apdu, sp);
+	ramHideProgress();
 	const resultEl = document.getElementById('ram-result');
 	const stepsEl = document.getElementById('ram-steps');
 	if (!res.success || !res.por || res.por.response_status !== 'por_ok') {
@@ -4733,9 +4738,10 @@ async function ramDelete(sp) {
 	ramSaveCntr(ramIncrementCntr(sp.cntr));
 	const sw = res.por.decoded ? res.por.decoded.last_status_word : '';
 	stepsEl.classList.remove('hidden');
-	stepsEl.textContent = 'DELETE ' + aid + ' -> ' + sw;
+	stepsEl.textContent = label + ' ' + aid + ' -> ' + sw;
 	resultEl.textContent = 'OK';
 	resultEl.classList.remove('hidden', 'text-red-600'); resultEl.classList.add('text-green-600');
+	await ramExplore(sp);
 }
 
 async function ramInstallCap(sp) {
@@ -4797,7 +4803,6 @@ async function ramExecute() {
 	}
 	try {
 		if (op === 'explore') await ramExplore(sp);
-		else if (op === 'delete') await ramDelete(sp);
 		else if (op === 'install-cap') await ramInstallCap(sp);
 	} catch (e) {
 		const resultEl = document.getElementById('ram-result');
@@ -6656,6 +6661,8 @@ const LANG_RU = {
 	'ICCID': 'ICCID',
 	'Cntr': 'Сч',
 	'Remove': 'Удалить',
+	'Delete': 'Удалить',
+	'Delete All': 'Удалить все',
 	'No cards defined.': 'Карты не заданы.',
 	'Card presets': 'Выбор карты',
 	'— Select card —': '— Выберите карту —',

@@ -132,9 +132,28 @@ Error Action supports the same builder (DISPLAY TEXT, PLAY TONE).
 
 ## RAM Tab
 
-CLA = `80` (GlobalPlatform Card Specification v2.3.1). Remote Application Management commands for card content management.
+CLA = `80` (GlobalPlatform Card Specification v2.3.1). Remote Application Management operations for card content management over SCP80.
 
-### Commands
+### Operations
+
+The RAM subtab offers two operations selected from the **Operation** dropdown:
+
+| Operation | Description |
+|---|---|
+| **Explore Card (all GP data)** | Queries GET STATUS for ISD, Applications, ELFs, and ELF Modules, plus GET DATA FF21 for memory info. Results appear in an explorer view with per-item **Delete** buttons. |
+| **Install Package (.cap file)** | Sends a `.cap` file to the card via the server: INSTALL\[for load\] → LOAD ×N → INSTALL\[for install (+make selectable)\]. |
+
+### Explorer View
+
+After "Explore Card" runs, the explorer view displays:
+
+- **ISD** — AID, lifecycle, privileges (no delete; the ISD cannot be removed)
+- **Applications** — AID, lifecycle, privileges, associated ELF/SD. Each has a **Delete** button (GP `DELETE` by AID).
+- **Executable Load Files** — AID, lifecycle, version, module AIDs. Each has **Delete** (ELF only) and **Delete All** (cascade: ELF + modules + installed Applications, P2=0x80) buttons.
+
+Delete confirms via a browser prompt before sending the GP `DELETE` command via SCP80. The explorer auto-refreshes after a successful deletion.
+
+### GP Commands Reference
 
 | Command | INS | P1 | Description |
 |---|---|---|---|
