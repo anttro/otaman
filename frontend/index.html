@@ -129,6 +129,7 @@
 			<button onclick="chainAddRow('chain-ram','set-status')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ SET STATUS</button>
 			<button onclick="chainAddRow('chain-ram','ext-auth')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ EXTERNAL AUTH</button>
 			<button onclick="chainAddRow('chain-ram','int-auth')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ INTERNAL AUTH</button>
+			<button onclick="chainAddRow('chain-ram','get-response')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ GET RESPONSE</button>
 		</div>
 		<textarea id="chain-ram-preview" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800" placeholder="Chain preview — add commands above"></textarea>
 		<button onclick="packToSp('chain-ram-preview')" id="chain-ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
@@ -1125,6 +1126,7 @@ const CHAIN_CMDS_RAM = [
 	{value:'store-data',label:'STORE DATA'},{value:'set-status',label:'SET STATUS'},
 	{value:'ext-auth',label:'EXTERNAL AUTHENTICATE'},
 	{value:'int-auth',label:'INTERNAL AUTHENTICATE'},
+	{value:'get-response',label:'GET RESPONSE'},
 ];
 
 function chainInit(id) { if (!_chains[id]) _chains[id] = {rows: []}; }
@@ -1464,6 +1466,10 @@ function chainRamFieldsHtml(idx, row, f, uf) {
 	if (cmd === 'int-auth') {
 		return '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Data (hex) &mdash; challenge</label>' +
 			'<input value="' + escHtml(f.data || '') + '" oninput="' + uf('data') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="hex"></div>';
+	}
+	if (cmd === 'get-response') {
+		return '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Le (max bytes)</label>' +
+			'<input value="' + escHtml(f.le || '00') + '" oninput="' + uf('le') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="00" maxlength="2"></div>';
 	}
 	return '';
 }
@@ -1869,6 +1875,10 @@ function chainRamBuildRowHex(idx, row) {
 		if (!ramData4) return '';
 		var dl9 = berLenStr(ramData4.length / 2);
 		return buildApdu(0x00, 0x88, 0x00, 0x00, parseInt(dl9, 16), ramData4) + '00';
+	}
+	if (cmd === 'get-response') {
+		var le = parseInt(f.le, 16) || 0;
+		return buildApdu(0x80, 0xC0, 0x00, 0x00, le, null);
 	}
 	return '';
 }
