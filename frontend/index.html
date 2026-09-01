@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.23</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.24</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -45,315 +45,47 @@
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ram" onclick="cApduSwitchSubtab('ram')">RAM/GP</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="parse" onclick="cApduSwitchSubtab('parse')" data-l10n="C-APDU Parser">C-APDU Parser</button>
 		</div>
-		<div id="c-apdu-sub-sim">
-		<div class="flex gap-4 mb-3">
-			<div class="w-full">
-				<div class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
-					<select id="sim-cmd" onchange="updateSimUsimFields('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-						<option value="select">SELECT</option>
-						<option value="update-record">UPDATE RECORD</option>
-						<option value="update-binary">UPDATE BINARY</option>
-						<option value="read-record">READ RECORD</option>
-						<option value="read-binary">READ BINARY</option>
-						<option value="erase-binary">ERASE BINARY</option>
-						<option value="activate-file">ACTIVATE FILE</option>
-						<option value="deactivate-file">DEACTIVATE FILE</option>
-						<option value="verify">VERIFY PIN</option>
-						<option value="change">CHANGE PIN</option>
-						<option value="disable">DISABLE PIN</option>
-						<option value="enable">ENABLE PIN</option>
-						<option value="unblock">UNBLOCK PIN</option>
-					</select>
-				</div>
-
-				<div id="sim-select-section">
-					<div id="sim-select-checkbox-row" class="mb-3">
-						<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
-							<input id="sim-select" type="checkbox" checked class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateSimSelectSection('sim')">
-							Start with SELECT
-						</label>
-					</div>
-					<div id="sim-select-method-body">
-					<div id="sim-sel-method-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SELECT method">SELECT method</label>
-						<select id="sim-sel-method" onchange="updateSimSelectMethod('sim'); updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-							<option value="fid">By FID</option>
-							<option value="path">By full path from MF</option>
-							<option value="dfname">By DF name / AID</option>
-							<option value="chain">ADF RFM chain</option>
-						</select>
-					</div>
-					<div id="sim-sel-fid-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (2 bytes)</label>
-						<input id="sim-sel-fid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
-					</div>
-					<div id="sim-sel-path-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Path (hex)">Path (hex)</label>
-						<input id="sim-sel-path" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="7FFF6FC5">
-					</div>
-					<div id="sim-sel-dfname-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
-						<input id="sim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
-					</div>
-					<div id="sim-sel-chain-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="FID chain (comma-separated)">FID chain (comma-separated)</label>
-						<input id="sim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F00,2FE2,C0">
-					</div>
-					</div>
-				</div>
-
-				<div id="sim-record-row" class="mb-3">
-					<div class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record #">Record #</label>
-						<input id="sim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-					</div>
-					<div class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Selection mode (P2)">Selection mode (P2)</label>
-						<select id="sim-rec-mode" onchange="updateP1P2Display('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-<option value="04">Absolute (04)</option>
-						<option value="02">Next (02)</option>
-						<option value="03">Previous (03)</option>
-						</select>
-					</div>
-				</div>
-
-				<div id="sim-offset-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Offset (hex)">Offset (hex)</label>
-					<input id="sim-offset" onchange="updateP1P2Display('sim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
-				</div>
-
-				<div id="sim-act-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Target">Target</label>
-					<select id="sim-act-target" onchange="updateActFileInput('sim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-						<option value="current" data-l10n="Current EF (case 1)">Current EF (case 1)</option>
-						<option value="fid" data-l10n="By FID">By FID</option>
-						<option value="mfpath" data-l10n="Path from MF">Path from MF</option>
-						<option value="dfpath" data-l10n="Path from current DF">Path from current DF</option>
-					</select>
-					<input id="sim-act-file" class="mt-1.5 font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5 / 7FFF6FC5" style="display:none">
-				</div>
-
-				<div id="sim-le-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Le (hex)</label>
-					<input id="sim-le" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
-				</div>
-
-				<div id="sim-data-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Data (hex)">Data (hex)</label>
-					<textarea id="sim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
-				</div>
-
-				<div id="sim-recsize-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record size (bytes)">Record size (bytes)</label>
-					<input id="sim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				</div>
-
-				<div id="sim-pin-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">PIN</label>
-					<select id="sim-pin" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-						<option value="01">PIN1 (01)</option>
-						<option value="02">PIN2 (02)</option>
-					</select>
-				</div>
-
-				<div id="sim-pin-val-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">PIN value</label>
-					<input id="sim-pin-val" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="1234" maxlength="8">
-				</div>
-
-				<div id="sim-pin-old-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Old PIN</label>
-					<input id="sim-pin-old" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="1234" maxlength="8">
-				</div>
-
-				<div id="sim-pin-new-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">New PIN</label>
-					<input id="sim-pin-new" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="5678" maxlength="8">
-				</div>
-
-				<div id="sim-override-row" class="mb-3">
-					<div class="flex gap-2 mb-2">
-						<div class="flex-1">
-							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P1 (hex)</label>
-							<input id="sim-p1" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
-						</div>
-						<div class="flex-1">
-							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P2 (hex)</label>
-							<input id="sim-p2" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
-						</div>
-					</div>
-					<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
-						<input id="sim-override" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="toggleSimOverride('sim')">
-						Allow P1/P2 editing
-					</label>
-				</div>
-			</div>
+			<div id="c-apdu-sub-sim">
+		<div id="chain-sim-rows"></div>
+		<div class="flex flex-wrap gap-1 mb-3">
+			<button onclick="chainAddRow('chain-sim','select')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ SELECT</button>
+			<button onclick="chainAddRow('chain-sim','read-record')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ READ RECORD</button>
+			<button onclick="chainAddRow('chain-sim','read-binary')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ READ BINARY</button>
+			<button onclick="chainAddRow('chain-sim','update-record')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ UPDATE RECORD</button>
+			<button onclick="chainAddRow('chain-sim','update-binary')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ UPDATE BINARY</button>
+			<button onclick="chainAddRow('chain-sim','erase-binary')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ ERASE BINARY</button>
+			<button onclick="chainAddRow('chain-sim','activate-file')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ ACTIVATE</button>
+			<button onclick="chainAddRow('chain-sim','deactivate-file')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ DEACTIVATE</button>
+			<button onclick="chainAddRow('chain-sim','verify')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ VERIFY PIN</button>
+			<button onclick="chainAddRow('chain-sim','change')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ CHANGE PIN</button>
+			<button onclick="chainAddRow('chain-sim','disable')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ DISABLE PIN</button>
+			<button onclick="chainAddRow('chain-sim','enable')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ ENABLE PIN</button>
+			<button onclick="chainAddRow('chain-sim','unblock')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ UNBLOCK PIN</button>
+			<button onclick="chainAddRow('chain-sim','get-response')" class="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600">+ GET RESPONSE</button>
 		</div>
-
-		<button onclick="genSimUsim('sim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
-		<textarea id="sim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		<button onclick="packToSp('sim-result')" id="sim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
+		<textarea id="chain-sim-preview" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800" placeholder="Chain preview — add commands above"></textarea>
+		<button onclick="packToSp('chain-sim-preview')" id="chain-sim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 
 	<div id="c-apdu-sub-usim" class="hidden">
-		<div class="flex gap-4 mb-3">
-			<div class="w-full">
-				<div class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
-					<select id="usim-cmd" onchange="updateSimUsimFields('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-						<option value="select">SELECT</option>
-						<option value="update-record">UPDATE RECORD</option>
-						<option value="update-binary">UPDATE BINARY</option>
-						<option value="read-record">READ RECORD</option>
-						<option value="read-binary">READ BINARY</option>
-						<option value="activate-file">ACTIVATE FILE</option>
-						<option value="deactivate-file">DEACTIVATE FILE</option>
-						<option value="verify">VERIFY PIN</option>
-						<option value="change">CHANGE PIN</option>
-						<option value="disable">DISABLE PIN</option>
-						<option value="enable">ENABLE PIN</option>
-						<option value="unblock">UNBLOCK PIN</option>
-					</select>
-				</div>
-
-				<div id="usim-select-section">
-					<div id="usim-select-checkbox-row" class="mb-3">
-						<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
-							<input id="usim-select" type="checkbox" checked class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateSimSelectSection('usim')">
-							Start with SELECT
-						</label>
-					</div>
-					<div id="usim-select-method-body">
-					<div id="usim-sel-method-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SELECT method">SELECT method</label>
-						<select id="usim-sel-method" onchange="updateSimSelectMethod('usim'); updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-							<option value="fid">By FID</option>
-							<option value="path">By full path from MF</option>
-							<option value="dfname">By DF name / AID</option>
-							<option value="chain">ADF RFM chain</option>
-						</select>
-					</div>
-					<div id="usim-sel-silent-row" class="mb-3">
-						<label class="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
-							<input id="usim-sel-silent" type="checkbox" onchange="updateP1P2Display('usim')" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800">
-							Silent (P2=0C, no FCP returned)
-						</label>
-					</div>
-					<div id="usim-sel-fid-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">FID (2 bytes)</label>
-						<input id="usim-sel-fid" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5" maxlength="4">
-					</div>
-					<div id="usim-sel-path-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Path (hex)">Path (hex)</label>
-						<input id="usim-sel-path" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="7FFF6FC5">
-						<div class="flex gap-4 mt-1.5 text-sm text-gray-700 dark:text-slate-300">
-							<label class="flex items-center gap-1.5"><input type="radio" name="usim-sel-base" value="mf" checked onchange="updateP1P2Display('usim')" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800"> from MF</label>
-							<label class="flex items-center gap-1.5"><input type="radio" name="usim-sel-base" value="df" onchange="updateP1P2Display('usim')" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800"> from current DF</label>
-						</div>
-					</div>
-					<div id="usim-sel-dfname-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">AID (hex)</label>
-						<input id="usim-sel-dfname" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
-					</div>
-					<div id="usim-sel-chain-row" class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="FID chain (comma-separated)">FID chain (comma-separated)</label>
-						<input id="usim-sel-chain" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="3F00,2FE2,C0">
-					</div>
-					</div>
-				</div>
-
-				<div id="usim-record-row" class="mb-3">
-					<div class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record #">Record #</label>
-						<input id="usim-record" type="number" min="1" max="255" value="1" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-					</div>
-					<div class="mb-3">
-						<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Selection mode (P2)">Selection mode (P2)</label>
-						<select id="usim-rec-mode" onchange="updateP1P2Display('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-<option value="04">Absolute (04)</option>
-						<option value="02">Next (02)</option>
-						<option value="03">Previous (03)</option>
-						</select>
-					</div>
-				</div>
-
-				<div id="usim-offset-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Offset (hex)">Offset (hex)</label>
-					<input id="usim-offset" onchange="updateP1P2Display('usim')" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="0000" maxlength="4" value="0000">
-				</div>
-
-				<div id="usim-act-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Target">Target</label>
-					<select id="usim-act-target" onchange="updateActFileInput('usim')" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-						<option value="current" data-l10n="Current EF (case 1)">Current EF (case 1)</option>
-						<option value="fid" data-l10n="By FID">By FID</option>
-						<option value="mfpath" data-l10n="Path from MF">Path from MF</option>
-						<option value="dfpath" data-l10n="Path from current DF">Path from current DF</option>
-					</select>
-					<input id="usim-act-file" class="mt-1.5 font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="6FC5 / 7FFF6FC5" style="display:none">
-				</div>
-
-				<div id="usim-le-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Le (hex)</label>
-					<input id="usim-le" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
-				</div>
-
-				<div id="usim-data-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Data (hex)">Data (hex)</label>
-					<textarea id="usim-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
-				</div>
-
-				<div id="usim-recsize-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Record size (bytes)">Record size (bytes)</label>
-					<input id="usim-recsize" type="number" min="1" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				</div>
-
-				<div id="usim-pin-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">PIN</label>
-					<select id="usim-pin" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-						<option value="01">PIN1 (01)</option>
-						<option value="02">PIN2 (02)</option>
-					</select>
-				</div>
-
-				<div id="usim-pin-val-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">PIN value</label>
-					<input id="usim-pin-val" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="1234" maxlength="8">
-				</div>
-
-				<div id="usim-pin-old-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Old PIN</label>
-					<input id="usim-pin-old" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="1234" maxlength="8">
-				</div>
-
-				<div id="usim-pin-new-row" class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">New PIN</label>
-					<input id="usim-pin-new" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="5678" maxlength="8">
-				</div>
-
-				<div id="usim-override-row" class="mb-3">
-					<div class="flex gap-2 mb-2">
-						<div class="flex-1">
-							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P1 (hex)</label>
-							<input id="usim-p1" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
-						</div>
-						<div class="flex-1">
-							<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">P2 (hex)</label>
-							<input id="usim-p2" disabled class="font-mono disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
-						</div>
-					</div>
-					<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
-						<input id="usim-override" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="toggleSimOverride('usim')">
-						Allow P1/P2 editing
-					</label>
-				</div>
-			</div>
+		<div id="chain-usim-rows"></div>
+		<div class="flex flex-wrap gap-1 mb-3">
+			<button onclick="chainAddRow('chain-usim','select')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ SELECT</button>
+			<button onclick="chainAddRow('chain-usim','read-record')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ READ RECORD</button>
+			<button onclick="chainAddRow('chain-usim','read-binary')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ READ BINARY</button>
+			<button onclick="chainAddRow('chain-usim','update-record')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ UPDATE RECORD</button>
+			<button onclick="chainAddRow('chain-usim','update-binary')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ UPDATE BINARY</button>
+			<button onclick="chainAddRow('chain-usim','activate-file')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ ACTIVATE</button>
+			<button onclick="chainAddRow('chain-usim','deactivate-file')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ DEACTIVATE</button>
+			<button onclick="chainAddRow('chain-usim','verify')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ VERIFY PIN</button>
+			<button onclick="chainAddRow('chain-usim','change')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ CHANGE PIN</button>
+			<button onclick="chainAddRow('chain-usim','disable')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ DISABLE PIN</button>
+			<button onclick="chainAddRow('chain-usim','enable')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ ENABLE PIN</button>
+			<button onclick="chainAddRow('chain-usim','unblock')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ UNBLOCK PIN</button>
+			<button onclick="chainAddRow('chain-usim','get-response')" class="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600">+ GET RESPONSE</button>
 		</div>
-
-		<button onclick="genSimUsim('usim')" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
-		<textarea id="usim-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		<button onclick="packToSp('usim-result')" id="usim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
+		<textarea id="chain-usim-preview" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800" placeholder="Chain preview — add commands above"></textarea>
+		<button onclick="packToSp('chain-usim-preview')" id="chain-usim-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 
 	<div id="c-apdu-sub-ber" class="hidden">
@@ -382,242 +114,24 @@
 	</div>
 
 	<div id="c-apdu-sub-ram" class="hidden">
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
-			<select id="ram-cmd" onchange="updateRamFields()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="install-load">INSTALL [for load]</option>
-				<option value="install-install">INSTALL [for install]</option>
-				<option value="install-make-sel">INSTALL [for make selectable]</option>
-				<option value="install-reg-update">INSTALL [for registry update]</option>
-				<option value="install-extradition">INSTALL [for extradition]</option>
-				<option value="load">LOAD</option>
-				<option value="delete">DELETE</option>
-				<option value="get-status">GET STATUS</option>
-				<option value="get-data">GET DATA</option>
-				<option value="store-data">STORE DATA</option>
-				<option value="set-status">SET STATUS</option>
-				<option value="ext-auth">EXTERNAL AUTHENTICATE</option>
-				<option value="int-auth">INTERNAL AUTHENTICATE</option>
-			</select>
+		<div id="chain-ram-rows"></div>
+		<div class="flex flex-wrap gap-1 mb-3">
+			<button onclick="chainAddRow('chain-ram','install-load')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ INSTALL [for load]</button>
+			<button onclick="chainAddRow('chain-ram','install-install')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ INSTALL [for install]</button>
+			<button onclick="chainAddRow('chain-ram','install-make-sel')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ INSTALL [for make selectable]</button>
+			<button onclick="chainAddRow('chain-ram','install-reg-update')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ INSTALL [for registry update]</button>
+			<button onclick="chainAddRow('chain-ram','install-extradition')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ INSTALL [for extradition]</button>
+			<button onclick="chainAddRow('chain-ram','load')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ LOAD</button>
+			<button onclick="chainAddRow('chain-ram','delete')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ DELETE</button>
+			<button onclick="chainAddRow('chain-ram','get-status')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ GET STATUS</button>
+			<button onclick="chainAddRow('chain-ram','get-data')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ GET DATA</button>
+			<button onclick="chainAddRow('chain-ram','store-data')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ STORE DATA</button>
+			<button onclick="chainAddRow('chain-ram','set-status')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ SET STATUS</button>
+			<button onclick="chainAddRow('chain-ram','ext-auth')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ EXTERNAL AUTH</button>
+			<button onclick="chainAddRow('chain-ram','int-auth')" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">+ INTERNAL AUTH</button>
 		</div>
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Application / Instance AID (hex)</label>
-			<input id="ram-aid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
-		</div>
-		<div id="ram-sdaid-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SD AID (hex)</label>
-			<input id="ram-sdaid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
-		</div>
-		<div id="ram-elfaid-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Load File AID / Package AID (hex)</label>
-			<input id="ram-elfaid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
-		</div>
-		<div id="ram-modaid-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Executable Module AID / Applet Class AID (hex)</label>
-			<input id="ram-modaid" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000151000000">
-		</div>
-		<div id="ram-priv-row" class="mb-3">
-			<div class="flex items-center gap-3 mb-2">
-				<label class="text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Privileges">Privileges</label>
-				<input id="ram-priv" readonly class="font-mono w-20 border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 bg-gray-100 dark:bg-slate-800" value="00">
-			</div>
-			<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-				<div class="font-medium text-gray-700 dark:text-slate-300 mb-1" data-l10n="Byte 1">Byte 1</div>
-				<div class="font-medium text-gray-700 dark:text-slate-300 mb-1" data-l10n="Byte 2">Byte 2</div>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="80" onchange="updateRamPriv()"> Security Domain</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="80" onchange="updateRamPriv()"> Trusted Path</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="40" onchange="updateRamPriv()"> DAP Verification</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="40" onchange="updateRamPriv()"> Authorized Management</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="20" onchange="updateRamPriv()"> Delegated Management</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="20" onchange="updateRamPriv()"> Token Verification</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="10" onchange="updateRamPriv()"> Card Lock</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="10" onchange="updateRamPriv()"> Global Delete</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="08" onchange="updateRamPriv()"> Card Terminate</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="08" onchange="updateRamPriv()"> Global Lock</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="04" onchange="updateRamPriv()"> Card Reset</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="04" onchange="updateRamPriv()"> Global Registry</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="02" onchange="updateRamPriv()"> CVM Management</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b1" value="01" onchange="updateRamPriv()"> Mandated DAP Verification</label>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b2" value="02" onchange="updateRamPriv()"> Final Application</label>
-				<div></div>
-				<label class="flex items-center gap-1"><input type="checkbox" class="ram-priv-b3" value="80" onchange="updateRamPriv()"> Receipt Generation</label>
-			</div>
-		</div>
-		<div id="ram-toolkit-row" class="mb-3">
-			<div class="mb-2">
-				<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
-					<input id="ram-toolkit-enable" type="checkbox" class="rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800" onchange="updateRamToolkit()">
-					SIM/UICC Toolkit parameters
-				</label>
-			</div>
-			<div id="ram-toolkit-body" class="">
-				<div class="mb-3">
-					<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Toolkit mode">Toolkit mode</label>
-					<select id="ram-tk-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-						<option value="ca">SIM Toolkit (Tag CA)</option>
-						<option value="ea">UICC Toolkit (Tag EA)</option>
-					</select>
-				</div>
-				<div class="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Priority">Priority</label>
-						<input id="ram-tk-priority" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Timers (max)">Timers (max)</label>
-						<input id="ram-tk-timers" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Menu text length">Menu text length</label>
-						<input id="ram-tk-textlen" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Menu items">Menu items</label>
-						<input id="ram-tk-menus" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="First menu position">First menu position</label>
-						<input id="ram-tk-firstpos" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="First menu ID (hex)">First menu ID (hex)</label>
-						<input id="ram-tk-firstid" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Last menu position">Last menu position</label>
-						<input id="ram-tk-lastpos" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Last menu ID (hex)">Last menu ID (hex)</label>
-						<input id="ram-tk-lastid" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Channels (max)">Channels (max)</label>
-						<input id="ram-tk-channels" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">MSL (SPI1, hex)</label>
-						<select id="ram-tk-msl" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-							<option value="00">00 — no verification</option>
-							<option value="11">11 — RC/CC/DS</option>
-							<option value="12">12 — RC/DS/CC</option>
-							<option value="15">15 — RC/DS/CC + MAC</option>
-							<option value="16" selected>16 — RC/DS/CC + MAC + Cipher</option>
-							<option value="19">19 — RC/DS/CC + MAC + Cipher + DS</option>
-						</select>
-					</div>
-					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300">TAR (3 bytes)</label>
-						<input id="ram-tk-tar" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="B00001" maxlength="6" value="B00001">
-					</div>
-					<div id="ram-tk-ad-row">
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Access domain (hex)">Access domain (hex)</label>
-						<input id="ram-tk-ad" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800" placeholder="00" maxlength="2" value="00">
-					</div>
-					<div id="ram-tk-services-row">
-						<label class="block mb-1 text-xs font-medium text-gray-700 dark:text-slate-300" data-l10n="Max services">Max services</label>
-						<input id="ram-tk-services" type="number" min="0" max="255" value="0" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1.5 dark:bg-slate-800">
-					</div>
-				</div>
-			</div>
-		</div>
-		<div id="ram-load-data-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Load data (hex)">Load data (hex)</label>
-			<textarea id="ram-load-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
-		</div>
-		<div id="ram-data-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Data (hex)">Data (hex)</label>
-			<textarea id="ram-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800"></textarea>
-		</div>
-		<div id="ram-block-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Block number">Block number</label>
-			<input id="ram-block" type="number" min="0" value="0" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-		</div>
-		<div id="ram-enc-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Encryption">Encryption</label>
-			<select id="ram-enc" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="00">No encryption, more blocks</option>
-				<option value="40">App-dependent encryption, more blocks</option>
-				<option value="80">No encryption, last block</option>
-				<option value="C0">App-dependent encryption, last block</option>
-				<option value="E0">With encryption, last block</option>
-			</select>
-		</div>
-		<div id="ram-authp1-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Security level (P1)</label>
-			<select id="ram-authp1" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="00">00 — No secure messaging</option>
-				<option value="01">01 — C-MAC</option>
-				<option value="03">03 — C-DEC + C-MAC</option>
-			</select>
-		</div>
-		<div id="ram-del-mode-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="DELETE mode">DELETE mode</label>
-			<select id="ram-del-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="00">AID only (00)</option>
-				<option value="80">AID and all related objects (80)</option>
-			</select>
-		</div>
-		<div id="ram-gs-mode-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET STATUS mode">GET STATUS mode</label>
-			<select id="ram-gs-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="80">ISD (80)</option>
-				<option value="40">Applications and SSD (40)</option>
-				<option value="20">Executable Load Files (20)</option>
-				<option value="10">ELF and modules (10)</option>
-			</select>
-		</div>
-		<div id="ram-gs-p2-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET STATUS format">GET STATUS format</label>
-			<select id="ram-gs-p2" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="02">02 — First/all, TLV format</option>
-				<option value="03">03 — Next, TLV format</option>
-				<option value="00">00 — First/all, raw format (deprecated)</option>
-			</select>
-		</div>
-		<div id="ram-tag-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="GET DATA tag">GET DATA tag</label>
-			<select id="ram-gd-tag-sel" onchange="document.getElementById('ram-tag').value=this.value" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 mb-1.5">
-				<option value="" data-l10n="— select preset —">— select preset —</option>
-				<option value="42">42 — Issuer Identification Number (IIN)</option>
-				<option value="45">45 — Card Image Number (CIN)</option>
-				<option value="66">66 — Card Data / SD Management Data</option>
-				<option value="67">67 — Card Capability Information</option>
-				<option value="E0">E0 — Key Information Template</option>
-				<option value="D3">D3 — Current Security Level</option>
-				<option value="2F00">2F00 — List of Applications</option>
-				<option value="FF21">FF21 — Extended Card Resources Info</option>
-				<option value="5F50">5F50 — SD Manager URL</option>
-				<option value="C1">C1 — Sequence Counter (SCP02/03)</option>
-				<option value="C2">C2 — Confirmation Counter</option>
-				<option value="7F21">7F21 — Certificate (SD public key)</option>
-				<option value="5031">5031 — Certificate info (EF.OD)</option>
-			</select>
-			<input id="ram-tag" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="5F50" maxlength="4" value="5F50">
-		</div>
-		<div id="ram-ss-mode-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SET STATUS type">SET STATUS type</label>
-			<select id="ram-ss-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="80">ISD (80)</option>
-				<option value="40">Application or SSD (40)</option>
-				<option value="60">SD + associated apps (60)</option>
-			</select>
-		</div>
-		<div id="ram-ss-state-row" class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="State">State</label>
-			<select id="ram-ss-state" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="00">00 — Unlock (previous state)</option>
-				<option value="80">80 — Lock (LOCKED)</option>
-				<option value="01">01 — OP_READY</option>
-				<option value="07">07 — INITIALIZED</option>
-				<option value="0F">0F — SECURED</option>
-				<option value="7F">7F — CARD_LOCKED</option>
-				<option value="FF">FF — TERMINATED</option>
-			</select>
-		</div>
-		<button onclick="genRam()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Generate APDU">Generate APDU</button>
-		<textarea id="ram-apdu-result" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		<button onclick="packToSp('ram-apdu-result')" id="ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
+		<textarea id="chain-ram-preview" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800" placeholder="Chain preview — add commands above"></textarea>
+		<button onclick="packToSp('chain-ram-preview')" id="chain-ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 	<div id="c-apdu-sub-parse" class="hidden">
 		<div class="mb-3">
@@ -1313,171 +827,11 @@ function cApduSwitchSubtab(name) {
 		const el = document.getElementById('c-apdu-sub-' + s);
 		if (el) el.classList.toggle('hidden', s !== name);
 	});
-	if (name === 'sim' || name === 'usim') {
-		updateSimUsimFields(name);
-		updateSimSelectMethod(name);
-	}
 	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp', parse:'c-apdu'}[name] || 'c-apdu');
 }
 document.querySelectorAll('.tab-btn').forEach(btn => {
 	btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
-
-// ===== SIM/USIM field visibility =====
-const RECORD_OPS = new Set(['update-record', 'read-record']);
-const BINARY_OPS = new Set(['update-binary', 'read-binary', 'erase-binary']);
-const READ_OPS = new Set(['read-record', 'read-binary']);
-const DATA_OPS = new Set(['update-record', 'update-binary']);
-const RECSIZE_OPS = new Set(['update-record']);
-const PIN_OPS = new Set(['verify', 'change', 'disable', 'enable', 'unblock']);
-
-function updateSimUsimFields(mode) {
-	if (!mode) return;
-	const cmd = document.getElementById(mode + '-cmd').value;
-	document.getElementById(mode + '-record-row').style.display = RECORD_OPS.has(cmd) ? '' : 'none';
-	document.getElementById(mode + '-offset-row').style.display = BINARY_OPS.has(cmd) ? '' : 'none';
-	document.getElementById(mode + '-le-row').style.display = READ_OPS.has(cmd) ? '' : 'none';
-	document.getElementById(mode + '-data-row').style.display = DATA_OPS.has(cmd) ? '' : 'none';
-	document.getElementById(mode + '-recsize-row').style.display = RECSIZE_OPS.has(cmd) ? '' : 'none';
-	document.getElementById(mode + '-pin-row').style.display = PIN_OPS.has(cmd) ? '' : 'none';
-	const pinValCmds = cmd === 'verify' || cmd === 'disable' || cmd === 'enable';
-	document.getElementById(mode + '-pin-val-row').style.display = pinValCmds ? '' : 'none';
-	const oldNewCmds = cmd === 'change' || cmd === 'unblock';
-	document.getElementById(mode + '-pin-old-row').style.display = oldNewCmds ? '' : 'none';
-	document.getElementById(mode + '-pin-new-row').style.display = oldNewCmds ? '' : 'none';
-	if (oldNewCmds) {
-		document.querySelector('#' + mode + '-pin-old-row label').textContent = cmd === 'unblock' ? 'Unblock PIN' : 'Old PIN';
-	}
-	document.getElementById(mode + '-act-row').style.display = (cmd === 'activate-file' || cmd === 'deactivate-file') ? '' : 'none';
-	if (cmd === 'select') {
-		document.getElementById(mode + '-select-checkbox-row').style.display = 'none';
-	} else {
-		document.getElementById(mode + '-select-checkbox-row').style.display = '';
-	}
-	updateP1P2Display(mode);
-}
-
-function updateSimSelectMethod(mode) {
-	if (!mode) return;
-	const method = document.getElementById(mode + '-sel-method').value;
-	document.getElementById(mode + '-sel-fid-row').style.display = method === 'fid' ? '' : 'none';
-	document.getElementById(mode + '-sel-path-row').style.display = method === 'path' ? '' : 'none';
-	document.getElementById(mode + '-sel-dfname-row').style.display = method === 'dfname' ? '' : 'none';
-	document.getElementById(mode + '-sel-chain-row').style.display = method === 'chain' ? '' : 'none';
-}
-
-function updateActFileInput(mode) {
-	const target = document.getElementById(mode + '-act-target').value;
-	document.getElementById(mode + '-act-file').style.display = target === 'current' ? 'none' : '';
-}
-
-function toggleSimOverride(mode) {
-	const checked = document.getElementById(mode + '-override').checked;
-	document.getElementById(mode + '-p1').disabled = !checked;
-	document.getElementById(mode + '-p2').disabled = !checked;
-}
-
-function updateSimSelectSection(mode) {
-	const cmd = document.getElementById(mode + '-cmd').value;
-	if (cmd === 'select') return;
-	document.getElementById(mode + '-select-method-body').style.display =
-		document.getElementById(mode + '-select').checked ? '' : 'none';
-}
-
-function updateP1P2Display(mode) {
-	const preset = mode === 'sim' ? {selP1: 0x00, selP2: 0x00} : {selP1: 0x00, selP2: 0x04};
-	const cmd = document.getElementById(mode + '-cmd').value;
-	if (cmd === 'select') {
-		const method = document.getElementById(mode + '-sel-method').value;
-		const silent = mode === 'usim' && !!document.getElementById('usim-sel-silent').checked;
-		const p2Base = silent ? 0x0C : preset.selP2;
-		let p1, p2;
-		if (method === 'fid' || method === 'chain') {
-			p1 = preset.selP1; p2 = p2Base;
-		} else if (method === 'path') {
-			p1 = (mode === 'usim' && document.querySelector('input[name="usim-sel-base"]:checked')?.value === 'df') ? 0x09 : 0x08;
-			p2 = mode === 'sim' ? 0x00 : p2Base;
-		} else if (method === 'dfname') {
-			p1 = 0x04; p2 = mode === 'sim' ? 0x00 : p2Base;
-		} else {
-			p1 = preset.selP1; p2 = p2Base;
-		}
-		document.getElementById(mode + '-p1').value = p1.toString(16).padStart(2, '0').toUpperCase();
-		document.getElementById(mode + '-p2').value = p2.toString(16).padStart(2, '0').toUpperCase();
-		return;
-	}
-	const record = parseInt(document.getElementById(mode + '-record').value) || 1;
-	const recMode = parseInt(document.getElementById(mode + '-rec-mode').value, 16);
-	const offsetHex = (document.getElementById(mode + '-offset').value || '0000').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0').slice(0, 4);
-	const offset = parseInt(offsetHex, 16);
-	const pin = document.getElementById(mode + '-pin').value;
-	let p1, p2;
-	if (cmd === 'read-record' || cmd === 'update-record') {
-		p1 = (recMode === 0x02 || recMode === 0x03) ? 0x00 : record; p2 = recMode;
-	} else if (cmd === 'read-binary' || cmd === 'update-binary' || cmd === 'erase-binary') {
-		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF;
-	} else if (cmd === 'activate-file' || cmd === 'deactivate-file') {
-		const target = document.getElementById(mode + '-act-target').value;
-		if (target === 'current') {
-			p1 = 0x00; p2 = 0x00;
-		} else {
-			p1 = target === 'fid' ? 0x00 : (target === 'mfpath' ? 0x08 : 0x09);
-			p2 = 0x00;
-		}
-	} else if (cmd === 'verify' || cmd === 'change' || cmd === 'disable' || cmd === 'enable' || cmd === 'unblock') {
-		p1 = 0x00; p2 = parseInt(pin, 16);
-	} else {
-		p1 = 0x00; p2 = 0x00;
-	}
-	document.getElementById(mode + '-p1').value = p1.toString(16).padStart(2, '0').toUpperCase();
-	document.getElementById(mode + '-p2').value = p2.toString(16).padStart(2, '0').toUpperCase();
-}
-
-// ===== RAM field visibility =====
-function updateRamFields() {
-	const cmd = document.getElementById('ram-cmd').value;
-	const showPriv = ['install-install', 'install-make-sel', 'install-reg-update'].includes(cmd);
-	document.getElementById('ram-priv-row').style.display = showPriv ? '' : 'none';
-	document.getElementById('ram-toolkit-row').style.display = cmd === 'install-install' ? '' : 'none';
-	document.getElementById('ram-sdaid-row').style.display = ['install-load', 'install-reg-update', 'install-extradition'].includes(cmd) ? '' : 'none';
-	document.getElementById('ram-elfaid-row').style.display = cmd === 'install-install' ? '' : 'none';
-	document.getElementById('ram-modaid-row').style.display = cmd === 'install-install' ? '' : 'none';
-	document.getElementById('ram-load-data-row').style.display = cmd === 'install-load' ? '' : 'none';
-	document.getElementById('ram-data-row').style.display = ['load', 'store-data', 'ext-auth', 'int-auth'].includes(cmd) ? '' : 'none';
-	document.getElementById('ram-block-row').style.display = ['load', 'store-data'].includes(cmd) ? '' : 'none';
-	document.getElementById('ram-enc-row').style.display = cmd === 'store-data' ? '' : 'none';
-	document.getElementById('ram-authp1-row').style.display = cmd === 'ext-auth' ? '' : 'none';
-	document.getElementById('ram-del-mode-row').style.display = cmd === 'delete' ? '' : 'none';
-	document.getElementById('ram-gs-mode-row').style.display = cmd === 'get-status' ? '' : 'none';
-	document.getElementById('ram-gs-p2-row').style.display = cmd === 'get-status' ? '' : 'none';
-	document.getElementById('ram-tag-row').style.display = cmd === 'get-data' ? '' : 'none';
-	document.getElementById('ram-ss-mode-row').style.display = cmd === 'set-status' ? '' : 'none';
-	document.getElementById('ram-ss-state-row').style.display = cmd === 'set-status' ? '' : 'none';
-	updateRamToolkit();
-}
-
-function updateRamPriv() {
-	let b1 = 0, b2 = 0, b3 = 0;
-	document.querySelectorAll('.ram-priv-b1:checked').forEach(cb => b1 |= parseInt(cb.value, 16));
-	document.querySelectorAll('.ram-priv-b2:checked').forEach(cb => b2 |= parseInt(cb.value, 16));
-	document.querySelectorAll('.ram-priv-b3:checked').forEach(cb => b3 |= parseInt(cb.value, 16));
-	let hex = b1.toString(16).padStart(2, '0').toUpperCase();
-	hex += b2.toString(16).padStart(2, '0').toUpperCase();
-	if (b3) hex += b3.toString(16).padStart(2, '0').toUpperCase();
-	document.getElementById('ram-priv').value = hex;
-}
-
-function updateRamToolkit() {
-	const checked = document.getElementById('ram-toolkit-enable').checked;
-	document.getElementById('ram-toolkit-body').style.display = checked ? '' : 'none';
-	updateRamTkMode();
-}
-function updateRamTkMode() {
-	const isSim = document.getElementById('ram-tk-mode').value === 'ca';
-	document.getElementById('ram-tk-ad-row').style.display = isSim ? '' : 'none';
-	document.getElementById('ram-tk-services-row').style.display = isSim ? 'none' : '';
-}
-document.getElementById('ram-tk-mode').addEventListener('change', updateRamTkMode);
 
 function updateRcPriv() {
 	let b1 = 0, b2 = 0, b3 = 0;
@@ -1733,257 +1087,660 @@ function buildSelect(cla, p1, p2, fid) {
 	return buildApdu(cla, 0xA4, p1, p2, 0x02, data);
 }
 
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-const OPS = {
-	'select':            {ins: 0xA4},
-	'read-record':       {ins: 0xB2},
-	'read-binary':       {ins: 0xB0},
-	'update-record':     {ins: 0xDC},
-	'update-binary':     {ins: 0xD6},
-	'erase-binary':      {ins: 0x0E},
-	'activate-file':     {ins: 0x44},
-	'deactivate-file':   {ins: 0x04},
-	'verify':            {ins: 0x20},
-	'change':            {ins: 0x24},
-	'disable':           {ins: 0x26},
-	'enable':            {ins: 0x28},
-	'unblock':           {ins: 0x2C},
-};
+// ===== Chain Builder =====
+// Row-based APDU chain builder for SIM RFM, USIM RFM, and RAM/GP sub-tabs.
+// Each chain has a list of rows; each row = one APDU command with its own fields.
+// Chain preview = concatenation of all row hexes, with Le stripping when
+// a Case 4 command is followed by GET RESPONSE (ETSI TS 102 226 compact).
+const _chains = {};
 
-function getSelValue(mode) {
-	const method = document.getElementById(mode + '-sel-method').value;
-	if (method === 'fid') {
-		return {type: 'fid', value: (document.getElementById(mode + '-sel-fid').value || '').replace(/[^0-9a-fA-F]/g, '')};
-	} else if (method === 'path') {
-		return {type: 'path', value: (document.getElementById(mode + '-sel-path').value || '').replace(/[^0-9a-fA-F]/g, '')};
-	} else if (method === 'dfname') {
-		return {type: 'dfname', value: (document.getElementById(mode + '-sel-dfname').value || '').replace(/[^0-9a-fA-F]/g, '')};
-	} else if (method === 'chain') {
-		return {type: 'chain', value: (document.getElementById(mode + '-sel-chain').value || '').trim()};
-	}
-	return null;
+const CHAIN_CMDS_SIM = [
+	{value:'select',label:'SELECT'},{value:'read-record',label:'READ RECORD'},
+	{value:'read-binary',label:'READ BINARY'},{value:'update-record',label:'UPDATE RECORD'},
+	{value:'update-binary',label:'UPDATE BINARY'},{value:'erase-binary',label:'ERASE BINARY'},
+	{value:'activate-file',label:'ACTIVATE FILE'},{value:'deactivate-file',label:'DEACTIVATE FILE'},
+	{value:'verify',label:'VERIFY PIN'},{value:'change',label:'CHANGE PIN'},
+	{value:'disable',label:'DISABLE PIN'},{value:'enable',label:'ENABLE PIN'},
+	{value:'unblock',label:'UNBLOCK PIN'},{value:'get-response',label:'GET RESPONSE'},
+];
+const CHAIN_CMDS_USIM = [
+	{value:'select',label:'SELECT'},{value:'read-record',label:'READ RECORD'},
+	{value:'read-binary',label:'READ BINARY'},{value:'update-record',label:'UPDATE RECORD'},
+	{value:'update-binary',label:'UPDATE BINARY'},
+	{value:'activate-file',label:'ACTIVATE FILE'},{value:'deactivate-file',label:'DEACTIVATE FILE'},
+	{value:'verify',label:'VERIFY PIN'},{value:'change',label:'CHANGE PIN'},
+	{value:'disable',label:'DISABLE PIN'},{value:'enable',label:'ENABLE PIN'},
+	{value:'unblock',label:'UNBLOCK PIN'},{value:'get-response',label:'GET RESPONSE'},
+];
+const CHAIN_CMDS_RAM = [
+	{value:'install-load',label:'INSTALL [for load]'},
+	{value:'install-install',label:'INSTALL [for install]'},
+	{value:'install-make-sel',label:'INSTALL [for make selectable]'},
+	{value:'install-reg-update',label:'INSTALL [for registry update]'},
+	{value:'install-extradition',label:'INSTALL [for extradition]'},
+	{value:'load',label:'LOAD'},{value:'delete',label:'DELETE'},
+	{value:'get-status',label:'GET STATUS'},{value:'get-data',label:'GET DATA'},
+	{value:'store-data',label:'STORE DATA'},{value:'set-status',label:'SET STATUS'},
+	{value:'ext-auth',label:'EXTERNAL AUTHENTICATE'},
+	{value:'int-auth',label:'INTERNAL AUTHENTICATE'},
+];
+
+function chainInit(id) { if (!_chains[id]) _chains[id] = {rows: []}; }
+function chainAddRow(id, cmd) { chainInit(id); _chains[id].rows.push({cmd: cmd, fields: {}}); chainRender(id); }
+function chainDeleteRow(id, idx) { chainInit(id); _chains[id].rows.splice(idx, 1); chainRender(id); }
+function chainUpdateCmd(id, idx, cmd) { chainInit(id); _chains[id].rows[idx].cmd = cmd; _chains[id].rows[idx].fields = {}; chainRender(id); }
+function chainUpdateField(id, idx, field, value) {
+	chainInit(id);
+	_chains[id].rows[idx].fields[field] = value;
+	const h = document.getElementById(id + '-row-' + idx + '-hex');
+	if (h) h.value = chainBuildRowHex(id, idx);
+	const p = document.getElementById(id + '-preview');
+	if (p) p.value = chainBuildHex(id);
+	const b = document.getElementById(id + '-pack-btn');
+	if (b) b.disabled = !chainBuildHex(id);
 }
 
-function buildSelectApdu(mode, preset, selInfo) {
-	const isSim = preset.cla === 0xA0;
-	if (!selInfo || !selInfo.value) return '';
-	// USIM response control: FCP request (P2=04 + Le) vs silent hop (P2=0C, no Le)
-	const silent = !isSim && !!document.getElementById('usim-sel-silent').checked;
-	const p2 = silent ? 0x0C : preset.selP2;
-	const le = (!isSim && !silent) ? '00' : null;
-	if (selInfo.type === 'fid') {
-		if (selInfo.value.length !== 4) return '';
-		let apdu = buildSelect(preset.cla, preset.selP1, p2, selInfo.value);
-		if (le) apdu += le;
-		return apdu;
-	} else if (selInfo.type === 'path') {
-		if (selInfo.value.length < 2 || selInfo.value.length % 2 !== 0) return '';
-		const p3 = selInfo.value.length / 2;
-		let p1 = isSim ? 0x08 : (document.querySelector('input[name="usim-sel-base"]:checked')?.value === 'df' ? 0x09 : 0x08);
-		let apdu = buildApdu(preset.cla, 0xA4, p1, p2, p3, selInfo.value);
-		if (le) apdu += le;
-		return apdu;
-	} else if (selInfo.type === 'dfname') {
-		if (selInfo.value.length < 2) return '';
-		const p3 = selInfo.value.length / 2;
-		let apdu = buildApdu(preset.cla, 0xA4, 0x04, p2, p3, selInfo.value);
-		if (le) apdu += le;
-		return apdu;
-	} else if (selInfo.type === 'chain') {
-		const tokens = selInfo.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
-		let out = '';
-		for (const tok of tokens) {
-			// 'C0' or 'C0:NN' - GET RESPONSE hop (Le defaults to '00')
-			const gr = /^c0(?::([0-9a-fA-F]{1,2}))?$/i.exec(tok);
-			if (gr) {
-				const leByte = parseInt(gr[1] || '00', 16);
-				out += buildApdu(preset.cla, 0xC0, 0x00, 0x00, leByte, '');
-				continue;
-			}
-			const fid = tok.replace(/[^0-9a-fA-F]/g, '');
-			if (fid.length !== 4) continue;
-			let apdu = buildSelect(preset.cla, preset.selP1, p2, fid);
-			if (le) apdu += le;
-			out += apdu;
+function chainRender(chainId) {
+	chainInit(chainId);
+	const container = document.getElementById(chainId + '-rows');
+	const preview = document.getElementById(chainId + '-preview');
+	const packBtn = document.getElementById(chainId + '-pack-btn');
+	if (!container) return;
+	const rows = _chains[chainId].rows;
+	container.innerHTML = '';
+	rows.forEach(function(row, idx) {
+		const div = document.createElement('div');
+		div.className = 'mb-3 p-3 border border-gray-200 dark:border-slate-600 rounded';
+		div.innerHTML = chainRenderRow(chainId, idx, row);
+		container.appendChild(div);
+	});
+	const hex = chainBuildHex(chainId);
+	if (preview) preview.value = hex;
+	if (packBtn) packBtn.disabled = !hex;
+}
+
+function chainRenderRow(chainId, idx, row) {
+	const isRam = chainId === 'chain-ram';
+	const cmds = isRam ? CHAIN_CMDS_RAM : (chainId === 'chain-usim' ? CHAIN_CMDS_USIM : CHAIN_CMDS_SIM);
+	const cmdOpts = cmds.map(function(c) {
+		return '<option value="' + c.value + '"' + (c.value === row.cmd ? ' selected' : '') + '>' + c.label + '</option>';
+	}).join('');
+	const fieldsHtml = chainRowFieldsHtml(chainId, idx, row);
+	const hex = chainBuildRowHex(chainId, idx);
+	return '<div class="flex items-center gap-2 mb-2">' +
+		'<select onchange="chainUpdateCmd(\'' + chainId + '\',' + idx + ',this.value)" class="flex-shrink-0 w-52 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1 dark:bg-slate-800">' + cmdOpts + '</select>' +
+		'<button onclick="chainDeleteRow(\'' + chainId + '\',' + idx + ')" class="text-red-500 hover:text-red-700 text-lg font-bold px-1" title="Delete">&times;</button>' +
+		'<input id="' + chainId + '-row-' + idx + '-hex" readonly value="' + escHtml(hex) + '" class="flex-1 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-50 dark:bg-slate-900">' +
+		'</div>' +
+		'<div class="pl-4">' + fieldsHtml + '</div>';
+}
+
+function chainRowFieldsHtml(chainId, idx, row) {
+	var f = row.fields;
+	function uf(field) { return "chainUpdateField('" + chainId + "'," + idx + ",'" + field + "',this.value)"; }
+	if (chainId === 'chain-sim' || chainId === 'chain-usim') return chainSimFieldsHtml(chainId, idx, f, uf);
+	return chainRamFieldsHtml(idx, row, f, uf);
+}
+
+// ===== SIM/USIM field rendering =====
+function chainSimFieldsHtml(chainId, idx, f, uf) {
+	var cmd = (_chains[chainId] && _chains[chainId].rows[idx]) ? _chains[chainId].rows[idx].cmd : '';
+	if (cmd === 'select') {
+		var method = f.method || 'fid';
+		var silent = chainId === 'chain-usim' && f.silent;
+		var html = '<div class="grid grid-cols-2 gap-2 mb-2"><div>' +
+			'<label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Method</label>' +
+			'<select onchange="' + uf('method') + ';chainRender(\'' + chainId + '\')" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="fid"' + (method === 'fid' ? ' selected' : '') + '>By FID</option>' +
+			'<option value="path"' + (method === 'path' ? ' selected' : '') + '>By path</option>' +
+			'<option value="dfname"' + (method === 'dfname' ? ' selected' : '') + '>By AID</option>' +
+			'<option value="chain"' + (method === 'chain' ? ' selected' : '') + '>Chain</option>' +
+			'</select></div>';
+		if (chainId === 'chain-usim') {
+			html += '<div class="flex items-end pb-0.5"><label class="flex items-center gap-1.5 text-xs">' +
+				'<input type="checkbox"' + (silent ? ' checked' : '') + ' onchange="chainUpdateField(\'chain-usim\',' + idx + ',\'silent\',this.checked);chainRender(\'chain-usim\')" class="rounded">' +
+				'Silent (P2=0C)</label></div>';
 		}
-		return out;
+		html += '</div>';
+		if (method === 'fid') {
+			html += '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">FID (2 bytes)</label>' +
+				'<input value="' + escHtml(f.fid || '') + '" oninput="' + uf('fid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="6FC5" maxlength="4"></div>';
+		}
+		if (method === 'path') {
+			html += '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Path (hex)</label>' +
+				'<input value="' + escHtml(f.path || '') + '" oninput="' + uf('path') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="7FFF6FC5">';
+			if (chainId === 'chain-usim') {
+				html += '<div class="flex gap-3 mt-1 text-xs"><label class="flex items-center gap-1"><input type="radio" name="ch-usim-' + idx + '-base" value="mf"' + ((f.base || 'mf') === 'mf' ? ' checked' : '') + ' onchange="chainUpdateField(\'chain-usim\',' + idx + ',\'base\',\'mf\')"> from MF</label>' +
+					'<label class="flex items-center gap-1"><input type="radio" name="ch-usim-' + idx + '-base" value="df"' + (f.base === 'df' ? ' checked' : '') + ' onchange="chainUpdateField(\'chain-usim\',' + idx + ',\'base\',\'df\')"> from current DF</label></div>';
+			}
+			html += '</div>';
+		}
+		if (method === 'dfname') {
+			html += '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">AID (hex)</label>' +
+				'<input value="' + escHtml(f.dfname || '') + '" oninput="' + uf('dfname') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div>';
+		}
+		if (method === 'chain') {
+			html += '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">FID chain (comma-separated)</label>' +
+				'<input value="' + escHtml(f.chain || '') + '" oninput="' + uf('chain') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="3F00,2FE2,C0"></div>';
+		}
+		return html;
+	}
+	if (cmd === 'read-record') {
+		var rm = f.recMode || '04';
+		return '<div class="grid grid-cols-3 gap-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Record #</label>' +
+			'<input type="number" min="1" max="255" value="' + escHtml(f.record || '1') + '" oninput="' + uf('record') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">P2 (mode)</label>' +
+			'<select onchange="' + uf('recMode') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="04"' + (rm === '04' ? ' selected' : '') + '>Absolute (04)</option>' +
+			'<option value="02"' + (rm === '02' ? ' selected' : '') + '>Next (02)</option>' +
+			'<option value="03"' + (rm === '03' ? ' selected' : '') + '>Previous (03)</option></select></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Le</label>' +
+			'<input value="' + escHtml(f.le || '00') + '" oninput="' + uf('le') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="00" maxlength="2"></div></div>';
+	}
+	if (cmd === 'read-binary') {
+		return '<div class="grid grid-cols-2 gap-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Offset (hex)</label>' +
+			'<input value="' + escHtml(f.offset || '0000') + '" oninput="' + uf('offset') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="0000" maxlength="4"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Le</label>' +
+			'<input value="' + escHtml(f.le || '00') + '" oninput="' + uf('le') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="00" maxlength="2"></div></div>';
+	}
+	if (cmd === 'update-record') {
+		var rm2 = f.recMode || '04';
+		return '<div class="grid grid-cols-2 gap-2 mb-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Record #</label>' +
+			'<input type="number" min="1" max="255" value="' + escHtml(f.record || '1') + '" oninput="' + uf('record') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">P2 (mode)</label>' +
+			'<select onchange="' + uf('recMode') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="04"' + (rm2 === '04' ? ' selected' : '') + '>Absolute (04)</option>' +
+			'<option value="02"' + (rm2 === '02' ? ' selected' : '') + '>Next (02)</option>' +
+			'<option value="03"' + (rm2 === '03' ? ' selected' : '') + '>Previous (03)</option></select></div></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Data (hex)</label>' +
+			'<textarea oninput="' + uf('data') + '" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800">' + escHtml(f.data || '') + '</textarea></div>';
+	}
+	if (cmd === 'update-binary') {
+		return '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Offset (hex)</label>' +
+			'<input value="' + escHtml(f.offset || '0000') + '" oninput="' + uf('offset') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="0000" maxlength="4"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Data (hex)</label>' +
+			'<textarea oninput="' + uf('data') + '" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800">' + escHtml(f.data || '') + '</textarea></div>';
+	}
+	if (cmd === 'erase-binary') {
+		return '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Offset (hex)</label>' +
+			'<input value="' + escHtml(f.offset || '0000') + '" oninput="' + uf('offset') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="0000" maxlength="4"></div>';
+	}
+	if (cmd === 'activate-file' || cmd === 'deactivate-file') {
+		var target = f.target || 'current';
+		var html2 = '<div class="grid grid-cols-2 gap-2"><div>' +
+			'<label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Target</label>' +
+			'<select onchange="' + uf('target') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="current"' + (target === 'current' ? ' selected' : '') + '>Current EF (case 1)</option>' +
+			'<option value="fid"' + (target === 'fid' ? ' selected' : '') + '>By FID</option>' +
+			'<option value="mfpath"' + (target === 'mfpath' ? ' selected' : '') + '>Path from MF</option>' +
+			'<option value="dfpath"' + (target === 'dfpath' ? ' selected' : '') + '>Path from current DF</option></select></div>';
+		if (target !== 'current') {
+			html2 += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">File (hex)</label>' +
+				'<input value="' + escHtml(f.file || '') + '" oninput="' + uf('file') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="6FC5 / 7FFF6FC5"></div>';
+		}
+		html2 += '</div>';
+		return html2;
+	}
+	if (cmd === 'verify' || cmd === 'disable' || cmd === 'enable') {
+		var pin = f.pin || '01';
+		return '<div class="grid grid-cols-2 gap-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">PIN</label>' +
+			'<select onchange="' + uf('pin') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="01"' + (pin === '01' ? ' selected' : '') + '>PIN1 (01)</option>' +
+			'<option value="02"' + (pin === '02' ? ' selected' : '') + '>PIN2 (02)</option></select></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">PIN value</label>' +
+			'<input value="' + escHtml(f.pinVal || '') + '" oninput="' + uf('pinVal') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="1234" maxlength="8"></div></div>';
+	}
+	if (cmd === 'change' || cmd === 'unblock') {
+		var pin2 = f.pin || '01';
+		return '<div class="grid grid-cols-3 gap-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">PIN</label>' +
+			'<select onchange="' + uf('pin') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="01"' + (pin2 === '01' ? ' selected' : '') + '>PIN1 (01)</option>' +
+			'<option value="02"' + (pin2 === '02' ? ' selected' : '') + '>PIN2 (02)</option></select></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + (cmd === 'unblock' ? 'Unblock PIN' : 'Old PIN') + '</label>' +
+			'<input value="' + escHtml(f.pinOld || '') + '" oninput="' + uf('pinOld') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="1234" maxlength="8"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">New PIN</label>' +
+			'<input value="' + escHtml(f.pinNew || '') + '" oninput="' + uf('pinNew') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="5678" maxlength="8"></div></div>';
+	}
+	if (cmd === 'get-response') {
+		return '<div class="text-xs text-gray-500 dark:text-slate-400 italic">No parameters &mdash; CLA=C0 INS=C0 P1=00 P2=00</div>';
 	}
 	return '';
 }
 
-function genSimUsim(mode) {
-	const preset = mode === 'sim' ? {cla: 0xA0, selP1: 0x00, selP2: 0x00} : {cla: 0x00, selP1: 0x00, selP2: 0x04};
-	const cmd = document.getElementById(mode + '-cmd').value;
-	const doSelect = document.getElementById(mode + '-select').checked;
-	const selInfo = getSelValue(mode);
-	const record = parseInt(document.getElementById(mode + '-record').value) || 1;
-	const recModeHex = document.getElementById(mode + '-rec-mode').value;
-	const recMode = parseInt(recModeHex, 16);
-	const offsetHex = (document.getElementById(mode + '-offset').value || '0000').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0').slice(0, 4);
-	const offset = parseInt(offsetHex, 16);
-	const leHex = (document.getElementById(mode + '-le').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2);
-	const le = parseInt(leHex, 16);
-	let dataHex = (document.getElementById(mode + '-data').value || '').replace(/[^0-9a-fA-F]/g, '');
-	const recSize = parseInt(document.getElementById(mode + '-recsize').value) || 0;
-	const pin = document.getElementById(mode + '-pin').value;
-	const override = document.getElementById(mode + '-override').checked;
-	const overrideP1 = override ? parseInt((document.getElementById(mode + '-p1').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2), 16) : null;
-	const overrideP2 = override ? parseInt((document.getElementById(mode + '-p2').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2), 16) : null;
-
-	const resultEl = document.getElementById(mode + '-result');
-
-	if (recSize > 0 && dataHex.length > 0) {
-		const targetBytes = recSize * 2;
-		if (dataHex.length > targetBytes) dataHex = dataHex.slice(0, targetBytes);
-		else dataHex = dataHex.padEnd(targetBytes, 'F');
+// ===== RAM/GP field rendering =====
+function chainRamFieldsHtml(idx, row, f, uf) {
+	var cmd = row.cmd;
+	if (cmd === 'install-load') {
+		return '<div class="grid grid-cols-2 gap-2 mb-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Load File AID</label>' +
+			'<input value="' + escHtml(f.loadFileAid || '') + '" oninput="' + uf('loadFileAid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">SD AID</label>' +
+			'<input value="' + escHtml(f.sdAid || '') + '" oninput="' + uf('sdAid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Load data (hex)</label>' +
+			'<textarea oninput="' + uf('loadData') + '" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800">' + escHtml(f.loadData || '') + '</textarea></div>';
 	}
-
-	if (cmd === 'select') {
-		const selectApdu = buildSelectApdu(mode, preset, selInfo);
-		if (!selectApdu) { resultEl.value = 'Error: specify SELECT parameters'; return; }
-		resultEl.value = selectApdu;
-		document.getElementById(mode + '-pack-btn').disabled = false;
-		return;
+	if (cmd === 'install-install') {
+		var html = '<div class="grid grid-cols-3 gap-2 mb-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Application / Instance AID</label>' +
+			'<input value="' + escHtml(f.aid || '') + '" oninput="' + uf('aid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Load File AID / Package AID</label>' +
+			'<input value="' + escHtml(f.elfAid || '') + '" oninput="' + uf('elfAid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Executable Module AID / Applet Class AID</label>' +
+			'<input value="' + escHtml(f.modAid || '') + '" oninput="' + uf('modAid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div></div>';
+		// Privileges
+		html += chainRamPrivHtml(idx, f, uf);
+		// Toolkit
+		html += chainRamToolkitHtml(idx, f, uf);
+		return html;
 	}
-
-	const op = OPS[cmd];
-	if (!op) { resultEl.value = 'Error: unknown command'; return; }
-
-	let p1, p2, p3, data = null;
-	if (cmd === 'read-record') {
-		p1 = (recMode === 0x02 || recMode === 0x03) ? 0x00 : record; p2 = recMode; p3 = le;
-	} else if (cmd === 'read-binary') {
-		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = le;
-	} else if (cmd === 'update-record') {
-		if (!dataHex) { resultEl.value = 'Error: specify data'; return; }
-		p1 = (recMode === 0x02 || recMode === 0x03) ? 0x00 : record; p2 = recMode; p3 = dataHex.length / 2; data = dataHex;
-	} else if (cmd === 'update-binary') {
-		if (!dataHex) { resultEl.value = 'Error: specify data'; return; }
-		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = dataHex.length / 2; data = dataHex;
-	} else if (cmd === 'erase-binary') {
-		p1 = (offset >> 8) & 0xFF; p2 = offset & 0xFF; p3 = 0x00;
-	} else if (cmd === 'activate-file' || cmd === 'deactivate-file') {
-		const target = document.getElementById(mode + '-act-target').value;
-		if (target === 'current') {
-			p1 = 0x00; p2 = 0x00; p3 = null;
-		} else {
-			const fileHex = (document.getElementById(mode + '-act-file').value || '').replace(/[^0-9a-fA-F]/g, '');
-			if (!fileHex || fileHex.length % 2 !== 0) { resultEl.value = 'Error: specify FID or path (even hex length)'; return; }
-			p1 = target === 'fid' ? 0x00 : (target === 'mfpath' ? 0x08 : 0x09);
-			p2 = 0x00;
-			p3 = fileHex.length / 2;
-			data = fileHex;
+	if (cmd === 'install-make-sel') {
+		return '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Application / Instance AID</label>' +
+			'<input value="' + escHtml(f.aid || '') + '" oninput="' + uf('aid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div>' +
+			chainRamPrivHtml(idx, f, uf);
+	}
+	if (cmd === 'install-reg-update') {
+		return '<div class="grid grid-cols-2 gap-2 mb-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">SD AID</label>' +
+			'<input value="' + escHtml(f.sdAid || '') + '" oninput="' + uf('sdAid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Application / Instance AID</label>' +
+			'<input value="' + escHtml(f.aid || '') + '" oninput="' + uf('aid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div></div>' +
+			chainRamPrivHtml(idx, f, uf);
+	}
+	if (cmd === 'install-extradition') {
+		return '<div class="grid grid-cols-2 gap-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">SD AID</label>' +
+			'<input value="' + escHtml(f.sdAid || '') + '" oninput="' + uf('sdAid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Application / Instance AID</label>' +
+			'<input value="' + escHtml(f.aid || '') + '" oninput="' + uf('aid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div></div>';
+	}
+	if (cmd === 'load') {
+		return '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Data (hex)</label>' +
+			'<textarea oninput="' + uf('data') + '" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800">' + escHtml(f.data || '') + '</textarea></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Block number</label>' +
+			'<input type="number" min="0" value="' + escHtml(f.block || '0') + '" oninput="' + uf('block') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800"></div>';
+	}
+	if (cmd === 'delete') {
+		var dm = f.delMode || '00';
+		return '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Application / Instance AID</label>' +
+			'<input value="' + escHtml(f.aid || '') + '" oninput="' + uf('aid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">DELETE mode</label>' +
+			'<select onchange="' + uf('delMode') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="00"' + (dm === '00' ? ' selected' : '') + '>AID only (00)</option>' +
+			'<option value="80"' + (dm === '80' ? ' selected' : '') + '>AID + related objects (80)</option></select></div>';
+	}
+	if (cmd === 'get-status') {
+		var gm = f.gsMode || '80';
+		var gp = f.gsP2 || '00';
+		return '<div class="grid grid-cols-2 gap-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">GET STATUS mode</label>' +
+			'<select onchange="' + uf('gsMode') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="80"' + (gm === '80' ? ' selected' : '') + '>ISD (80)</option>' +
+			'<option value="40"' + (gm === '40' ? ' selected' : '') + '>Applications and SSD (40)</option>' +
+			'<option value="20"' + (gm === '20' ? ' selected' : '') + '>Executable Load Files (20)</option>' +
+			'<option value="10"' + (gm === '10' ? ' selected' : '') + '>ELF and modules (10)</option></select></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">GET STATUS format</label>' +
+			'<select onchange="' + uf('gsP2') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="02"' + (gp === '02' ? ' selected' : '') + '>02 &mdash; First/all, TLV format</option>' +
+			'<option value="03"' + (gp === '03' ? ' selected' : '') + '>03 &mdash; Next, TLV format</option>' +
+			'<option value="00"' + (gp === '00' ? ' selected' : '') + '>00 &mdash; First/all, raw format</option></select></div></div>';
+	}
+	if (cmd === 'get-data') {
+		var tag = f.tag || '5F50';
+		return '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">GET DATA tag</label>' +
+			'<select onchange="chainUpdateField(\'chain-ram\',' + idx + ',\'tag\',this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800 mb-1">' +
+			'<option value=""' + (!tag ? ' selected' : '') + '>&mdash; select preset &mdash;</option>' +
+			'<option value="42"' + (tag === '42' ? ' selected' : '') + '>42 &mdash; IIN</option>' +
+			'<option value="45"' + (tag === '45' ? ' selected' : '') + '>45 &mdash; CIN</option>' +
+			'<option value="66"' + (tag === '66' ? ' selected' : '') + '>66 &mdash; Card Data</option>' +
+			'<option value="67"' + (tag === '67' ? ' selected' : '') + '>67 &mdash; Card Capability</option>' +
+			'<option value="E0"' + (tag === 'E0' ? ' selected' : '') + '>E0 &mdash; Key Info Template</option>' +
+			'<option value="D3"' + (tag === 'D3' ? ' selected' : '') + '>D3 &mdash; Current Security Level</option>' +
+			'<option value="2F00"' + (tag === '2F00' ? ' selected' : '') + '>2F00 &mdash; List of Applications</option>' +
+			'<option value="FF21"' + (tag === 'FF21' ? ' selected' : '') + '>FF21 &mdash; Extended Card Resources</option>' +
+			'<option value="5F50"' + (tag === '5F50' ? ' selected' : '') + '>5F50 &mdash; SD Manager URL</option>' +
+			'<option value="C1"' + (tag === 'C1' ? ' selected' : '') + '>C1 &mdash; Sequence Counter</option>' +
+			'<option value="C2"' + (tag === 'C2' ? ' selected' : '') + '>C2 &mdash; Confirmation Counter</option>' +
+			'<option value="7F21"' + (tag === '7F21' ? ' selected' : '') + '>7F21 &mdash; Certificate</option>' +
+			'<option value="5031"' + (tag === '5031' ? ' selected' : '') + '>5031 &mdash; Certificate info</option>' +
+			'</select>' +
+			'<input value="' + escHtml(tag) + '" oninput="' + uf('tag') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="5F50" maxlength="4"></div>';
+	}
+	if (cmd === 'store-data') {
+		var enc = f.enc || '00';
+		return '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Data (hex)</label>' +
+			'<textarea oninput="' + uf('data') + '" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800">' + escHtml(f.data || '') + '</textarea></div>' +
+			'<div class="grid grid-cols-2 gap-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Encryption</label>' +
+			'<select onchange="' + uf('enc') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="00"' + (enc === '00' ? ' selected' : '') + '>No encryption, more blocks</option>' +
+			'<option value="40"' + (enc === '40' ? ' selected' : '') + '>App-dependent, more blocks</option>' +
+			'<option value="80"' + (enc === '80' ? ' selected' : '') + '>No encryption, last block</option>' +
+			'<option value="C0"' + (enc === 'C0' ? ' selected' : '') + '>App-dependent, last block</option>' +
+			'<option value="E0"' + (enc === 'E0' ? ' selected' : '') + '>With encryption, last block</option></select></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Block number</label>' +
+			'<input type="number" min="0" value="' + escHtml(f.block || '0') + '" oninput="' + uf('block') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800"></div></div>';
+	}
+	if (cmd === 'set-status') {
+		var sm = f.ssMode || '80';
+		var ss = f.ssState || '00';
+		var html3 = '<div class="grid grid-cols-2 gap-2 mb-2">' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">SET STATUS type</label>' +
+			'<select onchange="' + uf('ssMode') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="80"' + (sm === '80' ? ' selected' : '') + '>ISD (80)</option>' +
+			'<option value="40"' + (sm === '40' ? ' selected' : '') + '>Application or SSD (40)</option>' +
+			'<option value="60"' + (sm === '60' ? ' selected' : '') + '>SD + associated apps (60)</option></select></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">State</label>' +
+			'<select onchange="' + uf('ssState') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="00"' + (ss === '00' ? ' selected' : '') + '>00 &mdash; Unlock</option>' +
+			'<option value="80"' + (ss === '80' ? ' selected' : '') + '>80 &mdash; Lock (LOCKED)</option>' +
+			'<option value="01"' + (ss === '01' ? ' selected' : '') + '>01 &mdash; OP_READY</option>' +
+			'<option value="07"' + (ss === '07' ? ' selected' : '') + '>07 &mdash; INITIALIZED</option>' +
+			'<option value="0F"' + (ss === '0F' ? ' selected' : '') + '>0F &mdash; SECURED</option>' +
+			'<option value="7F"' + (ss === '7F' ? ' selected' : '') + '>7F &mdash; CARD_LOCKED</option>' +
+			'<option value="FF"' + (ss === 'FF' ? ' selected' : '') + '>FF &mdash; TERMINATED</option></select></div></div>';
+		if (sm !== '80') {
+			html3 += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Application / Instance AID</label>' +
+				'<input value="' + escHtml(f.aid || '') + '" oninput="' + uf('aid') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="A000000151000000"></div>';
 		}
-	} else if (cmd === 'verify' || cmd === 'disable' || cmd === 'enable') {
-		const pinVal = document.getElementById(mode + '-pin-val').value || '';
-		if (!pinVal) { resultEl.value = 'Error: specify PIN value'; return; }
-		const pinHex = Array.from(pinVal).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').padEnd(16, 'F').slice(0, 16);
-		p1 = 0x00; p2 = parseInt(pin, 16); p3 = 0x08; data = pinHex;
-	} else if (cmd === 'change' || cmd === 'unblock') {
-		const oldPin = document.getElementById(mode + '-pin-old').value || '';
-		const newPin = document.getElementById(mode + '-pin-new').value || '';
-		if (!oldPin || !newPin) { resultEl.value = 'Error: specify old and new PIN'; return; }
-		const oldHex = Array.from(oldPin).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').padEnd(16, 'F').slice(0, 16);
-		const newHex = Array.from(newPin).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').padEnd(16, 'F').slice(0, 16);
-		p1 = 0x00; p2 = parseInt(pin, 16); p3 = 0x10; data = oldHex + newHex;
+		return html3;
 	}
-
-	if (override) {
-		if (overrideP1 !== null) p1 = overrideP1;
-		if (overrideP2 !== null) p2 = overrideP2;
+	if (cmd === 'ext-auth') {
+		var ap = f.authP1 || '00';
+		return '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Data (hex) &mdash; 16 bytes</label>' +
+			'<input value="' + escHtml(f.data || '') + '" oninput="' + uf('data') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="32 hex chars"></div>' +
+			'<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Security level (P1)</label>' +
+			'<select onchange="' + uf('authP1') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+			'<option value="00"' + (ap === '00' ? ' selected' : '') + '>00 &mdash; No secure messaging</option>' +
+			'<option value="01"' + (ap === '01' ? ' selected' : '') + '>01 &mdash; C-MAC</option>' +
+			'<option value="03"' + (ap === '03' ? ' selected' : '') + '>03 &mdash; C-DEC + C-MAC</option></select></div>';
 	}
-
-	let apdu = '';
-	if (doSelect) {
-		const selectApdu = buildSelectApdu(mode, preset, selInfo);
-		if (selectApdu) {
-			// full CLA on every command - scripted secured-packet streams must be
-			// self-delimiting; implied-CLA fragments desync the card's parser
-			apdu = selectApdu + buildApdu(preset.cla, op.ins, p1, p2, p3, data);
-		} else {
-			apdu = buildApdu(preset.cla, op.ins, p1, p2, p3, data);
-		}
-	} else {
-		apdu = buildApdu(preset.cla, op.ins, p1, p2, p3, data);
+	if (cmd === 'int-auth') {
+		return '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Data (hex) &mdash; challenge</label>' +
+			'<input value="' + escHtml(f.data || '') + '" oninput="' + uf('data') + '" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="hex"></div>';
 	}
-
-	resultEl.value = apdu;
-	document.getElementById(mode + '-pack-btn').disabled = false;
+	return '';
 }
 
-function genRam() {
-	const cmd = document.getElementById('ram-cmd').value;
-	const aid = (document.getElementById('ram-aid').value || '').replace(/[^0-9a-fA-F]/g, '');
-	const sdAid = (document.getElementById('ram-sdaid').value || '').replace(/[^0-9a-fA-F]/g, '');
-	const elfAid = (document.getElementById('ram-elfaid').value || '').replace(/[^0-9a-fA-F]/g, '');
-	const modAid = (document.getElementById('ram-modaid').value || '').replace(/[^0-9a-fA-F]/g, '');
-	const loadData = (document.getElementById('ram-load-data').value || '').replace(/[^0-9a-fA-F]/g, '');
-	const ramData = (document.getElementById('ram-data').value || '').replace(/[^0-9a-fA-F]/g, '');
-	const blockNum = parseInt(document.getElementById('ram-block').value) || 0;
-	const enc = document.getElementById('ram-enc').value;
-	const delMode = document.getElementById('ram-del-mode').value;
-	const gsMode = document.getElementById('ram-gs-mode').value;
-	const tagHex = (document.getElementById('ram-tag').value || '5F50').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0').slice(0, 4);
-	const ssMode = parseInt(document.getElementById('ram-ss-mode').value, 16);
-	const ssState = parseInt(document.getElementById('ram-ss-state').value, 16);
+// ===== RAM/GP privileges sub-form (per-row) =====
+function chainRamPrivHtml(idx, f, uf) {
+	var priv = f.priv || '00';
+	var b1 = parseInt(priv.substring(0, 2), 16) || 0;
+	var b2 = priv.length >= 4 ? parseInt(priv.substring(2, 4), 16) : 0;
+	var b3 = priv.length >= 6 ? parseInt(priv.substring(4, 6), 16) : 0;
+	var html = '<div class="mb-2"><div class="flex items-center gap-3 mb-1">' +
+		'<label class="text-xs font-medium text-gray-700 dark:text-slate-300">Privileges</label>' +
+		'<input readonly value="' + escHtml(priv) + '" class="font-mono w-16 border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-0.5 bg-gray-100 dark:bg-slate-800">' +
+		'</div><div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">';
+	var CHECKS = [
+		['Security Domain','80','b1'],['Trusted Path','80','b2'],
+		['DAP Verification','40','b1'],['Authorized Management','40','b2'],
+		['Delegated Management','20','b1'],['Token Verification','20','b2'],
+		['Card Lock','10','b1'],['Global Delete','10','b2'],
+		['Card Terminate','08','b1'],['Global Lock','08','b2'],
+		['Card Reset','04','b1'],['Global Registry','04','b2'],
+		['CVM Management','02','b1'],['Final Application','02','b2'],
+		['Mandated DAP Verification','01','b1'],['',0,''],
+		['Receipt Generation','80','b3'],['','','']
+	];
+	CHECKS.forEach(function(c) {
+		if (!c[0]) return '';
+		var byteIdx = c[2];
+		var val = parseInt(c[1], 16);
+		var checked = (byteIdx === 'b1' && (b1 & val)) || (byteIdx === 'b2' && (b2 & val)) || (byteIdx === 'b3' && (b3 & val));
+		html += '<label class="flex items-center gap-1"><input type="checkbox" class="chain-priv-' + byteIdx + '-' + idx + '"' +
+			(checked ? ' checked' : '') + ' onchange="chainRamUpdatePriv(' + idx + ')"> ' + c[0] + '</label>';
+	});
+	html += '</div></div>';
+	return html;
+}
 
-	const resultEl = document.getElementById('ram-apdu-result');
+function chainRamUpdatePriv(idx) {
+	var b1 = 0, b2 = 0, b3 = 0;
+	document.querySelectorAll('.chain-priv-b1-' + idx + ':checked').forEach(function(cb) { b1 |= parseInt(cb.value, 16); });
+	document.querySelectorAll('.chain-priv-b2-' + idx + ':checked').forEach(function(cb) { b2 |= parseInt(cb.value, 16); });
+	document.querySelectorAll('.chain-priv-b3-' + idx + ':checked').forEach(function(cb) { b3 |= parseInt(cb.value, 16); });
+	var hex = b1.toString(16).padStart(2, '0').toUpperCase();
+	hex += b2.toString(16).padStart(2, '0').toUpperCase();
+	if (b3) hex += b3.toString(16).padStart(2, '0').toUpperCase();
+	chainUpdateField('chain-ram', idx, 'priv', hex);
+}
 
-	const INSTALL_P1 = {
-		'install-load': 0x02,
-		'install-install': 0x0C,
-		'install-make-sel': 0x08,
-		'install-reg-update': 0x40,
-		'install-extradition': 0x10,
+// ===== RAM/GP toolkit sub-form (per-row) =====
+function chainRamToolkitHtml(idx, f, uf) {
+	var enabled = f.tkEnabled;
+	var html = '<div class="mb-2"><label class="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-slate-300">' +
+		'<input type="checkbox"' + (enabled ? ' checked' : '') + ' onchange="chainUpdateField(\'chain-ram\',' + idx + ',\'tkEnabled\',this.checked);chainRender(\'chain-ram\')" class="rounded">' +
+		'SIM/UICC Toolkit parameters</label></div>';
+	if (!enabled) return html;
+	var tkMode = f.tkMode || 'ea';
+	var priority = f.tkPriority || '0';
+	var timers = f.tkTimers || '0';
+	var textLen = f.tkTextlen || '0';
+	var menus = f.tkMenus || '0';
+	var firstPos = f.tkFirstpos || '0';
+	var firstId = f.tkFirstid || '00';
+	var lastPos = f.tkLastpos || '0';
+	var lastId = f.tkLastid || '00';
+	var channels = f.tkChannels || '0';
+	var msl = f.tkMsl || '16';
+	var tar = f.tkTar || 'B00001';
+	var ad = f.tkAd || '';
+	var services = f.tkServices || '0';
+	html += '<div class="p-2 bg-gray-50 dark:bg-slate-900 rounded border border-gray-200 dark:border-slate-700">' +
+		'<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">Toolkit mode</label>' +
+		'<select onchange="' + uf('tkMode') + '" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+		'<option value="ca"' + (tkMode === 'ca' ? ' selected' : '') + '>SIM Toolkit (Tag CA)</option>' +
+		'<option value="ea"' + (tkMode === 'ea' ? ' selected' : '') + '>UICC Toolkit (Tag EA)</option></select></div>' +
+		'<div class="grid grid-cols-4 gap-x-2 gap-y-1.5 text-xs">' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">Priority</label>' +
+		'<input type="number" min="0" max="255" value="' + escHtml(priority) + '" oninput="' + uf('tkPriority') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800"></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">Timers</label>' +
+		'<input type="number" min="0" max="255" value="' + escHtml(timers) + '" oninput="' + uf('tkTimers') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800"></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">Text length</label>' +
+		'<input type="number" min="0" max="255" value="' + escHtml(textLen) + '" oninput="' + uf('tkTextlen') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800"></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">Menus</label>' +
+		'<input type="number" min="0" max="255" value="' + escHtml(menus) + '" oninput="' + uf('tkMenus') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800"></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">1st pos</label>' +
+		'<input type="number" min="0" max="255" value="' + escHtml(firstPos) + '" oninput="' + uf('tkFirstpos') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800"></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">1st ID (hex)</label>' +
+		'<input value="' + escHtml(firstId) + '" oninput="' + uf('tkFirstid') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800" maxlength="2"></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">Last pos</label>' +
+		'<input type="number" min="0" max="255" value="' + escHtml(lastPos) + '" oninput="' + uf('tkLastpos') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800"></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">Last ID (hex)</label>' +
+		'<input value="' + escHtml(lastId) + '" oninput="' + uf('tkLastid') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800" maxlength="2"></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">Channels</label>' +
+		'<input type="number" min="0" max="255" value="' + escHtml(channels) + '" oninput="' + uf('tkChannels') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800"></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">MSL (SPI1)</label>' +
+		'<select onchange="' + uf('tkMsl') + '" class="w-full border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800">' +
+		'<option value="00"' + (msl === '00' ? ' selected' : '') + '>00</option>' +
+		'<option value="11"' + (msl === '11' ? ' selected' : '') + '>11 RC/CC/DS</option>' +
+		'<option value="12"' + (msl === '12' ? ' selected' : '') + '>12 RC/DS/CC</option>' +
+		'<option value="15"' + (msl === '15' ? ' selected' : '') + '>15 RC/DS/CC+MAC</option>' +
+		'<option value="16"' + (msl === '16' ? ' selected' : '') + '>16 RC/DS/CC+MAC+Cipher</option>' +
+		'<option value="19"' + (msl === '19' ? ' selected' : '') + '>19 RC/DS/CC+MAC+Cipher+DS</option></select></div>' +
+		'<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">TAR (3 bytes)</label>' +
+		'<input value="' + escHtml(tar) + '" oninput="' + uf('tkTar') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800" maxlength="6"></div>';
+	if (tkMode === 'ca') {
+		html += '<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">Access domain (hex)</label>' +
+			'<input value="' + escHtml(ad) + '" oninput="' + uf('tkAd') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800" maxlength="2"></div>';
+	} else {
+		html += '<div><label class="block text-gray-600 dark:text-slate-400 mb-0.5">Max services</label>' +
+			'<input type="number" min="0" max="255" value="' + escHtml(services) + '" oninput="' + uf('tkServices') + '" class="w-full font-mono border border-gray-300 dark:border-slate-600 rounded px-1.5 py-0.5 dark:bg-slate-800"></div>';
+	}
+	html += '</div></div>';
+	return html;
+}
+
+// ===== SIM/USIM hex builder =====
+function chainSimBuildRowHex(chainId, idx, row) {
+	var f = row.fields;
+	var isSim = chainId === 'chain-sim';
+	var cla = isSim ? 0xA0 : 0x00;
+
+	if (row.cmd === 'select') {
+		var method = f.method || 'fid';
+		var silent = !isSim && f.silent;
+		var p2 = silent ? 0x0C : (isSim ? 0x00 : 0x04);
+		if (method === 'fid') {
+			var fid = (f.fid || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+			if (fid.length !== 4) return '';
+			var apdu = buildApdu(cla, 0xA4, 0x00, p2, 0x02, fid);
+			if (!isSim) apdu += '00';
+			return apdu;
+		}
+		if (method === 'path') {
+			var path = (f.path || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+			if (path.length < 2 || path.length % 2 !== 0) return '';
+			var p1 = (!isSim && f.base === 'df') ? 0x09 : 0x08;
+			var apdu2 = buildApdu(cla, 0xA4, p1, p2, path.length / 2, path);
+			if (!isSim) apdu2 += '00';
+			return apdu2;
+		}
+		if (method === 'dfname') {
+			var aid = (f.dfname || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+			if (aid.length < 2) return '';
+			var apdu3 = buildApdu(cla, 0xA4, 0x04, p2, aid.length / 2, aid);
+			if (!isSim) apdu3 += '00';
+			return apdu3;
+		}
+		if (method === 'chain') {
+			var tokens = (f.chain || '').split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+			var out = '';
+			for (var ti = 0; ti < tokens.length; ti++) {
+				var tok = tokens[ti];
+				var gr = /^c0(?::([0-9a-fA-F]{1,2}))?$/i.exec(tok);
+				if (gr) {
+					var leByte = parseInt(gr[1] || '00', 16);
+					out += buildApdu(cla, 0xC0, 0x00, 0x00, leByte, '');
+					continue;
+				}
+				var fid2 = tok.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+				if (fid2.length !== 4) continue;
+				var s = buildSelect(cla, 0x00, p2, fid2);
+				if (!isSim) s += '00';
+				out += s;
+			}
+			return out;
+		}
+		return '';
+	}
+	if (row.cmd === 'get-response') {
+		return '00C0000000';
+	}
+	var OPS2 = {
+		'read-record': {ins: 0xB2}, 'read-binary': {ins: 0xB0},
+		'update-record': {ins: 0xDC}, 'update-binary': {ins: 0xD6},
+		'erase-binary': {ins: 0x0E}, 'activate-file': {ins: 0x44},
+		'deactivate-file': {ins: 0x04}, 'verify': {ins: 0x20},
+		'change': {ins: 0x24}, 'disable': {ins: 0x26},
+		'enable': {ins: 0x28}, 'unblock': {ins: 0x2C},
 	};
-
-	function lv(data) {
-		if (!data) return '00';
-		return berLenStr(data.length / 2) + data;
+	var op = OPS2[row.cmd];
+	if (!op) return '';
+	var p1, p2v, p3, data = null;
+	if (row.cmd === 'read-record') {
+		var rm = parseInt(f.recMode || '04', 16);
+		var rec = parseInt(f.record) || 1;
+		var le = parseInt(f.le || '00', 16);
+		p1 = (rm === 0x02 || rm === 0x03) ? 0x00 : rec;
+		p2v = rm; p3 = le;
+	} else if (row.cmd === 'read-binary') {
+		var off = parseInt((f.offset || '0000').replace(/[^0-9a-fA-F]/g, ''), 16) || 0;
+		var le2 = parseInt(f.le || '00', 16);
+		p1 = (off >> 8) & 0xFF; p2v = off & 0xFF; p3 = le2;
+	} else if (row.cmd === 'update-record') {
+		var rm2 = parseInt(f.recMode || '04', 16);
+		var rec2 = parseInt(f.record) || 1;
+		data = (f.data || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		if (!data) return '';
+		p1 = (rm2 === 0x02 || rm2 === 0x03) ? 0x00 : rec2;
+		p2v = rm2; p3 = data.length / 2;
+	} else if (row.cmd === 'update-binary') {
+		var off2 = parseInt((f.offset || '0000').replace(/[^0-9a-fA-F]/g, ''), 16) || 0;
+		data = (f.data || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		if (!data) return '';
+		p1 = (off2 >> 8) & 0xFF; p2v = off2 & 0xFF; p3 = data.length / 2;
+	} else if (row.cmd === 'erase-binary') {
+		var off3 = parseInt((f.offset || '0000').replace(/[^0-9a-fA-F]/g, ''), 16) || 0;
+		p1 = (off3 >> 8) & 0xFF; p2v = off3 & 0xFF; p3 = 0x00;
+	} else if (row.cmd === 'activate-file' || row.cmd === 'deactivate-file') {
+		var target = f.target || 'current';
+		if (target === 'current') { p1 = 0x00; p2v = 0x00; p3 = null; }
+		else {
+			var fileHex = (f.file || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+			if (!fileHex || fileHex.length % 2 !== 0) return '';
+			p1 = target === 'fid' ? 0x00 : (target === 'mfpath' ? 0x08 : 0x09);
+			p2v = 0x00; p3 = fileHex.length / 2; data = fileHex;
+		}
+	} else if (row.cmd === 'verify' || row.cmd === 'disable' || row.cmd === 'enable') {
+		var pin = f.pin || '01';
+		var pinVal = f.pinVal || '';
+		if (!pinVal) return '';
+		var pinHex = Array.from(pinVal).map(function(c) { return c.charCodeAt(0).toString(16).padStart(2, '0'); }).join('').padEnd(16, 'F').slice(0, 16);
+		p1 = 0x00; p2v = parseInt(pin, 16); p3 = 0x08; data = pinHex;
+	} else if (row.cmd === 'change' || row.cmd === 'unblock') {
+		var pin2 = f.pin || '01';
+		var oldPin = f.pinOld || '';
+		var newPin = f.pinNew || '';
+		if (!oldPin || !newPin) return '';
+		var oldHex = Array.from(oldPin).map(function(c) { return c.charCodeAt(0).toString(16).padStart(2, '0'); }).join('').padEnd(16, 'F').slice(0, 16);
+		var newHex = Array.from(newPin).map(function(c) { return c.charCodeAt(0).toString(16).padStart(2, '0'); }).join('').padEnd(16, 'F').slice(0, 16);
+		p1 = 0x00; p2v = parseInt(pin2, 16); p3 = 0x10; data = oldHex + newHex;
+	} else {
+		return '';
 	}
+	return buildApdu(cla, op.ins, p1, p2v, p3, data);
+}
 
+// ===== RAM/GP hex builder =====
+function chainRamBuildRowHex(idx, row) {
+	var f = row.fields;
+	var cmd = row.cmd;
+	function lv(data) { if (!data) return '00'; return berLenStr(data.length / 2) + data; }
 	function computePriv() {
-		const privHex = document.getElementById('ram-priv').value;
-		const b1 = parseInt(privHex.substr(0, 2), 16) || 0;
-		const b2 = privHex.length >= 4 ? parseInt(privHex.substr(2, 2), 16) : 0;
-		const b3 = privHex.length >= 6 ? parseInt(privHex.substr(4, 2), 16) : 0;
+		var ph = f.priv || '00';
+		var b1 = parseInt(ph.substring(0, 2), 16) || 0;
+		var b2 = ph.length >= 4 ? parseInt(ph.substring(2, 4), 16) : 0;
+		var b3 = ph.length >= 6 ? parseInt(ph.substring(4, 6), 16) : 0;
 		if (b2 === 0 && b3 === 0) return b1.toString(16).padStart(2, '0').toUpperCase();
-		return b1.toString(16).padStart(2, '0').toUpperCase() + b2.toString(16).padStart(2, '0').toUpperCase() + b3.toString(16).padStart(2, '0').toUpperCase();
+		var r = b1.toString(16).padStart(2, '0').toUpperCase() + b2.toString(16).padStart(2, '0').toUpperCase();
+		if (b3) r += b3.toString(16).padStart(2, '0').toUpperCase();
+		return r;
 	}
-
-	function buildToolkitParams() {
-		if (!document.getElementById('ram-toolkit-enable').checked) return '';
-		const tkMode = document.getElementById('ram-tk-mode').value;
-		const priority = parseInt(document.getElementById('ram-tk-priority').value) || 0;
-		const timers = parseInt(document.getElementById('ram-tk-timers').value) || 0;
-		const textLen = parseInt(document.getElementById('ram-tk-textlen').value) || 0;
-		const menus = parseInt(document.getElementById('ram-tk-menus').value) || 0;
-		const firstPos = parseInt(document.getElementById('ram-tk-firstpos').value) || 0;
-		const firstId = (document.getElementById('ram-tk-firstid').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2) || '00';
-		const lastPos = parseInt(document.getElementById('ram-tk-lastpos').value) || 0;
-		const lastId = (document.getElementById('ram-tk-lastid').value || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2) || '00';
-		const channels = parseInt(document.getElementById('ram-tk-channels').value) || 0;
-		const msl = document.getElementById('ram-tk-msl').value;
-		const tar = (document.getElementById('ram-tk-tar').value || '').replace(/[^0-9a-fA-F]/g, '');
-		const adRaw = (document.getElementById('ram-tk-ad').value || '').replace(/[^0-9a-fA-F]/g, '');
-		const ad = adRaw.padStart(2, '0').slice(0, 2);
-		const services = parseInt(document.getElementById('ram-tk-services').value) || 0;
-
-		if (tar && tar.length % 6 !== 0) { resultEl.value = 'Error: TAR must be 3-byte multiples'; return null; }
-		if (parseInt(firstId, 16) > 0x7F || parseInt(lastId, 16) > 0x7F) { resultEl.value = 'Error: menu IDs must be <= 7F'; return null; }
-
-		let menuPairs = '';
-		for (let i = 1; i <= menus; i++) {
+	function buildTkParams() {
+		if (!f.tkEnabled) return '';
+		var tkMode = f.tkMode || 'ea';
+		var priority = parseInt(f.tkPriority) || 0;
+		var timers = parseInt(f.tkTimers) || 0;
+		var textLen = parseInt(f.tkTextlen) || 0;
+		var menus = parseInt(f.tkMenus) || 0;
+		var firstPos = parseInt(f.tkFirstpos) || 0;
+		var firstId = (f.tkFirstid || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2) || '00';
+		var lastPos = parseInt(f.tkLastpos) || 0;
+		var lastId = (f.tkLastid || '00').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2) || '00';
+		var channels = parseInt(f.tkChannels) || 0;
+		var msl = f.tkMsl || '00';
+		var tar = (f.tkTar || '').replace(/[^0-9a-fA-F]/g, '');
+		var ad = (f.tkAd || '').replace(/[^0-9a-fA-F]/g, '').padStart(2, '0').slice(0, 2);
+		var services = parseInt(f.tkServices) || 0;
+		if (tar && tar.length % 6 !== 0) return null;
+		var menuPairs = '';
+		for (var i = 1; i <= menus; i++) {
 			if (i === 1) menuPairs += firstPos.toString(16).padStart(2, '0') + firstId;
 			else if (i === menus) menuPairs += lastPos.toString(16).padStart(2, '0') + lastId;
 			else menuPairs += '0000';
 		}
-
-		const mslField = msl === '00' ? '00' : '0201' + msl;
-
-		let tkPayload = '';
+		var mslField = msl === '00' ? '00' : '0201' + msl;
+		var tkPayload = '';
 		if (tkMode === 'ca') {
-			tkPayload = (adRaw ? '01' + ad : '00') +
+			tkPayload = (f.tkAd ? '01' + ad : '00') +
 				priority.toString(16).padStart(2, '0') +
 				timers.toString(16).padStart(2, '0') +
 				textLen.toString(16).padStart(2, '0') +
@@ -1992,7 +1749,7 @@ function genRam() {
 				channels.toString(16).padStart(2, '0') +
 				mslField +
 				(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00');
-			const caTlv = 'CA' + berLenStr(tkPayload.length / 2) + tkPayload;
+			var caTlv = 'CA' + berLenStr(tkPayload.length / 2) + tkPayload;
 			return 'EF' + berLenStr(caTlv.length / 2) + caTlv;
 		} else {
 			tkPayload = priority.toString(16).padStart(2, '0') +
@@ -2004,87 +1761,150 @@ function genRam() {
 				mslField +
 				(tar ? (tar.length / 2).toString(16).padStart(2, '0') + tar : '00') +
 				services.toString(16).padStart(2, '0');
-			const innerTlv = '80' + berLenStr(tkPayload.length / 2) + tkPayload;
+			var innerTlv = '80' + berLenStr(tkPayload.length / 2) + tkPayload;
 			return 'EA' + berLenStr(innerTlv.length / 2) + innerTlv;
 		}
 	}
-
-	let apdu = '';
+	var INSTALL_P1 = {
+		'install-load': 0x02, 'install-install': 0x0C,
+		'install-make-sel': 0x08, 'install-reg-update': 0x40,
+		'install-extradition': 0x10,
+	};
+	var aid = (f.aid || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+	var sdAid = (f.sdAid || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
 	if (cmd === 'install-load') {
-		if (!aid) { resultEl.value = 'Error: specify Load File AID'; return; }
-		let dataField = lv(aid) + lv(sdAid) + '00' + (loadData ? lv(loadData) : '00') + '00';
-		const dataLen = berLenStr(dataField.length / 2);
-		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField) + '00';
-	} else if (cmd === 'install-install') {
-		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
-		const privBytes = computePriv();
-		let installParams = 'C900';
-		const tkParams = buildToolkitParams();
-		if (tkParams === null) return;
-		if (tkParams) installParams += tkParams;
-		let dataField = lv(elfAid) + lv(modAid) + lv(aid) + lv(privBytes) + lv(installParams) + '00';
-		const dataLen = berLenStr(dataField.length / 2);
-		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField) + '00';
-	} else if (cmd === 'install-make-sel') {
-		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
-		const privBytes = computePriv();
-		let dataField = '00' + '00' + lv(aid) + lv(privBytes) + '00' + '00';
-		const dataLen = berLenStr(dataField.length / 2);
-		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField) + '00';
-	} else if (cmd === 'install-reg-update') {
-		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
-		const privBytes = computePriv();
-		let dataField = lv(sdAid) + '00' + lv(aid) + lv(privBytes) + '00' + '00';
-		const dataLen = berLenStr(dataField.length / 2);
-		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField) + '00';
-	} else if (cmd === 'install-extradition') {
-		if (!sdAid || sdAid.length < 10 || sdAid.length > 20) { resultEl.value = 'Error: specify SD AID (5-10 bytes)'; return; }
-		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
-		let dataField = lv(sdAid) + '00' + lv(aid) + '00' + '00' + '00';
-		const dataLen = berLenStr(dataField.length / 2);
-		apdu = buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField) + '00';
-	} else if (cmd === 'load') {
-		if (!ramData) { resultEl.value = 'Error: specify data'; return; }
-		const dataLen = berLenStr(ramData.length / 2);
-		apdu = buildApdu(0x80, 0xE8, 0x80, blockNum, parseInt(dataLen, 16), ramData) + '00';
-	} else if (cmd === 'delete') {
-		if (!aid) { resultEl.value = 'Error: specify AID'; return; }
-		const dataField = '4F' + berLenStr(aid.length / 2) + aid;
-		const dataLen = berLenStr(dataField.length / 2);
-		apdu = buildApdu(0x80, 0xE4, 0x00, parseInt(delMode, 16), parseInt(dataLen, 16), dataField) + '00';
-	} else if (cmd === 'get-status') {
-		const gsP2 = document.getElementById('ram-gs-p2').value;
-		apdu = buildApdu(0x80, 0xF2, parseInt(gsMode, 16), parseInt(gsP2, 16), 0x02, '4F00') + '00';
-	} else if (cmd === 'get-data') {
-		const tag = parseInt(tagHex, 16);
-		if (tagHex === '2F00' || tagHex === '5031') {
-			apdu = buildApdu(0x80, 0xCA, (tag >> 8) & 0xFF, tag & 0xFF, 0x02, '5C00') + '00';
-		} else {
-			apdu = buildApdu(0x80, 0xCA, (tag >> 8) & 0xFF, tag & 0xFF, 0x00, null) + '00';
-		}
-	} else if (cmd === 'store-data') {
-		if (!ramData) { resultEl.value = 'Error: specify data'; return; }
-		const dataLen = berLenStr(ramData.length / 2);
-		apdu = buildApdu(0x80, 0xE2, parseInt(enc, 16), blockNum, parseInt(dataLen, 16), ramData);
-	} else if (cmd === 'set-status') {
-		if (ssMode === 0x80) {
-			apdu = buildApdu(0x80, 0xF0, 0x80, ssState, 0x00, null);
-		} else {
-			if (!aid) { resultEl.value = 'Error: specify AID'; return; }
-			apdu = buildApdu(0x80, 0xF0, ssMode, ssState, aid.length / 2, aid);
-		}
-	} else if (cmd === 'ext-auth') {
-		if (!ramData || ramData.length !== 32) { resultEl.value = 'Error: specify 16-byte data (host cryptogram + MAC)'; return; }
-		const authP1 = parseInt(document.getElementById('ram-authp1').value, 16);
-		apdu = buildApdu(0x84, 0x82, authP1, 0x00, 0x10, ramData);
-	} else if (cmd === 'int-auth') {
-		if (!ramData) { resultEl.value = 'Error: specify data (challenge)'; return; }
-		const dataLen = berLenStr(ramData.length / 2);
-		apdu = buildApdu(0x00, 0x88, 0x00, 0x00, parseInt(dataLen, 16), ramData) + '00';
+		var loadFileAid = (f.loadFileAid || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		var loadData = (f.loadData || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		if (!loadFileAid) return '';
+		var dataField = lv(loadFileAid) + lv(sdAid) + '00' + (loadData ? lv(loadData) : '00') + '00';
+		var dataLen = berLenStr(dataField.length / 2);
+		return buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dataLen, 16), dataField) + '00';
 	}
+	if (cmd === 'install-install') {
+		var elfAid = (f.elfAid || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		var modAid = (f.modAid || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		if (!aid) return '';
+		var privBytes = computePriv();
+		var installParams = 'C900';
+		var tkParams = buildTkParams();
+		if (tkParams === null) return '';
+		if (tkParams) installParams += tkParams;
+		var df2 = lv(elfAid) + lv(modAid) + lv(aid) + lv(privBytes) + lv(installParams) + '00';
+		var dl2 = berLenStr(df2.length / 2);
+		return buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dl2, 16), df2) + '00';
+	}
+	if (cmd === 'install-make-sel') {
+		if (!aid) return '';
+		var privBytes2 = computePriv();
+		var df3 = '00' + '00' + lv(aid) + lv(privBytes2) + '00' + '00';
+		var dl3 = berLenStr(df3.length / 2);
+		return buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dl3, 16), df3) + '00';
+	}
+	if (cmd === 'install-reg-update') {
+		if (!aid) return '';
+		var privBytes3 = computePriv();
+		var df4 = lv(sdAid) + '00' + lv(aid) + lv(privBytes3) + '00' + '00';
+		var dl4 = berLenStr(df4.length / 2);
+		return buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dl4, 16), df4) + '00';
+	}
+	if (cmd === 'install-extradition') {
+		if (!sdAid || sdAid.length < 10 || sdAid.length > 20) return '';
+		if (!aid) return '';
+		var df5 = lv(sdAid) + '00' + lv(aid) + '00' + '00' + '00';
+		var dl5 = berLenStr(df5.length / 2);
+		return buildApdu(0x80, 0xE6, INSTALL_P1[cmd], 0x00, parseInt(dl5, 16), df5) + '00';
+	}
+	if (cmd === 'load') {
+		var ramData = (f.data || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		var blockNum = parseInt(f.block) || 0;
+		if (!ramData) return '';
+		var dl6 = berLenStr(ramData.length / 2);
+		return buildApdu(0x80, 0xE8, 0x80, blockNum, parseInt(dl6, 16), ramData) + '00';
+	}
+	if (cmd === 'delete') {
+		if (!aid) return '';
+		var delMode = f.delMode || '00';
+		var df7 = '4F' + berLenStr(aid.length / 2) + aid;
+		var dl7 = berLenStr(df7.length / 2);
+		return buildApdu(0x80, 0xE4, 0x00, parseInt(delMode, 16), parseInt(dl7, 16), df7) + '00';
+	}
+	if (cmd === 'get-status') {
+		var gsMode = f.gsMode || '80';
+		var gsP2 = f.gsP2 || '00';
+		return buildApdu(0x80, 0xF2, parseInt(gsMode, 16), parseInt(gsP2, 16), 0x02, '4F00') + '00';
+	}
+	if (cmd === 'get-data') {
+		var tagHex = (f.tag || '5F50').replace(/[^0-9a-fA-F]/g, '').padStart(4, '0').slice(0, 4);
+		var tag = parseInt(tagHex, 16);
+		if (tagHex === '2F00' || tagHex === '5031') {
+			return buildApdu(0x80, 0xCA, (tag >> 8) & 0xFF, tag & 0xFF, 0x02, '5C00') + '00';
+		}
+		return buildApdu(0x80, 0xCA, (tag >> 8) & 0xFF, tag & 0xFF, 0x00, null) + '00';
+	}
+	if (cmd === 'store-data') {
+		var ramData2 = (f.data || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		var enc = f.enc || '00';
+		var blockNum2 = parseInt(f.block) || 0;
+		if (!ramData2) return '';
+		var dl8 = berLenStr(ramData2.length / 2);
+		return buildApdu(0x80, 0xE2, parseInt(enc, 16), blockNum2, parseInt(dl8, 16), ramData2);
+	}
+	if (cmd === 'set-status') {
+		var ssMode = f.ssMode || '80';
+		var ssState = f.ssState || '00';
+		if (ssMode === '80') {
+			return buildApdu(0x80, 0xF0, 0x80, parseInt(ssState, 16), 0x00, null);
+		}
+		if (!aid) return '';
+		return buildApdu(0x80, 0xF0, parseInt(ssMode, 16), parseInt(ssState, 16), aid.length / 2, aid);
+	}
+	if (cmd === 'ext-auth') {
+		var ramData3 = (f.data || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		var authP1 = f.authP1 || '00';
+		if (!ramData3 || ramData3.length !== 32) return '';
+		return buildApdu(0x84, 0x82, parseInt(authP1, 16), 0x00, 0x10, ramData3);
+	}
+	if (cmd === 'int-auth') {
+		var ramData4 = (f.data || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+		if (!ramData4) return '';
+		var dl9 = berLenStr(ramData4.length / 2);
+		return buildApdu(0x00, 0x88, 0x00, 0x00, parseInt(dl9, 16), ramData4) + '00';
+	}
+	return '';
+}
 
-	resultEl.value = apdu || 'Error: unknown command';
-	if (apdu) document.getElementById('ram-pack-btn').disabled = false;
+// ===== Chain hex builder (with Le stripping) =====
+function chainBuildRowHex(chainId, idx) {
+	chainInit(chainId);
+	var row = _chains[chainId].rows[idx];
+	if (!row) return '';
+	if (chainId === 'chain-sim' || chainId === 'chain-usim') {
+		return chainSimBuildRowHex(chainId, idx, row);
+	}
+	return chainRamBuildRowHex(idx, row);
+}
+
+function chainIsCase4(cmd, chainId) {
+	if (cmd === 'select') return chainId === 'chain-usim';
+	if (cmd === 'get-status' || cmd === 'get-data' || cmd === 'store-data' || cmd === 'int-auth') return true;
+	return false;
+}
+
+function chainBuildHex(chainId) {
+	chainInit(chainId);
+	var rows = _chains[chainId].rows;
+	if (!rows.length) return '';
+	var parts = [];
+	for (var i = 0; i < rows.length; i++) {
+		var rowHex = chainBuildRowHex(chainId, i);
+		if (i < rows.length - 1 && rows[i + 1].cmd === 'get-response') {
+			if (chainIsCase4(rows[i].cmd, chainId) && rowHex.length >= 2) {
+				rowHex = rowHex.slice(0, -2);
+			}
+		}
+		parts.push(rowHex);
+	}
+	return parts.join('');
 }
 
 function updateConvFields() {
@@ -7023,14 +6843,9 @@ updateConvFields();
 updateSp();
 updateSpKic();
 updateSpKid();
-updateSimUsimFields('sim');
-updateSimSelectMethod('sim');
-updateSimSelectSection('sim');
-toggleSimOverride('sim');
-toggleSimOverride('usim');
-updateP1P2Display('sim');
-updateP1P2Display('usim');
-updateRamFields();
+chainInit('chain-sim');
+chainInit('chain-usim');
+chainInit('chain-ram');
 translatePage();
 // PWA
 let deferredPrompt;

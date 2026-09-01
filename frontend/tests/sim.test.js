@@ -21,73 +21,89 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-class StubEl {
-	constructor(value = '') {
-		this.value = value;
-		this.checked = false;
-		this.style = {};
-		this.disabled = false;
-	}
-}
-
-const els = {};
-let usimBase = 'mf';
-const doc = {
-	getElementById: (id) => {
-		if (!els[id]) els[id] = new StubEl();
-		return els[id];
-	},
-	querySelector: (sel) => (sel.includes('usim-sel-base') ? { value: usimBase } : null),
-};
-global.document = doc;
-
-const FNS = ['buildApdu', 'buildSelect', 'getSelValue', 'buildSelectApdu',
-	'updateSimUsimFields', 'updateP1P2Display', 'genSimUsim', 'OPS'];
+// Extract chain builder functions and dependencies
+const FNS = ['buildApdu', 'buildSelect', 'escHtml', 'chainInit', 'chainSimBuildRowHex'];
 let code = '';
 for (const f of FNS) {
-	if (f === 'OPS') {
-		const m = html.match(/const OPS = \{[\s\S]*?\n\};/);
-		code += m[0].replace(/^const /, 'var ') + '\n';
-	} else {
-		code += extractFunc(html, f) + '\n';
-	}
+	code += extractFunc(html, f) + '\n';
 }
-code += '\nvar SIM_PRESETS = {};';
+// Also extract _chains
+const m = html.match(/const _chains = \{\};/);
+if (m) code += m[0].replace(/^const /, 'var ') + '\n';
 eval(code);
 
-
-function set(id, v) { els[id] = Object.assign(new StubEl(), { value: v }); }
-function setChecked(id, v) { els[id] = Object.assign(new StubEl(), { checked: v }); }
-
 function setup(mode, opts) {
-	for (const k of Object.keys(els)) delete els[k];
-	usimBase = opts.base || 'mf';
-	set(mode + '-cmd', opts.cmd);
-	setChecked(mode + '-select', !!opts.doSelect);
-	set(mode + '-sel-method', opts.selMethod || 'fid');
-	set(mode + '-sel-fid', opts.fid || '');
-	set(mode + '-sel-path', opts.path || '');
-	set(mode + '-sel-dfname', opts.dfname || '');
-	set(mode + '-sel-chain', opts.chain || '');
-	set(mode + '-record', opts.record || '1');
-	set(mode + '-rec-mode', opts.recMode || '04');
-	set(mode + '-offset', opts.offset || '0000');
-	set(mode + '-le', opts.le || '00');
-	set(mode + '-data', opts.data || '');
-	set(mode + '-recsize', opts.recsize || '0');
-	set(mode + '-pin', opts.pin || '01');
-	set(mode + '-pin-val', opts.pinVal || '');
-	set(mode + '-pin-old', opts.pinOld || '');
-	set(mode + '-pin-new', opts.pinNew || '');
-	set(mode + '-act-target', opts.actTarget || 'current');
-	set(mode + '-act-file', opts.actFile || '');
-	els['usim-sel-silent'] = Object.assign(new StubEl(), { checked: !!opts.silent });
-	els[mode + '-select'] = Object.assign(new StubEl(), { checked: !!opts.doSelect });
-	set(mode + '-override', '');
-	els[mode + '-result'] = new StubEl();
-	els[mode + '-pack-btn'] = new StubEl();
-	genSimUsim(mode);
-	return els[mode + '-result'].value;
+	const chainId = mode === 'sim' ? 'chain-sim' : 'chain-usim';
+	_chains[chainId] = { rows: [] };
+
+	const cmd = opts.cmd;
+	const fields = {};
+
+	if (cmd === 'select') {
+		fields.method = opts.selMethod || 'fid';
+		if (opts.fid) fields.fid = opts.fid;
+		if (opts.path) fields.path = opts.path;
+		if (opts.dfname) fields.dfname = opts.dfname;
+		if (opts.chain) fields.chain = opts.chain;
+		if (opts.silent) fields.silent = opts.silent;
+		if (opts.base) fields.base = opts.base;
+	} else if (cmd === 'read-record') {
+		fields.record = opts.record || '1';
+		fields.recMode = opts.recMode || '04';
+		fields.le = opts.le || '00';
+	} else if (cmd === 'read-binary') {
+		fields.offset = opts.offset || '0000';
+		fields.le = opts.le || '00';
+	} else if (cmd === 'update-record') {
+		fields.record = opts.record || '1';
+		fields.recMode = opts.recMode || '04';
+		fields.data = opts.data || '';
+	} else if (cmd === 'update-binary') {
+		fields.offset = opts.offset || '0000';
+		fields.data = opts.data || '';
+	} else if (cmd === 'erase-binary') {
+		fields.offset = opts.offset || '0000';
+	} else if (cmd === 'activate-file' || cmd === 'deactivate-file') {
+		fields.target = opts.actTarget || 'current';
+		fields.file = opts.actFile || '';
+	} else if (cmd === 'verify' || cmd === 'disable' || cmd === 'enable') {
+		fields.pin = opts.pin || '01';
+		fields.pinVal = opts.pinVal || '';
+	} else if (cmd === 'change' || cmd === 'unblock') {
+		fields.pin = opts.pin || '01';
+		fields.pinOld = opts.pinOld || '';
+		fields.pinNew = opts.pinNew || '';
+	}
+
+	_chains[chainId].rows.push({ cmd: cmd, fields: fields });
+
+	if (opts.doSelect) {
+		const selFields = {};
+		selFields.method = opts.selMethod || 'fid';
+		if (opts.fid) selFields.fid = opts.fid;
+		if (opts.path) selFields.path = opts.path;
+		if (opts.dfname) selFields.dfname = opts.dfname;
+		if (opts.chain) selFields.chain = opts.chain;
+		if (opts.silent) selFields.silent = opts.silent;
+		if (opts.base) selFields.base = opts.base;
+		_chains[chainId].rows.unshift({ cmd: 'select', fields: selFields });
+	}
+
+	const rowIdx = opts.doSelect ? 1 : 0;
+	return chainSimBuildRowHex(chainId, rowIdx, _chains[chainId].rows[rowIdx]);
+}
+
+function setupMulti(mode, rows) {
+	const chainId = mode === 'sim' ? 'chain-sim' : 'chain-usim';
+	_chains[chainId] = { rows: [] };
+	for (const r of rows) {
+		_chains[chainId].rows.push({ cmd: r.cmd, fields: r.fields || {} });
+	}
+	let hex = '';
+	for (let i = 0; i < _chains[chainId].rows.length; i++) {
+		hex += chainSimBuildRowHex(chainId, i, _chains[chainId].rows[i]);
+	}
+	return hex;
 }
 
 test('VERIFY PIN FF-pads to 8 bytes (Lc=08)', () => {
@@ -166,18 +182,28 @@ test('GET RESPONSE hop with explicit Le (C0:NN)', () => {
 });
 
 test('silent path select + READ RECORD keeps full CLA (live PNN read)', () => {
-	const apdu = setup('usim', {
-		cmd: 'read-record', selMethod: 'path', base: 'df', silent: true, doSelect: true,
-		path: '6FC5', record: '1', recMode: '04', le: '14',
-	});
+	const chainId = 'chain-usim';
+	_chains[chainId] = { rows: [
+		{ cmd: 'select', fields: { method: 'path', path: '6FC5', base: 'df', silent: true } },
+		{ cmd: 'read-record', fields: { record: '1', recMode: '04', le: '14' } },
+	]};
+	let apdu = '';
+	for (let i = 0; i < _chains[chainId].rows.length; i++) {
+		apdu += chainSimBuildRowHex(chainId, i, _chains[chainId].rows[i]);
+	}
 	assert.strictEqual(apdu, '00A4090C026FC500B2010414');
 });
 
 test('select + READ BINARY emits explicit CLA on second command', () => {
-	const apdu = setup('usim', {
-		cmd: 'read-binary', selMethod: 'path', base: 'df', silent: true, doSelect: true,
-		path: '6FC5', offset: '0000', le: '0A',
-	});
+	const chainId = 'chain-usim';
+	_chains[chainId] = { rows: [
+		{ cmd: 'select', fields: { method: 'path', path: '6FC5', base: 'df', silent: true } },
+		{ cmd: 'read-binary', fields: { offset: '0000', le: '0A' } },
+	]};
+	let apdu = '';
+	for (let i = 0; i < _chains[chainId].rows.length; i++) {
+		apdu += chainSimBuildRowHex(chainId, i, _chains[chainId].rows[i]);
+	}
 	assert.strictEqual(apdu, '00A4090C026FC500B000000A');
 });
 

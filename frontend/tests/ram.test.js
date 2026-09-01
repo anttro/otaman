@@ -21,68 +21,50 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-class StubEl {
-	constructor(value = '') {
-		this.value = value;
-		this.checked = false;
-		this.style = {};
-	}
-}
-
-const els = {};
-function el(id, value = '') {
-	if (!els[id]) els[id] = new StubEl(value);
-	return els[id];
-}
-
-function reset() {
-	for (const id of Object.keys(els)) delete els[id];
-}
-
-const FNS = ['berLenStr', 'buildApdu', 'genRam'];
+// Extract chain builder functions and dependencies
+const FNS = ['berLenStr', 'buildApdu', 'escHtml', 'chainInit', 'chainRamBuildRowHex'];
 let code = '';
-for (const f of FNS) code += extractFunc(html, f) + '\n';
+for (const f of FNS) {
+	code += extractFunc(html, f) + '\n';
+}
+const m = html.match(/const _chains = \{\};/);
+if (m) code += m[0].replace(/^const /, 'var ') + '\n';
 eval(code);
 
-// document.getElementById stub: global getElementById in the extracted functions
-const doc = {
-	getElementById: (id) => {
-		if (!els[id]) els[id] = new StubEl();
-		return els[id];
-	},
-};
-// genRam also references document.getElementById via global document
+const els = {};
+const doc = { getElementById: (id) => { if (!els[id]) els[id] = {value:''}; return els[id]; } };
 global.document = doc;
 
-function set(id, v) { el(id).value = v; }
-function setChecked(id, v) { el(id).checked = v; }
+function reset() { for (const id of Object.keys(els)) delete els[id]; }
 
-function genRamResult() {
-	genRam();
-	return els['ram-apdu-result'].value;
+function genRamResult(fields) {
+	const row = { cmd: fields.cmd, fields: fields };
+	return chainRamBuildRowHex(0, row);
 }
 
 function genRamApdu() {
-	reset();
-	set('ram-cmd', 'install-install');
-	set('ram-aid', 'A000000151000000');
-	set('ram-priv', '00');
-	setChecked('ram-toolkit-enable', true);
-	set('ram-tk-mode', 'ea');
-	set('ram-tk-priority', '0');
-	set('ram-tk-timers', '0');
-	set('ram-tk-textlen', '0');
-	set('ram-tk-menus', '2');
-	set('ram-tk-firstpos', '1');
-	set('ram-tk-firstid', '01');
-	set('ram-tk-lastpos', '2');
-	set('ram-tk-lastid', '02');
-	set('ram-tk-channels', '0');
-	set('ram-tk-msl', '16');
-	set('ram-tk-tar', 'B00001');
-	set('ram-tk-ad', '');
-	set('ram-tk-services', '0');
-	return genRamResult();
+	return genRamResult({
+		cmd: 'install-install',
+		aid: 'A000000151000000',
+		elfAid: '',
+		modAid: '',
+		priv: '00',
+		tkEnabled: true,
+		tkMode: 'ea',
+		tkPriority: '0',
+		tkTimers: '0',
+		tkTextlen: '0',
+		tkMenus: '2',
+		tkFirstpos: '1',
+		tkFirstid: '01',
+		tkLastpos: '2',
+		tkLastid: '02',
+		tkChannels: '0',
+		tkMsl: '16',
+		tkTar: 'B00001',
+		tkAd: '',
+		tkServices: '0',
+	});
 }
 
 test('UICC toolkit nested inside EA (m=2, services 0)', () => {
@@ -91,203 +73,91 @@ test('UICC toolkit nested inside EA (m=2, services 0)', () => {
 });
 
 test('UICC m=1 emits single pair', () => {
-	reset();
-	set('ram-cmd', 'install-install');
-	set('ram-aid', 'A000000151000000');
-	set('ram-priv', '00');
-	setChecked('ram-toolkit-enable', true);
-	set('ram-tk-mode', 'ea');
-	set('ram-tk-priority', '0');
-	set('ram-tk-timers', '0');
-	set('ram-tk-textlen', '0');
-	set('ram-tk-menus', '1');
-	set('ram-tk-firstpos', '1');
-	set('ram-tk-firstid', '01');
-	set('ram-tk-lastpos', '0');
-	set('ram-tk-lastid', '00');
-	set('ram-tk-channels', '0');
-	set('ram-tk-msl', '16');
-	set('ram-tk-tar', 'B00001');
-	set('ram-tk-ad', '');
-	set('ram-tk-services', '0');
-	const apdu = genRamResult();
+	const apdu = genRamResult({
+		cmd: 'install-install', aid: 'A000000151000000', priv: '00',
+		tkEnabled: true, tkMode: 'ea', tkPriority: '0', tkTimers: '0', tkTextlen: '0',
+		tkMenus: '1', tkFirstpos: '1', tkFirstid: '01', tkLastpos: '0', tkLastid: '00',
+		tkChannels: '0', tkMsl: '16', tkTar: 'B00001', tkAd: '', tkServices: '0',
+	});
 	assert.ok(apdu.includes('EA11800F0000000101010002011603B0000100'), apdu);
 });
 
 test('UICC m=3 fills middle pair with 0000', () => {
-	reset();
-	set('ram-cmd', 'install-install');
-	set('ram-aid', 'A000000151000000');
-	set('ram-priv', '00');
-	setChecked('ram-toolkit-enable', true);
-	set('ram-tk-mode', 'ea');
-	set('ram-tk-priority', '0');
-	set('ram-tk-timers', '0');
-	set('ram-tk-textlen', '0');
-	set('ram-tk-menus', '3');
-	set('ram-tk-firstpos', '1');
-	set('ram-tk-firstid', '01');
-	set('ram-tk-lastpos', '3');
-	set('ram-tk-lastid', '03');
-	set('ram-tk-channels', '0');
-	set('ram-tk-msl', '16');
-	set('ram-tk-tar', 'B00001');
-	set('ram-tk-ad', '');
-	set('ram-tk-services', '0');
-	const apdu = genRamResult();
+	const apdu = genRamResult({
+		cmd: 'install-install', aid: 'A000000151000000', priv: '00',
+		tkEnabled: true, tkMode: 'ea', tkPriority: '0', tkTimers: '0', tkTextlen: '0',
+		tkMenus: '3', tkFirstpos: '1', tkFirstid: '01', tkLastpos: '3', tkLastid: '03',
+		tkChannels: '0', tkMsl: '16', tkTar: 'B00001', tkAd: '', tkServices: '0',
+	});
 	assert.ok(apdu.includes('EA158013000000030101000003030002011603B0000100'), apdu);
 });
 
 test('UICC services 7 appended as final byte', () => {
-	reset();
-	set('ram-cmd', 'install-install');
-	set('ram-aid', 'A000000151000000');
-	set('ram-priv', '00');
-	setChecked('ram-toolkit-enable', true);
-	set('ram-tk-mode', 'ea');
-	set('ram-tk-priority', '0');
-	set('ram-tk-timers', '0');
-	set('ram-tk-textlen', '0');
-	set('ram-tk-menus', '2');
-	set('ram-tk-firstpos', '1');
-	set('ram-tk-firstid', '01');
-	set('ram-tk-lastpos', '2');
-	set('ram-tk-lastid', '02');
-	set('ram-tk-channels', '0');
-	set('ram-tk-msl', '16');
-	set('ram-tk-tar', 'B00001');
-	set('ram-tk-ad', '');
-	set('ram-tk-services', '7');
-	const apdu = genRamResult();
+	const apdu = genRamResult({
+		cmd: 'install-install', aid: 'A000000151000000', priv: '00',
+		tkEnabled: true, tkMode: 'ea', tkPriority: '0', tkTimers: '0', tkTextlen: '0',
+		tkMenus: '2', tkFirstpos: '1', tkFirstid: '01', tkLastpos: '2', tkLastid: '02',
+		tkChannels: '0', tkMsl: '16', tkTar: 'B00001', tkAd: '', tkServices: '7',
+	});
 	assert.ok(apdu.includes('EA13801100000002010102020002011603B0000107'), apdu);
 });
 
 test('SIM (CA) access domain FIRST, no services byte', () => {
-	reset();
-	set('ram-cmd', 'install-install');
-	set('ram-aid', 'A000000151000000');
-	set('ram-priv', '00');
-	setChecked('ram-toolkit-enable', true);
-	set('ram-tk-mode', 'ca');
-	set('ram-tk-priority', '0');
-	set('ram-tk-timers', '0');
-	set('ram-tk-textlen', '0');
-	set('ram-tk-menus', '2');
-	set('ram-tk-firstpos', '1');
-	set('ram-tk-firstid', '01');
-	set('ram-tk-lastpos', '2');
-	set('ram-tk-lastid', '02');
-	set('ram-tk-channels', '0');
-	set('ram-tk-msl', '16');
-	set('ram-tk-tar', 'B00001');
-	set('ram-tk-ad', '5A');
-	set('ram-tk-services', '0');
-	const apdu = genRamResult();
+	const apdu = genRamResult({
+		cmd: 'install-install', aid: 'A000000151000000', priv: '00',
+		tkEnabled: true, tkMode: 'ca', tkPriority: '0', tkTimers: '0', tkTextlen: '0',
+		tkMenus: '2', tkFirstpos: '1', tkFirstid: '01', tkLastpos: '2', tkLastid: '02',
+		tkChannels: '0', tkMsl: '16', tkTar: 'B00001', tkAd: '5A', tkServices: '0',
+	});
 	assert.ok(apdu.includes('EF14CA12015A00000002010102020002011603B00001'), apdu);
 });
 
 test('SIM (CA) blank access domain emits length byte 00', () => {
-	reset();
-	set('ram-cmd', 'install-install');
-	set('ram-aid', 'A000000151000000');
-	set('ram-priv', '00');
-	setChecked('ram-toolkit-enable', true);
-	set('ram-tk-mode', 'ca');
-	set('ram-tk-priority', '0');
-	set('ram-tk-timers', '0');
-	set('ram-tk-textlen', '0');
-	set('ram-tk-menus', '2');
-	set('ram-tk-firstpos', '1');
-	set('ram-tk-firstid', '01');
-	set('ram-tk-lastpos', '2');
-	set('ram-tk-lastid', '02');
-	set('ram-tk-channels', '0');
-	set('ram-tk-msl', '16');
-	set('ram-tk-tar', 'B00001');
-	set('ram-tk-ad', '');
-	set('ram-tk-services', '0');
-	const apdu = genRamResult();
+	const apdu = genRamResult({
+		cmd: 'install-install', aid: 'A000000151000000', priv: '00',
+		tkEnabled: true, tkMode: 'ca', tkPriority: '0', tkTimers: '0', tkTextlen: '0',
+		tkMenus: '2', tkFirstpos: '1', tkFirstid: '01', tkLastpos: '2', tkLastid: '02',
+		tkChannels: '0', tkMsl: '16', tkTar: 'B00001', tkAd: '', tkServices: '0',
+	});
 	assert.ok(apdu.includes('EF13CA110000000002010102020002011603B00001'), apdu);
 });
 
 test('SIM (CA) m=3, no TAR, blank access domain', () => {
-	reset();
-	set('ram-cmd', 'install-install');
-	set('ram-aid', 'A000000151000000');
-	set('ram-priv', '00');
-	setChecked('ram-toolkit-enable', true);
-	set('ram-tk-mode', 'ca');
-	set('ram-tk-priority', '0');
-	set('ram-tk-timers', '0');
-	set('ram-tk-textlen', '0');
-	set('ram-tk-menus', '3');
-	set('ram-tk-firstpos', '1');
-	set('ram-tk-firstid', '01');
-	set('ram-tk-lastpos', '3');
-	set('ram-tk-lastid', '03');
-	set('ram-tk-channels', '0');
-	set('ram-tk-msl', '16');
-	set('ram-tk-tar', '');
-	set('ram-tk-ad', '');
-	set('ram-tk-services', '0');
-	const apdu = genRamResult();
+	const apdu = genRamResult({
+		cmd: 'install-install', aid: 'A000000151000000', priv: '00',
+		tkEnabled: true, tkMode: 'ca', tkPriority: '0', tkTimers: '0', tkTextlen: '0',
+		tkMenus: '3', tkFirstpos: '1', tkFirstid: '01', tkLastpos: '3', tkLastid: '03',
+		tkChannels: '0', tkMsl: '16', tkTar: '', tkAd: '', tkServices: '0',
+	});
 	assert.ok(apdu.includes('EF12CA1000000000030101000003030002011600'), apdu);
 });
 
 test('UICC m=60 uses long-form BER lengths (EA 81 87 / inner 81 84)', () => {
-	reset();
-	set('ram-cmd', 'install-install');
-	set('ram-aid', 'A000000151000000');
-	set('ram-priv', '00');
-	setChecked('ram-toolkit-enable', true);
-	set('ram-tk-mode', 'ea');
-	set('ram-tk-priority', '0');
-	set('ram-tk-timers', '0');
-	set('ram-tk-textlen', '0');
-	set('ram-tk-menus', '60');
-	set('ram-tk-firstpos', '1');
-	set('ram-tk-firstid', '01');
-	set('ram-tk-lastpos', '60');
-	set('ram-tk-lastid', '3C');
-	set('ram-tk-channels', '0');
-	set('ram-tk-msl', '16');
-	set('ram-tk-tar', 'B00001');
-	set('ram-tk-ad', '');
-	set('ram-tk-services', '0');
-	const apdu = genRamResult();
+	const apdu = genRamResult({
+		cmd: 'install-install', aid: 'A000000151000000', priv: '00',
+		tkEnabled: true, tkMode: 'ea', tkPriority: '0', tkTimers: '0', tkTextlen: '0',
+		tkMenus: '60', tkFirstpos: '1', tkFirstid: '01', tkLastpos: '60', tkLastid: '3C',
+		tkChannels: '0', tkMsl: '16', tkTar: 'B00001', tkAd: '', tkServices: '0',
+	});
 	assert.ok(apdu.includes('EA8188808185'), apdu);
 });
 
 test('LOAD P1 fixed to 80 (last block)', () => {
-	reset();
-	set('ram-cmd', 'load');
-	set('ram-data', 'AABBCC');
-	set('ram-block', '0');
-	const apdu = genRamResult();
+	const apdu = genRamResult({ cmd: 'load', data: 'AABBCC', block: '0' });
 	assert.ok(apdu.startsWith('80E88000'), apdu);
 });
 
 test('DELETE: P1=00, mode in P2', () => {
-	reset();
-	set('ram-cmd', 'delete');
-	set('ram-aid', 'AA1902BC225501');
-	set('ram-del-mode', '00');
-	let apdu = genRamResult();
+	let apdu = genRamResult({ cmd: 'delete', aid: 'AA1902BC225501', delMode: '00' });
 	assert.ok(apdu.startsWith('80E40000'), apdu);
 
-	set('ram-del-mode', '80');
-	apdu = genRamResult();
+	apdu = genRamResult({ cmd: 'delete', aid: 'AA1902BC225501', delMode: '80' });
 	assert.ok(apdu.startsWith('80E40080'), apdu);
 });
 
 test('STORE DATA ram-enc P1 values 00/40/80/C0/E0', () => {
 	for (const [enc, p1] of [['00','00'],['40','40'],['80','80'],['C0','C0'],['E0','E0']]) {
-		reset();
-		set('ram-cmd', 'store-data');
-		set('ram-data', 'AABB');
-		set('ram-enc', enc);
-		set('ram-block', '0');
-		const apdu = genRamResult();
+		const apdu = genRamResult({ cmd: 'store-data', data: 'AABB', enc: enc, block: '0' });
 		assert.ok(apdu.startsWith('80E2' + p1 + '00'), enc + ' -> P1 ' + p1);
 	}
 });
