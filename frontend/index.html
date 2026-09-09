@@ -6709,6 +6709,14 @@ function profilerMatch(mode, expected, actual) {
 	return e === a;
 }
 
+// Like profilerMatch, but compares only the overlapping (shorter) portion.
+function profilerMatchMin(mode, expected, actual) {
+	const e = profilerNormHex(expected);
+	const a = profilerNormHex(actual);
+	const n = Math.min(e.length, a.length);
+	return profilerMatch(mode, e.slice(0, n), a.slice(0, n));
+}
+
 function profilerValidateProfile(obj) {
 	if (!obj || typeof obj !== 'object') return 'Not an object';
 	if (!obj.name) return 'Missing name';
@@ -7096,6 +7104,7 @@ async function profilerCheck(i) {
 
 async function profilerRunRule(r) {
 	const res = { path: r.path, name: null, status: 'pass', checks: [] };
+	let sizeMismatch = false;
 	let sel;
 	try {
 		sel = await pysimFetch('/api/select', { path: r.path });
@@ -7118,17 +7127,17 @@ async function profilerRunRule(r) {
 	}
 	if (r.fileSize !== null && r.fileSize !== undefined) {
 		const ok = sel.file_size === r.fileSize;
-		if (!ok) res.status = 'fail';
+		if (!ok) { res.status = 'fail'; sizeMismatch = true; }
 		res.checks.push({ label: 'fileSize', expected: r.fileSize, actual: sel.file_size, ok: ok });
 	}
 	if (r.recordLen !== null && r.recordLen !== undefined) {
 		const ok = sel.record_len === r.recordLen;
-		if (!ok) res.status = 'fail';
+		if (!ok) { res.status = 'fail'; sizeMismatch = true; }
 		res.checks.push({ label: 'recordLen', expected: r.recordLen, actual: sel.record_len, ok: ok });
 	}
 	if (r.numRecords !== null && r.numRecords !== undefined) {
 		const ok = sel.num_of_rec === r.numRecords;
-		if (!ok) res.status = 'fail';
+		if (!ok) { res.status = 'fail'; sizeMismatch = true; }
 		res.checks.push({ label: 'numRecords', expected: r.numRecords, actual: sel.num_of_rec, ok: ok });
 	}
 	if (r.content) {
@@ -7146,18 +7155,19 @@ async function profilerRunRule(r) {
 		} else if (r.content.kind === 'record') {
 			const exp = r.content.records || [];
 			const act = rd.records || [];
+			const n = Math.min(exp.length, act.length);
 			if (exp.length !== act.length) {
 				res.status = 'fail';
 				res.checks.push({ label: 'content.records', expected: exp.length + ' records', actual: act.length + ' records', ok: false });
-			} else {
-				for (let j = 0; j < exp.length; j++) {
-					const ok = exp[j].num === act[j].num && profilerMatch(r.content.mode, exp[j].data, act[j].data);
-					if (!ok) res.status = 'fail';
-					res.checks.push({ label: 'content.rec' + exp[j].num, expected: exp[j].data, actual: act[j].data, ok: ok });
-				}
+			}
+			for (let j = 0; j < n; j++) {
+				const dataOk = sizeMismatch ? profilerMatchMin(r.content.mode, exp[j].data, act[j].data) : profilerMatch(r.content.mode, exp[j].data, act[j].data);
+				const ok = exp[j].num === act[j].num && dataOk;
+				if (!ok) res.status = 'fail';
+				res.checks.push({ label: 'content.rec' + exp[j].num, expected: exp[j].data, actual: act[j].data, ok: ok });
 			}
 		} else {
-			const ok = profilerMatch(r.content.mode, r.content.expected, rd.data);
+			const ok = sizeMismatch ? profilerMatchMin(r.content.mode, r.content.expected, rd.data) : profilerMatch(r.content.mode, r.content.expected, rd.data);
 			if (!ok) res.status = 'fail';
 			res.checks.push({ label: 'content', expected: r.content.expected, actual: rd.data, ok: ok });
 		}

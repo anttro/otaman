@@ -21,7 +21,7 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerMatch', 'profilerValidateProfile'];
+const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerValidateProfile'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 eval(code);
@@ -52,6 +52,20 @@ test('mask without ? is a prefix match', () => {
 	assert.ok(profilerMatch('mask', '0891', '0891'));
 	assert.ok(!profilerMatch('mask', '0891', '081910'));
 	assert.ok(!profilerMatch('mask', '', '0891'));
+});
+
+test('profilerMatchMin compares the shorter overlapping portion', () => {
+	// shorter expected vs longer actual -> compare prefix
+	assert.ok(profilerMatchMin('exact', '1122FFFF', '1122FFFFFF'));
+	assert.ok(!profilerMatchMin('exact', '1122FFFF', '1122FFAA'));
+	// shorter actual vs longer expected -> compare prefix
+	assert.ok(profilerMatchMin('exact', '1122FFFFFF', '1122FFFF'));
+	// equal lengths behave like profilerMatch
+	assert.ok(profilerMatchMin('exact', '1122FFFF', '1122FFFF'));
+	assert.ok(!profilerMatchMin('exact', '1122FFFF', '1122FFEE'));
+	// mask with ? over a shorter actual
+	assert.ok(profilerMatchMin('mask', '08?91?AA', '081910'));
+	assert.ok(!profilerMatchMin('mask', '08?91?AA', '091110'));
 });
 
 test('profile validation', () => {
