@@ -1718,3 +1718,43 @@ video {
 .dark :where(.text-red-700) {
   color: rgb(239 68 68 / var(--tw-text-opacity, 1));
 }
+
+/* Light theme: darken light gray shades (backgrounds & borders) one step */
+.bg-gray-50 {
+  background-color: rgb(243 244 246 / var(--tw-bg-opacity, 1));
+}
+.bg-gray-100 {
+  background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
+}
+.bg-gray-200 {
+  background-color: rgb(209 213 219 / var(--tw-bg-opacity, 1));
+}
+.border-gray-100 {
+  border-color: rgb(229 231 235 / var(--tw-border-opacity, 1));
+}
+.border-gray-200 {
+  border-color: rgb(209 213 219 / var(--tw-border-opacity, 1));
+}
+.border-gray-300 {
+  border-color: rgb(156 163 175 / var(--tw-border-opacity, 1));
+}
+.text-gray-300 {
+  color: rgb(156 163 175 / var(--tw-text-opacity, 1));
+}
+.hover\:bg-gray-100:hover {
+  background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
+}
+.hover\:bg-gray-200:hover {
+  background-color: rgb(209 213 219 / var(--tw-bg-opacity, 1));
+}
+.hover\:bg-gray-300:hover {
+  background-color: rgb(156 163 175 / var(--tw-bg-opacity, 1));
+}
+
+/* Dark theme: lighten gray fonts */
+.dark\:text-gray-400:is(.dark *) {
+  color: rgb(156 163 175 / var(--tw-text-opacity, 1));
+}
+.dark\:text-gray-600:is(.dark *) {
+  color: rgb(156 163 175 / var(--tw-text-opacity, 1));
+}
