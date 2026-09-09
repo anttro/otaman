@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.25</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.26</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -648,6 +648,7 @@
 			<div class="flex gap-1 mb-2">
 				<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-blue-600 text-white" data-pysim-sub="files" data-l10n="File manager">File manager</button>
 				<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="custom" data-l10n="Custom files">Custom files</button>
+			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="profiler" data-l10n="Profiler">Profiler</button>
 			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd" data-l10n="pySim command line">pySim command line</button>
 			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu" data-l10n="Raw APDU">Raw APDU</button>
 			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="proactive">Proactive UICC</button>
@@ -694,6 +695,36 @@
 				<button onclick="pysimCustomImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
 			</div>
 			<textarea id="pysim-cf-io" class="hidden mt-2 w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800" rows="6"></textarea>
+		</div>
+
+		<div id="pysim-sub-profiler" class="hidden">
+			<div id="profiler-list">
+				<div class="flex flex-wrap gap-2 mb-3">
+					<button onclick="profilerNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New profile">New profile</button>
+					<button onclick="profilerFromCard()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Profile from card">Profile from card</button>
+					<button onclick="document.getElementById('profiler-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import profile">Import profile</button>
+					<input type="file" id="profiler-import-file" accept=".json,application/json" class="hidden" onchange="profilerImportFile(this)">
+				</div>
+				<div id="profiler-list-body"></div>
+			</div>
+			<div id="profiler-editor" class="hidden">
+				<div class="flex flex-wrap gap-2 items-center mb-3">
+					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
+					<input id="profiler-name" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Profile name">
+					<button onclick="profilerAddRule()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Add rule">Add rule</button>
+					<button onclick="profilerSaveProfile()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
+				</div>
+				<div id="profiler-rules"></div>
+			</div>
+			<div id="profiler-results" class="hidden">
+				<div class="flex flex-wrap gap-2 items-center mb-3">
+					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
+					<span id="profiler-results-title" class="text-sm font-semibold"></span>
+				</div>
+				<div id="profiler-progress" class="mb-2 text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+				<div id="profiler-summary" class="mb-2 text-sm"></div>
+				<div id="profiler-report"></div>
+			</div>
 		</div>
 
 		<div id="pysim-sub-cmd" class="hidden">
@@ -760,6 +791,21 @@
 			</div>
 		</div>
 	</div>
+	</div>
+
+	<div id="profiler-scan-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 max-h-[85vh] overflow-auto">
+			<h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="Profile from card">Profile from card</h3>
+			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile name">Profile name</label>
+			<input id="profiler-scan-name" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800 mb-3" placeholder="Profile name">
+			<div class="mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Ignore contents of:">Ignore contents of:</div>
+			<div id="profiler-scan-ignore" class="space-y-1 mb-3 max-h-56 overflow-auto"></div>
+			<div id="profiler-scan-error" class="text-xs text-red-500 hidden mb-2"></div>
+			<div class="flex gap-2 justify-end">
+				<button onclick="profilerScanCancel()" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
+				<button id="profiler-scan-btn" onclick="profilerScanStart()" class="px-4 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Scan">Scan</button>
+			</div>
+		</div>
 	</div>
 
 	<div id="stk-menu-panel" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
@@ -1602,7 +1648,7 @@ function chainSimBuildRowHex(chainId, idx, row) {
 			var fid = (f.fid || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
 			if (fid.length !== 4) return '';
 			var apdu = buildApdu(cla, 0xA4, 0x00, p2, 0x02, fid);
-			if (!isSim) apdu += '00';
+			if (!isSim && !silent) apdu += '00';
 			return apdu;
 		}
 		if (method === 'path') {
@@ -1610,14 +1656,14 @@ function chainSimBuildRowHex(chainId, idx, row) {
 			if (path.length < 2 || path.length % 2 !== 0) return '';
 			var p1 = (!isSim && f.base === 'df') ? 0x09 : 0x08;
 			var apdu2 = buildApdu(cla, 0xA4, p1, p2, path.length / 2, path);
-			if (!isSim) apdu2 += '00';
+			if (!isSim && !silent) apdu2 += '00';
 			return apdu2;
 		}
 		if (method === 'dfname') {
 			var aid = (f.dfname || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
 			if (aid.length < 2) return '';
 			var apdu3 = buildApdu(cla, 0xA4, 0x04, p2, aid.length / 2, aid);
-			if (!isSim) apdu3 += '00';
+			if (!isSim && !silent) apdu3 += '00';
 			return apdu3;
 		}
 		if (method === 'chain') {
@@ -1634,7 +1680,7 @@ function chainSimBuildRowHex(chainId, idx, row) {
 				var fid2 = tok.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
 				if (fid2.length !== 4) continue;
 				var s = buildSelect(cla, 0x00, p2, fid2);
-				if (!isSim) s += '00';
+				if (!isSim && !silent) s += '00';
 				out += s;
 			}
 			return out;
@@ -5178,12 +5224,13 @@ function pysimSwitchSubtab(name) {
 		btn.classList.toggle('text-gray-700', !isActive);
 		btn.classList.toggle('dark:text-slate-300', !isActive);
 	});
-	['cmd', 'apdu', 'files', 'custom', 'proactive'].forEach(s => {
+	['cmd', 'apdu', 'files', 'custom', 'proactive', 'profiler'].forEach(s => {
 		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
 	});
 	if (name === 'custom') pysimCustomRender();
 	if (name === 'proactive') { stkCheckMenu(); pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); pysimPollStatusInit(); }
-	pysimHelpAnchor = {cmd:'pysim-cmdline', apdu:'raw-apdu', files:'file-manager', custom:'custom-files', proactive:'proactive-uicc'}[name] || 'card-reader';
+	if (name === 'profiler') profilerSetView('list');
+	pysimHelpAnchor = {cmd:'pysim-cmdline', apdu:'raw-apdu', files:'file-manager', custom:'custom-files', proactive:'proactive-uicc', profiler:'card-reader'}[name] || 'card-reader';
 	setHelpAnchor(pysimHelpAnchor);
 }
 
@@ -6601,6 +6648,541 @@ function pysimCustomImportField() {
 // Init custom files
 pysimCustomLoad();
 
+// ===== Profiler =====
+let profiles = [];
+let profilerView = 'list';
+let profilerEditId = null;
+let profilerDraft = null;
+let profilerResults = null;
+
+// Files whose contents are ignored (contents check omitted) when scanning.
+// Keyed by FID; display name is the pySim name.
+const PROFILER_IGNORE_FILES = [
+	{ fid: '6F7E', name: 'EF.LOCI' },
+	{ fid: '6F73', name: 'EF.PSLOCI' },
+	{ fid: '6FE3', name: 'EF.EPSLOCI' },
+	{ fid: '4F01', name: 'EF.5GS3GPPLOCI' },
+	{ fid: '6F08', name: 'EF.Keys' },
+	{ fid: '6F09', name: 'EF.KeysPS' },
+	{ fid: '6F3C', name: 'EF.SMS' },
+	{ fid: '6F20', name: 'EF.Kc' },
+	{ fid: '4F52', name: 'EF.KcGPRS' },
+	{ fid: '6F53', name: 'EF.LOCIGPRS' },
+	{ fid: '6F48', name: 'EF.CBMID' },
+	{ fid: '6F43', name: 'EF.SMSS' },
+];
+
+function profilerLoad() {
+	try {
+		const d = localStorage.getItem('otaman_profiles');
+		profiles = d ? JSON.parse(d) : [];
+	} catch (e) { profiles = []; }
+}
+
+function profilerSave() {
+	localStorage.setItem('otaman_profiles', JSON.stringify(profiles));
+}
+
+function profilerNewId() {
+	return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+function profilerNormHex(s) {
+	return (s || '').toUpperCase().replace(/[^0-9A-F?]/g, '');
+}
+
+// Match an expected hex (may contain '?' nibble wildcards) against actual hex.
+function profilerMatch(mode, expected, actual) {
+	const e = profilerNormHex(expected);
+	const a = profilerNormHex(actual);
+	if (!e) return false;
+	if (mode === 'mask') {
+		if (e.indexOf('?') < 0) {
+			return a.indexOf(e) === 0;
+		}
+		if (e.length !== a.length) return false;
+		for (let i = 0; i < e.length; i++) {
+			if (e[i] !== '?' && e[i] !== a[i]) return false;
+		}
+		return true;
+	}
+	return e === a;
+}
+
+function profilerValidateProfile(obj) {
+	if (!obj || typeof obj !== 'object') return 'Not an object';
+	if (!obj.name) return 'Missing name';
+	if (!Array.isArray(obj.rules)) return 'Missing rules array';
+	for (const r of obj.rules) {
+		if (!r || typeof r !== 'object') return 'Invalid rule';
+		if (r.type !== 'file') return 'Unsupported rule type: ' + r.type;
+		if (!r.path) return 'Rule missing path';
+	}
+	return null;
+}
+
+function profilerRenderList() {
+	const el = document.getElementById('profiler-list-body');
+	if (!profiles.length) {
+		el.innerHTML = '<span class="text-gray-400">' + t('No profiles defined.') + '</span>';
+		return;
+	}
+	let html = '';
+	for (let i = 0; i < profiles.length; i++) {
+		const p = profiles[i];
+		html += '<div class="flex items-center gap-2 py-1.5 border-b border-gray-200 dark:border-slate-700">';
+		html += '<b>' + esc(p.name) + '</b>';
+		html += '<span class="text-xs text-gray-400 dark:text-slate-500">' + esc(new Date(p.created).toLocaleString()) + '</span>';
+		html += '<span class="text-xs text-gray-400 dark:text-slate-500">(' + p.rules.length + ' ' + esc(t('rules')) + ')</span>';
+		html += '<span class="ml-auto flex gap-1">';
+		html += '<button onclick="profilerEdit(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + esc(t('Edit')) + '</button>';
+		html += '<button onclick="profilerCheck(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700">' + esc(t('Check')) + '</button>';
+		html += '<button onclick="profilerExport(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">' + esc(t('Export')) + '</button>';
+		html += '<button onclick="profilerDelete(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
+		html += '</span></div>';
+	}
+	el.innerHTML = html;
+}
+
+function profilerSetView(view) {
+	profilerView = view;
+	document.getElementById('profiler-list').classList.toggle('hidden', view !== 'list');
+	document.getElementById('profiler-editor').classList.toggle('hidden', view !== 'editor');
+	document.getElementById('profiler-results').classList.toggle('hidden', view !== 'results');
+	if (view === 'list') profilerRenderList();
+}
+
+function profilerNew() {
+	const name = prompt(t('Profile name') + ':', '');
+	if (!name) return;
+	profiles.push({ id: profilerNewId(), name: name, created: new Date().toISOString(), rules: [] });
+	profilerSave();
+	profilerEdit(profiles.length - 1);
+}
+
+function profilerFromCard() {
+	document.getElementById('profiler-scan-name').value = '';
+	const ignore = document.getElementById('profiler-scan-ignore');
+	let html = '';
+	for (const f of PROFILER_IGNORE_FILES) {
+		html += '<label class="flex items-center gap-2 text-sm">' +
+			'<input type="checkbox" data-ignore-fid="' + f.fid + '" checked>' +
+			'<span>' + esc(t('Ignore contents of')) + ' ' + esc(f.name) + '</span></label>';
+	}
+	ignore.innerHTML = html;
+	document.getElementById('profiler-scan-error').classList.add('hidden');
+	document.getElementById('profiler-scan-modal').classList.remove('hidden');
+}
+
+function profilerScanCancel() {
+	document.getElementById('profiler-scan-modal').classList.add('hidden');
+}
+
+async function profilerScanStart() {
+	const name = document.getElementById('profiler-scan-name').value.trim();
+	const errEl = document.getElementById('profiler-scan-error');
+	if (!name) {
+		errEl.textContent = t('Please enter a profile name');
+		errEl.classList.remove('hidden');
+		return;
+	}
+	const ignoreFids = new Set();
+	document.querySelectorAll('#profiler-scan-ignore input[data-ignore-fid]').forEach(cb => {
+		if (cb.checked) ignoreFids.add(cb.getAttribute('data-ignore-fid').toUpperCase());
+	});
+	const btn = document.getElementById('profiler-scan-btn');
+	btn.disabled = true;
+	btn.textContent = t('Scanning...');
+	try {
+		const rules = await profilerScanCard(ignoreFids);
+		const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
+		profiles.push(profile);
+		profilerSave();
+		profilerScanCancel();
+		profilerEdit(profiles.length - 1);
+	} catch (e) {
+		errEl.textContent = e.message;
+		errEl.classList.remove('hidden');
+	} finally {
+		btn.disabled = false;
+		btn.textContent = t('Scan');
+	}
+}
+
+// Recursively walk the card filesystem and build rules for files that exist.
+async function profilerScanCard(ignoreFids) {
+	const rules = [];
+	const seen = new Set();
+
+	// dir: { name, fid, parentSel (to select this dir), pathPrefix (rule-path segs for its children) }
+	async function walkDir(dir) {
+		let body = { name: dir.name, fid: dir.fid };
+		if (dir.parentSel) body.parent_sel = dir.parentSel;
+		let data;
+		try {
+			data = await pysimFetch('/api/tree', body);
+		} catch (e) { return; }
+		if (!data || data.exists === false) return;
+		for (const c of (data.children || [])) {
+			// parent selector for c, mirroring getParentSel()
+			const parentSel = (dir.name === 'MF') ? 'MF'
+				: (dir.name && dir.name.startsWith('ADF.')) ? dir.name
+				: (dir.fid ? dir.fid : dir.name);
+			if (c.isDir) {
+				// ADF roots use the AID, not the generic ADF fid
+				const childPrefix = c.aid ? [c.aid.toUpperCase()]
+					: dir.pathPrefix.concat(c.fid ? c.fid.toUpperCase() : c.name);
+				await walkDir({ name: c.name, fid: c.fid, parentSel: parentSel, pathPrefix: childPrefix });
+			} else {
+				const childPath = dir.pathPrefix.concat(c.fid ? c.fid.toUpperCase() : c.name).join('/');
+				if (seen.has(childPath)) continue;
+				seen.add(childPath);
+				const rule = await profilerBuildFileRule(childPath, c, ignoreFids);
+				if (rule) rules.push(rule);
+			}
+		}
+	}
+
+	// MF-rooted walk
+	await walkDir({ name: 'MF', fid: null, parentSel: null, pathPrefix: ['MF'] });
+
+	// Sweep custom files not already covered (map leading MF fid 3F00 -> MF)
+	for (const cf of pysimCustomFiles) {
+		const parts = cf.path.split('/').filter(Boolean);
+		if (!parts.length) continue;
+		let segs;
+		if (parts[0].toUpperCase() === '3F00') segs = ['MF'].concat(parts.slice(1));
+		else segs = parts;
+		const path = segs.join('/');
+		if (seen.has(path)) continue;
+		seen.add(path);
+		const rule = await profilerBuildFileRule(path, { fid: cf.fid, name: cf.name }, ignoreFids);
+		if (rule) rules.push(rule);
+	}
+	return rules;
+}
+
+async function profilerBuildFileRule(path, c, ignoreFids) {
+	let sel;
+	try {
+		sel = await pysimFetch('/api/select', { path: path });
+	} catch (e) { return null; }
+	if (!sel || sel.exists !== true) return null;
+	const rule = {
+		type: 'file',
+		path: path,
+		fileType: sel.file_type || null,
+		fileSize: (sel.file_size === null || sel.file_size === undefined) ? null : sel.file_size,
+		recordLen: (sel.record_len === null || sel.record_len === undefined) ? null : sel.record_len,
+		numRecords: (sel.num_of_rec === null || sel.num_of_rec === undefined) ? null : sel.num_of_rec,
+		content: null,
+	};
+	const fid = (c.fid || sel.fid || '').toUpperCase();
+	if (ignoreFids.has(fid)) return rule;
+	try {
+		const rd = await pysimFetch('/api/read', { path: path, mode: 'raw' });
+		if (rd && rd.success) {
+			if (rd.records) {
+				rule.content = {
+					mode: 'exact', kind: 'record',
+					records: rd.records.map(r => ({ num: r.num, data: r.data })),
+				};
+			} else if (rd.data) {
+				rule.content = { mode: 'exact', kind: 'transparent', expected: rd.data };
+			}
+		}
+	} catch (e) {}
+	return rule;
+}
+
+function profilerImportFile(input) {
+	const file = input.files && input.files[0];
+	input.value = '';
+	if (!file) return;
+	const reader = new FileReader();
+	reader.onload = () => {
+		try {
+			const obj = JSON.parse(reader.result);
+			const err = profilerValidateProfile(obj);
+			if (err) throw new Error(err);
+			obj.id = profilerNewId();
+			obj.created = obj.created || new Date().toISOString();
+			profiles.push(obj);
+			profilerSave();
+			profilerRenderList();
+		} catch (e) {
+			alert('Import error: ' + e.message);
+		}
+	};
+	reader.readAsText(file);
+}
+
+function profilerExport(i) {
+	const p = profiles[i];
+	downloadJson((p.name || 'profile').replace(/[^a-zA-Z0-9_-]+/g, '_') + '.json', p);
+}
+
+function profilerDelete(i) {
+	const p = profiles[i];
+	if (!confirm(t('Delete profile') + ' "' + p.name + '"?') ) return;
+	profiles.splice(i, 1);
+	profilerSave();
+	profilerRenderList();
+}
+
+function profilerEdit(i) {
+	const p = profiles[i];
+	profilerEditId = p.id;
+	profilerDraft = JSON.parse(JSON.stringify(p));
+	profilerSetView('editor');
+	document.getElementById('profiler-name').value = profilerDraft.name;
+	profilerRenderEditor();
+}
+
+function profilerBackToList() {
+	profilerDraft = null;
+	profilerEditId = null;
+	profilerSetView('list');
+}
+
+function profilerAddRule() {
+	if (!profilerDraft) return;
+	profilerDraft.rules.push({ type: 'file', path: '', fileType: null, fileSize: null, recordLen: null, numRecords: null, content: null });
+	profilerRenderEditor();
+}
+
+function profilerDeleteRule(i) {
+	if (!profilerDraft) return;
+	profilerDraft.rules.splice(i, 1);
+	profilerRenderEditor();
+}
+
+function profilerRenderEditor() {
+	if (!profilerDraft) return;
+	const el = document.getElementById('profiler-rules');
+	if (!profilerDraft.rules.length) {
+		el.innerHTML = '<span class="text-gray-400">' + t('No rules defined.') + '</span>';
+		return;
+	}
+	let html = '';
+	for (let i = 0; i < profilerDraft.rules.length; i++) {
+		const r = profilerDraft.rules[i];
+		html += profilerRenderRule(i, r);
+	}
+	el.innerHTML = html;
+}
+
+function profilerRenderRule(i, r) {
+	const fts = { transparent: 'transparent', linear_fixed: 'linear_fixed', cyclic: 'cyclic', ber_tlv: 'ber_tlv', df: 'df' };
+	let ftOpts = '<option value=""' + (!r.fileType ? ' selected' : '') + '>—</option>';
+	for (const k in fts) {
+		ftOpts += '<option value="' + k + '"' + (r.fileType === k ? ' selected' : '') + '>' + fts[k] + '</option>';
+	}
+	const cm = r.content ? r.content.mode : 'exact';
+	let html = '<div class="mb-2 p-3 border border-gray-200 dark:border-slate-600 rounded">';
+	html += '<div class="flex items-center gap-2 mb-2">';
+	html += '<span class="text-xs font-semibold text-gray-500 dark:text-slate-400">#' + (i + 1) + '</span>';
+	html += '<button onclick="profilerDeleteRule(' + i + ')" class="ml-auto px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
+	html += '</div>';
+	html += '<div class="grid grid-cols-1 gap-2 mb-2">';
+	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Path')) + '</label>' +
+		'<input value="' + escHtml(r.path || '') + '" oninput="profilerUpdateRule(' + i + ',\'path\',this.value)" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="MF/7F10/6F3A"></div>';
+	html += '</div>';
+	html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">';
+	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('File type')) + '</label>' +
+		'<select onchange="profilerUpdateRule(' + i + ',\'fileType\',this.value||null)" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' + ftOpts + '</select></div>';
+	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Size')) + '</label>' +
+		'<input type="number" value="' + (r.fileSize === null ? '' : r.fileSize) + '" oninput="profilerUpdateRule(' + i + ',\'fileSize\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
+	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record length')) + '</label>' +
+		'<input type="number" value="' + (r.recordLen === null ? '' : r.recordLen) + '" oninput="profilerUpdateRule(' + i + ',\'recordLen\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
+	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record count')) + '</label>' +
+		'<input type="number" value="' + (r.numRecords === null ? '' : r.numRecords) + '" oninput="profilerUpdateRule(' + i + ',\'numRecords\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
+	html += '</div>';
+	html += profilerRenderContentEditor(i, r);
+	html += '</div>';
+	return html;
+}
+
+function profilerRenderContentEditor(i, r) {
+	const c = r.content;
+	const mode = c ? c.mode : 'exact';
+	let html = '<div class="mb-1 text-xs text-gray-600 dark:text-slate-400">' + esc(t('Contents')) + '</div>';
+	html += '<div class="flex items-center gap-3 mb-1">';
+	html += '<label class="text-xs flex items-center gap-1"><input type="radio" name="profiler-cm-' + i + '" value="none"' + (!c ? ' checked' : '') + ' onchange="profilerSetContent(' + i + ',null)"> ' + esc(t('None')) + '</label>';
+	html += '<label class="text-xs flex items-center gap-1"><input type="radio" name="profiler-cm-' + i + '" value="exact"' + (c && mode === 'exact' ? ' checked' : '') + ' onchange="profilerSetContent(' + i + ',\'exact\')"> ' + esc(t('Exact')) + '</label>';
+	html += '<label class="text-xs flex items-center gap-1"><input type="radio" name="profiler-cm-' + i + '" value="mask"' + (c && mode === 'mask' ? ' checked' : '') + ' onchange="profilerSetContent(' + i + ',\'mask\')"> ' + esc(t('Mask')) + '</label>';
+	html += '</div>';
+	if (c) {
+		if (c.kind === 'record') {
+			html += '<div class="space-y-1">';
+			for (let ri = 0; ri < c.records.length; ri++) {
+				const rec = c.records[ri];
+				html += '<div class="flex items-center gap-2"><span class="text-xs text-gray-500 w-8">' + rec.num + '</span>' +
+					'<input value="' + escHtml(rec.data) + '" oninput="profilerUpdateRecord(' + i + ',' + ri + ',this.value)" class="flex-1 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800"></div>';
+			}
+			html += '</div>';
+		} else {
+			html += '<textarea oninput="profilerUpdateRuleContent(' + i + ',this.value)" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800">' + escHtml(c.expected || '') + '</textarea>';
+		}
+	}
+	return html;
+}
+
+function profilerUpdateRule(i, field, value) {
+	if (!profilerDraft) return;
+	profilerDraft.rules[i][field] = value;
+}
+
+function profilerSetContent(i, mode) {
+	if (!profilerDraft) return;
+	const r = profilerDraft.rules[i];
+	if (!mode) {
+		r.content = null;
+	} else if (r.content) {
+		r.content.mode = mode;
+	} else {
+		r.content = { mode: mode, kind: 'transparent', expected: '' };
+	}
+	profilerRenderEditor();
+}
+
+function profilerUpdateRuleContent(i, value) {
+	if (!profilerDraft) return;
+	const c = profilerDraft.rules[i].content;
+	if (c) c.expected = value;
+}
+
+function profilerUpdateRecord(i, ri, value) {
+	if (!profilerDraft) return;
+	const c = profilerDraft.rules[i].content;
+	if (c && c.records) c.records[ri].data = value;
+}
+
+function profilerSaveProfile() {
+	if (!profilerDraft) return;
+	profilerDraft.name = document.getElementById('profiler-name').value.trim();
+	const idx = profiles.findIndex(p => p.id === profilerEditId);
+	if (idx >= 0) profiles[idx] = profilerDraft;
+	profilerSave();
+	profilerSetView('list');
+}
+
+async function profilerCheck(i) {
+	const p = profiles[i];
+	profilerSetView('results');
+	document.getElementById('profiler-results-title').textContent = p.name;
+	const prog = document.getElementById('profiler-progress');
+	const summary = document.getElementById('profiler-summary');
+	const report = document.getElementById('profiler-report');
+	report.innerHTML = '';
+	summary.innerHTML = '';
+	const results = [];
+	let passed = 0, failed = 0, errors = 0;
+	for (let ri = 0; ri < p.rules.length; ri++) {
+		const r = p.rules[ri];
+		prog.textContent = t('Checking') + ' ' + (ri + 1) + '/' + p.rules.length + ' — ' + r.path;
+		const res = await profilerRunRule(r);
+		results.push(res);
+		if (res.status === 'pass') passed++;
+		else if (res.status === 'fail') failed++;
+		else errors++;
+	}
+	prog.textContent = '';
+	summary.innerHTML = '<span class="text-emerald-600 font-semibold">' + passed + ' ' + t('passed') + '</span>' +
+		' · <span class="text-red-600 font-semibold">' + failed + ' ' + t('failed') + '</span>' +
+		' · <span class="text-yellow-600 font-semibold">' + errors + ' ' + t('errors') + '</span>';
+	report.innerHTML = profilerRenderReport(results);
+}
+
+async function profilerRunRule(r) {
+	const res = { path: r.path, status: 'pass', checks: [] };
+	let sel;
+	try {
+		sel = await pysimFetch('/api/select', { path: r.path });
+	} catch (e) {
+		res.status = 'error';
+		res.error = e.message;
+		return res;
+	}
+	if (!sel || sel.exists !== true) {
+		res.status = 'fail';
+		res.checks.push({ label: 'exists', expected: true, actual: false, ok: false });
+		return res;
+	}
+	res.checks.push({ label: 'exists', expected: true, actual: true, ok: true });
+	if (r.fileType) {
+		const ok = sel.file_type === r.fileType;
+		if (!ok) res.status = 'fail';
+		res.checks.push({ label: 'fileType', expected: r.fileType, actual: sel.file_type, ok: ok });
+	}
+	if (r.fileSize !== null && r.fileSize !== undefined) {
+		const ok = sel.file_size === r.fileSize;
+		if (!ok) res.status = 'fail';
+		res.checks.push({ label: 'fileSize', expected: r.fileSize, actual: sel.file_size, ok: ok });
+	}
+	if (r.recordLen !== null && r.recordLen !== undefined) {
+		const ok = sel.record_len === r.recordLen;
+		if (!ok) res.status = 'fail';
+		res.checks.push({ label: 'recordLen', expected: r.recordLen, actual: sel.record_len, ok: ok });
+	}
+	if (r.numRecords !== null && r.numRecords !== undefined) {
+		const ok = sel.num_of_rec === r.numRecords;
+		if (!ok) res.status = 'fail';
+		res.checks.push({ label: 'numRecords', expected: r.numRecords, actual: sel.num_of_rec, ok: ok });
+	}
+	if (r.content) {
+		let rd;
+		try {
+			rd = await pysimFetch('/api/read', { path: r.path, mode: 'raw' });
+		} catch (e) {
+			res.status = 'error';
+			res.error = e.message;
+			return res;
+		}
+		if (!rd || !rd.success) {
+			res.status = 'fail';
+			res.checks.push({ label: 'content', expected: 'readable', actual: 'read failed (' + (rd && rd.sw ? rd.sw : '?') + ')', ok: false });
+		} else if (r.content.kind === 'record') {
+			const exp = r.content.records || [];
+			const act = rd.records || [];
+			if (exp.length !== act.length) {
+				res.status = 'fail';
+				res.checks.push({ label: 'content.records', expected: exp.length + ' records', actual: act.length + ' records', ok: false });
+			} else {
+				for (let j = 0; j < exp.length; j++) {
+					const ok = exp[j].num === act[j].num && profilerMatch(r.content.mode, exp[j].data, act[j].data);
+					if (!ok) res.status = 'fail';
+					res.checks.push({ label: 'content.rec' + exp[j].num, expected: exp[j].data, actual: act[j].data, ok: ok });
+				}
+			}
+		} else {
+			const ok = profilerMatch(r.content.mode, r.content.expected, rd.data);
+			if (!ok) res.status = 'fail';
+			res.checks.push({ label: 'content', expected: r.content.expected, actual: rd.data, ok: ok });
+		}
+	}
+	return res;
+}
+
+function profilerRenderReport(results) {
+	let html = '';
+	for (const r of results) {
+		const color = r.status === 'pass' ? 'text-emerald-600' : (r.status === 'fail' ? 'text-red-600' : 'text-yellow-600');
+		const icon = r.status === 'pass' ? '✓' : (r.status === 'fail' ? '✗' : '⚠');
+		html += '<div class="mb-2 p-2 border border-gray-200 dark:border-slate-600 rounded">';
+		html += '<div class="flex items-center gap-2"><span class="' + color + ' font-bold">' + icon + '</span><span class="font-mono text-sm">' + esc(r.path) + '</span></div>';
+		if (r.error) html += '<div class="text-xs text-yellow-600 mt-1">' + esc(r.error) + '</div>';
+		for (const c of r.checks) {
+			if (c.ok) continue;
+			html += '<div class="text-xs text-red-600 mt-1">' + esc(c.label) + ': ' + esc(t('expected')) + ' <b>' + esc(String(c.expected)) + '</b>, ' + esc(t('actual')) + ' <b>' + esc(String(c.actual)) + '</b></div>';
+		}
+		html += '</div>';
+	}
+	return html;
+}
+
+profilerLoad();
+
 // Init sub-tab pills
 document.querySelectorAll('.pysim-subtab').forEach(btn => {
 	btn.addEventListener('click', () => pysimSwitchSubtab(btn.dataset.pysimSub));
@@ -6797,6 +7379,39 @@ const LANG_RU = {
 	'Saving...': 'Сохранение...',
 	'Saved': 'Сохранено',
 	'Save': 'Сохранить',
+	'Profiler': 'Профилёр',
+	'New profile': 'Новый профиль',
+	'Profile from card': 'Профиль с карты',
+	'Import profile': 'Импорт профиля',
+	'Back to list': 'Назад к списку',
+	'Add rule': 'Добавить правило',
+	'Scan': 'Сканировать',
+	'Ignore contents of:': 'Игнорировать содержимое:',
+	'Ignore contents of': 'Игнорировать содержимое',
+	'No profiles defined.': 'Профили не заданы.',
+	'rules': 'правил',
+	'Check': 'Проверить',
+	'Export': 'Экспорт',
+	'Profile name': 'Имя профиля',
+	'Please enter a profile name': 'Введите имя профиля',
+	'Scanning...': 'Сканирование...',
+	'Delete profile': 'Удалить профиль',
+	'No rules defined.': 'Правила не заданы.',
+	'Path': 'Путь',
+	'File type': 'Тип файла',
+	'Size': 'Размер',
+	'Record length': 'Длина записи',
+	'Record count': 'Кол-во записей',
+	'Contents': 'Содержимое',
+	'None': 'Нет',
+	'Exact': 'Точное',
+	'Mask': 'Маска',
+	'Checking': 'Проверка',
+	'passed': 'пройдено',
+	'failed': 'не пройдено',
+	'errors': 'ошибок',
+	'expected': 'ожидалось',
+	'actual': 'фактически',
 };
 let currentLang = 'en';
 

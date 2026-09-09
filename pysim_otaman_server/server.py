@@ -18,7 +18,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.25'
+VERSION = '1.9.26'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -156,6 +156,34 @@ def _select_with_parent(lchan, name, parent_sel, app):
         lchan.select(parent_sel, app)
     fcp = lchan.select(name, app)
     return fcp
+
+
+def _select_path(lchan, path, app):
+    """Select a file described by a full path.
+
+    Path is '/' separated; the first element is either 'MF' (or the MF fid
+    '3F00') or an ADF AID (hex). Remaining elements are FIDs or file names.
+    pySim's lchan.select() cannot select an ADF by its raw AID (selectables are
+    keyed by name/fid only), so ADF roots are resolved through rs.mf.applications.
+    """
+    parts = [p for p in (path or '').split('/') if p]
+    if not parts:
+        raise RuntimeError('Empty path')
+    rs = app.rs
+    first = parts[0]
+    if first.upper() in ('MF', '3F00'):
+        lchan.select('MF', app)
+    else:
+        aid = first.lower()
+        adf = rs.mf.applications.get(aid)
+        if not adf:
+            adf = next((v for k, v in rs.mf.applications.items() if k.lower() == aid), None)
+        if not adf:
+            raise RuntimeError('ADF not found: %s' % first)
+        lchan.select_file(adf, app)
+    for seg in parts[1:]:
+        lchan.select(seg, app)
+    return lchan.selected_file
 
 
 def _parse_tree_output(output):
@@ -1591,6 +1619,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 return
             body = self._read_body()
             self._log_req(body)
+            path = body.get('path')
             fid = body.get('fid')
             name = fid if fid else body.get('name', '')
             parent_sel = body.get('parent_sel')
@@ -1601,12 +1630,18 @@ class PysimHandler(BaseHTTPRequestHandler):
                 return
             lchan = rs.lchan[0]
             try:
-                _select_with_parent(lchan, name, parent_sel, app)
+                if path:
+                    _select_path(lchan, path, app)
+                else:
+                    _select_with_parent(lchan, name, parent_sel, app)
                 cur = lchan.selected_file
                 data = {
                     'name': cur.name if cur else None,
                     'fid': cur.fid.upper() if cur and cur.fid else None,
                     'file_type': _get_file_type(lchan, cur),
+                    'file_size': lchan.selected_file_size() if lchan else None,
+                    'record_len': lchan.selected_file_record_len() if lchan else None,
+                    'num_of_rec': lchan.selected_file_num_of_rec() if lchan else None,
                     'exists': True,
                 }
                 self._send_json(data)
@@ -1623,9 +1658,9 @@ class PysimHandler(BaseHTTPRequestHandler):
                 return
             body = self._read_body()
             self._log_req(body)
+            path = body.get('path')
             fid = body.get('fid')
             name = fid if fid else body.get('name', '')
-            fid = body.get('fid')
             parent_sel = body.get('parent_sel')
             mode = body.get('mode', 'raw')
             rs = app.rs
@@ -1636,7 +1671,10 @@ class PysimHandler(BaseHTTPRequestHandler):
             lchan = rs.lchan[0]
             try:
                 sel = fid if fid else name
-                _select_with_parent(lchan, sel, parent_sel, app)
+                if path:
+                    _select_path(lchan, path, app)
+                else:
+                    _select_with_parent(lchan, sel, parent_sel, app)
                 ft = _get_file_type(lchan, lchan.selected_file)
                 is_record = ft in ('linear_fixed', 'cyclic')
                 if mode == 'decoded':
