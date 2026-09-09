@@ -6903,11 +6903,12 @@ async function profilerBuildFileRule(path, c, ignoreFids) {
 		sel = await pysimFetch('/api/select', { path: path });
 	} catch (e) { return null; }
 	if (!sel || sel.exists !== true) return null;
+	const isRecord = profilerContentKindForFileType(sel.file_type) === 'record';
 	const rule = {
 		type: 'file',
 		path: path,
 		fileType: sel.file_type || null,
-		fileSize: (sel.file_size === null || sel.file_size === undefined) ? null : sel.file_size,
+		fileSize: isRecord ? null : ((sel.file_size === null || sel.file_size === undefined) ? null : sel.file_size),
 		recordLen: (sel.record_len === null || sel.record_len === undefined) ? null : sel.record_len,
 		numRecords: (sel.num_of_rec === null || sel.num_of_rec === undefined) ? null : sel.num_of_rec,
 		content: null,
@@ -7184,7 +7185,8 @@ async function profilerRunRule(r) {
 		if (!ok) res.status = 'fail';
 		res.checks.push({ label: 'fileType', expected: r.fileType, actual: sel.file_type, ok: ok });
 	}
-	if (r.fileSize !== null && r.fileSize !== undefined) {
+	const isRecord = profilerContentKindForFileType(r.fileType) === 'record';
+	if (!isRecord && r.fileSize !== null && r.fileSize !== undefined) {
 		const ok = sel.file_size === r.fileSize;
 		if (!ok) { res.status = 'fail'; sizeMismatch = true; }
 		res.checks.push({ label: 'fileSize', expected: r.fileSize, actual: sel.file_size, ok: ok });
