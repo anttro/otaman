@@ -21,7 +21,7 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerValidateProfile'];
+const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerValidateProfile'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 eval(code);
@@ -66,6 +66,12 @@ test('profilerMatchMin compares the shorter overlapping portion', () => {
 	// mask with ? over a shorter actual
 	assert.ok(profilerMatchMin('mask', '08?91?AA', '081910'));
 	assert.ok(!profilerMatchMin('mask', '08?91?AA', '091110'));
+});
+
+test('profilerMaskPrefix4 keeps first 4 bytes and masks the rest', () => {
+	assert.strictEqual(profilerMaskPrefix4('082905911234567890'), '08290591??????????');
+	assert.strictEqual(profilerMaskPrefix4('08290591'), '08290591');
+	assert.strictEqual(profilerMaskPrefix4('1234'), '1234');
 });
 
 test('profile validation', () => {

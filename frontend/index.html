@@ -6672,6 +6672,13 @@ const PROFILER_IGNORE_FILES = [
 	{ fid: '6F43', name: 'EF.SMSS' },
 ];
 
+// Files where contents are captured as a mask matching only the first 4 bytes
+// (the rest are '?' wildcards). Keyed by FID; display name is the pySim name.
+const PROFILER_MASK_PREFIX4_FIDS = {
+	'6F07': 'EF.IMSI',
+	'2FE2': 'EF.ICCID',
+};
+
 function profilerLoad() {
 	try {
 		const d = localStorage.getItem('otaman_profiles');
@@ -6715,6 +6722,13 @@ function profilerMatchMin(mode, expected, actual) {
 	const a = profilerNormHex(actual);
 	const n = Math.min(e.length, a.length);
 	return profilerMatch(mode, e.slice(0, n), a.slice(0, n));
+}
+
+// Keep the first 4 bytes (8 hex chars) exact and mask the rest with '?'.
+function profilerMaskPrefix4(hex) {
+	const h = profilerNormHex(hex);
+	if (h.length <= 8) return h;
+	return h.slice(0, 8) + '?'.repeat(h.length - 8);
 }
 
 function profilerValidateProfile(obj) {
@@ -6896,7 +6910,11 @@ async function profilerBuildFileRule(path, c, ignoreFids) {
 					records: rd.records.map(r => ({ num: r.num, data: r.data })),
 				};
 			} else if (rd.data) {
-				rule.content = { mode: 'exact', kind: 'transparent', expected: rd.data };
+				if (PROFILER_MASK_PREFIX4_FIDS[fid]) {
+					rule.content = { mode: 'mask', kind: 'transparent', expected: profilerMaskPrefix4(rd.data) };
+				} else {
+					rule.content = { mode: 'exact', kind: 'transparent', expected: rd.data };
+				}
 			}
 		}
 	} catch (e) {}
