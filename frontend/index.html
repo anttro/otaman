@@ -6744,6 +6744,11 @@ function profilerContentKindForFileType(ft) {
 	return (ft === 'linear_fixed' || ft === 'cyclic') ? 'record' : 'transparent';
 }
 
+// A fresh record content object seeded with one empty record row.
+function profilerEmptyRecordContent(mode) {
+	return { mode: mode, kind: 'record', records: [{ num: 1, data: '' }] };
+}
+
 function profilerValidateProfile(obj) {
 	if (!obj || typeof obj !== 'object') return 'Not an object';
 	if (!obj.name) return 'Missing name';
@@ -7065,9 +7070,14 @@ function profilerRenderContentEditor(i, r) {
 			for (let ri = 0; ri < c.records.length; ri++) {
 				const rec = c.records[ri];
 				html += '<div class="flex items-center gap-2"><span class="text-xs text-gray-500 w-8">' + rec.num + '</span>' +
-					'<input value="' + escHtml(rec.data) + '" oninput="profilerUpdateRecord(' + i + ',' + ri + ',this.value)" class="flex-1 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800"></div>';
+					'<input value="' + escHtml(rec.data) + '" oninput="profilerUpdateRecord(' + i + ',' + ri + ',this.value)" class="flex-1 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800">';
+				if (c.records.length > 1) {
+					html += '<button onclick="profilerDeleteRecord(' + i + ',' + ri + ')" class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>';
+				}
+				html += '</div>';
 			}
 			html += '</div>';
+			html += '<button onclick="profilerAddRecord(' + i + ')" class="mt-1 text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300">+ Record</button>';
 		} else {
 			html += '<textarea oninput="profilerUpdateRuleContent(' + i + ',this.value)" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800">' + escHtml(c.expected || '') + '</textarea>';
 		}
@@ -7091,7 +7101,7 @@ function profilerUpdateRuleFileType(i, value) {
 		const kind = profilerContentKindForFileType(value);
 		if (r.content.kind !== kind) {
 			r.content = kind === 'record'
-				? { mode: r.content.mode, kind: 'record', records: [] }
+				? profilerEmptyRecordContent(r.content.mode)
 				: { mode: r.content.mode, kind: 'transparent', expected: '' };
 		}
 	}
@@ -7108,7 +7118,7 @@ function profilerSetContent(i, mode) {
 	} else {
 		const kind = profilerContentKindForFileType(r.fileType);
 		r.content = kind === 'record'
-			? { mode: mode, kind: 'record', records: [] }
+			? profilerEmptyRecordContent(mode)
 			: { mode: mode, kind: 'transparent', expected: '' };
 	}
 	profilerRenderEditor();
@@ -7124,6 +7134,24 @@ function profilerUpdateRecord(i, ri, value) {
 	if (!profilerDraft) return;
 	const c = profilerDraft.rules[i].content;
 	if (c && c.records) c.records[ri].data = value;
+}
+
+function profilerAddRecord(i) {
+	if (!profilerDraft) return;
+	const c = profilerDraft.rules[i].content;
+	if (!c || c.kind !== 'record') return;
+	const lastNum = c.records.length ? c.records[c.records.length - 1].num : 0;
+	c.records.push({ num: lastNum + 1, data: '' });
+	profilerRenderEditor();
+}
+
+function profilerDeleteRecord(i, ri) {
+	if (!profilerDraft) return;
+	const c = profilerDraft.rules[i].content;
+	if (!c || c.kind !== 'record') return;
+	if (c.records.length <= 1) return;
+	c.records.splice(ri, 1);
+	profilerRenderEditor();
 }
 
 function profilerSaveProfile() {

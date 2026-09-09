@@ -21,7 +21,7 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerValidateProfile'];
+const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 eval(code);
@@ -90,6 +90,14 @@ test('profilerContentKindForFileType', () => {
 	assert.strictEqual(profilerContentKindForFileType('transparent'), 'transparent');
 	assert.strictEqual(profilerContentKindForFileType('ber_tlv'), 'transparent');
 	assert.strictEqual(profilerContentKindForFileType('df'), 'transparent');
+});
+
+test('profilerEmptyRecordContent seeds one empty record row', () => {
+	const c = profilerEmptyRecordContent('exact');
+	assert.strictEqual(c.kind, 'record');
+	assert.strictEqual(c.mode, 'exact');
+	assert.strictEqual(c.records.length, 1);
+	assert.deepStrictEqual(c.records[0], { num: 1, data: '' });
 });
 
 test('profile validation', () => {
