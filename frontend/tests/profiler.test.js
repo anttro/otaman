@@ -21,7 +21,7 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerValidateProfile'];
+const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerValidateProfile'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 eval(code);
@@ -72,6 +72,24 @@ test('profilerMaskPrefix4 keeps first 4 bytes and masks the rest', () => {
 	assert.strictEqual(profilerMaskPrefix4('082905911234567890'), '08290591??????????');
 	assert.strictEqual(profilerMaskPrefix4('08290591'), '08290591');
 	assert.strictEqual(profilerMaskPrefix4('1234'), '1234');
+});
+
+test('profilerFileFields maps file type to applicable fields', () => {
+	assert.deepStrictEqual(profilerFileFields('transparent'), { size: true, records: false });
+	assert.deepStrictEqual(profilerFileFields('ber_tlv'), { size: true, records: false });
+	assert.deepStrictEqual(profilerFileFields('linear_fixed'), { size: false, records: true });
+	assert.deepStrictEqual(profilerFileFields('cyclic'), { size: false, records: true });
+	assert.deepStrictEqual(profilerFileFields('df'), { size: false, records: false });
+	assert.deepStrictEqual(profilerFileFields(null), { size: true, records: true });
+	assert.deepStrictEqual(profilerFileFields(''), { size: true, records: true });
+});
+
+test('profilerContentKindForFileType', () => {
+	assert.strictEqual(profilerContentKindForFileType('linear_fixed'), 'record');
+	assert.strictEqual(profilerContentKindForFileType('cyclic'), 'record');
+	assert.strictEqual(profilerContentKindForFileType('transparent'), 'transparent');
+	assert.strictEqual(profilerContentKindForFileType('ber_tlv'), 'transparent');
+	assert.strictEqual(profilerContentKindForFileType('df'), 'transparent');
 });
 
 test('profile validation', () => {

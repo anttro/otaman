@@ -6731,6 +6731,19 @@ function profilerMaskPrefix4(hex) {
 	return h.slice(0, 8) + '?'.repeat(h.length - 8);
 }
 
+// Which size/record fields apply to a given file type.
+function profilerFileFields(ft) {
+	if (ft === 'linear_fixed' || ft === 'cyclic') return { size: false, records: true };
+	if (ft === 'df') return { size: false, records: false };
+	if (ft === 'transparent' || ft === 'ber_tlv') return { size: true, records: false };
+	return { size: true, records: true };
+}
+
+// Content representation ('record' vs 'transparent') for a given file type.
+function profilerContentKindForFileType(ft) {
+	return (ft === 'linear_fixed' || ft === 'cyclic') ? 'record' : 'transparent';
+}
+
 function profilerValidateProfile(obj) {
 	if (!obj || typeof obj !== 'object') return 'Not an object';
 	if (!obj.name) return 'Missing name';
@@ -7014,17 +7027,24 @@ function profilerRenderRule(i, r) {
 	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Path')) + '</label>' +
 		'<input value="' + escHtml(r.path || '') + '" oninput="profilerUpdateRule(' + i + ',\'path\',this.value)" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="MF/7F10/6F3A"></div>';
 	html += '</div>';
+	const vis = profilerFileFields(r.fileType);
 	html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">';
 	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('File type')) + '</label>' +
-		'<select onchange="profilerUpdateRule(' + i + ',\'fileType\',this.value||null)" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' + ftOpts + '</select></div>';
-	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Size')) + '</label>' +
-		'<input type="number" value="' + (r.fileSize === null ? '' : r.fileSize) + '" oninput="profilerUpdateRule(' + i + ',\'fileSize\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
-	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record length')) + '</label>' +
-		'<input type="number" value="' + (r.recordLen === null ? '' : r.recordLen) + '" oninput="profilerUpdateRule(' + i + ',\'recordLen\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
-	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record count')) + '</label>' +
-		'<input type="number" value="' + (r.numRecords === null ? '' : r.numRecords) + '" oninput="profilerUpdateRule(' + i + ',\'numRecords\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
+		'<select onchange="profilerUpdateRuleFileType(' + i + ',this.value||null)" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' + ftOpts + '</select></div>';
+	if (vis.size) {
+		html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Size')) + '</label>' +
+			'<input type="number" value="' + (r.fileSize === null ? '' : r.fileSize) + '" oninput="profilerUpdateRule(' + i + ',\'fileSize\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
+	}
+	if (vis.records) {
+		html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record length')) + '</label>' +
+			'<input type="number" value="' + (r.recordLen === null ? '' : r.recordLen) + '" oninput="profilerUpdateRule(' + i + ',\'recordLen\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
+		html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record count')) + '</label>' +
+			'<input type="number" value="' + (r.numRecords === null ? '' : r.numRecords) + '" oninput="profilerUpdateRule(' + i + ',\'numRecords\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
+	}
 	html += '</div>';
-	html += profilerRenderContentEditor(i, r);
+	if (r.fileType !== 'df') {
+		html += profilerRenderContentEditor(i, r);
+	}
 	html += '</div>';
 	return html;
 }
@@ -7059,6 +7079,24 @@ function profilerUpdateRule(i, field, value) {
 	profilerDraft.rules[i][field] = value;
 }
 
+function profilerUpdateRuleFileType(i, value) {
+	if (!profilerDraft) return;
+	const r = profilerDraft.rules[i];
+	r.fileType = value;
+	const vis = profilerFileFields(value);
+	if (!vis.size) r.fileSize = null;
+	if (!vis.records) { r.recordLen = null; r.numRecords = null; }
+	if (r.content) {
+		const kind = profilerContentKindForFileType(value);
+		if (r.content.kind !== kind) {
+			r.content = kind === 'record'
+				? { mode: r.content.mode, kind: 'record', records: [] }
+				: { mode: r.content.mode, kind: 'transparent', expected: '' };
+		}
+	}
+	profilerRenderEditor();
+}
+
 function profilerSetContent(i, mode) {
 	if (!profilerDraft) return;
 	const r = profilerDraft.rules[i];
@@ -7067,7 +7105,10 @@ function profilerSetContent(i, mode) {
 	} else if (r.content) {
 		r.content.mode = mode;
 	} else {
-		r.content = { mode: mode, kind: 'transparent', expected: '' };
+		const kind = profilerContentKindForFileType(r.fileType);
+		r.content = kind === 'record'
+			? { mode: mode, kind: 'record', records: [] }
+			: { mode: mode, kind: 'transparent', expected: '' };
 	}
 	profilerRenderEditor();
 }
