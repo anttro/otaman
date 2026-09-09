@@ -7095,7 +7095,7 @@ async function profilerCheck(i) {
 }
 
 async function profilerRunRule(r) {
-	const res = { path: r.path, status: 'pass', checks: [] };
+	const res = { path: r.path, name: null, status: 'pass', checks: [] };
 	let sel;
 	try {
 		sel = await pysimFetch('/api/select', { path: r.path });
@@ -7104,6 +7104,7 @@ async function profilerRunRule(r) {
 		res.error = e.message;
 		return res;
 	}
+	if (sel && sel.name) res.name = sel.name;
 	if (!sel || sel.exists !== true) {
 		res.status = 'fail';
 		res.checks.push({ label: 'exists', expected: true, actual: false, ok: false });
@@ -7164,13 +7165,31 @@ async function profilerRunRule(r) {
 	return res;
 }
 
+function profilerCustomNameForPath(path) {
+	if (!path) return null;
+	const norm = path.toUpperCase();
+	for (const c of pysimCustomFiles) {
+		const parts = c.path.split('/').filter(Boolean);
+		if (!parts.length) continue;
+		let segs;
+		if (parts[0].toUpperCase() === '3F00') segs = ['MF'].concat(parts.slice(1));
+		else segs = parts;
+		if (segs.join('/').toUpperCase() === norm) return c.name;
+	}
+	return null;
+}
+
 function profilerRenderReport(results) {
 	let html = '';
 	for (const r of results) {
 		const color = r.status === 'pass' ? 'text-emerald-600' : (r.status === 'fail' ? 'text-red-600' : 'text-yellow-600');
 		const icon = r.status === 'pass' ? '✓' : (r.status === 'fail' ? '✗' : '⚠');
+		const name = profilerCustomNameForPath(r.path) || r.name;
+		const title = name
+			? '<span>' + esc(name) + '</span> <span class="text-gray-400 dark:text-slate-500">(' + esc(r.path) + ')</span>'
+			: '<span>' + esc(r.path) + '</span>';
 		html += '<div class="mb-2 p-2 border border-gray-200 dark:border-slate-600 rounded">';
-		html += '<div class="flex items-center gap-2"><span class="' + color + ' font-bold">' + icon + '</span><span class="font-mono text-sm">' + esc(r.path) + '</span></div>';
+		html += '<div class="flex items-center gap-2"><span class="' + color + ' font-bold">' + icon + '</span><span class="font-mono text-sm">' + title + '</span></div>';
 		if (r.error) html += '<div class="text-xs text-yellow-600 mt-1">' + esc(r.error) + '</div>';
 		for (const c of r.checks) {
 			if (c.ok) continue;
