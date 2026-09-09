@@ -1686,3 +1686,35 @@ video {
   --tw-text-opacity: 1;
   color: rgb(203 213 225 / var(--tw-text-opacity, 1));
 }
+
+/* ===== Theme contrast adjustments ===== */
+
+/* Light theme: darken softer (muted) text one step for higher contrast */
+.text-gray-400 {
+  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
+}
+.text-gray-500 {
+  color: rgb(75 85 99 / var(--tw-text-opacity, 1));
+}
+.text-gray-600 {
+  color: rgb(55 65 81 / var(--tw-text-opacity, 1));
+}
+
+/* Dark theme: lighten softer (muted) text one step for higher contrast */
+.dark\:text-slate-500:is(.dark *) {
+  color: rgb(148 163 184 / var(--tw-text-opacity, 1));
+}
+.dark\:text-slate-400:is(.dark *) {
+  color: rgb(203 213 225 / var(--tw-text-opacity, 1));
+}
+
+/* Dark theme: red text is too dark on dark backgrounds — lighten it */
+.dark :where(.text-red-500) {
+  color: rgb(248 113 113 / var(--tw-text-opacity, 1));
+}
+.dark :where(.text-red-600) {
+  color: rgb(248 113 113 / var(--tw-text-opacity, 1));
+}
+.dark :where(.text-red-700) {
+  color: rgb(239 68 68 / var(--tw-text-opacity, 1));
+}
