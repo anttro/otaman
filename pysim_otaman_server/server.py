@@ -18,7 +18,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.24'
+VERSION = '1.9.25'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 

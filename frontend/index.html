@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.24</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.25</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -651,7 +651,6 @@
 			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd" data-l10n="pySim command line">pySim command line</button>
 			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu" data-l10n="Raw APDU">Raw APDU</button>
 			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="proactive">Proactive UICC</button>
-			<button id="stk-menu-btn" onclick="stkMenuOpen()" class="pysim-subtab px-3 py-1 text-sm rounded-full bg-emerald-600 text-white hover:bg-emerald-700" style="display:none">STK: <span id="stk-menu-title"></span></button>
 		</div>
 
 		<div id="pysim-sub-files">
@@ -719,7 +718,12 @@
 		<div id="pysim-sub-proactive" class="hidden">
 			<div class="flex gap-6">
 				<div>
-					<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="STATUS and Polling">STATUS and Polling</div>
+					<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="STK menu">STK menu</div>
+				<div class="flex items-center gap-2 mb-3">
+					<button id="stk-menu-btn" onclick="stkMenuOpen()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" style="display:none">STK: <span id="stk-menu-title"></span></button>
+					<span id="stk-menu-none" class="text-xs text-gray-500 dark:text-slate-400" style="display:none" data-l10n="No menu set by the card">No menu set by the card</span>
+				</div>
+				<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="STATUS and Polling">STATUS and Polling</div>
 					<div class="flex items-center gap-2 mb-3">
 						<button id="pli-status-btn" onclick="pysimStatusPoll()" class="px-2.5 py-1 text-sm rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Send STATUS">Send STATUS</button>
 						<span class="text-xs text-gray-500 dark:text-slate-400">|</span>
@@ -4849,15 +4853,16 @@ let stkMenuStack = [];
 
 async function stkCheckMenu() {
 	try {
-		console.log('stkCheckMenu called');
 		const data = await pysimFetch('/api/menu');
-		console.log('menu data:', data);
 		const btn = document.getElementById('stk-menu-btn');
+		const none = document.getElementById('stk-menu-none');
 		if (data && data.title && data.items && data.items.length) {
 			document.getElementById('stk-menu-title').textContent = data.title;
 			btn.style.display = '';
+			none.style.display = 'none';
 		} else {
 			btn.style.display = 'none';
+			none.style.display = '';
 		}
 	} catch (e) {
 		console.error('stkCheckMenu error:', e);
@@ -4866,7 +4871,6 @@ async function stkCheckMenu() {
 
 function stkSetPillsDisabled(disabled) {
 	document.querySelectorAll('.pysim-subtab').forEach(b => {
-		if (b.id === 'stk-menu-btn') return;
 		b.disabled = disabled;
 		b.classList.toggle('opacity-50', disabled);
 	});
@@ -5178,7 +5182,7 @@ function pysimSwitchSubtab(name) {
 		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
 	});
 	if (name === 'custom') pysimCustomRender();
-	if (name === 'proactive') { pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); pysimPollStatusInit(); }
+	if (name === 'proactive') { stkCheckMenu(); pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); pysimPollStatusInit(); }
 	pysimHelpAnchor = {cmd:'pysim-cmdline', apdu:'raw-apdu', files:'file-manager', custom:'custom-files', proactive:'proactive-uicc'}[name] || 'card-reader';
 	setHelpAnchor(pysimHelpAnchor);
 }
@@ -6786,6 +6790,8 @@ const LANG_RU = {
 	'Send STATUS': 'Отправить STATUS',
 	'help': 'справка',
 	'STATUS and Polling': 'STATUS и опрос',
+	'STK menu': 'Меню STK',
+	'No menu set by the card': 'Меню не задано картой',
 	'Polling': 'Опрос',
 	'STATUS...': 'STATUS...',
 	'Saving...': 'Сохранение...',
