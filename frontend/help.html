@@ -42,16 +42,17 @@
 
 <section class="mb-10">
 	<h2 id="c-apdu" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">2. C-APDU tab</h2>
-	<p class="mb-3">Builds command APDUs (C-APDUs). Four sub-tabs cover different card generations and command sets.</p>
+	<p class="mb-3">Builds command APDUs (C-APDUs). Five sub-tabs cover different card generations and command sets: <strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, and <strong>C-APDU Parser</strong>.</p>
 
 	<h3 id="sim-rfm" class="text-lg font-medium mb-2">2.1 SIM RFM</h3>
 	<p class="mb-2">CLA = <code class="font-mono text-sm">A0</code> (GSM 11.11 / TS 151 011, ISO 7816-4). Remote File Management for classic SIM cards.</p>
+	<p class="mb-2">Commands are assembled as a <strong>chain</strong>: press a <code class="font-mono text-sm">+&nbsp;Command</code> button to append a row, fill that row&rsquo;s fields, and the chain preview (above the pack button) updates automatically. Add a <strong>GET RESPONSE</strong> row to fetch data following a SELECT. Press <strong>Pack into Secured packet</strong> to wrap the whole chain into an SCP80 packet.</p>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
 			<th class="text-left py-1 px-2">Command</th><th class="text-left py-1 px-2">INS</th><th class="text-left py-1 px-2">Description</th>
 		</tr></thead>
 		<tbody>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">SELECT</td><td class="py-1 px-2 font-mono">A4</td><td class="py-1 px-2">Select EF/DF by FID, path, DF name or chain</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">SELECT</td><td class="py-1 px-2 font-mono">A4</td><td class="py-1 px-2">Select EF/DF by FID, path, AID or chain</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">UPDATE RECORD</td><td class="py-1 px-2 font-mono">DC</td><td class="py-1 px-2">Update a record in a record-oriented EF</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">UPDATE BINARY</td><td class="py-1 px-2 font-mono">D6</td><td class="py-1 px-2">Update binary content at an offset</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">READ RECORD</td><td class="py-1 px-2 font-mono">B2</td><td class="py-1 px-2">Read a record</td></tr>
@@ -60,7 +61,11 @@
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">ACTIVATE FILE</td><td class="py-1 px-2 font-mono">44</td><td class="py-1 px-2">Activate a file</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">DEACTIVATE FILE</td><td class="py-1 px-2 font-mono">04</td><td class="py-1 px-2">Deactivate a file</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">VERIFY PIN</td><td class="py-1 px-2 font-mono">20</td><td class="py-1 px-2">Verify PIN1 or PIN2</td></tr>
-			<tr><td class="py-1 px-2 font-mono">CHANGE PIN</td><td class="py-1 px-2 font-mono">24</td><td class="py-1 px-2">Change PIN1 or PIN2</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">CHANGE PIN</td><td class="py-1 px-2 font-mono">24</td><td class="py-1 px-2">Change PIN1 or PIN2</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">DISABLE PIN</td><td class="py-1 px-2 font-mono">26</td><td class="py-1 px-2">Disable a PIN</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">ENABLE PIN</td><td class="py-1 px-2 font-mono">28</td><td class="py-1 px-2">Enable a PIN</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">UNBLOCK PIN</td><td class="py-1 px-2 font-mono">2C</td><td class="py-1 px-2">Unblock a PIN with PUK</td></tr>
+			<tr><td class="py-1 px-2 font-mono">GET RESPONSE</td><td class="py-1 px-2 font-mono">C0</td><td class="py-1 px-2">Fetch data indicated by a preceding <code class="font-mono text-sm">61XX</code>/<code class="font-mono text-sm">9FXX</code> status word</td></tr>
 		</tbody>
 	</table>
 	<h4 id="sim-select-methods" class="font-medium mb-1">SELECT methods</h4>
@@ -72,20 +77,18 @@
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">By FID</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">2-byte FID (4 hex)</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">By full path from MF</td><td class="py-1 px-2 font-mono">08</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Full path hex from MF</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">By DF name / AID</td><td class="py-1 px-2 font-mono">04</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">AID (application ID)</td></tr>
-			<tr><td class="py-1 px-2">ADF RFM chain</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Comma-separated FIDs</td></tr>
+			<tr><td class="py-1 px-2">Chain</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Comma-separated FIDs; a <code class="font-mono text-sm">C0</code> (or <code class="font-mono text-sm">C0:NN</code>) token inserts a GET RESPONSE hop</td></tr>
 		</tbody>
 	</table>
-	<h4 id="sim-options" class="font-medium mb-1">Options</h4>
-	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
-		<li><strong>Start with SELECT</strong> — prepend a SELECT before the operation; unchecked sends standalone.</li>
-		<li><strong>Selection mode (P2)</strong> — record commands: Absolute (04), Next (06), Previous (02).</li>
-		<li><strong>Record size</strong> — pad/truncate data to the specified byte count.</li>
-		<li><strong>Allow P1/P2 editing</strong> — manual override of P1/P2 bytes.</li>
-	</ul>
-	<p class="text-sm mb-3">A conversion panel is embedded in the right column (IMSI, MSISDN, ICCID, SPN, PLMN, nibble swap). See <a href="#conversion" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;2.5</a>.</p>
+	<p class="text-sm mb-3">For record commands, the P2 mode is <strong>Absolute (04)</strong>, <strong>Next (02)</strong>, or <strong>Previous (03)</strong>. When a Case&nbsp;4 command is immediately followed by a GET RESPONSE row, the chain builder strips its trailing Le byte automatically (ETSI TS 102 226 &sect;5.1.1). A conversion panel is embedded in the right column (IMSI, MSISDN, ICCID, SPN, PLMN, nibble swap). See <a href="#conversion" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;2.5</a>.</p>
 
 	<h3 id="usim-rfm" class="text-lg font-medium mb-2">2.2 USIM RFM</h3>
-	<p class="mb-2">CLA = <code class="font-mono text-sm">00</code> (ETSI TS 102 221). Same commands as SIM, but SELECT uses P1=<code class="font-mono text-sm">09</code>, P2=<code class="font-mono text-sm">0C</code> (select by FID from the current directory).</p>
+	<p class="mb-2">CLA = <code class="font-mono text-sm">00</code> (ETSI TS 102 221). Same chain builder and command set as SIM. Differences:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>SELECT</strong> requests FCP by default (P2=<code class="font-mono text-sm">04</code>) and appends Le=<code class="font-mono text-sm">00</code>; a <strong>Silent (P2=0C)</strong> checkbox selects without requesting FCP (no Le, no response data).</li>
+		<li><strong>By path</strong> offers <strong>from MF</strong> (P1=<code class="font-mono text-sm">08</code>) or <strong>from current DF</strong> (P1=<code class="font-mono text-sm">09</code>).</li>
+		<li>Each SELECT hop in a chain requests FCP unless marked silent.</li>
+	</ul>
 
 	<h3 id="ber-tlv" class="text-lg font-medium mb-2">2.3 Expanded Script</h3>
 	<p class="mb-2">Builds the Expanded Remote Application data format per ETSI TS 102 226 &sect;5.2.1.</p>
@@ -137,7 +140,7 @@
 	</ul>
 
 	<h3 id="ram-gp" class="text-lg font-medium mb-2">2.4 RAM/GP</h3>
-	<p class="mb-2">CLA = <code class="font-mono text-sm">80</code> (GlobalPlatform Card Specification v2.3.1). Remote Application Management commands for card content management.</p>
+	<p class="mb-2">CLA = <code class="font-mono text-sm">80</code> (GlobalPlatform Card Specification v2.3.1). Remote Application Management commands for card content management. Built with the same chain builder as SIM/USIM: add rows, fill fields, and the chain preview updates automatically.</p>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
 			<th class="text-left py-1 px-2">Command</th><th class="text-left py-1 px-2">INS</th><th class="text-left py-1 px-2">P1</th><th class="text-left py-1 px-2">Description</th>
@@ -145,21 +148,22 @@
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [for load]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">02</td><td class="py-1 px-2">Register a load file for loading</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [for install]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">0C</td><td class="py-1 px-2">Install an application or SD</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [make selectable]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">10</td><td class="py-1 px-2">Make an application selectable</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [registry update]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">01</td><td class="py-1 px-2">Update registry entries</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [extradition]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">04</td><td class="py-1 px-2">Extradition between SDs</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">LOAD</td><td class="py-1 px-2 font-mono">E8</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Load executable code blocks</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">DELETE</td><td class="py-1 px-2 font-mono">E4</td><td class="py-1 px-2 font-mono">00/80</td><td class="py-1 px-2">Delete application or SD</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [make selectable]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">08</td><td class="py-1 px-2">Make an application selectable</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [registry update]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">40</td><td class="py-1 px-2">Update registry entries</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INSTALL [extradition]</td><td class="py-1 px-2 font-mono">E6</td><td class="py-1 px-2 font-mono">10</td><td class="py-1 px-2">Extradition between SDs</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">LOAD</td><td class="py-1 px-2 font-mono">E8</td><td class="py-1 px-2 font-mono">80</td><td class="py-1 px-2">Load executable code block (P1=80 last block, block number in P2)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">DELETE</td><td class="py-1 px-2 font-mono">E4</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Delete application or SD (P2=00 AID only / 80 AID + related objects)</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">GET STATUS</td><td class="py-1 px-2 font-mono">F2</td><td class="py-1 px-2 font-mono">80/40/20/10</td><td class="py-1 px-2">Get card status</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">GET DATA</td><td class="py-1 px-2 font-mono">CA</td><td class="py-1 px-2 font-mono">tag</td><td class="py-1 px-2">Read card data objects</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">STORE DATA</td><td class="py-1 px-2 font-mono">E2</td><td class="py-1 px-2 font-mono">00/40/80/C0</td><td class="py-1 px-2">Store data (key, certificate, &hellip;)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">STORE DATA</td><td class="py-1 px-2 font-mono">E2</td><td class="py-1 px-2 font-mono">00/40/80/C0/E0</td><td class="py-1 px-2">Store data (key, certificate, &hellip;)</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">SET STATUS</td><td class="py-1 px-2 font-mono">F0</td><td class="py-1 px-2 font-mono">80/40/60</td><td class="py-1 px-2">Lifecycle state management</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">EXTERNAL AUTHENTICATE</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">SCP host authentication</td></tr>
-			<tr><td class="py-1 px-2 font-mono">INTERNAL AUTHENTICATE</td><td class="py-1 px-2 font-mono">88</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Card challenge-response</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">INTERNAL AUTHENTICATE</td><td class="py-1 px-2 font-mono">88</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Card challenge-response</td></tr>
+			<tr><td class="py-1 px-2 font-mono">GET RESPONSE</td><td class="py-1 px-2 font-mono">C0</td><td class="py-1 px-2 font-mono">00</td><td class="py-1 px-2">Fetch data after a <code class="font-mono text-sm">61XX</code> status (Le configurable)</td></tr>
 		</tbody>
 	</table>
 	<h4 id="ram-privileges" class="font-medium mb-1">Privileges (INSTALL [for install])</h4>
-	<p class="text-sm mb-2">Tag <code class="font-mono text-sm">C7</code> in the INSTALL data field, built from 3 privilege bytes (GP spec Tables 11-7/8/9):</p>
+	<p class="text-sm mb-2">Three privilege bytes (GP spec Tables 11-7/8/9), encoded as a length-value field inside the INSTALL data:</p>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700">
 			<th class="text-left py-1 px-2">Bit</th><th class="text-left py-1 px-2">Byte 1</th><th class="text-left py-1 px-2">Byte 2</th><th class="text-left py-1 px-2">Byte 3</th>
@@ -198,6 +202,9 @@
 		<li><strong>PLMN &rarr; EF_PLMNsel / PLMNwAcT</strong> — 3-byte BCD + optional access technology selector.</li>
 		<li><strong>Nibble swap</strong> — swap nibble pairs of an even-length hex string.</li>
 	</ul>
+
+	<h3 id="c-apdu-parser" class="text-lg font-medium mb-2">2.6 C-APDU Parser</h3>
+	<p class="text-sm mb-3">Pastes raw APDU hex and renders a collapsible tree. It auto-detects the container: an <strong>Expanded Script</strong> (leading <code class="font-mono text-sm">AA</code> or <code class="font-mono text-sm">AE80</code>, decoded per ETSI TS 102 226 &sect;5.2.1) or a <strong>Compact C-APDU chain</strong> (a sequence of ISO 7816 C-APDUs). Each node shows its label, hex and a short description; parent nodes expand to reveal their sub-elements.
 
 
 <section class="mb-10">
@@ -286,7 +293,7 @@
 
 <section class="mb-10">
 	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Card reader (pySim) tab</h2>
-	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations. Sub-tabs: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>, and <strong>Proactive UICC</strong>.</p>
+	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations. Sub-tabs: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>Profiler</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>, and <strong>Proactive UICC</strong>.</p>
 
 	<h3 id="file-manager" class="text-lg font-medium mb-2">5.1 File manager</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
@@ -305,9 +312,12 @@
 	<p class="text-sm mb-3">Send an arbitrary APDU and view the raw response.</p>
 
 	<h3 id="proactive-uicc" class="text-lg font-medium mb-2">5.5 Proactive UICC</h3>
-	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session: subscribed events, the proactive command log, the PROVIDE LOCAL INFORMATION data dictionary, and STATUS polling.</p>
+	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session: the STK menu, subscribed events, the proactive command log, the PROVIDE LOCAL INFORMATION data dictionary, and STATUS polling.</p>
 
-	<h4 id="subscribed-events" class="font-medium mb-1">5.5.1 Subscribed events (SET UP EVENT LIST)</h4>
+	<h4 id="stk-menu" class="font-medium mb-1">5.5.1 STK menu</h4>
+	<p class="text-sm mb-3">When the card has issued a SET UP MENU command, a &ldquo;STK menu&rdquo; block appears at the top of this view with an emerald <strong>STK: &lt;title&gt;</strong> button that opens the menu overlay (same as the card&rsquo;s STK menu browser). If the card has not set up a menu, the block shows &ldquo;No menu set by the card&rdquo; instead. The menu state is refreshed each time the view is opened.</p>
+
+	<h4 id="subscribed-events" class="font-medium mb-1">5.5.2 Subscribed events (SET UP EVENT LIST)</h4>
 	<p class="text-sm mb-2">The events the card monitors. Each event has a <strong>Send</strong> button that opens a form specific to the event type:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>No-data events</strong> (User Activity, Idle Screen, Data Available, &hellip;) — one-click notification</li>
@@ -317,10 +327,10 @@
 	</ul>
 	<p class="text-sm mb-3">Sending an event uses <code class="font-mono text-sm">ENVELOPE(Event Download)</code> per TS 102 223 / TS 131 111.</p>
 
-	<h4 id="proactive-log" class="font-medium mb-1">5.5.2 Proactive command log</h4>
+	<h4 id="proactive-log" class="font-medium mb-1">5.5.3 Proactive command log</h4>
 	<p class="text-sm mb-2">Chronological list of fetched proactive commands. Each row shows the elapsed time, type code, name, and a decoded qualifier (for commands that have one). Commands with response data show a <code class="font-mono text-sm">Response:</code> line with the TERMINAL RESPONSE bytes (boilerplate TLVs stripped); PROVIDE LOCAL INFORMATION responses are decoded using the PLI data dictionary decoders.</p>
 
-	<h4 id="pli-dict" class="font-medium mb-1">5.5.3 PROVIDE LOCAL INFORMATION data dictionary</h4>
+	<h4 id="pli-dict" class="font-medium mb-1">5.5.4 PROVIDE LOCAL INFORMATION data dictionary</h4>
 	<p class="text-sm mb-2">Editable hex values for all 22 PLI qualifiers (TS 102 223 &sect;8.6 + TS 131 111). Ten qualifiers have inline decode/encode forms:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
@@ -330,10 +340,30 @@
 	</ul>
 	<p class="text-sm mb-3">Values persist server-side until restart. When the card issues PLI, the server injects the dictionary values into the TERMINAL RESPONSE.</p>
 
-	<h4 id="status-polling" class="font-medium mb-1">5.5.4 STATUS polling</h4>
+	<h4 id="status-polling" class="font-medium mb-1">5.5.5 STATUS polling</h4>
 	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
 
-	<h3 id="usage-scenarios" class="text-lg font-medium mb-2">5.6 Usage scenarios</h3>
+	<h3 id="profiler" class="text-lg font-medium mb-2">5.6 Profiler</h3>
+	<p class="text-sm mb-2">Verifies that a card matches a named <strong>profile</strong> — an ordered set of rules describing the expected file system and (optionally) file contents. Profiles are stored in <code class="font-mono text-sm">localStorage</code>.</p>
+	<h4 class="font-medium mb-1">Profile list</h4>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>New profile</strong> — creates an empty ruleset after prompting for a name.</li>
+		<li><strong>Profile from card</strong> — scans the equipped card and generates one rule per existing file (see below), then opens the editor.</li>
+		<li><strong>Import profile</strong> — loads a ruleset from a JSON file (the name is stored inside the JSON).</li>
+		<li>Each profile row shows its name and creation time, with <strong>Edit</strong>, <strong>Check</strong>, <strong>Export</strong> (download JSON), and <strong>Delete</strong> actions.</li>
+	</ul>
+	<h4 class="font-medium mb-1">Filesystem rules</h4>
+	<p class="text-sm mb-2">Rules run sequentially. A filesystem rule is defined by:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Path</strong> — starts with <code class="font-mono text-sm">MF</code> (e.g. <code class="font-mono text-sm">MF/7F10/6F3A</code>) or an ADF AID (e.g. <code class="font-mono text-sm">A0000000871002/6F07</code>).</li>
+		<li><strong>File attributes</strong> — file type, size, record length and record count, taken from the FCI template (any may be left unset).</li>
+		<li><strong>Contents</strong> (optional) — <strong>Exact</strong> hex equality, or <strong>Mask</strong> where <code class="font-mono text-sm">?</code> is a per-nibble wildcard (a mask with no <code class="font-mono text-sm">?</code> is a prefix match, e.g. <code class="font-mono text-sm">0891</code> for the IMSI MCC/MNC). Record files store a per-record list.</li>
+	</ul>
+	<p class="text-sm mb-3"><strong>Check</strong> runs every rule against the equipped card and shows a live progress line plus a pass/fail report (existence, each FCI attribute, and the content match).</p>
+	<h4 class="font-medium mb-1">&ldquo;Profile from card&rdquo; scan options</h4>
+	<p class="text-sm mb-2">The scan dialog asks for a profile name and offers an <strong>&ldquo;Ignore contents of&rdquo;</strong> checklist (all checked by default) of frequently-overwritten files whose contents are skipped: <code class="font-mono text-sm">EF.LOCI</code>, <code class="font-mono text-sm">EF.PSLOCI</code>, <code class="font-mono text-sm">EF.EPSLOCI</code>, <code class="font-mono text-sm">EF.5GS3GPPLOCI</code>, <code class="font-mono text-sm">EF.Keys</code>, <code class="font-mono text-sm">EF.KeysPS</code>, <code class="font-mono text-sm">EF.SMS</code>, <code class="font-mono text-sm">EF.Kc</code>, <code class="font-mono text-sm">EF.KcGPRS</code>, <code class="font-mono text-sm">EF.LOCIGPRS</code>, <code class="font-mono text-sm">EF.CBMID</code>, <code class="font-mono text-sm">EF.SMSS</code>. Rules are created only for files that actually exist on the card (an FCI template is returned); missing files are skipped. Custom files from the <strong>Custom files</strong> sub-tab are included under the same existence check.</p>
+
+	<h3 id="usage-scenarios" class="text-lg font-medium mb-2">5.7 Usage scenarios</h3>
 
 	<h4 id="scenario-a" class="font-medium mb-1">Scenario A &mdash; Working with files not in pySim&rsquo;s model (Custom files)</h4>
 	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
