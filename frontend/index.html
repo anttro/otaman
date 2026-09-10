@@ -230,7 +230,7 @@
 			<div id="hota-http-fields" class="hidden space-y-2">
 				<div class="flex gap-2">
 					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Host (text→hex)">Host (text→hex)</label>
-						<input id="hota-host" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="megafon.ru">
+						<input id="hota-host" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="example.com">
 					</div>
 				</div>
 				<div class="flex gap-2">
@@ -240,7 +240,7 @@
 				</div>
 				<div class="flex gap-2">
 					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="URI (text→hex)">URI (text→hex)</label>
-						<input id="hota-uri" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="http://megafon.ru/sdp">
+						<input id="hota-uri" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="http://example.com/sdp">
 					</div>
 				</div>
 			</div>
@@ -752,7 +752,7 @@
 						<button onclick="pysimEquipCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Equip card">Equip card</button>
 						<button onclick="pysimStatusCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Check status">Check status</button>
 						<button onclick="pysimResetCmd()" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Reset card">Reset card</button>
-						<button onclick="pysimDisconnect()" id="pysim-disconnect-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Disconnect from pySim">Disconnect from pySim</button>
+						<button onclick="pysimDisconnect()" id="pysim-disconnect-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Disconnect from server">Disconnect from server</button>
 					</div>
 					<div id="pysim-status" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 				</div>
@@ -7917,7 +7917,7 @@ const LANG_RU = {
 	'Equip card': 'Подключить карту',
 	'Check status': 'Проверить статус',
 	'Reset card': 'Сброс карты',
-	'Disconnect from pySim': 'Отключиться от pySim',
+	'Disconnect from server': 'Отключиться от сервера',
 	'File manager': 'Файловый менеджер',
 	'Custom files': 'Пользовательские файлы',
 	'pySim command line': 'Командная строка pySim',
