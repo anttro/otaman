@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.27</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v1.9.28</span></h1>
 		<div class="flex items-center gap-4">
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -914,6 +914,12 @@
 			<input id="profiler-scan-name" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800 mb-3" placeholder="Profile name">
 			<div class="mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Ignore contents of:">Ignore contents of:</div>
 			<div id="profiler-scan-ignore" class="space-y-1 mb-3 max-h-56 overflow-auto"></div>
+			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="FCP/FCI check">FCP/FCI check</label>
+			<select id="profiler-scan-fci-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 mb-3">
+				<option value="type" data-l10n="Filetype only (FCP)">Filetype only (FCP)</option>
+				<option value="type_size" selected data-l10n="Filetype + size (FCP)">Filetype + size (FCP)</option>
+				<option value="exact" data-l10n="Exact FCI">Exact FCI</option>
+			</select>
 			<div id="profiler-scan-error" class="text-xs text-red-500 hidden mb-2"></div>
 			<div class="flex gap-2 justify-end">
 				<button onclick="profilerScanCancel()" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
@@ -6978,6 +6984,11 @@ function profilerNormHex(s) {
 	return (s || '').toUpperCase().replace(/[^0-9A-F?]/g, '');
 }
 
+// Strict hex normalization for byte-exact comparisons (no '?' wildcards).
+function profilerNormHexStrict(s) {
+	return (s || '').toUpperCase().replace(/[^0-9A-F]/g, '');
+}
+
 // Match an expected hex (may contain '?' nibble wildcards) against actual hex.
 function profilerMatch(mode, expected, actual) {
 	const e = profilerNormHex(expected);
@@ -7037,6 +7048,7 @@ function profilerValidateProfile(obj) {
 		if (!r || typeof r !== 'object') return 'Invalid rule';
 		if (r.type !== 'file') return 'Unsupported rule type: ' + r.type;
 		if (!r.path) return 'Rule missing path';
+		if (r.fciMode && !['type', 'type_size', 'exact'].includes(r.fciMode)) return 'Invalid FCP/FCI mode: ' + r.fciMode;
 	}
 	return null;
 }
@@ -7114,11 +7126,12 @@ async function profilerScanStart() {
 			ignoreNames.add((cb.getAttribute('data-ignore-name') || '').toUpperCase());
 		}
 	});
+	const fciMode = document.getElementById('profiler-scan-fci-mode').value;
 	const btn = document.getElementById('profiler-scan-btn');
 	btn.disabled = true;
 	btn.textContent = t('Scanning...');
 	try {
-		const rules = await profilerScanCard(ignoreFids, ignoreNames);
+		const rules = await profilerScanCard(ignoreFids, ignoreNames, fciMode);
 		const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
 		profiles.push(profile);
 		profilerSave();
@@ -7134,7 +7147,7 @@ async function profilerScanStart() {
 }
 
 // Recursively walk the card filesystem and build rules for files that exist.
-async function profilerScanCard(ignoreFids, ignoreNames) {
+async function profilerScanCard(ignoreFids, ignoreNames, fciMode) {
 	const rules = [];
 	const seen = new Set();
 
@@ -7161,7 +7174,7 @@ async function profilerScanCard(ignoreFids, ignoreNames) {
 				const childPath = dir.pathPrefix.concat(c.fid ? c.fid.toUpperCase() : c.name).join('/');
 				if (seen.has(childPath)) continue;
 				seen.add(childPath);
-				const rule = await profilerBuildFileRule(childPath, c, ignoreFids, ignoreNames);
+				const rule = await profilerBuildFileRule(childPath, c, ignoreFids, ignoreNames, fciMode);
 				if (rule) rules.push(rule);
 			}
 		}
@@ -7180,13 +7193,13 @@ async function profilerScanCard(ignoreFids, ignoreNames) {
 		const path = segs.join('/');
 		if (seen.has(path)) continue;
 		seen.add(path);
-		const rule = await profilerBuildFileRule(path, { fid: cf.fid, name: cf.name }, ignoreFids, ignoreNames);
+		const rule = await profilerBuildFileRule(path, { fid: cf.fid, name: cf.name }, ignoreFids, ignoreNames, fciMode);
 		if (rule) rules.push(rule);
 	}
 	return rules;
 }
 
-async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames) {
+async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames, fciMode) {
 	let sel;
 	try {
 		sel = await pysimFetch('/api/select', { path: path });
@@ -7201,6 +7214,8 @@ async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames) {
 		fileSize: isRecord ? null : ((sel.file_size === null || sel.file_size === undefined) ? null : sel.file_size),
 		recordLen: (sel.record_len === null || sel.record_len === undefined) ? null : sel.record_len,
 		numRecords: (sel.num_of_rec === null || sel.num_of_rec === undefined) ? null : sel.num_of_rec,
+		fciMode: fciMode || 'type_size',
+		fciHex: sel.fci_hex || null,
 		content: null,
 	};
 	const fid = (c.fid || sel.fid || '').toUpperCase();
@@ -7278,7 +7293,7 @@ function profilerBackToList() {
 
 function profilerAddRule() {
 	if (!profilerDraft) return;
-	profilerDraft.rules.push({ type: 'file', path: '', name: null, fileType: null, fileSize: null, recordLen: null, numRecords: null, content: null });
+	profilerDraft.rules.push({ type: 'file', path: '', name: null, fileType: null, fileSize: null, recordLen: null, numRecords: null, fciMode: 'type_size', fciHex: null, content: null });
 	profilerRenderEditor();
 }
 
@@ -7310,6 +7325,7 @@ function profilerRenderRule(i, r) {
 		ftOpts += '<option value="' + k + '"' + (r.fileType === k ? ' selected' : '') + '>' + fts[k] + '</option>';
 	}
 	const cm = r.content ? r.content.mode : 'exact';
+	const fciMode = r.fciMode || 'type_size';
 	let html = '<div class="mb-2 p-3 border border-gray-200 dark:border-slate-600 rounded">';
 	html += '<div class="flex items-center gap-2 mb-2">';
 	html += '<span class="text-xs font-semibold text-gray-500 dark:text-slate-400">#' + (i + 1) + '</span>';
@@ -7322,20 +7338,32 @@ function profilerRenderRule(i, r) {
 		'<input value="' + escHtml(r.path || '') + '" oninput="profilerUpdateRulePath(' + i + ',this.value,this)" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="MF/7F10/6F3A"></div>';
 	html += '</div>';
 	const vis = profilerFileFields(r.fileType);
+	const showSize = vis.size && fciMode !== 'type';
+	const showRecords = vis.records && fciMode !== 'type';
 	html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">';
+	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('FCP/FCI check')) + '</label>' +
+		'<select onchange="profilerUpdateRuleFciMode(' + i + ',this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
+		'<option value="type"' + (fciMode === 'type' ? ' selected' : '') + '>' + esc(t('Filetype only (FCP)')) + '</option>' +
+		'<option value="type_size"' + (fciMode === 'type_size' ? ' selected' : '') + '>' + esc(t('Filetype + size (FCP)')) + '</option>' +
+		'<option value="exact"' + (fciMode === 'exact' ? ' selected' : '') + '>' + esc(t('Exact FCI')) + '</option>' +
+		'</select></div>';
 	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('File type')) + '</label>' +
 		'<select onchange="profilerUpdateRuleFileType(' + i + ',this.value||null)" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' + ftOpts + '</select></div>';
-	if (vis.size) {
+	if (showSize) {
 		html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Size')) + '</label>' +
 			'<input type="number" value="' + (r.fileSize === null ? '' : r.fileSize) + '" oninput="profilerUpdateRule(' + i + ',\'fileSize\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
 	}
-	if (vis.records) {
+	if (showRecords) {
 		html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record length')) + '</label>' +
 			'<input type="number" value="' + (r.recordLen === null ? '' : r.recordLen) + '" oninput="profilerUpdateRule(' + i + ',\'recordLen\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
 		html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record count')) + '</label>' +
 			'<input type="number" value="' + (r.numRecords === null ? '' : r.numRecords) + '" oninput="profilerUpdateRule(' + i + ',\'numRecords\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
 	}
 	html += '</div>';
+	if (fciMode === 'exact') {
+		html += '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('FCI hex (raw SELECT response)')) + '</label>' +
+			'<textarea oninput="profilerUpdateRule(' + i + ',\'fciHex\',this.value)" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="62...">' + escHtml(r.fciHex || '') + '</textarea></div>';
+	}
 	if (r.fileType !== 'df') {
 		html += profilerRenderContentEditor(i, r);
 	}
@@ -7404,6 +7432,12 @@ function profilerUpdateRuleFileType(i, value) {
 				: { mode: r.content.mode, kind: 'transparent', expected: '' };
 		}
 	}
+	profilerRenderEditor();
+}
+
+function profilerUpdateRuleFciMode(i, value) {
+	if (!profilerDraft) return;
+	profilerDraft.rules[i].fciMode = value;
 	profilerRenderEditor();
 }
 
@@ -7513,20 +7547,30 @@ async function profilerRunRule(r) {
 		res.checks.push({ label: 'fileType', expected: r.fileType, actual: sel.file_type, ok: ok });
 	}
 	const isRecord = profilerContentKindForFileType(r.fileType) === 'record';
-	if (!isRecord && r.fileSize !== null && r.fileSize !== undefined) {
-		const ok = sel.file_size === r.fileSize;
-		if (!ok) { res.status = 'fail'; sizeMismatch = true; }
-		res.checks.push({ label: 'fileSize', expected: r.fileSize, actual: sel.file_size, ok: ok });
+	const fciMode = r.fciMode || 'type_size';
+	if (fciMode !== 'type') {
+		if (!isRecord && r.fileSize !== null && r.fileSize !== undefined) {
+			const ok = sel.file_size === r.fileSize;
+			if (!ok) { res.status = 'fail'; sizeMismatch = true; }
+			res.checks.push({ label: 'fileSize', expected: r.fileSize, actual: sel.file_size, ok: ok });
+		}
+		if (r.recordLen !== null && r.recordLen !== undefined) {
+			const ok = sel.record_len === r.recordLen;
+			if (!ok) { res.status = 'fail'; sizeMismatch = true; }
+			res.checks.push({ label: 'recordLen', expected: r.recordLen, actual: sel.record_len, ok: ok });
+		}
+		if (r.numRecords !== null && r.numRecords !== undefined) {
+			const ok = sel.num_of_rec === r.numRecords;
+			if (!ok) { res.status = 'fail'; sizeMismatch = true; }
+			res.checks.push({ label: 'numRecords', expected: r.numRecords, actual: sel.num_of_rec, ok: ok });
+		}
 	}
-	if (r.recordLen !== null && r.recordLen !== undefined) {
-		const ok = sel.record_len === r.recordLen;
-		if (!ok) { res.status = 'fail'; sizeMismatch = true; }
-		res.checks.push({ label: 'recordLen', expected: r.recordLen, actual: sel.record_len, ok: ok });
-	}
-	if (r.numRecords !== null && r.numRecords !== undefined) {
-		const ok = sel.num_of_rec === r.numRecords;
-		if (!ok) { res.status = 'fail'; sizeMismatch = true; }
-		res.checks.push({ label: 'numRecords', expected: r.numRecords, actual: sel.num_of_rec, ok: ok });
+	if (fciMode === 'exact' && r.fciHex) {
+		const expected = profilerNormHexStrict(r.fciHex);
+		const actual = profilerNormHexStrict(sel.fci_hex);
+		const ok = !!expected && expected === actual;
+		if (!ok) res.status = 'fail';
+		res.checks.push({ label: 'fci', expected: r.fciHex, actual: sel.fci_hex || '', ok: ok });
 	}
 	if (r.content) {
 		let rd;
@@ -7805,6 +7849,11 @@ const LANG_RU = {
 	'Scan': 'Сканировать',
 	'Ignore contents of:': 'Игнорировать содержимое:',
 	'Ignore contents of': 'Игнорировать содержимое',
+	'FCP/FCI check': 'Проверка FCP/FCI',
+	'Filetype only (FCP)': 'Только тип файла (FCP)',
+	'Filetype + size (FCP)': 'Тип файла + размер (FCP)',
+	'Exact FCI': 'Точный FCI',
+	'FCI hex (raw SELECT response)': 'FCI hex (сырой ответ SELECT)',
 	'No profiles defined.': 'Профили не заданы.',
 	'rules': 'правил',
 	'Check': 'Проверить',

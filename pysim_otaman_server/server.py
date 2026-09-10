@@ -18,7 +18,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '1.9.27'
+VERSION = '1.9.28'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1642,6 +1642,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                     'file_size': lchan.selected_file_size() if lchan else None,
                     'record_len': lchan.selected_file_record_len() if lchan else None,
                     'num_of_rec': lchan.selected_file_num_of_rec() if lchan else None,
+                    'fci_hex': (lchan.selected_file_fcp_hex or '').upper() if lchan and lchan.selected_file_fcp_hex else None,
                     'exists': True,
                 }
                 self._send_json(data)

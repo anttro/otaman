@@ -21,10 +21,11 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
+code += extractFunc(html, 'profilerRunRule', true) + '\n';
 code += html.match(/const PROFILER_MASK_PREFIX4_FIDS = \{[\s\S]*?\n\};/)[0] + '\n';
 eval(code);
 
@@ -231,4 +232,81 @@ test('profilerBuildFileRule still ignores when ignoreNames is omitted (back-comp
 		{ fid: '6F52', name: 'EF.KcGPRS' }, new Set(['6F52']));
 	assert.strictEqual(rule.content, null);
 	assert.ok(!calls.includes('/api/read'));
+});
+
+// --- FCP/FCI verification modes ---
+
+test('profilerNormHexStrict strips non-hex and drops wildcards', () => {
+	assert.strictEqual(profilerNormHexStrict('62 10 82 02 40 21'), '621082024021');
+	assert.strictEqual(profilerNormHexStrict('aabb?cc'), 'AABBCC');
+	assert.strictEqual(profilerNormHexStrict(''), '');
+});
+
+test('profilerBuildFileRule stores fciMode and fciHex from the select response', async () => {
+	mockFetch({ '/api/select': () => ({ ...KCGPRS_SELECT, fci_hex: '62 10 82 02 40 21' }) });
+	const rule = await profilerBuildFileRule('MF/7F20/6F52',
+		{ fid: '6F52', name: 'EF.KcGPRS' }, new Set(['6F52']), new Set(['EF.KCGPRS']), 'exact');
+	assert.strictEqual(rule.fciMode, 'exact');
+	assert.strictEqual(rule.fciHex, '62 10 82 02 40 21');
+});
+
+test('profilerBuildFileRule defaults fciMode to type_size and fciHex to null when unavailable', async () => {
+	mockFetch({ '/api/select': () => KCGPRS_SELECT });
+	const rule = await profilerBuildFileRule('MF/7F20/6F52',
+		{ fid: '6F52', name: 'EF.KcGPRS' }, new Set(), new Set());
+	assert.strictEqual(rule.fciMode, 'type_size');
+	assert.strictEqual(rule.fciHex, null);
+});
+
+function runSelect(extra) {
+	return { name: 'EF.ADN', fid: '6F3A', file_type: 'transparent', file_size: 4, record_len: null, num_of_rec: null, exists: true, ...(extra || {}) };
+}
+
+test('profilerRunRule in type mode skips size checks', async () => {
+	mockFetch({ '/api/select': () => runSelect({ file_size: 99 }) });
+	const res = await profilerRunRule({ path: 'MF/7F20/6F3A', fileType: 'transparent', fileSize: 4, fciMode: 'type' });
+	assert.strictEqual(res.status, 'pass');
+	assert.ok(!res.checks.some(c => c.label === 'fileSize'));
+});
+
+test('profilerRunRule in type_size mode checks size', async () => {
+	mockFetch({ '/api/select': () => runSelect({ file_size: 99 }) });
+	const res = await profilerRunRule({ path: 'MF/7F20/6F3A', fileType: 'transparent', fileSize: 4, fciMode: 'type_size' });
+	assert.strictEqual(res.status, 'fail');
+	assert.ok(res.checks.some(c => c.label === 'fileSize' && c.ok === false));
+});
+
+test('profilerRunRule legacy rule (no fciMode) still checks size', async () => {
+	mockFetch({ '/api/select': () => runSelect({ file_size: 4 }) });
+	const res = await profilerRunRule({ path: 'MF/7F20/6F3A', fileType: 'transparent', fileSize: 4 });
+	assert.strictEqual(res.status, 'pass');
+	assert.ok(res.checks.some(c => c.label === 'fileSize' && c.ok === true));
+});
+
+test('profilerRunRule exact FCI passes on byte-identical FCI', async () => {
+	mockFetch({ '/api/select': () => runSelect({ fci_hex: '621082024021' }) });
+	const res = await profilerRunRule({ path: 'MF/7F20/6F3A', fileType: 'transparent', fileSize: 4, fciMode: 'exact', fciHex: '62 10 82 02 40 21' });
+	assert.strictEqual(res.status, 'pass');
+	assert.ok(res.checks.some(c => c.label === 'fci' && c.ok === true));
+});
+
+test('profilerRunRule exact FCI fails on byte mismatch', async () => {
+	mockFetch({ '/api/select': () => runSelect({ fci_hex: '621082024022' }) });
+	const res = await profilerRunRule({ path: 'MF/7F20/6F3A', fileType: 'transparent', fileSize: 4, fciMode: 'exact', fciHex: '621082024021' });
+	assert.strictEqual(res.status, 'fail');
+	assert.ok(res.checks.some(c => c.label === 'fci' && c.ok === false));
+});
+
+test('profilerRunRule exact FCI fails when the live FCI is missing', async () => {
+	mockFetch({ '/api/select': () => runSelect({ fci_hex: null }) });
+	const res = await profilerRunRule({ path: 'MF/7F20/6F3A', fileType: 'transparent', fileSize: 4, fciMode: 'exact', fciHex: '621082024021' });
+	assert.strictEqual(res.status, 'fail');
+	assert.ok(res.checks.some(c => c.label === 'fci' && c.ok === false));
+});
+
+test('profilerValidateProfile accepts valid fciMode and rejects unknown', () => {
+	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'file', path: 'MF/6F07', fciMode: 'type' }] }), null);
+	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'file', path: 'MF/6F07', fciMode: 'type_size' }] }), null);
+	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'file', path: 'MF/6F07', fciMode: 'exact' }] }), null);
+	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'file', path: 'MF/6F07', fciMode: 'bogus' }] }), 'Invalid FCP/FCI mode: bogus');
 });
