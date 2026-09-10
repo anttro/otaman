@@ -474,6 +474,46 @@ test('profilerRunRule records which records matched on a record mismatch', async
 	assert.deepStrictEqual(res.recordsMatched, [1, 3]);
 });
 
+const REC_SELECT_10 = { name: 'EF.X', fid: '6F3A', file_type: 'linear_fixed', file_size: null, record_len: 2, num_of_rec: 10, exists: true };
+const REC_EXP_30 = (() => { const r = []; for (let i = 1; i <= 30; i++) r.push({ num: i, data: 'AB' }); return r; })();
+const REC_ACT_10 = (() => { const r = []; for (let i = 1; i <= 10; i++) r.push({ num: i, data: 'AB' }); return r; })();
+
+test('record count mismatch is reported once when numRecords is checked', async () => {
+	mockFetch({ '/api/select': () => REC_SELECT_10, '/api/read': () => ({ success: true, records: REC_ACT_10 }) });
+	const res = await profilerRunRule({
+		path: 'MF/7F20/6F3A', fileType: 'linear_fixed', recordLen: 2, numRecords: 30, fciMode: 'type_size',
+		content: { mode: 'exact', kind: 'record', records: REC_EXP_30 },
+	});
+	assert.strictEqual(res.status, 'fail');
+	assert.ok(res.checks.some(c => c.label === 'numRecords' && c.ok === false));
+	assert.ok(!res.checks.some(c => c.label === 'content.records'));
+});
+
+test('record count mismatch keeps content.records when numRecords is not checked (type mode)', async () => {
+	mockFetch({ '/api/select': () => REC_SELECT_10, '/api/read': () => ({ success: true, records: REC_ACT_10 }) });
+	const res = await profilerRunRule({
+		path: 'MF/7F20/6F3A', fileType: 'linear_fixed', recordLen: 2, numRecords: 30, fciMode: 'type',
+		content: { mode: 'exact', kind: 'record', records: REC_EXP_30 },
+	});
+	assert.strictEqual(res.status, 'fail');
+	assert.ok(res.checks.some(c => c.label === 'content.records' && c.ok === false));
+	assert.ok(!res.checks.some(c => c.label === 'numRecords'));
+});
+
+test('record count mismatch keeps content.records when numRecords passes but read differs', async () => {
+	mockFetch({
+		'/api/select': () => ({ ...REC_SELECT_10, num_of_rec: 3 }),
+		'/api/read': () => ({ success: true, records: REC_ACT_10.slice(0, 2) }),
+	});
+	const res = await profilerRunRule({
+		path: 'MF/7F20/6F3A', fileType: 'linear_fixed', recordLen: 2, numRecords: 3, fciMode: 'type_size',
+		content: { mode: 'exact', kind: 'record', records: [{ num: 1, data: 'AB' }, { num: 2, data: 'AB' }, { num: 3, data: 'AB' }] },
+	});
+	assert.strictEqual(res.status, 'fail');
+	assert.ok(res.checks.some(c => c.label === 'numRecords' && c.ok === true));
+	assert.ok(res.checks.some(c => c.label === 'content.records' && c.ok === false));
+});
+
 test('profilerRenderReport includes the checked-aspects summary and matching-record note', () => {
 	global.t = s => s;
 	global.pysimCustomFiles = [];

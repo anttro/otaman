@@ -7642,7 +7642,10 @@ async function profilerRunRule(r) {
 			const n = Math.min(exp.length, act.length);
 			if (exp.length !== act.length) {
 				res.status = 'fail';
-				res.checks.push({ label: 'content.records', expected: exp.length + ' records', actual: act.length + ' records', ok: false });
+				const numRec = res.checks.find(c => c.label === 'numRecords');
+				if (!numRec || numRec.ok) {
+					res.checks.push({ label: 'content.records', expected: exp.length + ' records', actual: act.length + ' records', ok: false });
+				}
 			}
 			const matched = [];
 			for (let j = 0; j < n; j++) {
