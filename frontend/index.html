@@ -7640,6 +7640,7 @@ async function profilerRunRule(r) {
 			const exp = r.content.records || [];
 			const act = rd.records || [];
 			const n = Math.min(exp.length, act.length);
+			let recMismatch = exp.length !== act.length;
 			if (exp.length !== act.length) {
 				res.status = 'fail';
 				const numRec = res.checks.find(c => c.label === 'numRecords');
@@ -7651,10 +7652,11 @@ async function profilerRunRule(r) {
 			for (let j = 0; j < n; j++) {
 				const dataOk = sizeMismatch ? profilerMatchMin(r.content.mode, exp[j].data, act[j].data) : profilerMatch(r.content.mode, exp[j].data, act[j].data);
 				const ok = exp[j].num === act[j].num && dataOk;
-				if (!ok) res.status = 'fail'; else matched.push(exp[j].num);
+				if (!ok) { res.status = 'fail'; recMismatch = true; } else matched.push(exp[j].num);
 				res.checks.push({ label: 'content.rec' + exp[j].num, expected: exp[j].data, actual: act[j].data, ok: ok });
 			}
 			if (matched.length) res.recordsMatched = matched;
+			if (recMismatch) res.recordsMismatch = true;
 		} else {
 			const ok = sizeMismatch ? profilerMatchMin(r.content.mode, r.content.expected, rd.data) : profilerMatch(r.content.mode, r.content.expected, rd.data);
 			if (!ok) res.status = 'fail';
@@ -7777,7 +7779,7 @@ function profilerRenderReport(results) {
 				html += '<div class="text-xs text-red-600 mt-1">' + esc(c.label) + ': ' + esc(t('expected')) + ' <b>' + esc(String(c.expected)) + '</b>, ' + esc(t('actual')) + ' <b>' + esc(String(c.actual)) + '</b></div>';
 			}
 		}
-		const recFailed = (r.checks || []).some(c => /^content\.rec\d+$/.test(c.label) && !c.ok);
+		const recFailed = r.recordsMismatch || (r.checks || []).some(c => /^content\.rec\d+$/.test(c.label) && !c.ok);
 		if (recFailed && r.recordsMatched && r.recordsMatched.length) {
 			html += '<div class="text-xs text-emerald-600 mt-1">' + esc(t('matching records')) + ': ' + esc(profilerNumRanges(r.recordsMatched)) + '</div>';
 		}

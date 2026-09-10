@@ -471,6 +471,7 @@ test('profilerRunRule records which records matched on a record mismatch', async
 		content: { mode: 'exact', kind: 'record', records: [{ num: 1, data: 'AA' }, { num: 2, data: 'BB' }, { num: 3, data: 'CC' }] },
 	});
 	assert.strictEqual(res.status, 'fail');
+	assert.strictEqual(res.recordsMismatch, true);
 	assert.deepStrictEqual(res.recordsMatched, [1, 3]);
 });
 
@@ -487,6 +488,13 @@ test('record count mismatch is reported once when numRecords is checked', async 
 	assert.strictEqual(res.status, 'fail');
 	assert.ok(res.checks.some(c => c.label === 'numRecords' && c.ok === false));
 	assert.ok(!res.checks.some(c => c.label === 'content.records'));
+	assert.strictEqual(res.recordsMismatch, true);
+	assert.deepStrictEqual(res.recordsMatched, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+	global.t = s => s;
+	global.pysimCustomFiles = [];
+	const report = profilerRenderReport([res]);
+	assert.ok(report.includes('matching records: 1-10'), report);
+	delete global.t;
 });
 
 test('record count mismatch keeps content.records when numRecords is not checked (type mode)', async () => {
