@@ -7136,8 +7136,7 @@ async function profilerScanStart() {
 	btn.textContent = t('Scanning...');
 	try {
 		const rules = await profilerScanCard(ignoreFids, ignoreNames, fciMode, (done, total, path) => {
-			const pct = total ? Math.round(done / total * 100) : 0;
-			progEl.textContent = done + ' / ' + total + ' ' + t('files') + ' (' + pct + '%)' + (path ? ' — ' + path : '');
+			progEl.textContent = done + ' / ' + total + ' ' + t('files') + (path ? ' — ' + path : '');
 		});
 		const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
 		profiles.push(profile);
