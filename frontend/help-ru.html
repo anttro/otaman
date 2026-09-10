@@ -35,8 +35,16 @@
 		<li>3GPP TS 23.038 — алфавит GSM 7-bit и DCS</li>
 		<li>3GPP TS 24.008 / 24.301 / 24.501 — коды причин NAS</li>
 		<li>GlobalPlatform Card Specification v2.3.1</li>
+		<li>GlobalPlatform GPC v2.2 Amendment B v1.1 — Remote Application Management over HTTP</li>
 		<li>ISO/IEC 7816-4 — команды обмена</li>
 		<li>ISO/IEC 9797-1 — алгоритмы MAC</li>
+	</ul>
+
+	<h3 id="interface" class="text-lg font-medium mb-2">1.1 Интерфейс</h3>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Шапка</strong> — версия приложения, кнопка <strong>INSTALL PWA</strong> (появляется, когда браузер предлагает установку, для офлайн-работы), ссылки на проект на GitHub и на эту справку, переключатель языка <strong>EN/RU</strong> и переключатель тёмной/светлой <strong>темы</strong>.</li>
+		<li>Выбор языка и темы хранится в <code class="font-mono text-sm">localStorage</code> и сохраняется между перезагрузками.</li>
+		<li>Ссылка <strong>help</strong> открывает эту документацию на разделе, соответствующем текущему представлению (например, подвкладка Profiler открывает &sect;5.6).</li>
 	</ul>
 
 
@@ -106,14 +114,13 @@
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">C-APDU</td><td class="py-1 px-2 font-mono">22</td><td class="py-1 px-2">APDU</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Immediate Action</td><td class="py-1 px-2 font-mono">81</td><td class="py-1 px-2">Проактивная команда или action indicator</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Условное восстановление при ошибках с action indicator или проактивной командой</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Многопакетное выполнение скрипта с флагами First/Intermediary/Last</td></tr>
-			<tr><td class="py-1 px-2">Response Type</td><td class="py-1 px-2 font-mono">-</td><td class="py-1 px-2">Индикатор типа ответа: expanded/compact/none</td></tr>
+			<tr><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Многопакетное выполнение скрипта с флагами First/Intermediary/Last</td></tr>
 		</tbody>
 	</table>
 	<p class="text-sm mb-3">Сборщик Immediate Action предлагает action indicator (<code class="font-mono text-sm">81</code>/<code class="font-mono text-sm">82</code>), структурированный сборщик проактивных команд (REFRESH, DISPLAY TEXT, PLAY TONE с авто-генерацией COMPREHENSION-TLV), или ручной hex-ввод.</p>
 
 	<h4 id="ber-error-action" class="font-medium mb-2 text-base">Error Action TLV (Tag 82)</h4>
-	<p class="text-sm mb-2">Восстановление при ошибках по TS 102 226 §5.2.1.3 — одна из трёх форм:</p>
+	<p class="text-sm mb-2">Восстановление при ошибках по TS 102 226 §5.2.1.3 — одна из четырёх форм:</p>
 	<ul class="text-sm list-disc pl-5 mb-2">
 		<li><strong>Проактивная команда:</strong> набор COMPREHENSION-TLV с DISPLAY TEXT или PLAY TONE (в Error Action допустимы только эти две, TS 102 226 Table 5.9)</li>
 		<li><strong>Без действия:</strong> <code class="font-mono text-sm">82 00</code></li>
@@ -130,14 +137,8 @@
 		<li><strong>Сохранение контекста:</strong> UICC сохраняет состояние безопасности/транзакции между пакетами</li>
 	</ul>
 
-	<h4 id="expanded-response" class="font-medium mb-2 text-base">Expanded Remote Response (TS 102 226 §5.2.2)</h4>
-	<p class="text-sm mb-2">Результаты по каждой команде с деталями ошибок и контекстом цепочки:</p>
-	<ul class="text-sm list-disc pl-5">
-		<li>Номер команды, статус слова, данные ответа для каждой команды</li>
-		<li>Код ошибки и информация о ней для неудачных команд (подсвечено красным)</li>
-		<li>Идентификатор скрипта и позиция для корреляции цепочки (ID, FIRST, LAST)</li>
-		<li>Индикатор типа ответа: 'expanded' vs 'compact' vs 'none'</li>
-	</ul>
+	<h4 id="expanded-response" class="font-medium mb-2 text-base">Декодирование ответов (TS 102 226 §5.2.2)</h4>
+	<p class="text-sm mb-2">Входящие ответы Proof of Receipt декодируются сервером — формат expanded Remote Application response data (TS 102 226 §5.2.2) или компактный формат. Представление Secured Packet показывает результат после <strong>Send to Card</strong> (см. <a href="#secured-packet" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;3.1</a>): статус PoR (TAR, счётчик, сырой PoR), а статусное слово и данные ответа последней команды подставляются на вкладку <strong>Response parser</strong>.</p>
 
 	<h3 id="ram-gp" class="text-lg font-medium mb-2">2.4 RAM/GP</h3>
 	<p class="mb-2">CLA = <code class="font-mono text-sm">80</code> (GlobalPlatform Card Specification v2.3.1). Команды удалённого управления приложениями. Строятся тем же сборщиком цепочки, что и SIM/USIM.</p>
@@ -259,7 +260,7 @@
 		<li>AES требует счётчик с защитой от повтора: биты SPI1 b5&nbsp;b4 должны быть <code class="font-mono text-sm">10</code> (счётчик больше) или <code class="font-mono text-sm">11</code> (счётчик +1) согласно TS 102 225 &sect;5.1.2/&sect;5.1.3.1</li>
 		<li>Байт паддинга настраивается (<code class="font-mono text-sm">00</code> по умолчанию или <code class="font-mono text-sm">FF</code>)</li>
 	</ul>
-	<p class="text-sm mb-3">Кнопка &laquo;Verify vs pySim&raquo; сверяет собранный пакет с эталонной реализацией <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. Кнопка &laquo;Send to Card&raquo; доставляет пакет через ENVELOPE SMS-PP-DOWNLOAD (при подключении к серверу).</p>
+	<p class="text-sm mb-3">Кнопка &laquo;Verify vs pySim&raquo; сверяет собранный пакет с эталонной реализацией <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. Кнопка &laquo;Send to Card&raquo; доставляет пакет через ENVELOPE SMS-PP-DOWNLOAD (при подключении к серверу). Полученный Proof of Receipt декодируется и показывается строкой статуса PoR (статус, TAR, счётчик, сырой PoR); статусное слово и данные ответа последней команды подставляются на вкладку <strong>Response parser</strong>, а успешный PoR увеличивает счётчик повторов и очищает пакет.</p>
 
 	<h3 id="cards" class="text-lg font-medium mb-2">3.2 Cards</h3>
 	<p class="mb-2">Хранит предустановки карт локально в браузере (<code class="font-mono text-sm">localStorage</code>), чтобы представление Secured Packet могло автоматически подставлять ключи и параметры.</p>
@@ -275,7 +276,7 @@
 			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex-символа (ключи 8/16/24 байта 3DES) или 32/48/64 hex-символа (ключи 16/24/32 байта AES)</td></tr>
 		</tbody>
 	</table>
-	<p class="text-sm mb-3"><strong>Export as JSON</strong> / <strong>Import JSON from clipboard</strong> для обмена предустановками. Выбранная предустановка автоматически заполняет форму Secured Packet.</p>
+	<p class="text-sm mb-3">Обмен предустановками: <strong>Export as JSON</strong> и <strong>Export to file</strong> для выгрузки, <strong>Import from file</strong>, <strong>Paste &amp; import</strong> или <strong>Import JSON from clipboard</strong> для загрузки. Выбранная предустановка автоматически заполняет форму Secured Packet.</p>
 
 	<h3 id="ram" class="text-lg font-medium mb-2">3.3 RAM</h3>
 	<p class="mb-2">Выполняет операции удалённого управления приложениями (Remote Application Management) как защищённые пакеты SCP80 через SMS-PP-DOWNLOAD ENVELOPE. Карта должна поддерживать SCP03 (AES или 3DES). Предустановка карты из подвкладки <strong>Cards</strong> обеспечивает SPI, ключи, TAR и счётчик.</p>
@@ -301,7 +302,7 @@
 
 <section class="mb-10">
 	<h2 id="response-parser" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Вкладка Response parser</h2>
-	<p class="mb-3">Декодирует raw-ответ команды: выберите отправленную команду, введите SW (например, <code class="font-mono text-sm">9000</code>) и hex данных ответа, затем нажмите <strong>Decode</strong>.</p>
+	<p class="mb-3">Декодирует raw-ответ команды: выберите отправленную команду, введите SW (например, <code class="font-mono text-sm">9000</code>) и hex данных ответа, затем нажмите <strong>Decode</strong>. Поля также автоматически заполняются статусным словом и данными ответа последней команды после успешного &laquo;Send to Card&raquo; (см. <a href="#secured-packet" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;3.1</a>).</p>
 	<ul class="list-disc list-inside text-sm space-y-1">
 		<li><strong>Команда</strong> — группа SIM/USIM (SELECT, STATUS, READ/UPDATE, PIN-операции, CAT-команды типа TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, &hellip;) или группа RAM/GP (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP-команды).</li>
 		<li><strong>Декодирование SW</strong> — статусные слова разрешаются по generic-, UICC- (TS 102 221) и GlobalPlatform-таблицам, контекст определяется автоматически.</li>
@@ -312,17 +313,18 @@
 
 <section class="mb-10">
 	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Вкладка Card reader (pySim)</h2>
-	<p class="mb-3">Подключение к локальному <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> для работы с картой. Подвкладки: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>Profiler</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong> и <strong>Proactive UICC</strong>.</p>
+	<p class="mb-3">Подключение к локальному <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> для работы с картой: введите URL сервера (по умолчанию <code class="font-mono text-sm">http://127.0.0.1:8080</code>) и нажмите <strong>Connect</strong>. Область статуса показывает состояние ридера/карты, а <strong>Equip card</strong> (пере)инициализирует карту после вставки. Подвкладки: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>Profiler</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong> и <strong>Proactive UICC</strong>.</p>
 
 	<h3 id="file-manager" class="text-lg font-medium mb-2">5.1 File manager</h3>
+	<p class="text-sm mb-2">Дерево файловой системы отображается слева; выбор файла открывает панель деталей справа.</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Read</strong> — чтение файла (автоопределение transparent/record)</li>
-		<li><strong>Edit</strong> — изменить hex-данные, <strong>Save</strong> для записи</li>
+		<li><strong>Edit</strong> — изменение hex-данных, <strong>Save</strong> для записи (или <strong>Cancel</strong>)</li>
 		<li><strong>Raw / Decoded</strong> — переключение между hex-дампом и декодированным JSON</li>
 	</ul>
 
 	<h3 id="custom-files" class="text-lg font-medium mb-2">5.2 Custom files</h3>
-	<p class="text-sm mb-3">Добавление файлов, не покрытых моделью pySim. Сохраняется в <code class="font-mono text-sm">localStorage</code>; экспорт/импорт JSON.</p>
+	<p class="text-sm mb-3">Добавление файлов, не покрытых моделью pySim: введите полный путь (например, <code class="font-mono text-sm">3F00/7F20/6F46</code>) и псевдоним (например, <code class="font-mono text-sm">EF.SPN</code>), затем нажмите <strong>Add</strong>; добавленные файлы появляются в дереве File manager. Список сохраняется в <code class="font-mono text-sm">localStorage</code>; обмен — <strong>Export as JSON</strong> / <strong>Export to file</strong> и <strong>Import from file</strong> / <strong>Paste &amp; import</strong> / <strong>Import JSON from clipboard</strong>.</p>
 
 	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">5.3 pySim command line</h3>
 	<p class="text-sm mb-3">Выполнение любых команд pySim-shell с подсказками (300&nbsp;мс) и автодополнением.</p>
@@ -372,14 +374,14 @@
 		<li>В каждой строке профиля показаны имя и время создания, а также действия <strong>Edit</strong>, <strong>Check</strong>, <strong>Export</strong> (скачать JSON) и <strong>Delete</strong>.</li>
 	</ul>
 	<h4 class="font-medium mb-1">Правила файловой системы</h4>
-	<p class="text-sm mb-2">Правила выполняются последовательно. Правило файловой системы задаётся:</p>
+	<p class="text-sm mb-2">Правила выполняются последовательно. Редактор показывает символьное имя файла pySim (если известно) рядом с путём правила; <strong>Add rule</strong> добавляет правило, <strong>Save</strong> сохраняет изменения. Правило файловой системы задаётся:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Путь</strong> — начинается с <code class="font-mono text-sm">MF</code> (например, <code class="font-mono text-sm">MF/7F10/6F3A</code>) или с AID ADF (например, <code class="font-mono text-sm">A0000000871002/6F07</code>).</li>
 		<li><strong>Проверка FCP/FCI</strong> — какая часть информации об управлении файлом проверяется: <strong>Filetype only (FCP)</strong> (существование + тип файла), <strong>Filetype + size (FCP)</strong> (добавляются размер файла либо длина/число записей для record-файлов) или <strong>Exact FCI</strong> (добавляется побайтовое сравнение сырого ответа SELECT — шаблона FCP <code class="font-mono text-sm">'62'</code> — выявляет изменения FID/AID, жизненного цикла, атрибутов безопасности и проприетарных параметров).</li>
 		<li><strong>Атрибуты файла</strong> — тип файла, размер, длина записи и число записей из FCP-шаблона (любой можно оставить незаданным).</li>
-		<li><strong>Содержимое</strong> (опционально) — <strong>Exact</strong> (точное совпадение hex) или <strong>Mask</strong>, где <code class="font-mono text-sm">?</code> — шаблон на один полубайт (маска без <code class="font-mono text-sm">?</code> — совпадение префикса, например <code class="font-mono text-sm">0891</code> для MCC/MNC из IMSI). Для record-файлов хранится список по записям.</li>
+		<li><strong>Проверить содержимое</strong> (опционально) — <strong>Exact</strong> (точное совпадение hex) или <strong>Mask</strong>, где <code class="font-mono text-sm">?</code> — шаблон на один полубайт (маска без <code class="font-mono text-sm">?</code> — совпадение префикса, например <code class="font-mono text-sm">0891</code> для MCC/MNC из IMSI). Для record-файлов хранится список по записям.</li>
 	</ul>
-	<p class="text-sm mb-3"><strong>Check</strong> выполняет каждое правило на подключённой карте и показывает строку прогресса и отчёт прохождения. Рядом с путём файла указывается, что именно проверялось (например, <em>тип файла и размер, содержимое</em> или <em>точный FCI</em>); если часть проверок прошла, а часть нет — каждый аспект помечается (<em>тип файла ✓, размер ✗, содержимое ✓</em>), а расхождения расписываются ниже. Для record-файлов при расхождении содержимого добавляется пометка <em>совпадающие записи: 1-5, 7-10</em> со списком записей, которые совпали.</p>
+	<p class="text-sm mb-3"><strong>Check</strong> выполняет каждое правило на подключённой карте и показывает строку прогресса и отчёт прохождения. Рядом с путём файла указывается, что именно проверялось (например, <em>тип файла и размер, содержимое</em> или <em>точный FCI</em>); если часть проверок прошла, а часть нет — каждый аспект помечается (<em>тип файла ✓, размер ✗, содержимое ✓</em>), а расхождения расписываются ниже. Несовпавшие сырые данные (FCI, содержимое, данные записей) показываются как поля только для чтения с моноширинным шрифтом — ожидаемое над фактическим, в одной и той же колонке — для удобного сравнения. Для record-файлов при расхождении содержимого добавляется пометка <em>совпадающие записи: 1-5, 7-10</em> со списком записей, которые совпали.</p>
 	<h4 class="font-medium mb-1">Опции сканирования &laquo;Profile from card&raquo;</h4>
 	<p class="text-sm mb-2">Диалог сканирования запрашивает имя профиля и предлагает селектор <strong>&laquo;FCP/FCI check&raquo;</strong> (те же три режима, по умолчанию <strong>Filetype + size</strong>), применяемый ко всем создаваемым правилам, а также список <strong>&laquo;Ignore contents of&raquo;</strong> (все отмечены по умолчанию) часто перезаписываемых файлов, содержимое которых пропускается: <code class="font-mono text-sm">EF.LOCI</code>, <code class="font-mono text-sm">EF.PSLOCI</code>, <code class="font-mono text-sm">EF.EPSLOCI</code>, <code class="font-mono text-sm">EF.5GS3GPPLOCI</code>, <code class="font-mono text-sm">EF.Keys</code>, <code class="font-mono text-sm">EF.KeysPS</code>, <code class="font-mono text-sm">EF.SMS</code>, <code class="font-mono text-sm">EF.Kc</code>, <code class="font-mono text-sm">EF.KcGPRS</code>, <code class="font-mono text-sm">EF.LOCIGPRS</code>, <code class="font-mono text-sm">EF.CBMID</code>, <code class="font-mono text-sm">EF.SMSS</code>. Ещё две отмеченные по умолчанию опции <strong>&laquo;Match first 4 bytes for&raquo;</strong> <code class="font-mono text-sm">EF.IMSI</code> и <code class="font-mono text-sm">EF.ICCID</code> захватывают содержимое этих файлов как маску только первых 4 байт (снимите для точного сравнения). Строка прогресса показывает <em>N / всего файлов</em> с текущим путём файла во время сканирования; при сканировании опции скрываются, а кнопки блокируются. Правила создаются только для файлов, которые реально существуют на карте (возвращён FCP-шаблон); отсутствующие файлы пропускаются. Пользовательские файлы из подвкладки <strong>Custom files</strong> включаются с той же проверкой существования.</p>
 
@@ -454,13 +456,14 @@ start.bat           # запускает сервер (PWA + API)</pre>
 		</tbody>
 	</table>
 
-	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">6.5 Автоопределение ридера (<code class="font-mono text-sm">start.sh</code>)</h3>
+	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">6.5 Автоопределение ридера</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
-		<li><strong>PC/SC (Linux)</strong> — если запущен демон <code class="font-mono text-sm">pcscd</code>, передаёт <code class="font-mono text-sm">-p 0</code></li>
-		<li><strong>Serial (Linux)</strong> — если существует <code class="font-mono text-sm">/dev/ttyUSB0</code>, передаёт <code class="font-mono text-sm">-d /dev/ttyUSB0</code></li>
-		<li><strong>PC/SC (Windows)</strong> — всегда использует <code class="font-mono text-sm">-p 0</code> (PC/SC встроен в Windows)</li>
+		<li><strong>PC/SC (Linux)</strong> — <code class="font-mono text-sm">start.sh</code> передаёт <code class="font-mono text-sm">-p 0</code>, если запущен демон <code class="font-mono text-sm">pcscd</code></li>
+		<li><strong>PC/SC (Windows)</strong> — <code class="font-mono text-sm">start.bat</code> всегда использует <code class="font-mono text-sm">-p 0</code> (PC/SC встроен в Windows)</li>
+		<li><strong>Резерв сервера</strong> — при запуске без аргументов ридера сервер сам опрашивает PC/SC-ридер при старте (3 попытки с интервалом 2&nbsp;с)</li>
+		<li><strong>Serial-ридеры</strong> — запустите сервер вручную с <code class="font-mono text-sm">-d /dev/ttyUSB0</code> (Linux)</li>
 	</ul>
-	<p class="text-sm mb-3">Если ридер не обнаружен, сервер запускается без аргументов и показывает &laquo;Reader: none&raquo;. Карту можно инициализировать позже кнопкой <strong>Equip</strong> на вкладке Card reader.</p>
+	<p class="text-sm mb-3">Если карта отсутствует, вкладка Card reader показывает &laquo;No card detected&raquo;. Вставьте карту и нажмите <strong>Equip card</strong> для инициализации.</p>
 
 	<h3 id="manual-install" class="text-lg font-medium mb-2">6.6 Ручная установка</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3"># Создать и активировать venv

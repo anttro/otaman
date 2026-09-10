@@ -1002,7 +1002,7 @@ function cApduSwitchSubtab(name) {
 		const el = document.getElementById('c-apdu-sub-' + s);
 		if (el) el.classList.toggle('hidden', s !== name);
 	});
-	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp', parse:'c-apdu', httpota:'http-ota'}[name] || 'c-apdu');
+	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp', parse:'c-apdu-parser', httpota:'http-ota'}[name] || 'c-apdu');
 }
 
 // ===== HTTP OTA constructor =====
@@ -5520,7 +5520,7 @@ function pysimSwitchSubtab(name) {
 	if (name === 'custom') pysimCustomRender();
 	if (name === 'proactive') { stkCheckMenu(); pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); pysimPollStatusInit(); }
 	if (name === 'profiler') profilerSetView('list');
-	pysimHelpAnchor = {cmd:'pysim-cmdline', apdu:'raw-apdu', files:'file-manager', custom:'custom-files', proactive:'proactive-uicc', profiler:'card-reader'}[name] || 'card-reader';
+	pysimHelpAnchor = {cmd:'pysim-cmdline', apdu:'raw-apdu', files:'file-manager', custom:'custom-files', proactive:'proactive-uicc', profiler:'profiler'}[name] || 'card-reader';
 	setHelpAnchor(pysimHelpAnchor);
 }
 

@@ -35,8 +35,16 @@
 		<li>3GPP TS 23.038 — GSM 7-bit alphabet and DCS</li>
 		<li>3GPP TS 24.008 / 24.301 / 24.501 — NAS cause codes</li>
 		<li>GlobalPlatform Card Specification v2.3.1</li>
+		<li>GlobalPlatform GPC v2.2 Amendment B v1.1 — Remote Application Management over HTTP</li>
 		<li>ISO/IEC 7816-4 — commands for interchange</li>
 		<li>ISO/IEC 9797-1 — MAC algorithms</li>
+	</ul>
+
+	<h3 id="interface" class="text-lg font-medium mb-2">1.1 Interface</h3>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Header</strong> — the app version, an <strong>INSTALL PWA</strong> button (shown when the browser offers installation, enabling offline use), links to the project on GitHub and to this help, an <strong>EN/RU</strong> language toggle, and a dark/light <strong>theme</strong> toggle.</li>
+		<li>Language and theme choices are stored in <code class="font-mono text-sm">localStorage</code> and persist across reloads.</li>
+		<li>The <strong>help</strong> link opens this documentation at the section matching the current view (e.g. the Profiler sub-tab opens &sect;5.6).</li>
 	</ul>
 
 
@@ -106,14 +114,13 @@
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">C-APDU</td><td class="py-1 px-2 font-mono">22</td><td class="py-1 px-2">Raw APDU hex</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Immediate Action</td><td class="py-1 px-2 font-mono">81</td><td class="py-1 px-2">Proactive command or action indicator</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Error Action</td><td class="py-1 px-2 font-mono">82</td><td class="py-1 px-2">Conditional error recovery with action indicator or proactive command</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Multi-packet script execution with First/Intermediary/Last flags</td></tr>
-			<tr><td class="py-1 px-2">Response Type</td><td class="py-1 px-2 font-mono">-</td><td class="py-1 px-2">Expanded/Compact/None response parsing indicator</td></tr>
+			<tr><td class="py-1 px-2">Script Chaining</td><td class="py-1 px-2 font-mono">83</td><td class="py-1 px-2">Multi-packet script execution with First/Intermediary/Last flags</td></tr>
 		</tbody>
 	</table>
 	<p class="text-sm mb-3">The Immediate Action builder offers an action indicator (<code class="font-mono text-sm">81</code>/<code class="font-mono text-sm">82</code>), a structured proactive command builder (REFRESH, DISPLAY TEXT, PLAY TONE with auto-generated COMPREHENSION-TLV objects), or a freeform hex input.</p>
 
 	<h4 id="ber-error-action" class="font-medium mb-2 text-base">Error Action TLV (Tag 82)</h4>
-	<p class="text-sm mb-2">Error recovery per TS 102 226 §5.2.1.3 — one of three forms:</p>
+	<p class="text-sm mb-2">Error recovery per TS 102 226 §5.2.1.3 — one of four forms:</p>
 	<ul class="text-sm list-disc pl-5 mb-2">
 		<li><strong>Proactive command:</strong> COMPREHENSION-TLV set with DISPLAY TEXT or PLAY TONE (only these two are allowed in an Error Action, TS 102 226 Table 5.9)</li>
 		<li><strong>No action:</strong> <code class="font-mono text-sm">82 00</code></li>
@@ -130,14 +137,8 @@
 		<li><strong>Context Preservation:</strong> UICC keeps security/transaction state open across chained scripts</li>
 	</ul>
 
-	<h4 id="expanded-response" class="font-medium mb-2 text-base">Expanded Remote Response (TS 102 226 §5.2.2)</h4>
-	<p class="text-sm mb-2">Per-command results with error details and chaining context:</p>
-	<ul class="text-sm list-disc pl-5">
-		<li>Command number, status word, response data for each command</li>
-		<li>Error code and error info for failed commands (highlighted in red)</li>
-		<li>Script ID and position for chained script correlation (ID, FIRST, LAST)</li>
-		<li>Response type indicator: 'expanded' vs 'compact' vs 'none'</li>
-	</ul>
+	<h4 id="expanded-response" class="font-medium mb-2 text-base">Response decoding (TS 102 226 §5.2.2)</h4>
+	<p class="text-sm mb-2">Incoming Proof-of-Receipt responses are decoded by the server — expanded Remote Application response data (TS 102 226 §5.2.2) or the compact format. The Secured Packet view shows the outcome after <strong>Send to Card</strong> (see <a href="#secured-packet" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;3.1</a>): the PoR status (TAR, counter, raw PoR), with the last command&rsquo;s status word and response data filled into the <strong>Response parser</strong> tab.</p>
 
 	<h3 id="ram-gp" class="text-lg font-medium mb-2">2.4 RAM/GP</h3>
 	<p class="mb-2">CLA = <code class="font-mono text-sm">80</code> (GlobalPlatform Card Specification v2.3.1). Remote Application Management commands for card content management. Built with the same chain builder as SIM/USIM: add rows, fill fields, and the chain preview updates automatically.</p>
@@ -259,7 +260,7 @@
 		<li>AES requires a replay-protected counter: SPI1 bits b5&nbsp;b4 must be <code class="font-mono text-sm">10</code> (counter higher) or <code class="font-mono text-sm">11</code> (counter +1) per TS 102 225 &sect;5.1.2/&sect;5.1.3.1</li>
 		<li>Padding byte configurable (<code class="font-mono text-sm">00</code> default, or <code class="font-mono text-sm">FF</code>)</li>
 	</ul>
-	<p class="text-sm mb-3">A &ldquo;Verify vs pySim&rdquo; button cross-checks the assembled packet against pySim&rsquo;s reference <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. A &ldquo;Send to Card&rdquo; button delivers it via SMS-PP-DOWNLOAD ENVELOPE (when connected to the server).</p>
+	<p class="text-sm mb-3">A &ldquo;Verify vs pySim&rdquo; button cross-checks the assembled packet against pySim&rsquo;s reference <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. A &ldquo;Send to Card&rdquo; button delivers it via SMS-PP-DOWNLOAD ENVELOPE (when connected to the server). The returned Proof of Receipt is decoded and shown as a PoR status line (status, TAR, counter, raw PoR); the last command&rsquo;s status word and response data are filled into the <strong>Response parser</strong> tab, and a successful PoR advances the replay counter and clears the packet.</p>
 
 	<h3 id="cards" class="text-lg font-medium mb-2">3.2 Cards</h3>
 	<p class="mb-2">Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet view can auto-fill keys and parameters.</p>
@@ -275,7 +276,7 @@
 			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex chars (8/16/24-byte 3DES) or 32/48/64 hex chars (16/24/32-byte AES) keys</td></tr>
 		</tbody>
 	</table>
-	<p class="text-sm mb-3"><strong>Export as JSON</strong> / <strong>Import JSON from clipboard</strong> share presets. The selected card preset auto-fills the Secured Packet form.</p>
+	<p class="text-sm mb-3">Presets can be shared with <strong>Export as JSON</strong> and <strong>Export to file</strong>, and restored with <strong>Import from file</strong>, <strong>Paste &amp; import</strong>, or <strong>Import JSON from clipboard</strong>. The selected card preset auto-fills the Secured Packet form.</p>
 
 	<h3 id="ram" class="text-lg font-medium mb-2">3.3 RAM</h3>
 	<p class="mb-2">Delivers Remote Application Management operations as SCP80 secured packets via SMS-PP-DOWNLOAD ENVELOPE. The card must support SCP03 (AES or 3DES). A saved card preset from the <strong>Cards</strong> sub-tab provides the SPI, keys, TAR, and counter.</p>
@@ -301,7 +302,7 @@
 
 <section class="mb-10">
 	<h2 id="response-parser" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Response parser tab</h2>
-	<p class="mb-3">Decodes a raw command response: pick the command that was sent, enter the SW (e.g. <code class="font-mono text-sm">9000</code>) and the response data hex, then press <strong>Decode</strong>.</p>
+	<p class="mb-3">Decodes a raw command response: pick the command that was sent, enter the SW (e.g. <code class="font-mono text-sm">9000</code>) and the response data hex, then press <strong>Decode</strong>. The fields are also auto-filled with the last command&rsquo;s status word and response data after a successful &ldquo;Send to Card&rdquo; (see <a href="#secured-packet" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;3.1</a>).</p>
 	<ul class="list-disc list-inside text-sm space-y-1">
 		<li><strong>Command</strong> — SIM/USIM group (SELECT, STATUS, READ/UPDATE, PIN ops, CAT commands like TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, &hellip;) or RAM/GP group (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP commands).</li>
 		<li><strong>SW decode</strong> — status words resolved against generic, UICC (TS 102 221), and GlobalPlatform maps, with context auto-detected.</li>
@@ -312,17 +313,18 @@
 
 <section class="mb-10">
 	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Card reader (pySim) tab</h2>
-	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations. Sub-tabs: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>Profiler</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>, and <strong>Proactive UICC</strong>.</p>
+	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations: enter the server URL (default <code class="font-mono text-sm">http://127.0.0.1:8080</code>) and press <strong>Connect</strong>. The status area shows the reader/card state, and <strong>Equip card</strong> (re)initializes the card after insertion. Sub-tabs: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>Profiler</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>, and <strong>Proactive UICC</strong>.</p>
 
 	<h3 id="file-manager" class="text-lg font-medium mb-2">5.1 File manager</h3>
+	<p class="text-sm mb-2">The file system tree is displayed on the left; selecting a file opens its detail pane on the right.</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Read</strong> — reads the selected file (auto-detects transparent vs record files)</li>
-		<li><strong>Edit</strong> — modify hex data, <strong>Save</strong> to write back</li>
+		<li><strong>Edit</strong> — modify hex data, <strong>Save</strong> to write back (or <strong>Cancel</strong>)</li>
 		<li><strong>Raw / Decoded</strong> — toggle between hex dump and pySim-decoded JSON</li>
 	</ul>
 
 	<h3 id="custom-files" class="text-lg font-medium mb-2">5.2 Custom files</h3>
-	<p class="text-sm mb-3">Add files that pySim&rsquo;s model does not cover. Persists in <code class="font-mono text-sm">localStorage</code>; JSON export/import.</p>
+	<p class="text-sm mb-3">Add files that pySim&rsquo;s model does not cover: enter the full path (e.g. <code class="font-mono text-sm">3F00/7F20/6F46</code>) and an alias (e.g. <code class="font-mono text-sm">EF.SPN</code>), then press <strong>Add</strong>; added files appear in the File manager tree. The list persists in <code class="font-mono text-sm">localStorage</code> and can be shared with <strong>Export as JSON</strong> / <strong>Export to file</strong> and restored with <strong>Import from file</strong> / <strong>Paste &amp; import</strong> / <strong>Import JSON from clipboard</strong>.</p>
 
 	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">5.3 pySim command line</h3>
 	<p class="text-sm mb-3">Execute any pySim-shell command with usage hints (300&nbsp;ms) and autocomplete.</p>
@@ -372,14 +374,14 @@
 		<li>Each profile row shows its name and creation time, with <strong>Edit</strong>, <strong>Check</strong>, <strong>Export</strong> (download JSON), and <strong>Delete</strong> actions.</li>
 	</ul>
 	<h4 class="font-medium mb-1">Filesystem rules</h4>
-	<p class="text-sm mb-2">Rules run sequentially. A filesystem rule is defined by:</p>
+	<p class="text-sm mb-2">Rules run sequentially. The editor shows the symbolic pySim name (when known) next to each rule&rsquo;s path; use <strong>Add rule</strong> to append one and <strong>Save</strong> to keep the changes. A filesystem rule is defined by:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Path</strong> — starts with <code class="font-mono text-sm">MF</code> (e.g. <code class="font-mono text-sm">MF/7F10/6F3A</code>) or an ADF AID (e.g. <code class="font-mono text-sm">A0000000871002/6F07</code>).</li>
 		<li><strong>FCP/FCI check</strong> — how much of the file control information to verify: <strong>Filetype only (FCP)</strong> (existence + file type), <strong>Filetype + size (FCP)</strong> (adds file size, or record length/count for record files), or <strong>Exact FCI</strong> (adds a byte-for-byte comparison of the raw SELECT response — the FCP template <code class="font-mono text-sm">'62'</code> — catching FID/AID, life-cycle status, security-attribute and proprietary-parameter changes).</li>
 		<li><strong>File attributes</strong> — file type, size, record length and record count, taken from the FCP template (any may be left unset).</li>
-		<li><strong>Contents</strong> (optional) — <strong>Exact</strong> hex equality, or <strong>Mask</strong> where <code class="font-mono text-sm">?</code> is a per-nibble wildcard (a mask with no <code class="font-mono text-sm">?</code> is a prefix match, e.g. <code class="font-mono text-sm">0891</code> for the IMSI MCC/MNC). Record files store a per-record list.</li>
+		<li><strong>Check contents</strong> (optional) — <strong>Exact</strong> hex equality, or <strong>Mask</strong> where <code class="font-mono text-sm">?</code> is a per-nibble wildcard (a mask with no <code class="font-mono text-sm">?</code> is a prefix match, e.g. <code class="font-mono text-sm">0891</code> for the IMSI MCC/MNC). Record files store a per-record list.</li>
 	</ul>
-	<p class="text-sm mb-3"><strong>Check</strong> runs every rule against the equipped card and shows a live progress line plus a pass/fail report. Each row states exactly what was verified next to the file path (e.g. <em>filetype and size, contents</em> or <em>exact FCI</em>); when some checks pass and others fail, each aspect is marked (<em>filetype ✓, size ✗, contents ✓</em>) with the mismatches detailed below. For record files with a contents mismatch, a <em>matching records: 1-5, 7-10</em> note lists the records that did match.</p>
+	<p class="text-sm mb-3"><strong>Check</strong> runs every rule against the equipped card and shows a live progress line plus a pass/fail report. Each row states exactly what was verified next to the file path (e.g. <em>filetype and size, contents</em> or <em>exact FCI</em>); when some checks pass and others fail, each aspect is marked (<em>filetype ✓, size ✗, contents ✓</em>) with the mismatches detailed below. Mismatched raw data (FCI, contents, record data) is shown as read-only monospace fields — expected above actual, aligned in the same column — for easy comparison. For record files with a contents mismatch, a <em>matching records: 1-5, 7-10</em> note lists the records that did match.</p>
 	<h4 class="font-medium mb-1">&ldquo;Profile from card&rdquo; scan options</h4>
 	<p class="text-sm mb-2">The scan dialog asks for a profile name and offers a <strong>&ldquo;FCP/FCI check&rdquo;</strong> selector (the same three modes above, default <strong>Filetype + size</strong>) applied to every generated rule, plus an <strong>&ldquo;Ignore contents of&rdquo;</strong> checklist (all checked by default) of frequently-overwritten files whose contents are skipped: <code class="font-mono text-sm">EF.LOCI</code>, <code class="font-mono text-sm">EF.PSLOCI</code>, <code class="font-mono text-sm">EF.EPSLOCI</code>, <code class="font-mono text-sm">EF.5GS3GPPLOCI</code>, <code class="font-mono text-sm">EF.Keys</code>, <code class="font-mono text-sm">EF.KeysPS</code>, <code class="font-mono text-sm">EF.SMS</code>, <code class="font-mono text-sm">EF.Kc</code>, <code class="font-mono text-sm">EF.KcGPRS</code>, <code class="font-mono text-sm">EF.LOCIGPRS</code>, <code class="font-mono text-sm">EF.CBMID</code>, <code class="font-mono text-sm">EF.SMSS</code>. Two further checked-by-default options <strong>&ldquo;Match first 4 bytes for&rdquo;</strong> <code class="font-mono text-sm">EF.IMSI</code> and <code class="font-mono text-sm">EF.ICCID</code> capture those files&rsquo; contents as a mask of only the first 4 bytes (uncheck for exact matching). A progress line shows <em>N / total files</em> with the current file path while scanning; during the scan the options are hidden and the buttons are locked. Rules are created only for files that actually exist on the card (a FCP template is returned); missing files are skipped. Custom files from the <strong>Custom files</strong> sub-tab are included under the same existence check.</p>
 
@@ -454,13 +456,14 @@ start.bat           # starts the server (serves PWA + API)</pre>
 		</tbody>
 	</table>
 
-	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">6.5 Reader auto-detection (<code class="font-mono text-sm">start.sh</code>)</h3>
+	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">6.5 Reader auto-detection</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
-		<li><strong>PC/SC (Linux)</strong> — if the <code class="font-mono text-sm">pcscd</code> daemon is running, passes <code class="font-mono text-sm">-p 0</code></li>
-		<li><strong>Serial (Linux)</strong> — if <code class="font-mono text-sm">/dev/ttyUSB0</code> exists, passes <code class="font-mono text-sm">-d /dev/ttyUSB0</code></li>
-		<li><strong>PC/SC (Windows)</strong> — always uses <code class="font-mono text-sm">-p 0</code> (PC/SC is built into Windows)</li>
+		<li><strong>PC/SC (Linux)</strong> — <code class="font-mono text-sm">start.sh</code> passes <code class="font-mono text-sm">-p 0</code> when the <code class="font-mono text-sm">pcscd</code> daemon is running</li>
+		<li><strong>PC/SC (Windows)</strong> — <code class="font-mono text-sm">start.bat</code> always uses <code class="font-mono text-sm">-p 0</code> (PC/SC is built into Windows)</li>
+		<li><strong>Server fallback</strong> — started without reader arguments, the server itself probes for a PC/SC reader at startup (3 attempts, 2&nbsp;s apart)</li>
+		<li><strong>Serial readers</strong> — start the server manually with <code class="font-mono text-sm">-d /dev/ttyUSB0</code> (Linux)</li>
 	</ul>
-	<p class="text-sm mb-3">If no reader is detected, the server starts without reader arguments and shows &ldquo;Reader: none&rdquo;. The card can be initialized later via the <strong>Equip</strong> button in the Card reader tab.</p>
+	<p class="text-sm mb-3">If no card is present, the Card reader tab shows &ldquo;No card detected&rdquo;. Insert the card and click <strong>Equip card</strong> to initialize it.</p>
 
 	<h3 id="manual-install" class="text-lg font-medium mb-2">6.6 Manual installation</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3"># Create and activate a venv
