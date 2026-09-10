@@ -7350,32 +7350,32 @@ function profilerRenderRule(i, r) {
 	html += '<span class="text-xs font-semibold text-gray-500 dark:text-slate-400">#' + (i + 1) + '</span>';
 	html += '<button onclick="profilerDeleteRule(' + i + ')" class="ml-auto px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
 	html += '</div>';
-	html += '<div class="grid grid-cols-1 gap-2 mb-2">';
 	const sname = profilerCustomNameForPath(r.path) || r.name || '';
-	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Path')) +
+	html += '<div class="flex gap-2 mb-2">';
+	html += '<div class="w-72 shrink-0"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Path')) +
 		' <span class="profiler-rule-name font-normal text-gray-400 dark:text-slate-500">' + esc(sname) + '</span></label>' +
 		'<input value="' + escHtml(r.path || '') + '" oninput="profilerUpdateRulePath(' + i + ',this.value,this)" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="MF/7F10/6F3A"></div>';
-	html += '</div>';
-	const vis = profilerFileFields(r.fileType);
-	const showSize = vis.size && fciMode !== 'type';
-	const showRecords = vis.records && fciMode !== 'type';
-	html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">';
-	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('FCP/FCI check')) + '</label>' +
+	html += '<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('FCP/FCI check')) + '</label>' +
 		'<select onchange="profilerUpdateRuleFciMode(' + i + ',this.value)" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' +
 		'<option value="type"' + (fciMode === 'type' ? ' selected' : '') + '>' + esc(t('Filetype only (FCP)')) + '</option>' +
 		'<option value="type_size"' + (fciMode === 'type_size' ? ' selected' : '') + '>' + esc(t('Filetype + size (FCP)')) + '</option>' +
 		'<option value="exact"' + (fciMode === 'exact' ? ' selected' : '') + '>' + esc(t('Exact FCI')) + '</option>' +
 		'</select></div>';
-	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('File type')) + '</label>' +
+	html += '</div>';
+	const vis = profilerFileFields(r.fileType);
+	const showSize = vis.size && fciMode !== 'type';
+	const showRecords = vis.records && fciMode !== 'type';
+	html += '<div class="flex gap-2 mb-2">';
+	html += '<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('File type')) + '</label>' +
 		'<select onchange="profilerUpdateRuleFileType(' + i + ',this.value||null)" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' + ftOpts + '</select></div>';
 	if (showSize) {
-		html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Size')) + '</label>' +
+		html += '<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Size')) + '</label>' +
 			'<input type="number" value="' + (r.fileSize === null ? '' : r.fileSize) + '" oninput="profilerUpdateRule(' + i + ',\'fileSize\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
 	}
 	if (showRecords) {
-		html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record length')) + '</label>' +
+		html += '<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record length')) + '</label>' +
 			'<input type="number" value="' + (r.recordLen === null ? '' : r.recordLen) + '" oninput="profilerUpdateRule(' + i + ',\'recordLen\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
-		html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record count')) + '</label>' +
+		html += '<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Record count')) + '</label>' +
 			'<input type="number" value="' + (r.numRecords === null ? '' : r.numRecords) + '" oninput="profilerUpdateRule(' + i + ',\'numRecords\',this.value===\'\'?null:parseInt(this.value))" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="—"></div>';
 	}
 	html += '</div>';
@@ -7393,12 +7393,13 @@ function profilerRenderRule(i, r) {
 function profilerRenderContentEditor(i, r) {
 	const c = r.content;
 	const mode = c ? c.mode : 'exact';
-	let html = '<div class="mb-1 text-xs text-gray-600 dark:text-slate-400">' + esc(t('Contents')) + '</div>';
-	html += '<div class="flex items-center gap-3 mb-1">';
+	let html = '<div class="flex items-center justify-between mb-1">';
+	html += '<span class="text-xs text-gray-600 dark:text-slate-400">' + esc(t('Check contents')) + '</span>';
+	html += '<div class="flex items-center gap-3">';
 	html += '<label class="text-xs flex items-center gap-1"><input type="radio" name="profiler-cm-' + i + '" value="none"' + (!c ? ' checked' : '') + ' onchange="profilerSetContent(' + i + ',null)"> ' + esc(t('None')) + '</label>';
 	html += '<label class="text-xs flex items-center gap-1"><input type="radio" name="profiler-cm-' + i + '" value="exact"' + (c && mode === 'exact' ? ' checked' : '') + ' onchange="profilerSetContent(' + i + ',\'exact\')"> ' + esc(t('Exact')) + '</label>';
 	html += '<label class="text-xs flex items-center gap-1"><input type="radio" name="profiler-cm-' + i + '" value="mask"' + (c && mode === 'mask' ? ' checked' : '') + ' onchange="profilerSetContent(' + i + ',\'mask\')"> ' + esc(t('Mask')) + '</label>';
-	html += '</div>';
+	html += '</div></div>';
 	if (c) {
 		if (c.kind === 'record') {
 			html += '<div class="space-y-1">';
@@ -7889,7 +7890,7 @@ const LANG_RU = {
 	'Size': 'Размер',
 	'Record length': 'Длина записи',
 	'Record count': 'Кол-во записей',
-	'Contents': 'Содержимое',
+	'Check contents': 'Проверить содержимое',
 	'None': 'Нет',
 	'Exact': 'Точное',
 	'Mask': 'Маска',
