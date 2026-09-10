@@ -366,6 +366,46 @@ test('profilerScanCard without onProgress still works (back-compat)', async () =
 	assert.strictEqual(rules.length, 1);
 });
 
+// --- mask first 4 bytes (EF.IMSI / EF.ICCID) ---
+
+const IMSI_SELECT = { name: 'EF.IMSI', fid: '6F07', file_type: 'transparent', file_size: 9, record_len: null, num_of_rec: null, exists: true };
+const IMSI_DATA = '082905911234567890';
+
+test('profilerBuildFileRule masks first 4 bytes when the FID is in maskFids', async () => {
+	mockFetch({ '/api/select': () => IMSI_SELECT, '/api/read': () => ({ success: true, data: IMSI_DATA }) });
+	const rule = await profilerBuildFileRule('MF/6F07', { fid: '6F07', name: 'EF.IMSI' }, new Set(), new Set(), 'type_size', new Set(['6F07']));
+	assert.strictEqual(rule.content.mode, 'mask');
+	assert.strictEqual(rule.content.expected, '08290591??????????');
+});
+
+test('profilerBuildFileRule uses exact contents when maskFids does not contain the FID', async () => {
+	mockFetch({ '/api/select': () => IMSI_SELECT, '/api/read': () => ({ success: true, data: IMSI_DATA }) });
+	const rule = await profilerBuildFileRule('MF/6F07', { fid: '6F07', name: 'EF.IMSI' }, new Set(), new Set(), 'type_size', new Set());
+	assert.strictEqual(rule.content.mode, 'exact');
+	assert.strictEqual(rule.content.expected, IMSI_DATA);
+});
+
+test('profilerBuildFileRule keeps the legacy mask default when maskFids is omitted', async () => {
+	mockFetch({ '/api/select': () => IMSI_SELECT, '/api/read': () => ({ success: true, data: IMSI_DATA }) });
+	const rule = await profilerBuildFileRule('MF/6F07', { fid: '6F07', name: 'EF.IMSI' }, new Set(), new Set(), 'type_size');
+	assert.strictEqual(rule.content.mode, 'mask');
+	assert.strictEqual(rule.content.expected, '08290591??????????');
+});
+
+test('profilerScanCard threads maskFids through to rule building', async () => {
+	global.pysimCustomFiles = [];
+	global.pysimFetch = async (path, body) => {
+		if (path === '/api/tree') return { exists: true, name: 'MF', children: [{ name: 'EF.IMSI', fid: '6f07', isDir: false }] };
+		if (path === '/api/select') return IMSI_SELECT;
+		if (path === '/api/read') return { success: true, data: IMSI_DATA };
+		throw new Error('unexpected fetch: ' + path);
+	};
+	const rules = await profilerScanCard(new Set(), new Set(), 'type_size', undefined, new Set());
+	assert.strictEqual(rules.length, 1);
+	assert.strictEqual(rules[0].content.mode, 'exact');
+	assert.strictEqual(rules[0].content.expected, IMSI_DATA);
+});
+
 // --- result report (aspects, summary, matching records) ---
 
 test('profilerNumRanges compresses consecutive record numbers', () => {

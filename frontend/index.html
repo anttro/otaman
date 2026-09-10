@@ -912,19 +912,22 @@
 			<h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="Profile from card">Profile from card</h3>
 			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile name">Profile name</label>
 			<input id="profiler-scan-name" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800 mb-3" placeholder="Profile name">
-			<div class="mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Ignore contents of:">Ignore contents of:</div>
-			<div id="profiler-scan-ignore" class="space-y-1 mb-3 max-h-56 overflow-auto"></div>
-			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="FCP/FCI check">FCP/FCI check</label>
-			<select id="profiler-scan-fci-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 mb-3">
-				<option value="type" data-l10n="Filetype only (FCP)">Filetype only (FCP)</option>
-				<option value="type_size" selected data-l10n="Filetype + size (FCP)">Filetype + size (FCP)</option>
-				<option value="exact" data-l10n="Exact FCI">Exact FCI</option>
-			</select>
+			<div id="profiler-scan-options">
+				<div class="mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Ignore contents of:">Ignore contents of:</div>
+				<div id="profiler-scan-ignore" class="space-y-1 mb-3 max-h-56 overflow-auto"></div>
+				<div id="profiler-scan-mask" class="space-y-1 mb-3"></div>
+				<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="FCP/FCI check">FCP/FCI check</label>
+				<select id="profiler-scan-fci-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 mb-3">
+					<option value="type" data-l10n="Filetype only (FCP)">Filetype only (FCP)</option>
+					<option value="type_size" selected data-l10n="Filetype + size (FCP)">Filetype + size (FCP)</option>
+					<option value="exact" data-l10n="Exact FCI">Exact FCI</option>
+				</select>
+			</div>
 			<div id="profiler-scan-progress" class="text-xs text-gray-500 dark:text-slate-400 mb-2 hidden"></div>
 			<div id="profiler-scan-error" class="text-xs text-red-500 hidden mb-2"></div>
 			<div class="flex gap-2 justify-end">
-				<button onclick="profilerScanCancel()" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
-				<button id="profiler-scan-btn" onclick="profilerScanStart()" class="px-4 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Scan">Scan</button>
+				<button id="profiler-scan-cancel-btn" onclick="profilerScanCancel()" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Cancel">Cancel</button>
+				<button id="profiler-scan-btn" onclick="profilerScanStart()" class="px-4 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Scan">Scan</button>
 			</div>
 		</div>
 	</div>
@@ -7095,6 +7098,8 @@ function profilerNew() {
 
 function profilerFromCard() {
 	document.getElementById('profiler-scan-name').value = '';
+	document.getElementById('profiler-scan-name').readOnly = false;
+	document.getElementById('profiler-scan-name').classList.remove('opacity-50');
 	const ignore = document.getElementById('profiler-scan-ignore');
 	let html = '';
 	for (const f of PROFILER_IGNORE_FILES) {
@@ -7103,7 +7108,20 @@ function profilerFromCard() {
 			'<span>' + esc(t('Ignore contents of')) + ' ' + esc(f.name) + '</span></label>';
 	}
 	ignore.innerHTML = html;
+	const mask = document.getElementById('profiler-scan-mask');
+	let mhtml = '';
+	for (const fid in PROFILER_MASK_PREFIX4_FIDS) {
+		mhtml += '<label class="flex items-center gap-2 text-sm">' +
+			'<input type="checkbox" data-mask-fid="' + fid + '" checked>' +
+			'<span>' + esc(t('Match first 4 bytes for')) + ' ' + esc(PROFILER_MASK_PREFIX4_FIDS[fid]) + '</span></label>';
+	}
+	mask.innerHTML = mhtml;
+	document.getElementById('profiler-scan-options').classList.remove('hidden');
+	document.getElementById('profiler-scan-progress').classList.add('hidden');
 	document.getElementById('profiler-scan-error').classList.add('hidden');
+	document.getElementById('profiler-scan-cancel-btn').disabled = false;
+	document.getElementById('profiler-scan-btn').disabled = false;
+	document.getElementById('profiler-scan-btn').textContent = t('Scan');
 	document.getElementById('profiler-scan-modal').classList.remove('hidden');
 }
 
@@ -7127,9 +7145,19 @@ async function profilerScanStart() {
 			ignoreNames.add((cb.getAttribute('data-ignore-name') || '').toUpperCase());
 		}
 	});
+	const maskFids = new Set();
+	document.querySelectorAll('#profiler-scan-mask input[data-mask-fid]').forEach(cb => {
+		if (cb.checked) maskFids.add(cb.getAttribute('data-mask-fid').toUpperCase());
+	});
 	const fciMode = document.getElementById('profiler-scan-fci-mode').value;
 	const btn = document.getElementById('profiler-scan-btn');
+	const cancelBtn = document.getElementById('profiler-scan-cancel-btn');
+	const nameEl = document.getElementById('profiler-scan-name');
 	const progEl = document.getElementById('profiler-scan-progress');
+	document.getElementById('profiler-scan-options').classList.add('hidden');
+	cancelBtn.disabled = true;
+	nameEl.readOnly = true;
+	nameEl.classList.add('opacity-50');
 	progEl.classList.remove('hidden');
 	progEl.textContent = t('Discovering...');
 	btn.disabled = true;
@@ -7137,7 +7165,7 @@ async function profilerScanStart() {
 	try {
 		const rules = await profilerScanCard(ignoreFids, ignoreNames, fciMode, (done, total, path) => {
 			progEl.textContent = done + ' / ' + total + ' ' + t('files') + (path ? ' — ' + path : '');
-		});
+		}, maskFids);
 		const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
 		profiles.push(profile);
 		profilerSave();
@@ -7147,6 +7175,10 @@ async function profilerScanStart() {
 		errEl.textContent = e.message;
 		errEl.classList.remove('hidden');
 	} finally {
+		document.getElementById('profiler-scan-options').classList.remove('hidden');
+		cancelBtn.disabled = false;
+		nameEl.readOnly = false;
+		nameEl.classList.remove('opacity-50');
 		progEl.classList.add('hidden');
 		btn.disabled = false;
 		btn.textContent = t('Scan');
@@ -7157,7 +7189,7 @@ async function profilerScanStart() {
 // Phase 1 discovers every file (tree calls only) to know the total; phase 2
 // builds a rule per file, reporting progress via the optional onProgress
 // callback as onProgress(done, total, path).
-async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress) {
+async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, maskFids) {
 	const rules = [];
 	const files = [];
 	const seen = new Set();
@@ -7211,13 +7243,13 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress) {
 	for (let i = 0; i < files.length; i++) {
 		const entry = files[i];
 		if (onProgress) onProgress(i + 1, total, entry.path);
-		const rule = await profilerBuildFileRule(entry.path, entry.child, ignoreFids, ignoreNames, fciMode);
+		const rule = await profilerBuildFileRule(entry.path, entry.child, ignoreFids, ignoreNames, fciMode, maskFids);
 		if (rule) rules.push(rule);
 	}
 	return rules;
 }
 
-async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames, fciMode) {
+async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames, fciMode, maskFids) {
 	let sel;
 	try {
 		sel = await pysimFetch('/api/select', { path: path });
@@ -7248,7 +7280,8 @@ async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames, fciMode) 
 					records: rd.records.map(r => ({ num: r.num, data: r.data })),
 				};
 			} else if (rd.data) {
-				if (PROFILER_MASK_PREFIX4_FIDS[fid]) {
+				const useMask = maskFids ? maskFids.has(fid) : !!PROFILER_MASK_PREFIX4_FIDS[fid];
+				if (useMask) {
 					rule.content = { mode: 'mask', kind: 'transparent', expected: profilerMaskPrefix4(rd.data) };
 				} else {
 					rule.content = { mode: 'exact', kind: 'transparent', expected: rd.data };
@@ -7939,6 +7972,7 @@ const LANG_RU = {
 	'files': 'файлов',
 	'Ignore contents of:': 'Игнорировать содержимое:',
 	'Ignore contents of': 'Игнорировать содержимое',
+	'Match first 4 bytes for': 'Сравнивать первые 4 байта для',
 	'FCP/FCI check': 'Проверка FCP/FCI',
 	'Filetype only (FCP)': 'Только тип файла (FCP)',
 	'Filetype + size (FCP)': 'Тип файла + размер (FCP)',
