@@ -7737,6 +7737,14 @@ function profilerNumRanges(nums) {
 	return parts.join(', ');
 }
 
+// Checks whose expected/actual are raw data (hex), rendered as aligned fields.
+function profilerRawDataCheck(c) {
+	if (c.label === 'fci') return true;
+	if (/^content\.rec\d+$/.test(c.label)) return true;
+	if (c.label === 'content') return c.expected !== 'readable';
+	return false;
+}
+
 function profilerRenderReport(results) {
 	let html = '';
 	for (const r of results) {
@@ -7755,7 +7763,19 @@ function profilerRenderReport(results) {
 		if (r.error) html += '<div class="text-xs text-yellow-600 mt-1">' + esc(r.error) + '</div>';
 		for (const c of r.checks) {
 			if (c.ok) continue;
-			html += '<div class="text-xs text-red-600 mt-1">' + esc(c.label) + ': ' + esc(t('expected')) + ' <b>' + esc(String(c.expected)) + '</b>, ' + esc(t('actual')) + ' <b>' + esc(String(c.actual)) + '</b></div>';
+			if (profilerRawDataCheck(c)) {
+				html += '<div class="mt-1">';
+				html += '<div class="text-xs text-red-600 font-mono pl-2">' + esc(c.label) + '</div>';
+				html += '<div class="flex items-center gap-2 mt-0.5 pl-2">' +
+					'<span class="text-xs text-gray-500 dark:text-slate-400 w-24 text-right shrink-0">' + esc(t('expected')) + '</span>' +
+					'<input readonly title="' + escHtml(String(c.expected)) + '" value="' + escHtml(String(c.expected)) + '" class="flex-1 min-w-0 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800"></div>';
+				html += '<div class="flex items-center gap-2 mt-0.5 pl-2">' +
+					'<span class="text-xs text-gray-500 dark:text-slate-400 w-24 text-right shrink-0">' + esc(t('actual')) + '</span>' +
+					'<input readonly title="' + escHtml(String(c.actual)) + '" value="' + escHtml(String(c.actual)) + '" class="flex-1 min-w-0 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800"></div>';
+				html += '</div>';
+			} else {
+				html += '<div class="text-xs text-red-600 mt-1">' + esc(c.label) + ': ' + esc(t('expected')) + ' <b>' + esc(String(c.expected)) + '</b>, ' + esc(t('actual')) + ' <b>' + esc(String(c.actual)) + '</b></div>';
+			}
 		}
 		const recFailed = (r.checks || []).some(c => /^content\.rec\d+$/.test(c.label) && !c.ok);
 		if (recFailed && r.recordsMatched && r.recordsMatched.length) {

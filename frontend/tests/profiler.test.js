@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'profilerRenderReport'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -533,5 +533,38 @@ test('profilerRenderReport includes the checked-aspects summary and matching-rec
 	assert.ok(html.includes('filetype ✓, size ✗, contents ✓'));
 	assert.ok(html.includes('matching records'));
 	assert.ok(html.includes('1-2, 5'));
+	delete global.t;
+});
+
+test('profilerRawDataCheck identifies raw-data checks', () => {
+	assert.strictEqual(profilerRawDataCheck({ label: 'fci' }), true);
+	assert.strictEqual(profilerRawDataCheck({ label: 'content', expected: 'AABBCC' }), true);
+	assert.strictEqual(profilerRawDataCheck({ label: 'content.rec3' }), true);
+	assert.strictEqual(profilerRawDataCheck({ label: 'content', expected: 'readable' }), false);
+	assert.strictEqual(profilerRawDataCheck({ label: 'content.records' }), false);
+	assert.strictEqual(profilerRawDataCheck({ label: 'fileSize' }), false);
+});
+
+test('profilerRenderReport renders raw-data mismatches as aligned readonly fields', () => {
+	global.t = s => s;
+	global.pysimCustomFiles = [];
+	const html = profilerRenderReport([
+		{ path: 'MF/6F07', name: 'EF.IMSI', status: 'fail', checks: [
+			{ label: 'fci', ok: false, expected: '621082024021', actual: '621082024022' },
+		] },
+		{ path: 'MF/7F20/6F3A', name: 'EF.X', status: 'fail', checks: [
+			{ label: 'content.records', ok: false, expected: '30 records', actual: '10 records' },
+		] },
+	]);
+	const fciBlock = html.split('</div>').find(s => s.includes('621082024021'));
+	assert.ok(html.includes('readonly'));
+	assert.ok((html.match(/readonly/g) || []).length >= 2);
+	assert.ok(html.includes('font-mono'));
+	assert.ok(html.includes('value="621082024021"'));
+	assert.ok(html.includes('value="621082024022"'));
+	assert.ok(html.includes('w-24 text-right'));
+	// non-raw check stays inline
+	assert.ok(html.includes('content.records: expected'));
+	assert.ok(!fciBlock.includes(': expected'));
 	delete global.t;
 });
