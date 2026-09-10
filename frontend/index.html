@@ -920,6 +920,7 @@
 				<option value="type_size" selected data-l10n="Filetype + size (FCP)">Filetype + size (FCP)</option>
 				<option value="exact" data-l10n="Exact FCI">Exact FCI</option>
 			</select>
+			<div id="profiler-scan-progress" class="text-xs text-gray-500 dark:text-slate-400 mb-2 hidden"></div>
 			<div id="profiler-scan-error" class="text-xs text-red-500 hidden mb-2"></div>
 			<div class="flex gap-2 justify-end">
 				<button onclick="profilerScanCancel()" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
@@ -7128,10 +7129,16 @@ async function profilerScanStart() {
 	});
 	const fciMode = document.getElementById('profiler-scan-fci-mode').value;
 	const btn = document.getElementById('profiler-scan-btn');
+	const progEl = document.getElementById('profiler-scan-progress');
+	progEl.classList.remove('hidden');
+	progEl.textContent = t('Discovering...');
 	btn.disabled = true;
 	btn.textContent = t('Scanning...');
 	try {
-		const rules = await profilerScanCard(ignoreFids, ignoreNames, fciMode);
+		const rules = await profilerScanCard(ignoreFids, ignoreNames, fciMode, (done, total, path) => {
+			const pct = total ? Math.round(done / total * 100) : 0;
+			progEl.textContent = done + ' / ' + total + ' ' + t('files') + ' (' + pct + '%)' + (path ? ' — ' + path : '');
+		});
 		const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
 		profiles.push(profile);
 		profilerSave();
@@ -7141,14 +7148,19 @@ async function profilerScanStart() {
 		errEl.textContent = e.message;
 		errEl.classList.remove('hidden');
 	} finally {
+		progEl.classList.add('hidden');
 		btn.disabled = false;
 		btn.textContent = t('Scan');
 	}
 }
 
 // Recursively walk the card filesystem and build rules for files that exist.
-async function profilerScanCard(ignoreFids, ignoreNames, fciMode) {
+// Phase 1 discovers every file (tree calls only) to know the total; phase 2
+// builds a rule per file, reporting progress via the optional onProgress
+// callback as onProgress(done, total, path).
+async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress) {
 	const rules = [];
+	const files = [];
 	const seen = new Set();
 
 	// dir: { name, fid, parentSel (to select this dir), pathPrefix (rule-path segs for its children) }
@@ -7174,8 +7186,7 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode) {
 				const childPath = dir.pathPrefix.concat(c.fid ? c.fid.toUpperCase() : c.name).join('/');
 				if (seen.has(childPath)) continue;
 				seen.add(childPath);
-				const rule = await profilerBuildFileRule(childPath, c, ignoreFids, ignoreNames, fciMode);
-				if (rule) rules.push(rule);
+				files.push({ path: childPath, child: c });
 			}
 		}
 	}
@@ -7193,7 +7204,15 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode) {
 		const path = segs.join('/');
 		if (seen.has(path)) continue;
 		seen.add(path);
-		const rule = await profilerBuildFileRule(path, { fid: cf.fid, name: cf.name }, ignoreFids, ignoreNames, fciMode);
+		files.push({ path: path, child: { fid: cf.fid, name: cf.name } });
+	}
+
+	const total = files.length;
+	if (onProgress) onProgress(0, total, '');
+	for (let i = 0; i < files.length; i++) {
+		const entry = files[i];
+		if (onProgress) onProgress(i + 1, total, entry.path);
+		const rule = await profilerBuildFileRule(entry.path, entry.child, ignoreFids, ignoreNames, fciMode);
 		if (rule) rules.push(rule);
 	}
 	return rules;
@@ -7847,6 +7866,8 @@ const LANG_RU = {
 	'Back to list': 'Назад к списку',
 	'Add rule': 'Добавить правило',
 	'Scan': 'Сканировать',
+	'Discovering...': 'Поиск файлов...',
+	'files': 'файлов',
 	'Ignore contents of:': 'Игнорировать содержимое:',
 	'Ignore contents of': 'Игнорировать содержимое',
 	'FCP/FCI check': 'Проверка FCP/FCI',

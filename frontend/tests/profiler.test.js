@@ -26,6 +26,7 @@ let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
 code += extractFunc(html, 'profilerRunRule', true) + '\n';
+code += extractFunc(html, 'profilerScanCard', true) + '\n';
 code += html.match(/const PROFILER_MASK_PREFIX4_FIDS = \{[\s\S]*?\n\};/)[0] + '\n';
 eval(code);
 
@@ -309,4 +310,58 @@ test('profilerValidateProfile accepts valid fciMode and rejects unknown', () => 
 	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'file', path: 'MF/6F07', fciMode: 'type_size' }] }), null);
 	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'file', path: 'MF/6F07', fciMode: 'exact' }] }), null);
 	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'file', path: 'MF/6F07', fciMode: 'bogus' }] }), 'Invalid FCP/FCI mode: bogus');
+});
+
+// --- scan progress ---
+
+test('profilerScanCard reports discovery total then per-file progress', async () => {
+	const SEL = (fid, name) => ({ name, fid, file_type: 'transparent', file_size: 4, record_len: null, num_of_rec: null, exists: true });
+	const tree = {
+		MF: { exists: true, name: 'MF', children: [
+			{ name: 'DF.GSM', fid: '7f20', isDir: true },
+			{ name: 'EF.IMSI', fid: '6f07', isDir: false },
+		] },
+		'DF.GSM': { exists: true, name: 'DF.GSM', children: [
+			{ name: 'EF.ADN', fid: '6f3a', isDir: false },
+			{ name: 'EF.LOCI', fid: '6f7e', isDir: false },
+		] },
+	};
+	global.pysimCustomFiles = [{ path: 'MF/7F10/6F3A', fid: '6F3A', name: 'My ADN' }];
+	global.pysimFetch = async (path, body) => {
+		if (path === '/api/tree') {
+			const key = body.name === 'DF.GSM' ? 'DF.GSM' : 'MF';
+			return tree[key];
+		}
+		if (path === '/api/select') {
+			const fid = body.path.split('/').pop();
+			return SEL(fid, 'EF.' + fid);
+		}
+		throw new Error('unexpected fetch: ' + path);
+	};
+
+	const progress = [];
+	const rules = await profilerScanCard(new Set(), new Set(), 'type', (done, total, path) => {
+		progress.push([done, total, path]);
+	});
+
+	assert.strictEqual(rules.length, 4);
+	// initial 0/total report
+	assert.deepStrictEqual(progress[0], [0, 4, '']);
+	// then 1..4 with the file path, in scan order
+	assert.strictEqual(progress.length, 5);
+	assert.strictEqual(progress[4][0], 4);
+	assert.strictEqual(progress[4][1], 4);
+	const paths = progress.slice(1).map(p => p[2]);
+	assert.deepStrictEqual(paths, ['MF/7F20/6F3A', 'MF/7F20/6F7E', 'MF/6F07', 'MF/7F10/6F3A']);
+});
+
+test('profilerScanCard without onProgress still works (back-compat)', async () => {
+	global.pysimCustomFiles = [];
+	global.pysimFetch = async (path, body) => {
+		if (path === '/api/tree') return { exists: true, name: 'MF', children: [{ name: 'EF.IMSI', fid: '6f07', isDir: false }] };
+		if (path === '/api/select') return { name: 'EF.IMSI', fid: '6F07', file_type: 'transparent', file_size: 9, record_len: null, num_of_rec: null, exists: true };
+		throw new Error('unexpected fetch: ' + path);
+	};
+	const rules = await profilerScanCard(new Set(), new Set(), 'type_size');
+	assert.strictEqual(rules.length, 1);
 });
