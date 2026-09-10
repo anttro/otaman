@@ -42,7 +42,7 @@
 
 <section class="mb-10">
 	<h2 id="c-apdu" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">2. Вкладка C-APDU</h2>
-	<p class="mb-3">Построение командных APDU (C-APDU). Пять подвкладок охватывают разные поколения карт и наборы команд: <strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong> и <strong>C-APDU Parser</strong>.</p>
+	<p class="mb-3">Построение командных APDU (C-APDU). Шесть подвкладок охватывают разные поколения карт и наборы команд: <strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong> и <strong>C-APDU Parser</strong>.</p>
 
 	<h3 id="sim-rfm" class="text-lg font-medium mb-2">2.1 SIM RFM</h3>
 	<p class="mb-2">CLA = <code class="font-mono text-sm">A0</code> (GSM 11.11 / TS 151 011, ISO 7816-4). Удалённое управление файлами классических SIM-карт.</p>
@@ -204,7 +204,26 @@
 	</ul>
 
 	<h3 id="c-apdu-parser" class="text-lg font-medium mb-2">2.6 C-APDU Parser</h3>
-	<p class="text-sm mb-3">Вставка raw APDU hex и отображение сворачиваемого дерева. Автоматически определяет контейнер: <strong>Expanded Script</strong> (начало <code class="font-mono text-sm">AA</code> или <code class="font-mono text-sm">AE80</code>, декодируется по ETSI TS 102 226 &sect;5.2.1) или <strong>Compact C-APDU chain</strong> (последовательность C-APDU ISO 7816). Каждый узел показывает метку, hex и краткое описание; родительские узлы раскрываются в подэлементы.
+	<p class="text-sm mb-3">Вставка raw APDU hex и отображение сворачиваемого дерева. Автоматически определяет контейнер: <strong>Expanded Script</strong> (начало <code class="font-mono text-sm">AA</code> или <code class="font-mono text-sm">AE80</code>, декодируется по ETSI TS 102 226 &sect;5.2.1) или <strong>Compact C-APDU chain</strong> (последовательность C-APDU ISO 7816). Каждый узел показывает метку, hex и краткое описание; родительские узлы раскрываются в подэлементы.</p>
+
+	<h3 id="http-ota" class="text-lg font-medium mb-2">2.7 HTTP OTA</h3>
+	<p class="text-sm mb-3">Сборка payload&rsquo;ов Remote Application Management over HTTP по GlobalPlatform <strong>GPC v2.2 Amendment B v1.1</strong> (&sect;4.7). Два режима:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Trigger (Push SMS)</strong> — параметры запуска административной сессии (<code class="font-mono text-sm">81 &gt; 83 &gt; 84/[85]/[86]/89</code>, таблица 4-3). Сообщение, которое просит Security Domain карты исходящим запросом начать HTTP-сессию.</li>
+		<li><strong>Store (SD admin params)</strong> — записывает те же параметры как данные карты (параметры Security Domain) командой <strong>STORE DATA в TLV-режиме</strong> (<code class="font-mono text-sm">80 E2 90 00</code>, P1=90 = последний блок + BER-TLV по GP v2.2 Amendment B v1.1.3), обёрнутые в тег <code class="font-mono text-sm">85</code> (или <code class="font-mono text-sm">A5</code>) по таблице 4-4.</li>
+	</ul>
+	<p class="text-sm mb-2">Разделы соответствуют таблицам спецификации:</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Раздел</th><th class="text-left py-1 px-2">Tag</th><th class="text-left py-1 px-2">Содержимое</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Параметры соединения</td><td class="py-1 px-2 font-mono">84</td><td class="py-1 px-2">Любые COMPREHENSION-TLV для открытия TCP-соединения (OPEN CHANNEL по TS 102 223): Device Identities <code class="font-mono text-sm">02</code>, Alpha <code class="font-mono text-sm">80</code>, Bearer <code class="font-mono text-sm">01</code>, вендорские TLV. Редактор строк + пресеты, редактируемый hex.</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Параметры безопасности</td><td class="py-1 px-2 font-mono">85</td><td class="py-1 px-2">Таблица 4-6: LV PSK Identity (текст), LV Key version/KID. Идентифицирует ключ PSK TLS (RFC 4279).</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Политика повтора</td><td class="py-1 px-2 font-mono">86</td><td class="py-1 px-2">Таблица 4-7: счётчик повторов (2 байта, напр. <code class="font-mono text-sm">B000</code>), задержка повторной попытки как timer TLV из TS 102 223 (<code class="font-mono text-sm">25 03 HH MM SS</code>), опциональный вендорский TLV отчёта о сбое.</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">HTTP POST</td><td class="py-1 px-2 font-mono">89</td><td class="py-1 px-2">Таблицы 4-8/9/10: Host-заголовок (<code class="font-mono text-sm">8A</code>), X-Admin-From agent ID (<code class="font-mono text-sm">8B</code>), URI (<code class="font-mono text-sm">8C</code>) — текст преобразуется в октеты.</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-2"><strong>Command Scripting template</strong> (флажок) оборачивает всю команду <code class="font-mono text-sm">81</code> в формат Expanded Remote Application data с определённой длиной (<code class="font-mono text-sm">AA</code>, ETSI TS 102 226 &sect;5.2.1) для TAR-ов, обрабатывающих расширенный формат (RAM-over-HTTP &sect;4.7).</p>
+	<p class="text-sm mb-2"><strong>Pack into Secured packet</strong> отправляет готовый payload на вкладку SCP80 для заполнения SPI/счётчика — там укажите TAR, который слушает SD (обычно TAR OTASD).</p>
 
 
 <section class="mb-10">

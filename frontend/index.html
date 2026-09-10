@@ -43,7 +43,8 @@
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="usim" onclick="cApduSwitchSubtab('usim')">USIM RFM</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ber" onclick="cApduSwitchSubtab('ber')">Expanded Script</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ram" onclick="cApduSwitchSubtab('ram')">RAM/GP</button>
-			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="parse" onclick="cApduSwitchSubtab('parse')" data-l10n="C-APDU Parser">C-APDU Parser</button>
+			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="httpota" onclick="cApduSwitchSubtab('httpota')">HTTP OTA</button>
+		<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="parse" onclick="cApduSwitchSubtab('parse')" data-l10n="C-APDU Parser">C-APDU Parser</button>
 		</div>
 			<div id="c-apdu-sub-sim">
 		<div id="chain-sim-rows"></div>
@@ -141,6 +142,119 @@
 		</div>
 		<button onclick="parseHex()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Decode">Decode</button>
 		<div id="parse-output"></div>
+	</div>
+
+	<div id="c-apdu-sub-httpota" class="hidden">
+		<div class="flex gap-2 mb-3">
+			<button id="hota-mode-trigger" onclick="hotaSetMode('trigger')" class="px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-l10n="Trigger (Push SMS)">Trigger (Push SMS)</button>
+			<button id="hota-mode-store" onclick="hotaSetMode('store')" class="px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-l10n="Store (SD admin params)">Store (SD admin params)</button>
+		</div>
+
+		<div id="hota-store-tag-row" class="mb-3 hidden">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SD params tag">SD params tag</label>
+			<select id="hota-store-tag" onchange="hotaUpdatePreview()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+				<option value="85">'85' — GP v2.2 Amendment B v1.1 (Table 4-4)</option>
+				<option value="A5">'A5' — GP v2.2 Amendment B v1.1.3</option>
+			</select>
+		</div>
+
+		<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800 mb-3">
+			<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+				<input type="checkbox" id="hota-include-conn" checked onchange="hotaUpdatePreview()" class="rounded">
+				<span data-l10n="Connection parameters ('84')">Connection parameters ('84')</span>
+			</label>
+			<div id="hota-conn-tlvs" class="hidden"></div>
+			<div class="flex flex-wrap gap-1 mt-2">
+				<button onclick="hotaAddTlv()" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ TLV">+ TLV</button>
+				<button onclick="hotaAddPreset('devid')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ Device Identities">+ Device Identities</button>
+				<button onclick="hotaAddPreset('alpha')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ Alpha (empty)">+ Alpha (empty)</button>
+				<button onclick="hotaAddPreset('bearer')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ Bearer (GPRS)">+ Bearer (GPRS)</button>
+			</div>
+		</div>
+
+		<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800 mb-3">
+			<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+				<input type="checkbox" id="hota-include-sec" onchange="hotaUpdatePreview()" class="rounded">
+				<span data-l10n="Security parameters ('85')">Security parameters ('85')</span>
+			</label>
+			<div id="hota-sec-fields" class="hidden space-y-2">
+				<div class="flex gap-2">
+					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="PSK Identity (text)">PSK Identity (text)</label>
+						<input id="hota-psk-text" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="Test123">
+					</div>
+					<div class="w-16"><label class="block text-xs text-gray-600 dark:text-slate-400">KVN</label>
+						<input id="hota-kvn" maxlength="2" value="01" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+					</div>
+					<div class="w-16"><label class="block text-xs text-gray-600 dark:text-slate-400">KID</label>
+						<input id="hota-kid" maxlength="2" value="01" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800 mb-3">
+			<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+				<input type="checkbox" id="hota-include-retry" onchange="hotaUpdatePreview()" class="rounded">
+				<span data-l10n="Retry policy ('86')">Retry policy ('86')</span>
+			</label>
+			<div id="hota-retry-fields" class="hidden space-y-2">
+				<div class="flex gap-2">
+					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Retry counter (B0,00=unlimited)">Retry counter (B0,00=unlimited)</label>
+						<input id="hota-retry-counter" maxlength="4" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="B000">
+					</div>
+				</div>
+				<div class="flex gap-2">
+					<div class="w-16"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Hours">Hours</label>
+						<input id="hota-delay-h" type="number" min="0" max="255" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="0">
+					</div>
+					<div class="w-16"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Minutes">Minutes</label>
+						<input id="hota-delay-m" type="number" min="0" max="59" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="0">
+					</div>
+					<div class="w-16"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Seconds">Seconds</label>
+						<input id="hota-delay-s" type="number" min="0" max="59" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="0">
+					</div>
+				</div>
+				<div class="flex gap-2 items-end">
+					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Report failure (vendor-specific TLV)">Report failure (vendor-specific TLV)</label>
+						<input id="hota-retry-report" maxlength="40" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="0A08...">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800 mb-3">
+			<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+				<input type="checkbox" id="hota-include-http" onchange="hotaUpdatePreview()" class="rounded">
+				<span data-l10n="HTTP POST ('89', 8A=host,8B=agent,8C=URI)">HTTP POST ('89', 8A=host,8B=agent,8C=URI)</span>
+			</label>
+			<div id="hota-http-fields" class="hidden space-y-2">
+				<div class="flex gap-2">
+					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Host (text→hex)">Host (text→hex)</label>
+						<input id="hota-host" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="megafon.ru">
+					</div>
+				</div>
+				<div class="flex gap-2">
+					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="HTTP agent ID (text, X-Admin-From)">HTTP agent ID (text, X-Admin-From)</label>
+						<input id="hota-agent" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="v1.0">
+					</div>
+				</div>
+				<div class="flex gap-2">
+					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="URI (text→hex)">URI (text→hex)</label>
+						<input id="hota-uri" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="http://megafon.ru/sdp">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="border border-gray-300 dark:border-slate-600 rounded p-3 bg-gray-50 dark:bg-slate-800 mb-3 hidden" id="hota-expanded-row">
+			<label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
+				<input type="checkbox" id="hota-expanded" onchange="hotaUpdatePreview()" class="rounded">
+				<span data-l10n="Wrapped in Command Scripting template ('AA')">Wrapped in Command Scripting template ('AA')</span>
+			</label>
+		</div>
+
+		<textarea id="hota-preview" rows="5" readonly oninput="hotaPreviewEdited()" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800 mb-3" placeholder="RAM-over-HTTP payload will appear here..."></textarea>
+		<button onclick="packToSp('hota-preview')" id="hota-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 	</div>
 	<div class="w-1/4">
@@ -874,12 +988,178 @@ function cApduSwitchSubtab(name) {
 		btn.classList.toggle('text-gray-700', !active);
 		btn.classList.toggle('dark:text-slate-300', !active);
 	});
-	['sim', 'usim', 'ber', 'ram', 'parse'].forEach(s => {
+	['sim', 'usim', 'ber', 'ram', 'parse', 'httpota'].forEach(s => {
 		const el = document.getElementById('c-apdu-sub-' + s);
 		if (el) el.classList.toggle('hidden', s !== name);
 	});
-	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp', parse:'c-apdu'}[name] || 'c-apdu');
+	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp', parse:'c-apdu', httpota:'http-ota'}[name] || 'c-apdu');
 }
+
+// ===== HTTP OTA constructor =====
+let _hotaMode = 'trigger';
+function _hotaHex(s) { return (s || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase(); }
+function _hotaAsciiHex(s) { return (s || '').split('').map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').toUpperCase(); }
+function _hotaBerLen(n) {
+	if (n < 128) return n.toString(16).padStart(2, '0').toUpperCase();
+	if (n < 256) return '81' + n.toString(16).padStart(2, '0').toUpperCase();
+	return '82' + n.toString(16).padStart(4, '0').toUpperCase();
+}
+function _hotaTlv(tag8, val8) { const v = _hotaHex(val8); return tag8.toUpperCase() + _hotaBerLen(v.length / 2) + v; }
+
+function hotaTlv(tag, value) { return _hotaTlv(tag, value); }
+function hotaBuildConn(tlvs) {
+	let content = '';
+	for (const t of tlvs) {
+		const v = _hotaHex(t.value);
+		if (!t.tag) continue;
+		content += t.tag.toUpperCase() + _hotaBerLen(v.length / 2) + v;
+	}
+	return '84' + _hotaBerLen(content.length / 2) + content;
+}
+function hotaBuildSec(s) {
+	const psk = _hotaAsciiHex(s.pskIdentity);
+	const kvn = _hotaHex(s.kvn).padStart(2, '0');
+	const kid = _hotaHex(s.kid).padStart(2, '0');
+	const data = (psk.length / 2).toString(16).padStart(2, '0').toUpperCase() + psk + '02' + kvn + kid;
+	return '85' + _hotaBerLen(data.length / 2) + data;
+}
+function hotaBuildRetry(r) {
+	const counter = _hotaHex(r.counter);
+	const hh = (parseInt(r.delayH) || 0).toString(16).padStart(2, '0').toUpperCase();
+	const mm = (parseInt(r.delayM) || 0).toString(16).padStart(2, '0').toUpperCase();
+	const ss = (parseInt(r.delayS) || 0).toString(16).padStart(2, '0').toUpperCase();
+	const timerTlv = '2503' + hh + mm + ss;
+	const report = _hotaHex(r.reportFailure);
+	const content = counter + timerTlv + (report && report.length % 2 === 0 ? report : '');
+	return '86' + _hotaBerLen(content.length / 2) + content;
+}
+function hotaBuildHttpPost(h) {
+	const host = _hotaAsciiHex(h.host);
+	const agent = _hotaAsciiHex(h.agent);
+	const uri = _hotaAsciiHex(h.uri);
+	const content = _hotaTlv('8A', host) + _hotaTlv('8B', agent) + _hotaTlv('8C', uri);
+	return '89' + _hotaBerLen(content.length / 2) + content;
+}
+function hotaBuildTrigger(conn, sec, retry, httpPost, expanded) {
+	let content = conn;
+	if (sec) content += sec;
+	if (retry) content += retry;
+	if (httpPost) content += httpPost;
+	const sd = '83' + _hotaBerLen(content.length / 2) + content;
+	const trig = '81' + _hotaBerLen(sd.length / 2) + sd;
+	if (expanded) return 'AA' + _hotaBerLen(trig.length / 2) + trig;
+	return trig;
+}
+function hotaBuildStore(conn, sec, retry, httpPost, storeTag) {
+	const inner = _hotaTlv(storeTag, conn + (sec || '') + (retry || '') + (httpPost || ''));
+	return '80E29000' + _hotaBerLen(inner.length / 2) + inner;
+}
+function hotaBuild(mode, conn, sec, retry, httpPost, storeTag, expanded) {
+	return mode === 'store'
+		? hotaBuildStore(conn, sec, retry, httpPost, storeTag)
+		: hotaBuildTrigger(conn, sec, retry, httpPost, expanded);
+}
+
+function hotaSetMode(mode) {
+	_hotaMode = mode;
+	document.getElementById('hota-mode-trigger').className = 'px-4 py-1.5 text-sm rounded-full ' + (mode === 'trigger' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600');
+	document.getElementById('hota-mode-store').className = 'px-4 py-1.5 text-sm rounded-full ' + (mode === 'store' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600');
+	document.getElementById('hota-store-tag-row').classList.toggle('hidden', mode !== 'store');
+	document.getElementById('hota-expanded-row').classList.toggle('hidden', mode !== 'trigger');
+	hotaUpdatePreview();
+}
+
+function hotaToggleConn() {
+	const on = document.getElementById('hota-include-conn').checked;
+	document.getElementById('hota-conn-tlvs').classList.toggle('hidden', !on);
+	hotaUpdatePreview();
+}
+document.addEventListener('change', function(e) {
+	if (e.target && e.target.id === 'hota-include-conn') hotaToggleConn();
+	else if (e.target && e.target.id === 'hota-include-sec') document.getElementById('hota-sec-fields').classList.toggle('hidden', !e.target.checked);
+	else if (e.target && e.target.id === 'hota-include-retry') document.getElementById('hota-retry-fields').classList.toggle('hidden', !e.target.checked);
+	else if (e.target && e.target.id === 'hota-include-http') document.getElementById('hota-http-fields').classList.toggle('hidden', !e.target.checked);
+});
+hotaToggleConn();
+
+function hotaAddTlv() {
+	const container = document.getElementById('hota-conn-tlvs');
+	const row = document.createElement('div');
+	row.className = 'flex gap-1 items-center mb-1';
+	row.innerHTML =
+		'<input maxlength="2" oninput="hotaUpdatePreview()" class="font-mono w-14 border border-gray-300 dark:border-slate-600 text-sm rounded px-1.5 py-1 dark:bg-slate-800" placeholder="Tag">' +
+		'<input oninput="hotaUpdatePreview()" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-1.5 py-1 dark:bg-slate-800" placeholder="Value">' +
+		'<button onclick="this.parentElement.remove();hotaUpdatePreview()" class="text-gray-400 hover:text-red-500 px-1" title="Delete">&times;</button>';
+	container.appendChild(row);
+	hotaUpdatePreview();
+}
+function hotaAddPreset(name) {
+	const container = document.getElementById('hota-conn-tlvs');
+	const row = document.createElement('div');
+	row.className = 'flex gap-1 items-center mb-1';
+	const presets = {
+		devid: ['02', '8182'],
+		alpha: ['80', ''],
+		bearer: ['01', '014001'],
+	};
+	const [tag, value] = presets[name] || ['', ''];
+	row.innerHTML =
+		'<input maxlength="2" value="' + tag + '" oninput="hotaUpdatePreview()" class="font-mono w-14 border border-gray-300 dark:border-slate-600 text-sm rounded px-1.5 py-1 dark:bg-slate-800" placeholder="Tag">' +
+		'<input value="' + value + '" oninput="hotaUpdatePreview()" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-1.5 py-1 dark:bg-slate-800" placeholder="Value">' +
+		'<button onclick="this.parentElement.remove();hotaUpdatePreview()" class="text-gray-400 hover:text-red-500 px-1" title="Delete">&times;</button>';
+	container.appendChild(row);
+	hotaUpdatePreview();
+}
+
+function hotaReadConnTlvs() {
+	const tlvs = [];
+	document.querySelectorAll('#hota-conn-tlvs .flex').forEach(row => {
+		const inputs = row.querySelectorAll('input');
+		if (inputs.length >= 2) tlvs.push({ tag: _hotaHex(inputs[0].value), value: inputs[1].value });
+	});
+	return tlvs;
+}
+
+function hotaUpdatePreview() {
+	const connOn = document.getElementById('hota-include-conn').checked;
+	const secOn = document.getElementById('hota-include-sec').checked;
+	const retryOn = document.getElementById('hota-include-retry').checked;
+	const httpOn = document.getElementById('hota-include-http').checked;
+	const expanded = document.getElementById('hota-expanded').checked;
+	const storeTag = document.getElementById('hota-store-tag').value;
+	const conn = connOn ? hotaBuildConn(hotaReadConnTlvs()) : '';
+	const sec = secOn ? hotaBuildSec({
+		pskIdentity: document.getElementById('hota-psk-text').value,
+		kvn: document.getElementById('hota-kvn').value,
+		kid: document.getElementById('hota-kid').value,
+	}) : '';
+	const retry = retryOn ? hotaBuildRetry({
+		counter: document.getElementById('hota-retry-counter').value,
+		delayH: document.getElementById('hota-delay-h').value,
+		delayM: document.getElementById('hota-delay-m').value,
+		delayS: document.getElementById('hota-delay-s').value,
+		reportFailure: document.getElementById('hota-retry-report').value,
+	}) : '';
+	const http = httpOn ? hotaBuildHttpPost({
+		host: document.getElementById('hota-host').value,
+		agent: document.getElementById('hota-agent').value,
+		uri: document.getElementById('hota-uri').value,
+	}) : '';
+	const hex = hotaBuild(_hotaMode, conn, sec, retry, http, storeTag, expanded);
+	const preview = document.getElementById('hota-preview');
+	preview.value = hex;
+	document.getElementById('hota-pack-btn').disabled = !hex;
+}
+
+function hotaPreviewEdited() {
+	const hex = document.getElementById('hota-preview').value;
+	document.getElementById('hota-pack-btn').disabled = !hex;
+}
+document.querySelectorAll('#c-apdu-sub-httpota input, #c-apdu-sub-httpota select').forEach(el => {
+	if (el.type === 'checkbox') return;
+	el.addEventListener('input', hotaUpdatePreview);
+});
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
 	btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
@@ -7530,6 +7810,28 @@ const LANG_RU = {
 	'errors': 'ошибок',
 	'expected': 'ожидалось',
 	'actual': 'фактически',
+	'HTTP OTA': 'HTTP OTA',
+	'Trigger (Push SMS)': 'Триггер (Push SMS)',
+	'Store (SD admin params)': 'Store (параметры SD)',
+	'SD params tag': 'Tag параметров SD',
+	"Connection parameters ('84')": "Параметры соединения ('84')",
+	'+ TLV': '+ TLV',
+	'+ Device Identities': '+ Device Identities',
+	'+ Alpha (empty)': '+ Alpha (пустой)',
+	'+ Bearer (GPRS)': '+ Bearer (GPRS)',
+	"Security parameters ('85')": "Параметры безопасности ('85')",
+	'PSK Identity (text)': 'PSK Identity (текст)',
+	"Retry policy ('86')": "Политика повтора ('86')",
+	'Retry counter (B0,00=unlimited)': 'Счётчик повторов (B0,00=бесконечно)',
+	'Hours': 'Часы',
+	'Minutes': 'Минуты',
+	'Seconds': 'Секунды',
+	"Report failure (vendor-specific TLV)": "Отчёт о сбое (специфичный TLV)",
+	"HTTP POST ('89', 8A=host,8B=agent,8C=URI)": "HTTP POST ('89', 8A=host,8B=agent,8C=URI)",
+	'Host (text→hex)': 'Хост (текст→hex)',
+	"HTTP agent ID (text, X-Admin-From)": "ID HTTP агента (текст, X-Admin-From)",
+	'URI (text→hex)': 'URI (текст→hex)',
+	"Wrapped in Command Scripting template ('AA')": "Обёртка в Command Scripting template ('AA')",
 };
 let currentLang = 'en';
 
