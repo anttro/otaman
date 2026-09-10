@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile'];
+const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -156,6 +156,7 @@ test('profilerBuildFileRule skips contents for an ignored FID', async () => {
 	assert.strictEqual(rule.path, 'MF/7F20/6F52');
 	assert.strictEqual(rule.fileType, 'transparent');
 	assert.strictEqual(rule.fileSize, 9);
+	assert.strictEqual(rule.name, 'EF.KcGPRS');
 	assert.ok(!calls.includes('/api/read'), 'contents must not be read for ignored files');
 });
 
@@ -181,7 +182,47 @@ test('profilerBuildFileRule captures contents for non-ignored files', async () =
 	assert.ok(rule.content);
 	assert.strictEqual(rule.content.mode, 'exact');
 	assert.strictEqual(rule.content.expected, 'AABBCCDD');
+	assert.strictEqual(rule.name, 'EF.ADN');
 	assert.ok(calls.includes('/api/read'));
+});
+
+test('profilerBuildFileRule falls back to the select name when the child has none', async () => {
+	mockFetch({ '/api/select': () => KCGPRS_SELECT });
+	const rule = await profilerBuildFileRule('MF/7F20/6F52', { fid: '6F52' }, new Set(), new Set());
+	assert.strictEqual(rule.name, 'EF.KcGPRS');
+});
+
+test('profilerBuildFileRule stores null when no symbolic name is known', async () => {
+	mockFetch({ '/api/select': () => ({ fid: '6F3A', file_type: 'transparent', file_size: 0, exists: true }) });
+	const rule = await profilerBuildFileRule('MF/7F20/6F3A', { fid: '6F3A' }, new Set(), new Set());
+	assert.strictEqual(rule.name, null);
+});
+
+test('profilerCustomNameForPath resolves saved custom file names', () => {
+	global.pysimCustomFiles = [
+		{ path: '3F00/7F10/6F3A', fid: '6F3A', name: 'My ADN' },
+		{ path: 'MF/7F20/6F7E', fid: '6F7E', name: 'My LOCI' },
+	];
+	assert.strictEqual(profilerCustomNameForPath('MF/7F10/6F3A'), 'My ADN');
+	assert.strictEqual(profilerCustomNameForPath('MF/7F20/6F7E'), 'My LOCI');
+	assert.strictEqual(profilerCustomNameForPath('MF/7F20/6F3A'), null);
+	assert.strictEqual(profilerCustomNameForPath(''), null);
+	assert.strictEqual(profilerCustomNameForPath(null), null);
+});
+
+test('profilerUpdateRulePath clears the scan-time name and refreshes the label', () => {
+	global.pysimCustomFiles = [{ path: 'MF/7F10/6F3A', fid: '6F3A', name: 'My ADN' }];
+	global.profilerDraft = { rules: [{ path: 'MF/7F20/6F3A', name: 'EF.ADN' }] };
+	const span = { textContent: '' };
+	const input = { parentElement: { querySelector: () => span } };
+	profilerUpdateRulePath(0, 'MF/7F10/6F3A', input);
+	assert.strictEqual(global.profilerDraft.rules[0].path, 'MF/7F10/6F3A');
+	assert.strictEqual(global.profilerDraft.rules[0].name, null);
+	assert.strictEqual(span.textContent, 'My ADN');
+	profilerUpdateRulePath(0, 'MF/7F10/6FB1', input);
+	assert.strictEqual(span.textContent, '');
+	global.profilerDraft = null;
+	profilerUpdateRulePath(0, 'x', input);
 });
 
 test('profilerBuildFileRule still ignores when ignoreNames is omitted (back-compat)', async () => {

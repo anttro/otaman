@@ -7196,6 +7196,7 @@ async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames) {
 	const rule = {
 		type: 'file',
 		path: path,
+		name: c.name || sel.name || null,
 		fileType: sel.file_type || null,
 		fileSize: isRecord ? null : ((sel.file_size === null || sel.file_size === undefined) ? null : sel.file_size),
 		recordLen: (sel.record_len === null || sel.record_len === undefined) ? null : sel.record_len,
@@ -7277,7 +7278,7 @@ function profilerBackToList() {
 
 function profilerAddRule() {
 	if (!profilerDraft) return;
-	profilerDraft.rules.push({ type: 'file', path: '', fileType: null, fileSize: null, recordLen: null, numRecords: null, content: null });
+	profilerDraft.rules.push({ type: 'file', path: '', name: null, fileType: null, fileSize: null, recordLen: null, numRecords: null, content: null });
 	profilerRenderEditor();
 }
 
@@ -7315,8 +7316,10 @@ function profilerRenderRule(i, r) {
 	html += '<button onclick="profilerDeleteRule(' + i + ')" class="ml-auto px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
 	html += '</div>';
 	html += '<div class="grid grid-cols-1 gap-2 mb-2">';
-	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Path')) + '</label>' +
-		'<input value="' + escHtml(r.path || '') + '" oninput="profilerUpdateRule(' + i + ',\'path\',this.value)" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="MF/7F10/6F3A"></div>';
+	const sname = profilerCustomNameForPath(r.path) || r.name || '';
+	html += '<div><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Path')) +
+		' <span class="profiler-rule-name font-normal text-gray-400 dark:text-slate-500">' + esc(sname) + '</span></label>' +
+		'<input value="' + escHtml(r.path || '') + '" oninput="profilerUpdateRulePath(' + i + ',this.value,this)" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="MF/7F10/6F3A"></div>';
 	html += '</div>';
 	const vis = profilerFileFields(r.fileType);
 	html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">';
@@ -7373,6 +7376,17 @@ function profilerRenderContentEditor(i, r) {
 function profilerUpdateRule(i, field, value) {
 	if (!profilerDraft) return;
 	profilerDraft.rules[i][field] = value;
+}
+
+// Path edits drop the scan-time symbolic name (it no longer corresponds);
+// a custom-file lookup still supplies a display name for known paths.
+function profilerUpdateRulePath(i, value, input) {
+	if (!profilerDraft) return;
+	const r = profilerDraft.rules[i];
+	r.path = value;
+	r.name = null;
+	const span = input && input.parentElement ? input.parentElement.querySelector('.profiler-rule-name') : null;
+	if (span) span.textContent = profilerCustomNameForPath(value) || '';
 }
 
 function profilerUpdateRuleFileType(i, value) {
