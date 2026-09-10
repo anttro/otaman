@@ -5,7 +5,7 @@ const path = require('node:path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-function extractFunc(src, name) {
+function extractFunc(src, name, asyncFn) {
 	const re = new RegExp('function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{');
 	const m = re.exec(src);
 	if (!m) throw new Error('function ' + name + ' not found');
@@ -18,12 +18,14 @@ function extractFunc(src, name) {
 			if (depth === 0) break;
 		}
 	}
-	return src.slice(m.index, i + 1);
+	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
 const FNS = ['profilerNormHex', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
+code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
+code += html.match(/const PROFILER_MASK_PREFIX4_FIDS = \{[\s\S]*?\n\};/)[0] + '\n';
 eval(code);
 
 test('profilerNormHex uppercases and strips non-hex', () => {
@@ -106,4 +108,86 @@ test('profile validation', () => {
 	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'ota' }] }), 'Unsupported rule type: ota');
 	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'file' }] }), 'Rule missing path');
 	assert.strictEqual(profilerValidateProfile({ name: 'x', rules: [{ type: 'file', path: 'MF/7F10/6F3A' }] }), null);
+});
+
+// --- "Profile from card" ignore list ---
+
+function parseIgnoreFiles() {
+	const raw = html.match(/const PROFILER_IGNORE_FILES = \[([\s\S]*?)\n\];/)[1];
+	return [...raw.matchAll(/\{ fid: '([^']*)', name: '([^']*)' \}/g)].map(m => ({ fid: m[1], name: m[2] }));
+}
+
+test('ignore list FIDs are well-formed and KcGPRS uses the TS 51.011 FID (6F52)', () => {
+	const files = parseIgnoreFiles();
+	assert.ok(files.length >= 12);
+	for (const f of files) {
+		assert.match(f.fid, /^[0-9A-F]{4}$/, f.name + ' has a malformed FID');
+		assert.ok(f.name.startsWith('EF.'), f.fid + ' has a malformed name');
+	}
+	assert.strictEqual(files.find(f => f.name === 'EF.KcGPRS').fid, '6F52');
+});
+
+test('ignore list has no duplicate FIDs or names', () => {
+	const files = parseIgnoreFiles();
+	assert.strictEqual(new Set(files.map(f => f.fid)).size, files.length);
+	assert.strictEqual(new Set(files.map(f => f.name)).size, files.length);
+});
+
+function mockFetch(handlers) {
+	const calls = [];
+	global.pysimFetch = async (path, body) => {
+		calls.push(path);
+		if (handlers[path]) return handlers[path](body);
+		throw new Error('unexpected fetch: ' + path);
+	};
+	return calls;
+}
+
+const KCGPRS_SELECT = {
+	name: 'EF.KcGPRS', fid: '6F52', file_type: 'transparent',
+	file_size: 9, record_len: null, num_of_rec: null, exists: true,
+};
+
+test('profilerBuildFileRule skips contents for an ignored FID', async () => {
+	const calls = mockFetch({ '/api/select': () => KCGPRS_SELECT });
+	const rule = await profilerBuildFileRule('MF/7F20/6F52',
+		{ fid: '6f52', name: 'EF.KcGPRS' }, new Set(['6F52']), new Set(['EF.KCGPRS']));
+	assert.strictEqual(rule.content, null);
+	assert.strictEqual(rule.path, 'MF/7F20/6F52');
+	assert.strictEqual(rule.fileType, 'transparent');
+	assert.strictEqual(rule.fileSize, 9);
+	assert.ok(!calls.includes('/api/read'), 'contents must not be read for ignored files');
+});
+
+test('profilerBuildFileRule skips contents when the name matches but the FID differs', async () => {
+	// Regression: a KcGPRS copy at the TS 31.102 DF.GSM-ACCESS FID (4F52) must
+	// still be ignored when the user checked EF.KcGPRS in the ignore list.
+	const calls = mockFetch({
+		'/api/select': () => ({ name: 'EF.KcGPRS', fid: '4F52', file_type: 'transparent', file_size: 9, record_len: null, num_of_rec: null, exists: true }),
+	});
+	const rule = await profilerBuildFileRule('MF/5F3B/4F52',
+		{ fid: '4f52', name: 'EF.KcGPRS' }, new Set(['6F52']), new Set(['EF.KCGPRS']));
+	assert.strictEqual(rule.content, null);
+	assert.ok(!calls.includes('/api/read'), 'contents must not be read for name-matched files');
+});
+
+test('profilerBuildFileRule captures contents for non-ignored files', async () => {
+	const calls = mockFetch({
+		'/api/select': () => ({ name: 'EF.ADN', fid: '6F3A', file_type: 'transparent', file_size: 4, record_len: null, num_of_rec: null, exists: true }),
+		'/api/read': () => ({ success: true, data: 'AABBCCDD' }),
+	});
+	const rule = await profilerBuildFileRule('MF/7F20/6F3A',
+		{ fid: '6f3a', name: 'EF.ADN' }, new Set(['6F52']), new Set(['EF.KCGPRS']));
+	assert.ok(rule.content);
+	assert.strictEqual(rule.content.mode, 'exact');
+	assert.strictEqual(rule.content.expected, 'AABBCCDD');
+	assert.ok(calls.includes('/api/read'));
+});
+
+test('profilerBuildFileRule still ignores when ignoreNames is omitted (back-compat)', async () => {
+	const calls = mockFetch({ '/api/select': () => KCGPRS_SELECT });
+	const rule = await profilerBuildFileRule('MF/7F20/6F52',
+		{ fid: '6F52', name: 'EF.KcGPRS' }, new Set(['6F52']));
+	assert.strictEqual(rule.content, null);
+	assert.ok(!calls.includes('/api/read'));
 });

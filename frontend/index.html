@@ -6946,7 +6946,7 @@ const PROFILER_IGNORE_FILES = [
 	{ fid: '6F09', name: 'EF.KeysPS' },
 	{ fid: '6F3C', name: 'EF.SMS' },
 	{ fid: '6F20', name: 'EF.Kc' },
-	{ fid: '4F52', name: 'EF.KcGPRS' },
+	{ fid: '6F52', name: 'EF.KcGPRS' },
 	{ fid: '6F53', name: 'EF.LOCIGPRS' },
 	{ fid: '6F48', name: 'EF.CBMID' },
 	{ fid: '6F43', name: 'EF.SMSS' },
@@ -7086,7 +7086,7 @@ function profilerFromCard() {
 	let html = '';
 	for (const f of PROFILER_IGNORE_FILES) {
 		html += '<label class="flex items-center gap-2 text-sm">' +
-			'<input type="checkbox" data-ignore-fid="' + f.fid + '" checked>' +
+			'<input type="checkbox" data-ignore-fid="' + f.fid + '" data-ignore-name="' + f.name + '" checked>' +
 			'<span>' + esc(t('Ignore contents of')) + ' ' + esc(f.name) + '</span></label>';
 	}
 	ignore.innerHTML = html;
@@ -7107,14 +7107,18 @@ async function profilerScanStart() {
 		return;
 	}
 	const ignoreFids = new Set();
+	const ignoreNames = new Set();
 	document.querySelectorAll('#profiler-scan-ignore input[data-ignore-fid]').forEach(cb => {
-		if (cb.checked) ignoreFids.add(cb.getAttribute('data-ignore-fid').toUpperCase());
+		if (cb.checked) {
+			ignoreFids.add(cb.getAttribute('data-ignore-fid').toUpperCase());
+			ignoreNames.add((cb.getAttribute('data-ignore-name') || '').toUpperCase());
+		}
 	});
 	const btn = document.getElementById('profiler-scan-btn');
 	btn.disabled = true;
 	btn.textContent = t('Scanning...');
 	try {
-		const rules = await profilerScanCard(ignoreFids);
+		const rules = await profilerScanCard(ignoreFids, ignoreNames);
 		const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
 		profiles.push(profile);
 		profilerSave();
@@ -7130,7 +7134,7 @@ async function profilerScanStart() {
 }
 
 // Recursively walk the card filesystem and build rules for files that exist.
-async function profilerScanCard(ignoreFids) {
+async function profilerScanCard(ignoreFids, ignoreNames) {
 	const rules = [];
 	const seen = new Set();
 
@@ -7157,7 +7161,7 @@ async function profilerScanCard(ignoreFids) {
 				const childPath = dir.pathPrefix.concat(c.fid ? c.fid.toUpperCase() : c.name).join('/');
 				if (seen.has(childPath)) continue;
 				seen.add(childPath);
-				const rule = await profilerBuildFileRule(childPath, c, ignoreFids);
+				const rule = await profilerBuildFileRule(childPath, c, ignoreFids, ignoreNames);
 				if (rule) rules.push(rule);
 			}
 		}
@@ -7176,13 +7180,13 @@ async function profilerScanCard(ignoreFids) {
 		const path = segs.join('/');
 		if (seen.has(path)) continue;
 		seen.add(path);
-		const rule = await profilerBuildFileRule(path, { fid: cf.fid, name: cf.name }, ignoreFids);
+		const rule = await profilerBuildFileRule(path, { fid: cf.fid, name: cf.name }, ignoreFids, ignoreNames);
 		if (rule) rules.push(rule);
 	}
 	return rules;
 }
 
-async function profilerBuildFileRule(path, c, ignoreFids) {
+async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames) {
 	let sel;
 	try {
 		sel = await pysimFetch('/api/select', { path: path });
@@ -7199,7 +7203,8 @@ async function profilerBuildFileRule(path, c, ignoreFids) {
 		content: null,
 	};
 	const fid = (c.fid || sel.fid || '').toUpperCase();
-	if (ignoreFids.has(fid)) return rule;
+	const name = (c.name || sel.name || '').toUpperCase();
+	if (ignoreFids.has(fid) || (ignoreNames && ignoreNames.has(name))) return rule;
 	try {
 		const rd = await pysimFetch('/api/read', { path: path, mode: 'raw' });
 		if (rd && rd.success) {
