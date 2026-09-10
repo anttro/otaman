@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'profilerRenderReport'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -364,4 +364,94 @@ test('profilerScanCard without onProgress still works (back-compat)', async () =
 	};
 	const rules = await profilerScanCard(new Set(), new Set(), 'type_size');
 	assert.strictEqual(rules.length, 1);
+});
+
+// --- result report (aspects, summary, matching records) ---
+
+test('profilerNumRanges compresses consecutive record numbers', () => {
+	assert.strictEqual(profilerNumRanges([]), '');
+	assert.strictEqual(profilerNumRanges([1]), '1');
+	assert.strictEqual(profilerNumRanges([1, 2, 3, 4, 5, 7, 8, 9, 10]), '1-5, 7-10');
+	assert.strictEqual(profilerNumRanges([1, 3, 5]), '1, 3, 5');
+	assert.strictEqual(profilerNumRanges([7, 8, 1, 2]), '1-2, 7-8');
+	assert.strictEqual(profilerNumRanges([6]), '6');
+});
+
+test('profilerResultAspects groups checks and lets Exact FCI subsume type/size', () => {
+	assert.deepStrictEqual(
+		profilerResultAspects({ checks: [
+			{ label: 'fileType', ok: true }, { label: 'fileSize', ok: true }, { label: 'content', ok: true },
+		] }),
+		[{ key: 'filetype', ok: true }, { key: 'size', ok: true }, { key: 'contents', ok: true }]);
+	assert.deepStrictEqual(
+		profilerResultAspects({ checks: [
+			{ label: 'fileType', ok: true }, { label: 'fileSize', ok: true }, { label: 'fci', ok: false }, { label: 'content', ok: true },
+		] }),
+		[{ key: 'Exact FCI', ok: false }, { key: 'contents', ok: true }]);
+	assert.deepStrictEqual(
+		profilerResultAspects({ checks: [
+			{ label: 'recordLen', ok: true }, { label: 'numRecords', ok: false },
+		] }),
+		[{ key: 'records', ok: false }]);
+	assert.deepStrictEqual(profilerResultAspects({ checks: [{ label: 'exists', ok: true }] }), []);
+});
+
+test('profilerAspectSummary renders plain list when nothing failed', () => {
+	const tr = s => s;
+	assert.strictEqual(
+		profilerAspectSummary([{ key: 'filetype', ok: true }, { key: 'size', ok: true }, { key: 'contents', ok: true }], false, tr),
+		'filetype and size, contents');
+	assert.strictEqual(
+		profilerAspectSummary([{ key: 'filetype', ok: true }, { key: 'records', ok: true }, { key: 'contents', ok: true }], false, tr),
+		'filetype and records, contents');
+	assert.strictEqual(
+		profilerAspectSummary([{ key: 'Exact FCI', ok: true }, { key: 'contents', ok: true }], false, tr),
+		'Exact FCI, contents');
+	assert.strictEqual(profilerAspectSummary([{ key: 'filetype', ok: true }], false, tr), 'filetype');
+	assert.strictEqual(profilerAspectSummary([], false, tr), '');
+});
+
+test('profilerAspectSummary marks per-aspect when mixed', () => {
+	const tr = s => s;
+	assert.strictEqual(
+		profilerAspectSummary([{ key: 'filetype', ok: true }, { key: 'size', ok: false }, { key: 'contents', ok: true }], true, tr),
+		'filetype ✓, size ✗, contents ✓');
+	assert.strictEqual(
+		profilerAspectSummary([{ key: 'Exact FCI', ok: false }, { key: 'contents', ok: true }], true, tr),
+		'Exact FCI ✗, contents ✓');
+});
+
+test('profilerRunRule records which records matched on a record mismatch', async () => {
+	mockFetch({
+		'/api/select': () => ({ name: 'EF.X', fid: '6F3A', file_type: 'linear_fixed', file_size: null, record_len: 2, num_of_rec: 3, exists: true }),
+		'/api/read': () => ({ success: true, records: [{ num: 1, data: 'AA' }, { num: 2, data: 'XX' }, { num: 3, data: 'CC' }] }),
+	});
+	const res = await profilerRunRule({
+		path: 'MF/7F20/6F3A', fileType: 'linear_fixed', recordLen: 2, numRecords: 3, fciMode: 'type_size',
+		content: { mode: 'exact', kind: 'record', records: [{ num: 1, data: 'AA' }, { num: 2, data: 'BB' }, { num: 3, data: 'CC' }] },
+	});
+	assert.strictEqual(res.status, 'fail');
+	assert.deepStrictEqual(res.recordsMatched, [1, 3]);
+});
+
+test('profilerRenderReport includes the checked-aspects summary and matching-record note', () => {
+	global.t = s => s;
+	global.pysimCustomFiles = [];
+	const html = profilerRenderReport([
+		{ path: 'MF/7F20/6F3F', name: 'EF.GID2', status: 'pass', checks: [
+			{ label: 'fileType', ok: true }, { label: 'fileSize', ok: true }, { label: 'content', ok: true },
+		] },
+		{ path: 'MF/7F20/6F3A', name: 'EF.X', status: 'fail', checks: [
+			{ label: 'fileType', ok: true }, { label: 'fileSize', ok: false, expected: 4, actual: 99 }, { label: 'content', ok: true },
+		] },
+		{ path: 'MF/7F20/6F4E', name: 'EF.Y', status: 'fail', checks: [
+			{ label: 'content.rec6', ok: false, expected: 'BB', actual: 'XX' },
+			{ label: 'content.rec1', ok: true }, { label: 'content.rec2', ok: true }, { label: 'content.rec5', ok: true },
+		], recordsMatched: [1, 2, 5] },
+	]);
+	assert.ok(html.includes('filetype and size, contents'));
+	assert.ok(html.includes('filetype ✓, size ✗, contents ✓'));
+	assert.ok(html.includes('matching records'));
+	assert.ok(html.includes('1-2, 5'));
+	delete global.t;
 });

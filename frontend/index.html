@@ -7611,12 +7611,14 @@ async function profilerRunRule(r) {
 				res.status = 'fail';
 				res.checks.push({ label: 'content.records', expected: exp.length + ' records', actual: act.length + ' records', ok: false });
 			}
+			const matched = [];
 			for (let j = 0; j < n; j++) {
 				const dataOk = sizeMismatch ? profilerMatchMin(r.content.mode, exp[j].data, act[j].data) : profilerMatch(r.content.mode, exp[j].data, act[j].data);
 				const ok = exp[j].num === act[j].num && dataOk;
-				if (!ok) res.status = 'fail';
+				if (!ok) res.status = 'fail'; else matched.push(exp[j].num);
 				res.checks.push({ label: 'content.rec' + exp[j].num, expected: exp[j].data, actual: act[j].data, ok: ok });
 			}
+			if (matched.length) res.recordsMatched = matched;
 		} else {
 			const ok = sizeMismatch ? profilerMatchMin(r.content.mode, r.content.expected, rd.data) : profilerMatch(r.content.mode, r.content.expected, rd.data);
 			if (!ok) res.status = 'fail';
@@ -7640,6 +7642,65 @@ function profilerCustomNameForPath(path) {
 	return null;
 }
 
+// Group a rule's result checks into display aspects, derived from the checks
+// that actually ran. 'Exact FCI' subsumes filetype/size/records; 'exists' is
+// implicit and omitted.
+function profilerResultAspects(res) {
+	const groups = { filetype: [], size: [], records: [], 'Exact FCI': [], contents: [] };
+	for (const c of (res.checks || [])) {
+		const l = c.label;
+		if (l === 'fileType') groups.filetype.push(c);
+		else if (l === 'fileSize') groups.size.push(c);
+		else if (l === 'recordLen' || l === 'numRecords') groups.records.push(c);
+		else if (l === 'fci') groups['Exact FCI'].push(c);
+		else if (l === 'content' || l.startsWith('content.')) groups.contents.push(c);
+	}
+	const out = [];
+	if (groups['Exact FCI'].length) {
+		out.push({ key: 'Exact FCI', ok: groups['Exact FCI'].every(c => c.ok) });
+	} else {
+		if (groups.filetype.length) out.push({ key: 'filetype', ok: groups.filetype.every(c => c.ok) });
+		if (groups.size.length) out.push({ key: 'size', ok: groups.size.every(c => c.ok) });
+		if (groups.records.length) out.push({ key: 'records', ok: groups.records.every(c => c.ok) });
+	}
+	if (groups.contents.length) out.push({ key: 'contents', ok: groups.contents.every(c => c.ok) });
+	return out;
+}
+
+function profilerAspectSummary(aspects, marked, tr) {
+	tr = tr || (s => s);
+	if (!aspects || !aspects.length) return '';
+	if (marked) return aspects.map(a => tr(a.key) + ' ' + (a.ok ? '✓' : '✗')).join(', ');
+	const has = k => aspects.some(a => a.key === k);
+	let fcp = '';
+	if (has('Exact FCI')) fcp = tr('Exact FCI');
+	else if (has('filetype') && has('records')) fcp = tr('filetype and records');
+	else if (has('filetype') && has('size')) fcp = tr('filetype and size');
+	else if (has('filetype')) fcp = tr('filetype');
+	else if (has('records')) fcp = tr('records');
+	else if (has('size')) fcp = tr('size');
+	const parts = [];
+	if (fcp) parts.push(fcp);
+	if (has('contents')) parts.push(tr('contents'));
+	return parts.join(', ');
+}
+
+// Compress a list of record numbers into ranges: [1,2,3,5,7] -> "1-3, 5, 7".
+function profilerNumRanges(nums) {
+	if (!nums || !nums.length) return '';
+	const sorted = nums.slice().sort((a, b) => a - b);
+	const parts = [];
+	let start = null, prev = null;
+	for (const n of sorted) {
+		if (start === null) { start = prev = n; continue; }
+		if (n === prev + 1) { prev = n; continue; }
+		parts.push(start === prev ? String(start) : start + '-' + prev);
+		start = prev = n;
+	}
+	if (start !== null) parts.push(start === prev ? String(start) : start + '-' + prev);
+	return parts.join(', ');
+}
+
 function profilerRenderReport(results) {
 	let html = '';
 	for (const r of results) {
@@ -7649,12 +7710,20 @@ function profilerRenderReport(results) {
 		const title = name
 			? '<span>' + esc(name) + '</span> <span class="text-gray-400 dark:text-slate-500">(' + esc(r.path) + ')</span>'
 			: '<span>' + esc(r.path) + '</span>';
+		const aspects = profilerResultAspects(r);
+		const marked = aspects.some(a => !a.ok);
+		const summary = profilerAspectSummary(aspects, marked, t);
 		html += '<div class="mb-2 p-2 border border-gray-200 dark:border-slate-600 rounded">';
-		html += '<div class="flex items-center gap-2"><span class="' + color + ' font-bold">' + icon + '</span><span class="font-mono text-sm">' + title + '</span></div>';
+		html += '<div class="flex items-center gap-2"><span class="' + color + ' font-bold">' + icon + '</span><span class="font-mono text-sm">' + title + '</span>' +
+			(summary ? '<span class="text-xs text-gray-500 dark:text-slate-400">: ' + esc(summary) + '</span>' : '') + '</div>';
 		if (r.error) html += '<div class="text-xs text-yellow-600 mt-1">' + esc(r.error) + '</div>';
 		for (const c of r.checks) {
 			if (c.ok) continue;
 			html += '<div class="text-xs text-red-600 mt-1">' + esc(c.label) + ': ' + esc(t('expected')) + ' <b>' + esc(String(c.expected)) + '</b>, ' + esc(t('actual')) + ' <b>' + esc(String(c.actual)) + '</b></div>';
+		}
+		const recFailed = (r.checks || []).some(c => /^content\.rec\d+$/.test(c.label) && !c.ok);
+		if (recFailed && r.recordsMatched && r.recordsMatched.length) {
+			html += '<div class="text-xs text-emerald-600 mt-1">' + esc(t('matching records')) + ': ' + esc(profilerNumRanges(r.recordsMatched)) + '</div>';
 		}
 		html += '</div>';
 	}
@@ -7890,6 +7959,13 @@ const LANG_RU = {
 	'Record length': 'Длина записи',
 	'Record count': 'Кол-во записей',
 	'Check contents': 'Проверить содержимое',
+	'filetype': 'тип файла',
+	'size': 'размер',
+	'records': 'записи',
+	'contents': 'содержимое',
+	'filetype and size': 'тип файла и размер',
+	'filetype and records': 'тип файла и записи',
+	'matching records': 'совпадающие записи',
 	'None': 'Нет',
 	'Exact': 'Точное',
 	'Mask': 'Маска',
