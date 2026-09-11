@@ -7413,7 +7413,7 @@ function profilerRenderRule(i, r) {
 		html += '<div class="mb-2 flex gap-3 items-start">';
 		html += '<div class="flex-1 min-w-0"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('FCI hex (raw SELECT response)')) + '</label>' +
 			'<textarea oninput="profilerFciInput(' + i + ',this.value)" rows="4" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="62...">' + escHtml(r.fciHex || '') + '</textarea></div>';
-		html += '<div class="flex-1 min-w-0"><div class="text-xs text-gray-500 dark:text-slate-400 mb-0.5">' + esc(t('Decoded FCP')) + '</div>' +
+		html += '<div class="flex-1 min-w-0"><div class="text-xs text-gray-500 dark:text-slate-400 mb-0.5">' + esc(t('Decoded FCI')) + '</div>' +
 			'<div id="profiler-fci-preview-' + i + '" class="text-xs font-mono leading-relaxed text-gray-600 dark:text-slate-400 break-all">' + profilerFciPreviewItems(r.fciHex || '') + '</div></div>';
 		html += '</div>';
 	}
@@ -8272,7 +8272,7 @@ const LANG_RU = {
 	'FCI hex (raw SELECT response)': 'FCI hex (сырой ответ SELECT)',
 	'FCP parameters': 'Параметры FCP',
 	'Parameter': 'Параметр',
-	'Decoded FCP': 'Декодированный FCP',
+	'Decoded FCI': 'Декодированный FCI',
 	'Decode failed': 'Ошибка декодирования',
 	'No profiles defined.': 'Профили не заданы.',
 	'rules': 'правил',
