@@ -7991,7 +7991,7 @@ function fcpDiffHtml(expectedHex, actualHex) {
 	for (const it of a.items) if (!eMap[it.key]) keys.push(it.key);
 	let html = '';
 	if (keys.length) {
-		html += '<div class="mt-1 text-xs text-gray-500 dark:text-slate-400">' + esc(t('FCP parameters')) + '</div>';
+		html += '<div class="mt-1 text-xs text-gray-500 dark:text-slate-400">' + esc(t('FCI parameters')) + '</div>';
 		html += '<table class="w-full text-xs border-collapse">';
 		html += '<thead><tr class="border-b border-gray-200 dark:border-slate-700">' +
 			'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('Parameter')) + '</th>' +
@@ -8296,7 +8296,7 @@ const LANG_RU = {
 	'Filetype + size (FCP)': 'Тип файла + размер (FCP)',
 	'Exact FCI': 'Полный FCI',
 	'FCI hex (raw SELECT response)': 'FCI hex (сырой ответ SELECT)',
-	'FCP parameters': 'Параметры FCP',
+	'FCI parameters': 'Параметры FCI',
 	'Parameter': 'Параметр',
 	'Decoded FCI': 'Декодированный FCI',
 	'Decode failed': 'Ошибка декодирования',

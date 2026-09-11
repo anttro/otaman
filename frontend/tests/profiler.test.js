@@ -682,7 +682,7 @@ test('fcpDecode accepts long-form BER lengths (81/82) — editor preview regress
 	delete global.t;
 });
 
-test('fcpDiffHtml highlights differing FCP parameters', () => {
+test('fcpDiffHtml highlights differing FCI parameters', () => {
 	global.t = s => s;
 	const same = fcpDiffHtml(FCP_TRANSPARENT, FCP_TRANSPARENT);
 	assert.ok(same.includes('File size'));
@@ -727,7 +727,7 @@ test('profilerRenderReport shows the decoded FCI diff for a raw fci mismatch', (
 			{ label: 'fci', ok: false, expected: FCP_TRANSPARENT, actual: '62128002000A8202412183026F078A0105880110' },
 		] },
 	]);
-	assert.ok(html.includes('FCP parameters'));
+	assert.ok(html.includes('FCI parameters'));
 	assert.ok(html.includes('9 bytes'));
 	assert.ok(html.includes('10 bytes'));
 	assert.ok(html.includes('text-red-600'));
@@ -780,7 +780,7 @@ test('fcpDiffHtml appends decode-failure notes for corrupt sides', () => {
 	global.t = s => s;
 	const trunc = '6216' + FCP_TRANSPARENT.slice(4);
 	const html = fcpDiffHtml(trunc, FCP_TRANSPARENT);
-	assert.ok(html.includes('FCP parameters'), html);
+	assert.ok(html.includes('FCI parameters'), html);
 	assert.ok(html.includes('9 bytes'));
 	assert.ok(html.includes('expected: ') && html.includes('TLV 62 declares 22 bytes'));
 	// both sides empty -> nothing rendered
