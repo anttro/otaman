@@ -7383,8 +7383,11 @@ function profilerRenderRule(i, r) {
 	html += '<button onclick="profilerDeleteRule(' + i + ')" class="ml-auto px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
 	html += '</div>';
 	const sname = profilerCustomNameForPath(r.path) || r.name || '';
-	html += '<div class="flex gap-2 mb-2">';
-	html += '<div class="w-72 shrink-0"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Path')) +
+	const vis = profilerFileFields(r.fileType);
+	const showSize = vis.size && fciMode !== 'type';
+	const showRecords = vis.records && fciMode !== 'type';
+	html += '<div class="flex flex-wrap gap-2 mb-2">';
+	html += '<div class="w-48 shrink-0"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('Path')) +
 		' <span class="profiler-rule-name font-normal text-gray-400 dark:text-slate-500">' + esc(sname) + '</span></label>' +
 		'<input value="' + escHtml(r.path || '') + '" oninput="profilerUpdateRulePath(' + i + ',this.value,this)" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="MF/7F10/6F3A"></div>';
 	html += '<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('FCP/FCI check')) + '</label>' +
@@ -7393,11 +7396,6 @@ function profilerRenderRule(i, r) {
 		'<option value="type_size"' + (fciMode === 'type_size' ? ' selected' : '') + '>' + esc(t('Filetype + size (FCP)')) + '</option>' +
 		'<option value="exact"' + (fciMode === 'exact' ? ' selected' : '') + '>' + esc(t('Exact FCI')) + '</option>' +
 		'</select></div>';
-	html += '</div>';
-	const vis = profilerFileFields(r.fileType);
-	const showSize = vis.size && fciMode !== 'type';
-	const showRecords = vis.records && fciMode !== 'type';
-	html += '<div class="flex gap-2 mb-2">';
 	html += '<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('File type')) + '</label>' +
 		'<select onchange="profilerUpdateRuleFileType(' + i + ',this.value||null)" class="w-full border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">' + ftOpts + '</select></div>';
 	if (showSize) {
