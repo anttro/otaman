@@ -848,6 +848,10 @@
 				<div class="flex flex-wrap gap-2 items-center mb-3">
 					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
 					<span id="profiler-results-title" class="text-sm font-semibold"></span>
+					<label class="ml-auto flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400 cursor-pointer">
+						<input id="profiler-mismatch-only" type="checkbox" onchange="profilerToggleMismatchOnly(this.checked)">
+						<span data-l10n="Only mismatches">Only mismatches</span>
+					</label>
 				</div>
 				<div id="profiler-progress" class="mb-2 text-base font-mono text-gray-600 dark:text-slate-400"></div>
 				<div id="profiler-summary" class="mb-2 text-sm"></div>
@@ -6988,6 +6992,7 @@ let profilerView = 'list';
 let profilerEditId = null;
 let profilerDraft = null;
 let profilerResults = null;
+let profilerMismatchOnly = false;
 let snapshots = [];
 let snapshotViewId = null;
 let _scanTarget = 'profile';
@@ -7932,6 +7937,15 @@ async function profilerCheckSnapshot(i, si) {
 	await profilerRunProfile(p, profilerSnapshotSource(s), p.name + ' — ' + s.name);
 }
 
+function profilerToggleMismatchOnly(checked) {
+	profilerMismatchOnly = checked;
+	profilerRenderResultsView();
+}
+
+function profilerVisibleResults(results, mismatchOnly) {
+	return mismatchOnly ? results.filter(r => r.status !== 'pass') : results;
+}
+
 function profilerRenderResultsView() {
 	if (!profilerResults) return;
 	let passed = 0, failed = 0, errors = 0;
@@ -7943,7 +7957,10 @@ function profilerRenderResultsView() {
 	document.getElementById('profiler-summary').innerHTML = '<span class="text-emerald-600 font-semibold">' + passed + ' ' + t('passed') + '</span>' +
 		' · <span class="text-red-600 font-semibold">' + failed + ' ' + t('failed') + '</span>' +
 		' · <span class="text-yellow-600 font-semibold">' + errors + ' ' + t('errors') + '</span>';
-	document.getElementById('profiler-report').innerHTML = profilerRenderReport(profilerResults);
+	const shown = profilerVisibleResults(profilerResults, profilerMismatchOnly);
+	document.getElementById('profiler-report').innerHTML = shown.length
+		? profilerRenderReport(shown)
+		: '<div class="text-sm text-emerald-600">' + esc(t('No mismatches')) + '</div>';
 }
 
 function profilerLiveSource() {
@@ -8730,6 +8747,8 @@ const LANG_RU = {
 	'passed': 'пройдено',
 	'failed': 'не пройдено',
 	'errors': 'ошибок',
+	'Only mismatches': 'Только расхождения',
+	'No mismatches': 'Расхождений нет',
 	'expected': 'ожидалось',
 	'actual': 'фактически',
 	'HTTP OTA': 'HTTP OTA',
