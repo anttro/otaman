@@ -7071,7 +7071,7 @@ function profilerRenderList() {
 		html += '<span class="text-xs text-gray-400 dark:text-slate-500">' + esc(new Date(p.created).toLocaleString()) + '</span>';
 		html += '<span class="text-xs text-gray-400 dark:text-slate-500">(' + p.rules.length + ' ' + esc(t('rules')) + ')</span>';
 		html += '<span class="ml-auto flex gap-1">';
-		html += '<button onclick="profilerCheck(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700">' + esc(t('Check')) + ' ▶</button>';
+		html += '<button onclick="profilerCheck(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700">' + esc(t('Check card')) + ' ▶</button>';
 		html += '<button onclick="profilerEdit(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + esc(t('Edit')) + '</button>';
 		html += '<button onclick="profilerExport(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">' + esc(t('Export')) + '</button>';
 		html += '<button onclick="profilerDelete(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
@@ -8004,7 +8004,7 @@ const LANG_RU = {
 	'FCI hex (raw SELECT response)': 'FCI hex (сырой ответ SELECT)',
 	'No profiles defined.': 'Профили не заданы.',
 	'rules': 'правил',
-	'Check': 'Проверить',
+	'Check card': 'Проверить карту',
 	'Export': 'Экспорт',
 	'Profile name': 'Имя профиля',
 	'Please enter a profile name': 'Введите имя профиля',
