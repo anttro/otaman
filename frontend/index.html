@@ -813,9 +813,9 @@
 
 		<div id="pysim-sub-profiler" class="hidden">
 			<div id="profiler-list">
-				<div class="flex justify-center gap-2 mb-3">
-					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-list-tab="profiles" onclick="profilerListSwitch('profiles')" data-l10n="Profiles">Profiles</button>
-					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-list-tab="snapshots" onclick="profilerListSwitch('snapshots')" data-l10n="Card snapshots">Card snapshots</button>
+				<div class="flex gap-1 mb-3 border-b border-gray-300 dark:border-slate-600">
+					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-t bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-list-tab="profiles" onclick="profilerListSwitch('profiles')" data-l10n="Profiles">Profiles</button>
+					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-list-tab="snapshots" onclick="profilerListSwitch('snapshots')" data-l10n="Card snapshots">Card snapshots</button>
 				</div>
 				<div id="profiler-list-profiles">
 					<div class="flex flex-wrap gap-2 mb-3">
@@ -7142,7 +7142,9 @@ function profilerListSwitch(name) {
 	document.querySelectorAll('.profiler-list-tab').forEach(btn => {
 		const active = btn.dataset.listTab === name;
 		btn.classList.toggle('bg-blue-600', active);
+		btn.classList.toggle('dark:bg-blue-500', active);
 		btn.classList.toggle('text-white', active);
+		btn.classList.toggle('dark:text-white', active);
 		btn.classList.toggle('bg-gray-200', !active);
 		btn.classList.toggle('dark:bg-slate-700', !active);
 		btn.classList.toggle('text-gray-700', !active);
