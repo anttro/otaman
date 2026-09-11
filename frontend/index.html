@@ -7225,6 +7225,16 @@ function profilerScanSetTarget(target) {
 	document.getElementById('profiler-scan-options').classList.toggle('hidden', target === 'snapshot');
 }
 
+// Re-translate the dynamically built mask labels in the open scan modal,
+// preserving the checkbox state (ignore-list labels are plain file names).
+function profilerScanRefreshOptions() {
+	if (_scanTarget === 'snapshot') return;
+	document.querySelectorAll('#profiler-scan-mask input[data-mask-fid]').forEach(cb => {
+		const span = cb.parentElement ? cb.parentElement.querySelector('span') : null;
+		if (span) span.textContent = t('Match first 4 bytes for') + ' ' + PROFILER_MASK_PREFIX4_FIDS[cb.getAttribute('data-mask-fid')];
+	});
+}
+
 function profilerFromCard() {
 	profilerScanSetTarget('profile');
 	document.getElementById('profiler-scan-name').value = '';
@@ -7594,6 +7604,14 @@ function snapshotOpen(i) {
 	snapshotViewId = s.id;
 	profilerSetView('snapshot');
 	document.getElementById('snapshot-name').value = s.name;
+	profilerRenderSnapshotData();
+}
+
+// Re-render the immutable part of the snapshot view (ICCID + file cards)
+// without touching the (editable) name input.
+function profilerRenderSnapshotData() {
+	const s = snapshots.find(x => x.id === snapshotViewId);
+	if (!s) return;
 	document.getElementById('snapshot-iccid').textContent = s.iccid || '';
 	document.getElementById('snapshot-files').innerHTML = profilerRenderSnapshotFiles(s);
 }
@@ -7863,26 +7881,31 @@ async function profilerCheck(i) {
 	profilerSetView('results');
 	document.getElementById('profiler-results-title').textContent = p.name;
 	const prog = document.getElementById('profiler-progress');
-	const summary = document.getElementById('profiler-summary');
-	const report = document.getElementById('profiler-report');
-	report.innerHTML = '';
-	summary.innerHTML = '';
+	document.getElementById('profiler-summary').innerHTML = '';
+	document.getElementById('profiler-report').innerHTML = '';
 	const results = [];
-	let passed = 0, failed = 0, errors = 0;
 	for (let ri = 0; ri < p.rules.length; ri++) {
 		const r = p.rules[ri];
 		prog.textContent = t('Checking') + ' ' + (ri + 1) + '/' + p.rules.length + ' — ' + r.path;
-		const res = await profilerRunRule(r);
-		results.push(res);
+		results.push(await profilerRunRule(r));
+	}
+	prog.textContent = '';
+	profilerResults = results;
+	profilerRenderResultsView();
+}
+
+function profilerRenderResultsView() {
+	if (!profilerResults) return;
+	let passed = 0, failed = 0, errors = 0;
+	for (const res of profilerResults) {
 		if (res.status === 'pass') passed++;
 		else if (res.status === 'fail') failed++;
 		else errors++;
 	}
-	prog.textContent = '';
-	summary.innerHTML = '<span class="text-emerald-600 font-semibold">' + passed + ' ' + t('passed') + '</span>' +
+	document.getElementById('profiler-summary').innerHTML = '<span class="text-emerald-600 font-semibold">' + passed + ' ' + t('passed') + '</span>' +
 		' · <span class="text-red-600 font-semibold">' + failed + ' ' + t('failed') + '</span>' +
 		' · <span class="text-yellow-600 font-semibold">' + errors + ' ' + t('errors') + '</span>';
-	report.innerHTML = profilerRenderReport(results);
+	document.getElementById('profiler-report').innerHTML = profilerRenderReport(profilerResults);
 }
 
 async function profilerRunRule(r) {
@@ -8660,9 +8683,9 @@ function t(text) {
 function toggleLang() {
 	currentLang = currentLang === 'en' ? 'ru' : 'en';
 	localStorage.setItem('lang', currentLang);
-document.getElementById('lang-btn').textContent = currentLang.toUpperCase();
-translatePage();
+	document.getElementById('lang-btn').textContent = currentLang.toUpperCase();
 	translatePage();
+	refreshDynamicI18n();
 	updateHelpLink();
 }
 
@@ -8686,6 +8709,29 @@ function translatePage() {
 	});
 	const slogan = document.getElementById('slogan');
 	if (slogan) slogan.textContent = t('SIM OTA with a Human Face');
+}
+
+function isViewVisible(id) {
+	const el = document.getElementById(id);
+	return !!el && !el.classList.contains('hidden');
+}
+
+// Dynamic views build their labels with t() at render time; re-render the
+// visible ones after a language switch so they don't stay in the old language.
+function refreshDynamicI18n() {
+	if (isViewVisible('pysim-sub-profiler')) {
+		if (profilerView === 'list') { profilerRenderList(); profilerRenderSnapshotList(); }
+		else if (profilerView === 'editor') profilerRenderEditor();
+		else if (profilerView === 'results') profilerRenderResultsView();
+		else if (profilerView === 'snapshot') profilerRenderSnapshotData();
+	}
+	if (isViewVisible('profiler-scan-modal')) profilerScanRefreshOptions();
+	if (isViewVisible('scp80-sub-cards')) cardsRender();
+	if (isViewVisible('pysim-sub-proactive')) {
+		pysimEventsRender();
+		pysimProactiveLogRender();
+		pysimPliRender();
+	}
 }
 
 // Init language

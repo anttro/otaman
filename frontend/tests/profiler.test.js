@@ -21,13 +21,14 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
 code += extractFunc(html, 'profilerRunRule', true) + '\n';
 code += extractFunc(html, 'profilerScanCard', true) + '\n';
 code += extractFunc(html, 'profilerBuildSnapshotFile', true) + '\n';
+code += "var _scanTarget = 'profile';\n";
 code += html.match(/const PROFILER_MASK_PREFIX4_FIDS = \{[\s\S]*?\n\};/)[0] + '\n';
 eval(code);
 
@@ -941,4 +942,22 @@ test('profilerListSwitch toggles the profiles/snapshots tabs', () => {
 	assert.ok(btns[1].classList._c.has('bg-gray-200'));
 
 	delete global.document;
+});
+
+test('profilerScanRefreshOptions re-translates mask labels without touching checkbox state', () => {
+	global.t = s => (s === 'Match first 4 bytes for' ? 'FIRST4' : s);
+	const span = { textContent: '' };
+	const cb = {
+		checked: true,
+		parentElement: { querySelector: sel => (sel === 'span' ? span : null) },
+		getAttribute: () => '6F07',
+	};
+	global.document = {
+		querySelectorAll: sel => (sel === '#profiler-scan-mask input[data-mask-fid]' ? [cb] : []),
+	};
+	profilerScanRefreshOptions();
+	assert.strictEqual(span.textContent, 'FIRST4 EF.IMSI');
+	assert.strictEqual(cb.checked, true);
+	delete global.document;
+	delete global.t;
 });
