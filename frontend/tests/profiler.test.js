@@ -21,12 +21,13 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
 code += extractFunc(html, 'profilerRunRule', true) + '\n';
 code += extractFunc(html, 'profilerScanCard', true) + '\n';
+code += extractFunc(html, 'profilerBuildSnapshotFile', true) + '\n';
 code += html.match(/const PROFILER_MASK_PREFIX4_FIDS = \{[\s\S]*?\n\};/)[0] + '\n';
 eval(code);
 
@@ -818,4 +819,98 @@ test('profilerScanToggleAll / profilerScanIgnoreAllState manage the ignore check
 	assert.strictEqual(header.indeterminate, false);
 
 	delete global.document;
+});
+
+// --- card snapshots ---
+
+test('decIccid decodes nibble-swapped EF.ICCID digits and strips F padding', () => {
+	assert.strictEqual(decIccid('980711090000640090F8'), '8970119000004600098');
+	assert.strictEqual(decIccid('98103254769810325476'), '89012345678901234567');
+	assert.strictEqual(decIccid('98 07 11 09 00 00 64 00 90 f8'), '8970119000004600098');
+	assert.strictEqual(decIccid(''), '');
+});
+
+test('profilerSnapshotIccid finds EF.ICCID by name or FID and handles null cases', () => {
+	const hex = '980711090000640090F8';
+	assert.strictEqual(
+		profilerSnapshotIccid([{ path: 'MF/2FE2', name: 'EF.ICCID', content: { kind: 'transparent', data: hex } }]),
+		'8970119000004600098');
+	assert.strictEqual(
+		profilerSnapshotIccid([{ path: 'MF/6F07', name: 'x', content: { kind: 'transparent', data: hex } }]),
+		null);
+	assert.strictEqual(
+		profilerSnapshotIccid([{ path: 'MF/2FE2', name: 'EF.ICCID', content: null }]),
+		null);
+	assert.strictEqual(profilerSnapshotIccid([]), null);
+});
+
+test('profilerValidateSnapshot checks name and files array', () => {
+	assert.strictEqual(profilerValidateSnapshot(null), 'Not an object');
+	assert.strictEqual(profilerValidateSnapshot({ name: 'x' }), 'Missing files array');
+	assert.strictEqual(profilerValidateSnapshot({ name: 'x', files: 'nope' }), 'Missing files array');
+	assert.strictEqual(profilerValidateSnapshot({ files: [] }), 'Missing name');
+	assert.strictEqual(profilerValidateSnapshot({ name: 'x', files: [null] }), 'Invalid file entry');
+	assert.strictEqual(profilerValidateSnapshot({ name: 'x', files: [{}] }), 'File entry missing path');
+	assert.strictEqual(profilerValidateSnapshot({ name: 'x', files: [{ path: 'MF/6F07' }] }), null);
+});
+
+test('profilerBuildSnapshotFile captures exact contents for everything readable', async () => {
+	// transparent file (IMSI) is captured exactly, no mask
+	mockFetch({
+		'/api/select': () => ({ name: 'EF.IMSI', fid: '6F07', file_type: 'transparent', file_size: 9, record_len: null, num_of_rec: null, fci_hex: '6212', exists: true }),
+		'/api/read': () => ({ success: true, data: '082905911234567890' }),
+	});
+	const f = await profilerBuildSnapshotFile('MF/6F07', { fid: '6f07', name: 'EF.IMSI' });
+	assert.strictEqual(f.name, 'EF.IMSI');
+	assert.strictEqual(f.fileType, 'transparent');
+	assert.strictEqual(f.fileSize, 9);
+	assert.strictEqual(f.fciHex, '6212');
+	assert.deepStrictEqual(f.content, { kind: 'transparent', data: '082905911234567890' });
+
+	// record file
+	mockFetch({
+		'/api/select': () => ({ name: 'EF.ADN', fid: '6F3A', file_type: 'linear_fixed', file_size: null, record_len: 2, num_of_rec: 2, fci_hex: '620E', exists: true }),
+		'/api/read': () => ({ success: true, records: [{ num: 1, data: 'AA' }, { num: 2, data: 'BB' }] }),
+	});
+	const r = await profilerBuildSnapshotFile('MF/7F20/6F3A', { fid: '6F3A', name: 'EF.ADN' });
+	assert.strictEqual(r.recordLen, 2);
+	assert.strictEqual(r.numRecords, 2);
+	assert.deepStrictEqual(r.content, { kind: 'record', records: [{ num: 1, data: 'AA' }, { num: 2, data: 'BB' }] });
+
+	// unreadable -> content null, metadata kept
+	mockFetch({
+		'/api/select': () => ({ name: 'EF.Kc', fid: '6F20', file_type: 'transparent', file_size: 9, record_len: null, num_of_rec: null, fci_hex: '620A', exists: true }),
+		'/api/read': () => ({ success: false, sw: '6982' }),
+	});
+	const u = await profilerBuildSnapshotFile('MF/7F20/6F20', { fid: '6F20', name: 'EF.Kc' });
+	assert.strictEqual(u.content, null);
+	assert.strictEqual(u.fileSize, 9);
+});
+
+test('profilerScanCard snapshot mode builds snapshot entries with ICCID', async () => {
+	global.pysimCustomFiles = [];
+	global.pysimFetch = async (path, body) => {
+		if (path === '/api/tree') return { exists: true, name: 'MF', children: [
+			{ name: 'EF.ICCID', fid: '2fe2', isDir: false },
+			{ name: 'EF.IMSI', fid: '6f07', isDir: false },
+		] };
+		if (path === '/api/select') {
+			const fid = body.path.split('/').pop();
+			if (fid === '2FE2') return { name: 'EF.ICCID', fid: '2FE2', file_type: 'transparent', file_size: 10, record_len: null, num_of_rec: null, fci_hex: '620E', exists: true };
+			return { name: 'EF.IMSI', fid: '6F07', file_type: 'transparent', file_size: 9, record_len: null, num_of_rec: null, fci_hex: '6212', exists: true };
+		}
+		if (path === '/api/read') {
+			return body.path.endsWith('2FE2')
+				? { success: true, data: '980711090000640090F8' }
+				: { success: true, data: '082905911234567890' };
+		}
+		throw new Error('unexpected ' + path);
+	};
+	const files = await profilerScanCard(new Set(), new Set(), 'exact', undefined, new Set(), 'snapshot');
+	assert.strictEqual(files.length, 2);
+	assert.ok(!files[0].fciMode, 'snapshot entries carry no FCI mode');
+	assert.strictEqual(profilerSnapshotIccid(files), '8970119000004600098');
+	// IMSI captured exactly (no mask)
+	assert.strictEqual(files.find(f => f.name === 'EF.IMSI').content.data, '082905911234567890');
+	delete global.pysimCustomFiles;
 });

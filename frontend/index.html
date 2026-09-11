@@ -813,13 +813,27 @@
 
 		<div id="pysim-sub-profiler" class="hidden">
 			<div id="profiler-list">
-				<div class="flex flex-wrap gap-2 mb-3">
-					<button onclick="profilerNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New profile">New profile</button>
-					<button onclick="profilerFromCard()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Profile from card">Profile from card</button>
-					<button onclick="document.getElementById('profiler-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import profile">Import profile</button>
-					<input type="file" id="profiler-import-file" accept=".json,application/json" class="hidden" onchange="profilerImportFile(this)">
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<div class="text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300" data-l10n="Profiles">Profiles</div>
+						<div class="flex flex-wrap gap-2 mb-3">
+							<button onclick="profilerNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New profile">New profile</button>
+							<button onclick="profilerFromCard()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Profile from card">Profile from card</button>
+							<button onclick="document.getElementById('profiler-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import profile">Import profile</button>
+							<input type="file" id="profiler-import-file" accept=".json,application/json" class="hidden" onchange="profilerImportFile(this)">
+						</div>
+						<div id="profiler-list-body"></div>
+					</div>
+					<div>
+						<div class="text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300" data-l10n="Card snapshots">Card snapshots</div>
+						<div class="flex flex-wrap gap-2 mb-3">
+							<button onclick="snapshotNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New snapshot">New snapshot</button>
+							<button onclick="document.getElementById('snapshot-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import snapshot">Import snapshot</button>
+							<input type="file" id="snapshot-import-file" accept=".json,application/json" class="hidden" onchange="snapshotImportFile(this)">
+						</div>
+						<div id="snapshot-list-body"></div>
+					</div>
 				</div>
-				<div id="profiler-list-body"></div>
 			</div>
 			<div id="profiler-editor" class="hidden">
 				<div class="flex flex-wrap gap-2 items-center mb-3">
@@ -838,6 +852,15 @@
 				<div id="profiler-progress" class="mb-2 text-base font-mono text-gray-600 dark:text-slate-400"></div>
 				<div id="profiler-summary" class="mb-2 text-sm"></div>
 				<div id="profiler-report"></div>
+			</div>
+			<div id="profiler-snapshot" class="hidden">
+				<div class="flex flex-wrap gap-2 items-center mb-3">
+					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
+					<input id="snapshot-name" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Snapshot name">
+					<span id="snapshot-iccid" class="text-xs font-mono text-gray-500 dark:text-slate-400"></span>
+					<button onclick="snapshotSaveName()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
+				</div>
+				<div id="snapshot-files"></div>
 			</div>
 		</div>
 
@@ -909,8 +932,8 @@
 
 	<div id="profiler-scan-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
 		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 max-h-[85vh] overflow-auto">
-			<h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="Profile from card">Profile from card</h3>
-			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile name">Profile name</label>
+			<h3 id="profiler-scan-title" class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="Profile from card">Profile from card</h3>
+			<label id="profiler-scan-name-label" class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile name">Profile name</label>
 			<input id="profiler-scan-name" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800 mb-3" placeholder="Profile name">
 			<div id="profiler-scan-options">
 				<div class="flex items-center gap-2 mb-1">
@@ -1417,6 +1440,11 @@ function encMsisdn(msisdn) {
 
 function encIccid(iccid) {
 	return swapNibbles(iccid);
+}
+
+// EF.ICCID (2FE2): nibble-swapped E.118 digits, 19-20 digits, 'F' pad (TS 102 221 13.2).
+function decIccid(hex) {
+	return swapNibbles((hex || '').replace(/[^0-9a-fA-F]/g, '')).replace(/F+$/, '');
 }
 
 function buildApdu(cla, ins, p1, p2, p3, data) {
@@ -6950,6 +6978,9 @@ let profilerView = 'list';
 let profilerEditId = null;
 let profilerDraft = null;
 let profilerResults = null;
+let snapshots = [];
+let snapshotViewId = null;
+let _scanTarget = 'profile';
 
 // Files whose contents are ignored (contents check omitted) when scanning.
 // Keyed by FID; display name is the pySim name.
@@ -6988,6 +7019,21 @@ function profilerLoad() {
 
 function profilerSave() {
 	localStorage.setItem('otaman_profiles', JSON.stringify(profiles));
+}
+
+function snapshotsLoad() {
+	try {
+		const d = localStorage.getItem('otaman_snapshots');
+		snapshots = d ? JSON.parse(d) : [];
+	} catch (e) { snapshots = []; }
+}
+
+function snapshotsSave() {
+	try {
+		localStorage.setItem('otaman_snapshots', JSON.stringify(snapshots));
+	} catch (e) {
+		alert('Snapshot save failed: ' + e.message);
+	}
 }
 
 function profilerNewId() {
@@ -7095,7 +7141,31 @@ function profilerSetView(view) {
 	document.getElementById('profiler-list').classList.toggle('hidden', view !== 'list');
 	document.getElementById('profiler-editor').classList.toggle('hidden', view !== 'editor');
 	document.getElementById('profiler-results').classList.toggle('hidden', view !== 'results');
-	if (view === 'list') profilerRenderList();
+	document.getElementById('profiler-snapshot').classList.toggle('hidden', view !== 'snapshot');
+	if (view === 'list') { profilerRenderList(); profilerRenderSnapshotList(); }
+}
+
+function profilerRenderSnapshotList() {
+	const el = document.getElementById('snapshot-list-body');
+	if (!snapshots.length) {
+		el.innerHTML = '<span class="text-gray-400">' + t('No snapshots defined.') + '</span>';
+		return;
+	}
+	let html = '';
+	for (let i = 0; i < snapshots.length; i++) {
+		const s = snapshots[i];
+		html += '<div class="flex items-center gap-2 py-1.5 border-b border-gray-200 dark:border-slate-700">';
+		html += '<b>' + esc(s.name) + '</b>';
+		if (s.iccid) html += '<span class="text-xs font-mono text-gray-500 dark:text-slate-400">' + esc(s.iccid) + '</span>';
+		html += '<span class="text-xs text-gray-400 dark:text-slate-500">' + esc(new Date(s.created).toLocaleString()) + '</span>';
+		html += '<span class="text-xs text-gray-400 dark:text-slate-500">(' + s.files.length + ' ' + esc(t('files')) + ')</span>';
+		html += '<span class="ml-auto flex gap-1">';
+		html += '<button onclick="snapshotOpen(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + esc(t('Open')) + '</button>';
+		html += '<button onclick="snapshotExport(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">' + esc(t('Export')) + '</button>';
+		html += '<button onclick="snapshotDelete(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
+		html += '</span></div>';
+	}
+	el.innerHTML = html;
 }
 
 function profilerNew() {
@@ -7120,7 +7190,21 @@ function profilerScanIgnoreAllState() {
 	all.indeterminate = checked > 0 && checked < boxes.length;
 }
 
+function profilerScanSetTarget(target) {
+	_scanTarget = target;
+	const title = document.getElementById('profiler-scan-title');
+	const label = document.getElementById('profiler-scan-name-label');
+	const titleKey = target === 'snapshot' ? 'New snapshot' : 'Profile from card';
+	const labelKey = target === 'snapshot' ? 'Snapshot name' : 'Profile name';
+	title.setAttribute('data-l10n', titleKey);
+	title.textContent = t(titleKey);
+	label.setAttribute('data-l10n', labelKey);
+	label.textContent = t(labelKey);
+	document.getElementById('profiler-scan-options').classList.toggle('hidden', target === 'snapshot');
+}
+
 function profilerFromCard() {
+	profilerScanSetTarget('profile');
 	document.getElementById('profiler-scan-name').value = '';
 	document.getElementById('profiler-scan-name').readOnly = false;
 	document.getElementById('profiler-scan-name').classList.remove('opacity-50');
@@ -7154,11 +7238,25 @@ function profilerScanCancel() {
 	document.getElementById('profiler-scan-modal').classList.add('hidden');
 }
 
+function snapshotNew() {
+	profilerScanSetTarget('snapshot');
+	const nameEl = document.getElementById('profiler-scan-name');
+	nameEl.value = '';
+	nameEl.readOnly = false;
+	nameEl.classList.remove('opacity-50');
+	document.getElementById('profiler-scan-progress').classList.add('hidden');
+	document.getElementById('profiler-scan-error').classList.add('hidden');
+	document.getElementById('profiler-scan-cancel-btn').disabled = false;
+	document.getElementById('profiler-scan-btn').disabled = false;
+	document.getElementById('profiler-scan-btn').textContent = t('Scan');
+	document.getElementById('profiler-scan-modal').classList.remove('hidden');
+}
+
 async function profilerScanStart() {
 	const name = document.getElementById('profiler-scan-name').value.trim();
 	const errEl = document.getElementById('profiler-scan-error');
 	if (!name) {
-		errEl.textContent = t('Please enter a profile name');
+		errEl.textContent = t(_scanTarget === 'snapshot' ? 'Please enter a snapshot name' : 'Please enter a profile name');
 		errEl.classList.remove('hidden');
 		return;
 	}
@@ -7188,19 +7286,29 @@ async function profilerScanStart() {
 	btn.disabled = true;
 	btn.textContent = t('Scanning...');
 	try {
-		const rules = await profilerScanCard(ignoreFids, ignoreNames, fciMode, (done, total, path) => {
+		const onProgress = (done, total, path) => {
 			progEl.textContent = done + ' / ' + total + ' ' + t('files') + (path ? ' — ' + path : '');
-		}, maskFids);
-		const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
-		profiles.push(profile);
-		profilerSave();
-		profilerScanCancel();
-		profilerEdit(profiles.length - 1);
+		};
+		if (_scanTarget === 'snapshot') {
+			const files = await profilerScanCard(new Set(), new Set(), 'exact', onProgress, new Set(), 'snapshot');
+			const snapshot = { id: profilerNewId(), name: name, created: new Date().toISOString(), iccid: profilerSnapshotIccid(files), files: files };
+			snapshots.push(snapshot);
+			snapshotsSave();
+			profilerScanCancel();
+			profilerSetView('list');
+		} else {
+			const rules = await profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, maskFids);
+			const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
+			profiles.push(profile);
+			profilerSave();
+			profilerScanCancel();
+			profilerEdit(profiles.length - 1);
+		}
 	} catch (e) {
 		errEl.textContent = e.message;
 		errEl.classList.remove('hidden');
 	} finally {
-		document.getElementById('profiler-scan-options').classList.remove('hidden');
+		profilerScanSetTarget(_scanTarget);
 		cancelBtn.disabled = false;
 		nameEl.readOnly = false;
 		nameEl.classList.remove('opacity-50');
@@ -7214,7 +7322,7 @@ async function profilerScanStart() {
 // Phase 1 discovers every file (tree calls only) to know the total; phase 2
 // builds a rule per file, reporting progress via the optional onProgress
 // callback as onProgress(done, total, path).
-async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, maskFids) {
+async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, maskFids, mode) {
 	const rules = [];
 	const files = [];
 	const seen = new Set();
@@ -7268,7 +7376,9 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, ma
 	for (let i = 0; i < files.length; i++) {
 		const entry = files[i];
 		if (onProgress) onProgress(i + 1, total, entry.path);
-		const rule = await profilerBuildFileRule(entry.path, entry.child, ignoreFids, ignoreNames, fciMode, maskFids);
+		const rule = mode === 'snapshot'
+			? await profilerBuildSnapshotFile(entry.path, entry.child)
+			: await profilerBuildFileRule(entry.path, entry.child, ignoreFids, ignoreNames, fciMode, maskFids);
 		if (rule) rules.push(rule);
 	}
 	return rules;
@@ -7315,6 +7425,45 @@ async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames, fciMode, 
 		}
 	} catch (e) {}
 	return rule;
+}
+
+// Card snapshot entry: metadata + raw FCI + exact contents for every readable
+// file (no ignore list, no masking, no FCP/FCI check mode).
+async function profilerBuildSnapshotFile(path, c) {
+	let sel;
+	try {
+		sel = await pysimFetch('/api/select', { path: path });
+	} catch (e) { return null; }
+	if (!sel || sel.exists !== true) return null;
+	const isRecord = profilerContentKindForFileType(sel.file_type) === 'record';
+	const file = {
+		path: path,
+		name: c.name || sel.name || null,
+		fileType: sel.file_type || null,
+		fileSize: isRecord ? null : ((sel.file_size === null || sel.file_size === undefined) ? null : sel.file_size),
+		recordLen: (sel.record_len === null || sel.record_len === undefined) ? null : sel.record_len,
+		numRecords: (sel.num_of_rec === null || sel.num_of_rec === undefined) ? null : sel.num_of_rec,
+		fciHex: sel.fci_hex || null,
+		content: null,
+	};
+	try {
+		const rd = await pysimFetch('/api/read', { path: path, mode: 'raw' });
+		if (rd && rd.success) {
+			if (rd.records) {
+				file.content = { kind: 'record', records: rd.records.map(r => ({ num: r.num, data: r.data })) };
+			} else if (rd.data) {
+				file.content = { kind: 'transparent', data: rd.data };
+			}
+		}
+	} catch (e) {}
+	return file;
+}
+
+// Decode the ICCID from the captured EF.ICCID (2FE2) entry, if readable.
+function profilerSnapshotIccid(files) {
+	const f = (files || []).find(x => x.name === 'EF.ICCID' || (x.path || '').toUpperCase().endsWith('/2FE2'));
+	if (!f || !f.content || f.content.kind !== 'transparent' || !f.content.data) return null;
+	return decIccid(f.content.data) || null;
 }
 
 function profilerImportFile(input) {
@@ -7364,7 +7513,116 @@ function profilerEdit(i) {
 function profilerBackToList() {
 	profilerDraft = null;
 	profilerEditId = null;
+	snapshotViewId = null;
 	profilerSetView('list');
+}
+
+function profilerValidateSnapshot(obj) {
+	if (!obj || typeof obj !== 'object') return 'Not an object';
+	if (!obj.name) return 'Missing name';
+	if (!Array.isArray(obj.files)) return 'Missing files array';
+	for (const f of obj.files) {
+		if (!f || typeof f !== 'object') return 'Invalid file entry';
+		if (!f.path) return 'File entry missing path';
+	}
+	return null;
+}
+
+function snapshotImportFile(input) {
+	const file = input.files && input.files[0];
+	input.value = '';
+	if (!file) return;
+	const reader = new FileReader();
+	reader.onload = () => {
+		try {
+			const obj = JSON.parse(reader.result);
+			const err = profilerValidateSnapshot(obj);
+			if (err) throw new Error(err);
+			obj.id = profilerNewId();
+			obj.created = obj.created || new Date().toISOString();
+			obj.iccid = obj.iccid || profilerSnapshotIccid(obj.files);
+			snapshots.push(obj);
+			snapshotsSave();
+			profilerRenderSnapshotList();
+		} catch (e) {
+			alert('Import error: ' + e.message);
+		}
+	};
+	reader.readAsText(file);
+}
+
+function snapshotExport(i) {
+	const s = snapshots[i];
+	downloadJson((s.name || 'snapshot').replace(/[^a-zA-Z0-9_-]+/g, '_') + '.json', s);
+}
+
+function snapshotDelete(i) {
+	const s = snapshots[i];
+	if (!confirm(t('Delete snapshot') + ' "' + s.name + '"?') ) return;
+	snapshots.splice(i, 1);
+	snapshotsSave();
+	profilerRenderSnapshotList();
+}
+
+function snapshotOpen(i) {
+	const s = snapshots[i];
+	snapshotViewId = s.id;
+	profilerSetView('snapshot');
+	document.getElementById('snapshot-name').value = s.name;
+	document.getElementById('snapshot-iccid').textContent = s.iccid || '';
+	document.getElementById('snapshot-files').innerHTML = profilerRenderSnapshotFiles(s);
+}
+
+function snapshotSaveName() {
+	const s = snapshots.find(x => x.id === snapshotViewId);
+	if (!s) return;
+	const name = document.getElementById('snapshot-name').value.trim();
+	if (!name) return;
+	s.name = name;
+	snapshotsSave();
+	document.getElementById('snapshot-name').value = s.name;
+}
+
+function profilerRenderSnapshotFiles(s) {
+	if (!s.files.length) return '<span class="text-gray-400">' + t('No files captured.') + '</span>';
+	let html = '';
+	for (const f of s.files) {
+		const name = profilerCustomNameForPath(f.path) || f.name;
+		const title = name
+			? '<span>' + esc(name) + '</span> <span class="text-gray-400 dark:text-slate-500">(' + esc(f.path) + ')</span>'
+			: '<span>' + esc(f.path) + '</span>';
+		html += '<div class="mb-2 p-2 border border-gray-200 dark:border-slate-600 rounded">';
+		html += '<div class="font-mono text-sm">' + title + '</div>';
+		const attrs = [];
+		if (f.fileType) attrs.push(esc(t('File type')) + ': ' + esc(f.fileType));
+		if (f.fileSize !== null && f.fileSize !== undefined) attrs.push(esc(t('Size')) + ': ' + esc(String(f.fileSize)));
+		if (f.recordLen !== null && f.recordLen !== undefined) attrs.push(esc(t('Record length')) + ': ' + esc(String(f.recordLen)));
+		if (f.numRecords !== null && f.numRecords !== undefined) attrs.push(esc(t('Record count')) + ': ' + esc(String(f.numRecords)));
+		if (attrs.length) html += '<div class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">' + attrs.join(' · ') + '</div>';
+		if (f.fciHex) {
+			html += '<div class="mt-1 flex gap-3 items-start">';
+			html += '<div class="flex-1 min-w-0"><div class="text-xs text-gray-500 dark:text-slate-400 mb-0.5">' + esc(t('FCI hex (raw SELECT response)')) + '</div>' +
+				'<textarea readonly rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800 break-all">' + escHtml(f.fciHex) + '</textarea></div>';
+			html += '<div class="flex-1 min-w-0"><div class="text-xs text-gray-500 dark:text-slate-400 mb-0.5">' + esc(t('Decoded FCI')) + '</div>' +
+				'<div class="text-xs font-mono leading-relaxed text-gray-600 dark:text-slate-400 break-all">' + profilerFciPreviewItems(f.fciHex) + '</div></div>';
+			html += '</div>';
+		}
+		html += '<div class="text-xs text-gray-500 dark:text-slate-400 mt-1 mb-0.5">' + esc(t('Contents')) + '</div>';
+		if (!f.content) {
+			html += '<div class="text-xs text-gray-400 dark:text-slate-500">' + esc(t('Not captured')) + '</div>';
+		} else if (f.content.kind === 'record') {
+			html += '<div class="space-y-0.5">';
+			for (const rec of (f.content.records || [])) {
+				html += '<div class="flex items-center gap-2"><span class="text-xs text-gray-500 w-8 shrink-0">' + rec.num + '</span>' +
+					'<input readonly value="' + escHtml(rec.data) + '" class="flex-1 min-w-0 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800"></div>';
+			}
+			html += '</div>';
+		} else {
+			html += '<input readonly value="' + escHtml(f.content.data || '') + '" class="w-full min-w-0 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800">';
+		}
+		html += '</div>';
+	}
+	return html;
 }
 
 function profilerAddRule() {
@@ -8082,6 +8340,7 @@ function profilerRenderReport(results) {
 }
 
 profilerLoad();
+snapshotsLoad();
 
 // Init sub-tab pills
 document.querySelectorAll('.pysim-subtab').forEach(btn => {
@@ -8283,6 +8542,18 @@ const LANG_RU = {
 	'New profile': 'Новый профиль',
 	'Profile from card': 'Профиль с карты',
 	'Import profile': 'Импорт профиля',
+	'Profiles': 'Профили',
+	'Card snapshots': 'Снимки карты',
+	'New snapshot': 'Новый снимок',
+	'Import snapshot': 'Импорт снимка',
+	'Snapshot name': 'Имя снимка',
+	'Delete snapshot': 'Удалить снимок',
+	'No snapshots defined.': 'Снимки не заданы.',
+	'No files captured.': 'Файлы не захвачены.',
+	'Please enter a snapshot name': 'Введите имя снимка',
+	'Open': 'Открыть',
+	'Contents': 'Содержимое',
+	'Not captured': 'Не прочитано',
 	'Back to list': 'Назад к списку',
 	'Add rule': 'Добавить правило',
 	'Scan': 'Сканировать',
