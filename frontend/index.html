@@ -7411,7 +7411,8 @@ function profilerRenderRule(i, r) {
 	html += '</div>';
 	if (fciMode === 'exact') {
 		html += '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('FCI hex (raw SELECT response)')) + '</label>' +
-			'<textarea oninput="profilerUpdateRule(' + i + ',\'fciHex\',this.value)" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="62...">' + escHtml(r.fciHex || '') + '</textarea></div>';
+			'<textarea oninput="profilerUpdateRule(' + i + ',\'fciHex\',this.value);profilerUpdateFciPreview(' + i + ',this.value)" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="62...">' + escHtml(r.fciHex || '') + '</textarea>' +
+			'<div id="profiler-fci-preview-' + i + '">' + profilerFciPreviewHtml(r.fciHex || '') + '</div></div>';
 	}
 	if (r.fileType !== 'df') {
 		html += profilerRenderContentEditor(i, r);
@@ -7745,6 +7746,207 @@ function profilerRawDataCheck(c) {
 	return false;
 }
 
+// ===== FCP/FCI decoding (ISO 7816-4 5.3.3 tables 12-14, TS 102 221 11.1.1.4) =====
+
+function fcpInt(hex) { return hex ? parseInt(hex, 16) : 0; }
+
+function fcpFileDescriptor(v) {
+	if (!v) return '';
+	const fd = parseInt(v.substr(0, 2), 16);
+	const parts = [(fd & 0x80) ? 'shareable' : 'not shareable'];
+	const cat = (fd >> 3) & 0x07;
+	const st = fd & 0x07;
+	if (cat === 0x07) {
+		parts.push(st === 0x01 ? 'BER-TLV EF' : st === 0x02 ? 'SIMPLE-TLV EF' : st === 0x00 ? 'DF/ADF' : 'proprietary file (' + v.substr(0, 2) + ')');
+	} else {
+		parts.push(cat === 0 ? 'working EF' : cat === 1 ? 'internal EF' : 'proprietary EF (' + cat + ')');
+		parts.push(['no info', 'transparent', 'linear fixed', 'linear fixed TLV', 'linear variable', 'linear variable TLV', 'cyclic', 'cyclic TLV'][st] || ('structure ' + st));
+	}
+	if (v.length >= 4) parts.push('data coding ' + v.substr(2, 2));
+	if (v.length >= 10) parts.push('record length ' + fcpInt(v.substr(4, 4)) + ', ' + fcpInt(v.substr(8, 2)) + ' records');
+	else if (v.length === 8) parts.push('record length ' + fcpInt(v.substr(4, 4)));
+	else if (v.length === 6) parts.push('record length ' + fcpInt(v.substr(4, 2)));
+	return parts.join(', ');
+}
+
+// ISO 7816-4 table 13 / TS 102 221 table 11.7b.
+function fcpLifeCycle(v) {
+	if (v.length !== 2) return v;
+	const b = parseInt(v, 16);
+	if (b === 0x00) return 'no information';
+	if (b === 0x01) return 'creation';
+	if (b === 0x03) return 'initialization';
+	if ((b & 0x0C) === 0x0C) return 'termination';
+	if ((b & 0x05) === 0x05) return 'operational, activated';
+	if ((b & 0x05) === 0x04) return 'operational, deactivated';
+	return 'proprietary (' + v + ')';
+}
+
+// TS 102 221 11.1.1.4.8: SFI in b8-b4, b3-b1 zero; length 0 = no short id.
+function fcpSfi(v) {
+	if (!v) return 'not supported';
+	if (v.length === 2 && (parseInt(v, 16) & 0x07) === 0) return String(parseInt(v, 16) >> 3);
+	return v;
+}
+
+function fcpDo(key, value) {
+	if (/^[0-9A-F]+$/.test(value) === false) value = value || '';
+	switch (key) {
+		case '80': return { name: 'File size', decoded: fcpInt(value) + ' bytes' };
+		case '81': return { name: 'Total file size', decoded: fcpInt(value) + ' bytes' };
+		case '82': return { name: 'File descriptor', decoded: fcpFileDescriptor(value) };
+		case '83': return { name: 'File identifier', decoded: value };
+		case '84': return { name: 'DF name (AID)', decoded: value };
+		case '85': return { name: 'Proprietary information', decoded: value };
+		case '86': return { name: 'Security attribute (proprietary)', decoded: value };
+		case '87': return { name: 'FCI extension EF', decoded: value };
+		case '88': return { name: 'Short file identifier', decoded: fcpSfi(value) };
+		case '8A': return { name: 'Life cycle status', decoded: fcpLifeCycle(value) };
+		case '8B': return { name: 'Security attributes (referenced)', decoded: value.length >= 6 ? 'EF_ARR ' + value.substr(0, 4) + ', record ' + fcpInt(value.substr(4, 2)) : value };
+		case '8C': return { name: 'Security attributes (compact)', decoded: value };
+		case '8D': return { name: 'Security env. template EF', decoded: value };
+		case '8E': return { name: 'Channel security attribute', decoded: value };
+		case 'A0': return { name: 'Security attributes (data objects)', decoded: value };
+		case 'A5': return { name: 'Proprietary information', decoded: null };
+		case 'AB': return { name: 'Security attributes (expanded)', decoded: value };
+		case 'C6': return { name: 'PIN status template DO', decoded: null };
+		case 'A5/80': {
+			const b = fcpInt(value);
+			const parts = [(b & 0x01) ? 'clock stop allowed' : 'clock stop not allowed'];
+			const cls = [];
+			if (b & 0x10) cls.push('A');
+			if (b & 0x20) cls.push('B');
+			if (b & 0x40) cls.push('C');
+			if (b & 0x80) cls.push('D');
+			if (cls.length) parts.push('class ' + cls.join('/'));
+			return { name: 'UICC characteristics', decoded: parts.join(', ') };
+		}
+		case 'A5/81': {
+			if (value.length < 6) return { name: 'Application power consumption', decoded: value };
+			const vc = fcpInt(value.substr(0, 2));
+			const cls = [];
+			if (vc & 0x01) cls.push('A');
+			if (vc & 0x02) cls.push('B');
+			if (vc & 0x04) cls.push('C');
+			if (vc & 0x08) cls.push('D');
+			if (vc & 0x10) cls.push('E');
+			const ma = fcpInt(value.substr(2, 2)) & 0x3F;
+			const f = fcpInt(value.substr(4, 2));
+			const parts = [];
+			if (cls.length) parts.push('class ' + cls.join('/'));
+			if (ma) parts.push(ma + ' mA');
+			if (f === 0xFF) parts.push('no reference frequency');
+			else if (f) parts.push((f / 10) + ' MHz');
+			return { name: 'Application power consumption', decoded: parts.join(', ') };
+		}
+		case 'A5/82': {
+			const f = fcpInt(value);
+			return { name: 'Minimum application clock frequency', decoded: f === 0xFF ? 'none' : (f / 10) + ' MHz' };
+		}
+		case 'A5/83': return { name: 'Available memory', decoded: fcpInt(value) + ' bytes' };
+		case 'A5/84': return { name: 'File details', decoded: (fcpInt(value) & 0x01) ? 'DER coding only' : 'no details' };
+		case 'A5/85': return { name: 'Reserved file size', decoded: fcpInt(value) + ' bytes' };
+		case 'A5/86': return { name: 'Maximum file size', decoded: fcpInt(value) + ' bytes' };
+		case 'A5/87': return { name: 'Supported system commands', decoded: (fcpInt(value) & 0x01) ? 'TERMINAL CAPABILITY' : 'none' };
+		case 'A5/88': {
+			const b = fcpInt(value);
+			const tc = ['standard temperature range', 'temperature class A', 'temperature class B', 'temperature class C'][b & 0x07] || 'RFU';
+			return { name: 'Specific UICC environmental conditions', decoded: tc + ((b & 0x08) ? ', high humidity' : '') };
+		}
+		case 'A5/89': return { name: 'Platform-to-platform CAT secured APDU', decoded: value };
+		case 'A5/8A': return { name: 'Test configuration state', decoded: (fcpInt(value) & 0x01) ? 'active' : 'inactive' };
+		case 'A5/8B': return { name: 'Test configuration criterion type', decoded: value };
+		case 'A5/C0': return { name: 'Special file info', decoded: value };
+		case 'A5/C1': return { name: 'Filling pattern', decoded: value };
+		case 'A5/C2': return { name: 'Repeat pattern', decoded: value };
+		case 'C6/90': return { name: 'PS_DO', decoded: value };
+		case 'C6/95': return { name: 'Usage qualifier', decoded: value };
+		case 'C6/83': return { name: 'Key reference', decoded: value };
+		default: return { name: 'Unknown TLV ' + key, decoded: value };
+	}
+}
+
+// Decode a SELECT response (FCI): accepts the FCP template '62', an FCI template
+// '6F' wrapping FCP/FMD, or bare FCP content. Returns { ok, template, items }.
+function fcpDecode(hex) {
+	const h = (hex || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+	if (!h) return { ok: false, template: null, items: [] };
+	let template = null;
+	let body = h;
+	const top = parseTlvList(h);
+	if (top.length === 1 && top[0].raw.length === h.length && (top[0].tag === '62' || top[0].tag === '6F' || top[0].tag === '64')) {
+		template = top[0].tag;
+		body = top[0].value;
+		if (template === '6F') {
+			const fcp = parseTlvList(body).find(t => t.tag === '62');
+			if (fcp) { template = '62'; body = fcp.value; }
+		}
+	}
+	const tlvs = parseTlvList(body);
+	const consumed = tlvs.reduce((n, t) => n + t.raw.length, 0);
+	const ok = tlvs.length > 0 && consumed === body.length;
+	const items = [];
+	for (const t of tlvs) {
+		const d = fcpDo(t.tag, t.value);
+		items.push({ key: t.tag, tag: t.tag, name: d.name, value: t.value, decoded: d.decoded });
+		if (t.tag === 'A5' || t.tag === 'C6') {
+			for (const sub of parseTlvList(t.value)) {
+				const sd = fcpDo(t.tag + '/' + sub.tag, sub.value);
+				items.push({ key: t.tag + '/' + sub.tag, tag: sub.tag, name: sd.name, value: sub.value, decoded: sd.decoded });
+			}
+		}
+	}
+	return { ok, template, items };
+}
+
+function fcpDiffHtml(expectedHex, actualHex) {
+	const e = fcpDecode(expectedHex);
+	const a = fcpDecode(actualHex);
+	if (!e.ok || !a.ok || !e.items.length || !a.items.length) return '';
+	const eMap = {}, aMap = {};
+	e.items.forEach(it => { eMap[it.key] = it; });
+	a.items.forEach(it => { aMap[it.key] = it; });
+	const keys = e.items.map(it => it.key);
+	for (const it of a.items) if (!eMap[it.key]) keys.push(it.key);
+	let html = '<div class="mt-1 text-xs text-gray-500 dark:text-slate-400">' + esc(t('FCP parameters')) + '</div>';
+	html += '<table class="w-full text-xs border-collapse">';
+	html += '<thead><tr class="border-b border-gray-200 dark:border-slate-700">' +
+		'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('Parameter')) + '</th>' +
+		'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('expected')) + '</th>' +
+		'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('actual')) + '</th></tr></thead><tbody>';
+	for (const k of keys) {
+		const ev = eMap[k], av = aMap[k];
+		const ed = ev ? (ev.decoded === null ? '' : (ev.decoded || ev.value)) : '—';
+		const ad = av ? (av.decoded === null ? '' : (av.decoded || av.value)) : '—';
+		const eq = !!ev && !!av && ev.decoded === av.decoded && ev.value === av.value;
+		const color = eq ? 'text-gray-500 dark:text-slate-400' : 'text-red-600 font-medium';
+		html += '<tr class="border-b border-gray-100 dark:border-slate-800">' +
+			'<td class="py-0.5 px-1 ' + color + '">' + esc((ev || av).name) + '</td>' +
+			'<td class="py-0.5 px-1 font-mono break-all ' + color + '">' + esc(ed) + '</td>' +
+			'<td class="py-0.5 px-1 font-mono break-all ' + color + '">' + esc(ad) + '</td></tr>';
+	}
+	html += '</tbody></table>';
+	return html;
+}
+
+function profilerFciPreviewHtml(hex) {
+	const d = fcpDecode(hex);
+	if (!d.ok || !d.items.length) return '';
+	let html = '<div class="mt-1 text-xs text-gray-500 dark:text-slate-400">' + esc(t('Decoded FCP')) + '</div>';
+	html += '<div class="text-xs font-mono text-gray-600 dark:text-slate-400 leading-relaxed">';
+	for (const it of d.items) {
+		if (it.decoded === null) continue;
+		html += '<div>' + esc(it.name) + ': <span class="text-gray-800 dark:text-slate-200">' + esc(it.decoded || it.value) + '</span></div>';
+	}
+	html += '</div>';
+	return html;
+}
+
+function profilerUpdateFciPreview(i, value) {
+	const el = document.getElementById('profiler-fci-preview-' + i);
+	if (el) el.innerHTML = profilerFciPreviewHtml(value);
+}
+
 function profilerRenderReport(results) {
 	let html = '';
 	for (const r of results) {
@@ -7772,6 +7974,7 @@ function profilerRenderReport(results) {
 				html += '<div class="flex items-center gap-2 mt-0.5 pl-2">' +
 					'<span class="text-xs text-gray-500 dark:text-slate-400 w-24 text-right shrink-0">' + esc(t('actual')) + '</span>' +
 					'<input readonly title="' + escHtml(String(c.actual)) + '" value="' + escHtml(String(c.actual)) + '" class="flex-1 min-w-0 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800"></div>';
+				if (c.label === 'fci') html += fcpDiffHtml(String(c.expected), String(c.actual));
 				html += '</div>';
 			} else {
 				html += '<div class="text-xs text-red-600 mt-1">' + esc(c.label) + ': ' + esc(t('expected')) + ' <b>' + esc(String(c.expected)) + '</b>, ' + esc(t('actual')) + ' <b>' + esc(String(c.actual)) + '</b></div>';
@@ -8000,6 +8203,9 @@ const LANG_RU = {
 	'Filetype + size (FCP)': 'Тип файла + размер (FCP)',
 	'Exact FCI': 'Полный FCI',
 	'FCI hex (raw SELECT response)': 'FCI hex (сырой ответ SELECT)',
+	'FCP parameters': 'Параметры FCP',
+	'Parameter': 'Параметр',
+	'Decoded FCP': 'Декодированный FCP',
 	'No profiles defined.': 'Профили не заданы.',
 	'rules': 'правил',
 	'Check card': 'Проверить карту',

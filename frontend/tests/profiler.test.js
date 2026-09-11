@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewHtml'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -574,5 +574,105 @@ test('profilerRenderReport renders raw-data mismatches as aligned readonly field
 	// non-raw check stays inline
 	assert.ok(html.includes('content.records: expected'));
 	assert.ok(!fciBlock.includes(': expected'));
+	delete global.t;
+});
+
+// --- FCP/FCI decoding (ISO 7816-4 5.3.3, TS 102 221 11.1.1.4) ---
+
+const FCP_TRANSPARENT = '6212800200098202412183026F078A0105880110';
+const FCP_LINFIX = '620E82054221006E0583026F3A8A0105';
+const FCP_DF = '620B8202782183027F208A0105';
+const FCP_BERTLV = '620B8202792183026F018A0105';
+
+test('fcpDecode decodes a transparent EF FCP template', () => {
+	const d = fcpDecode(FCP_TRANSPARENT);
+	assert.strictEqual(d.ok, true);
+	assert.strictEqual(d.template, '62');
+	const by = {};
+	d.items.forEach(it => { by[it.key] = it; });
+	assert.strictEqual(by['80'].decoded, '9 bytes');
+	assert.strictEqual(by['82'].decoded, 'not shareable, working EF, transparent, data coding 21');
+	assert.strictEqual(by['83'].decoded, '6F07');
+	assert.strictEqual(by['8A'].decoded, 'operational, activated');
+	assert.strictEqual(by['88'].decoded, '2');
+});
+
+test('fcpDecode decodes linear fixed file descriptor (record length/count)', () => {
+	const d = fcpDecode(FCP_LINFIX);
+	assert.strictEqual(d.ok, true);
+	const fd = d.items.find(it => it.key === '82');
+	assert.strictEqual(fd.decoded, 'not shareable, working EF, linear fixed, data coding 21, record length 110, 5 records');
+});
+
+test('fcpDecode decodes DF and BER-TLV structures', () => {
+	assert.strictEqual(fcpDecode(FCP_DF).items.find(it => it.key === '82').decoded, 'not shareable, DF/ADF, data coding 21');
+	assert.strictEqual(fcpDecode(FCP_BERTLV).items.find(it => it.key === '82').decoded, 'not shareable, BER-TLV EF, data coding 21');
+});
+
+test('fcpDecode maps life cycle status per table 11.7b', () => {
+	const lcs = v => fcpDecode('6207820278218A01' + v).items.find(it => it.key === '8A').decoded;
+	assert.strictEqual(lcs('00'), 'no information');
+	assert.strictEqual(lcs('01'), 'creation');
+	assert.strictEqual(lcs('03'), 'initialization');
+	assert.strictEqual(lcs('05'), 'operational, activated');
+	assert.strictEqual(lcs('04'), 'operational, deactivated');
+	assert.strictEqual(lcs('0C'), 'termination');
+	assert.strictEqual(lcs('0D'), 'termination');
+	assert.strictEqual(lcs('80'), 'proprietary (80)');
+});
+
+test('fcpDecode decodes A5 proprietary sub-TLVs', () => {
+	const d = fcpDecode('62128202412183026F078A0105A5058503000000');
+	const by = {};
+	d.items.forEach(it => { by[it.key] = it; });
+	assert.strictEqual(by['A5'].decoded, null);
+	assert.strictEqual(by['A5/85'].decoded, '0 bytes');
+});
+
+test('fcpDecode unwraps an FCI 6F template and rejects malformed input', () => {
+	const d = fcpDecode('6F146212800200098202412183026F078A0105880110');
+	assert.strictEqual(d.ok, true);
+	assert.strictEqual(d.template, '62');
+	assert.strictEqual(d.items.find(it => it.key === '80').decoded, '9 bytes');
+
+	assert.strictEqual(fcpDecode('').ok, false);
+	assert.strictEqual(fcpDecode('ZZZZ').ok, false);
+	assert.strictEqual(fcpDecode('6214800200098202412183').ok, false); // truncated
+	assert.strictEqual(fcpDecode('6213' + FCP_TRANSPARENT.slice(4)).ok, false); // wrong outer length
+});
+
+test('fcpDiffHtml highlights differing FCP parameters', () => {
+	global.t = s => s;
+	const same = fcpDiffHtml(FCP_TRANSPARENT, FCP_TRANSPARENT);
+	assert.ok(same.includes('File size'));
+	assert.ok(!same.includes('text-red-600'));
+	const diff = fcpDiffHtml(FCP_TRANSPARENT, '62128002000A8202412183026F078A0105880110');
+	assert.ok(diff.includes('9 bytes'));
+	assert.ok(diff.includes('10 bytes'));
+	assert.ok(diff.includes('text-red-600'));
+	assert.ok(!fcpDiffHtml('garbage', FCP_TRANSPARENT));
+	delete global.t;
+});
+
+test('profilerFciPreviewHtml renders a decoded preview and degrades gracefully', () => {
+	global.t = s => s;
+	assert.ok(profilerFciPreviewHtml(FCP_TRANSPARENT).includes('File size: '));
+	assert.strictEqual(profilerFciPreviewHtml('not hex'), '');
+	assert.strictEqual(profilerFciPreviewHtml(''), '');
+	delete global.t;
+});
+
+test('profilerRenderReport shows the decoded FCI diff for a raw fci mismatch', () => {
+	global.t = s => s;
+	global.pysimCustomFiles = [];
+	const html = profilerRenderReport([
+		{ path: 'MF/6F07', name: 'EF.IMSI', status: 'fail', checks: [
+			{ label: 'fci', ok: false, expected: FCP_TRANSPARENT, actual: '62128002000A8202412183026F078A0105880110' },
+		] },
+	]);
+	assert.ok(html.includes('FCP parameters'));
+	assert.ok(html.includes('9 bytes'));
+	assert.ok(html.includes('10 bytes'));
+	assert.ok(html.includes('text-red-600'));
 	delete global.t;
 });
