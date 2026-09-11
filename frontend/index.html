@@ -913,7 +913,13 @@
 			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile name">Profile name</label>
 			<input id="profiler-scan-name" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800 mb-3" placeholder="Profile name">
 			<div id="profiler-scan-options">
-				<div class="mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Ignore contents of files:">Ignore contents of files:</div>
+				<div class="flex items-center gap-2 mb-1">
+					<span class="text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Ignore contents of files:">Ignore contents of files:</span>
+					<label class="ml-auto flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400 cursor-pointer">
+						<input type="checkbox" id="profiler-scan-ignore-all" onchange="profilerScanToggleAll(this.checked)" class="rounded">
+						<span data-l10n="All">All</span>
+					</label>
+				</div>
 				<div id="profiler-scan-ignore" class="grid grid-cols-2 gap-x-3 gap-y-1 mb-3 max-h-56 overflow-auto"></div>
 				<div id="profiler-scan-mask" class="space-y-1 mb-3"></div>
 				<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="FCP/FCI check">FCP/FCI check</label>
@@ -7100,6 +7106,20 @@ function profilerNew() {
 	profilerEdit(profiles.length - 1);
 }
 
+function profilerScanToggleAll(checked) {
+	document.querySelectorAll('#profiler-scan-ignore input[data-ignore-fid]').forEach(cb => { cb.checked = checked; });
+}
+
+function profilerScanIgnoreAllState() {
+	const boxes = document.querySelectorAll('#profiler-scan-ignore input[data-ignore-fid]');
+	const all = document.getElementById('profiler-scan-ignore-all');
+	if (!all) return;
+	let checked = 0;
+	boxes.forEach(cb => { if (cb.checked) checked++; });
+	all.checked = boxes.length > 0 && checked === boxes.length;
+	all.indeterminate = checked > 0 && checked < boxes.length;
+}
+
 function profilerFromCard() {
 	document.getElementById('profiler-scan-name').value = '';
 	document.getElementById('profiler-scan-name').readOnly = false;
@@ -7108,10 +7128,11 @@ function profilerFromCard() {
 	let html = '';
 	for (const f of PROFILER_IGNORE_FILES) {
 		html += '<label class="flex items-center gap-2 text-sm">' +
-			'<input type="checkbox" data-ignore-fid="' + f.fid + '" data-ignore-name="' + f.name + '"' + (f.checked === false ? '' : ' checked') + '>' +
+			'<input type="checkbox" data-ignore-fid="' + f.fid + '" data-ignore-name="' + f.name + '"' + (f.checked === false ? '' : ' checked') + ' onchange="profilerScanIgnoreAllState()">' +
 			'<span>' + esc(f.name) + '</span></label>';
 	}
 	ignore.innerHTML = html;
+	profilerScanIgnoreAllState();
 	const mask = document.getElementById('profiler-scan-mask');
 	let mhtml = '';
 	for (const fid in PROFILER_MASK_PREFIX4_FIDS) {
@@ -8268,6 +8289,7 @@ const LANG_RU = {
 	'Discovering...': 'Поиск файлов...',
 	'files': 'файлов',
 	'Ignore contents of files:': 'Игнорировать содержимое файлов:',
+	'All': 'Все',
 	'Match first 4 bytes for': 'Сравнивать первые 4 байта для',
 	'FCP/FCI check': 'Проверка FCP/FCI',
 	'Filetype only (FCP)': 'Только тип файла (FCP)',

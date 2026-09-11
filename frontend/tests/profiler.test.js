@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -786,4 +786,36 @@ test('fcpDiffHtml appends decode-failure notes for corrupt sides', () => {
 	// both sides empty -> nothing rendered
 	assert.strictEqual(fcpDiffHtml('', ''), '');
 	delete global.t;
+});
+
+test('profilerScanToggleAll / profilerScanIgnoreAllState manage the ignore checkboxes', () => {
+	const boxes = [{ checked: true }, { checked: false }, { checked: true }];
+	const header = { checked: false, indeterminate: false };
+	global.document = {
+		querySelectorAll: sel => (sel === '#profiler-scan-ignore input[data-ignore-fid]' ? boxes : []),
+		getElementById: id => (id === 'profiler-scan-ignore-all' ? header : null),
+	};
+
+	profilerScanIgnoreAllState();
+	assert.strictEqual(header.checked, false);
+	assert.strictEqual(header.indeterminate, true);
+
+	boxes[1].checked = true;
+	profilerScanIgnoreAllState();
+	assert.strictEqual(header.checked, true);
+	assert.strictEqual(header.indeterminate, false);
+
+	profilerScanToggleAll(false);
+	assert.ok(boxes.every(b => !b.checked));
+	profilerScanIgnoreAllState();
+	assert.strictEqual(header.checked, false);
+	assert.strictEqual(header.indeterminate, false);
+
+	profilerScanToggleAll(true);
+	assert.ok(boxes.every(b => b.checked));
+	profilerScanIgnoreAllState();
+	assert.strictEqual(header.checked, true);
+	assert.strictEqual(header.indeterminate, false);
+
+	delete global.document;
 });
