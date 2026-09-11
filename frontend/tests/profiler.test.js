@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewHtml'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -654,11 +654,26 @@ test('fcpDiffHtml highlights differing FCP parameters', () => {
 	delete global.t;
 });
 
-test('profilerFciPreviewHtml renders a decoded preview and degrades gracefully', () => {
+test('profilerFciPreviewItems renders decoded items and degrades gracefully', () => {
 	global.t = s => s;
-	assert.ok(profilerFciPreviewHtml(FCP_TRANSPARENT).includes('File size: '));
-	assert.strictEqual(profilerFciPreviewHtml('not hex'), '');
-	assert.strictEqual(profilerFciPreviewHtml(''), '');
+	assert.ok(profilerFciPreviewItems(FCP_TRANSPARENT).includes('File size: '));
+	assert.strictEqual(profilerFciPreviewItems('not hex'), '');
+	assert.strictEqual(profilerFciPreviewItems(''), '');
+	delete global.t;
+});
+
+test('profilerFciInput stores the edited FCI and re-decodes the preview', () => {
+	global.t = s => s;
+	global.profilerDraft = { rules: [{ fciHex: '', fciMode: 'exact' }] };
+	const el = { innerHTML: '' };
+	global.document = { getElementById: id => (id === 'profiler-fci-preview-0' ? el : null) };
+	profilerFciInput(0, FCP_TRANSPARENT);
+	assert.strictEqual(global.profilerDraft.rules[0].fciHex, FCP_TRANSPARENT);
+	assert.ok(el.innerHTML.includes('File size: '));
+	profilerFciInput(0, 'zz');
+	assert.strictEqual(el.innerHTML, '');
+	global.profilerDraft = null;
+	delete global.document;
 	delete global.t;
 });
 

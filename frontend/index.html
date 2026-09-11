@@ -7410,9 +7410,12 @@ function profilerRenderRule(i, r) {
 	}
 	html += '</div>';
 	if (fciMode === 'exact') {
-		html += '<div class="mb-2"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('FCI hex (raw SELECT response)')) + '</label>' +
-			'<textarea oninput="profilerUpdateRule(' + i + ',\'fciHex\',this.value);profilerUpdateFciPreview(' + i + ',this.value)" rows="2" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="62...">' + escHtml(r.fciHex || '') + '</textarea>' +
-			'<div id="profiler-fci-preview-' + i + '">' + profilerFciPreviewHtml(r.fciHex || '') + '</div></div>';
+		html += '<div class="mb-2 flex gap-3 items-start">';
+		html += '<div class="flex-1 min-w-0"><label class="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">' + esc(t('FCI hex (raw SELECT response)')) + '</label>' +
+			'<textarea oninput="profilerFciInput(' + i + ',this.value)" rows="4" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 dark:bg-slate-800" placeholder="62...">' + escHtml(r.fciHex || '') + '</textarea></div>';
+		html += '<div class="flex-1 min-w-0"><div class="text-xs text-gray-500 dark:text-slate-400 mb-0.5">' + esc(t('Decoded FCP')) + '</div>' +
+			'<div id="profiler-fci-preview-' + i + '" class="text-xs font-mono leading-relaxed text-gray-600 dark:text-slate-400 break-all">' + profilerFciPreviewItems(r.fciHex || '') + '</div></div>';
+		html += '</div>';
 	}
 	if (r.fileType !== 'df') {
 		html += profilerRenderContentEditor(i, r);
@@ -7929,22 +7932,25 @@ function fcpDiffHtml(expectedHex, actualHex) {
 	return html;
 }
 
-function profilerFciPreviewHtml(hex) {
+function profilerFciPreviewItems(hex) {
 	const d = fcpDecode(hex);
 	if (!d.ok || !d.items.length) return '';
-	let html = '<div class="mt-1 text-xs text-gray-500 dark:text-slate-400">' + esc(t('Decoded FCP')) + '</div>';
-	html += '<div class="text-xs font-mono text-gray-600 dark:text-slate-400 leading-relaxed">';
+	let html = '';
 	for (const it of d.items) {
 		if (it.decoded === null) continue;
 		html += '<div>' + esc(it.name) + ': <span class="text-gray-800 dark:text-slate-200">' + esc(it.decoded || it.value) + '</span></div>';
 	}
-	html += '</div>';
 	return html;
 }
 
 function profilerUpdateFciPreview(i, value) {
 	const el = document.getElementById('profiler-fci-preview-' + i);
-	if (el) el.innerHTML = profilerFciPreviewHtml(value);
+	if (el) el.innerHTML = profilerFciPreviewItems(value);
+}
+
+function profilerFciInput(i, value) {
+	profilerUpdateRule(i, 'fciHex', value);
+	profilerUpdateFciPreview(i, value);
 }
 
 function profilerRenderReport(results) {
