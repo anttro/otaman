@@ -913,8 +913,8 @@
 			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile name">Profile name</label>
 			<input id="profiler-scan-name" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800 mb-3" placeholder="Profile name">
 			<div id="profiler-scan-options">
-				<div class="mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Ignore contents of:">Ignore contents of:</div>
-				<div id="profiler-scan-ignore" class="space-y-1 mb-3 max-h-56 overflow-auto"></div>
+				<div class="mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Ignore contents of files:">Ignore contents of files:</div>
+				<div id="profiler-scan-ignore" class="grid grid-cols-2 gap-x-3 gap-y-1 mb-3 max-h-56 overflow-auto"></div>
 				<div id="profiler-scan-mask" class="space-y-1 mb-3"></div>
 				<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="FCP/FCI check">FCP/FCI check</label>
 				<select id="profiler-scan-fci-mode" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 mb-3">
@@ -7105,7 +7105,7 @@ function profilerFromCard() {
 	for (const f of PROFILER_IGNORE_FILES) {
 		html += '<label class="flex items-center gap-2 text-sm">' +
 			'<input type="checkbox" data-ignore-fid="' + f.fid + '" data-ignore-name="' + f.name + '" checked>' +
-			'<span>' + esc(t('Ignore contents of')) + ' ' + esc(f.name) + '</span></label>';
+			'<span>' + esc(f.name) + '</span></label>';
 	}
 	ignore.innerHTML = html;
 	const mask = document.getElementById('profiler-scan-mask');
@@ -7995,8 +7995,7 @@ const LANG_RU = {
 	'Scan': 'Сканировать',
 	'Discovering...': 'Поиск файлов...',
 	'files': 'файлов',
-	'Ignore contents of:': 'Игнорировать содержимое:',
-	'Ignore contents of': 'Игнорировать содержимое',
+	'Ignore contents of files:': 'Игнорировать содержимое файлов:',
 	'Match first 4 bytes for': 'Сравнивать первые 4 байта для',
 	'FCP/FCI check': 'Проверка FCP/FCI',
 	'Filetype only (FCP)': 'Только тип файла (FCP)',
