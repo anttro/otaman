@@ -641,6 +641,35 @@ test('fcpDecode unwraps an FCI 6F template and rejects malformed input', () => {
 	assert.strictEqual(fcpDecode('6213' + FCP_TRANSPARENT.slice(4)).ok, false); // wrong outer length
 });
 
+test('fcpDecode accepts long-form BER lengths (81/82) — editor preview regression', () => {
+	// 62 12 <18B> vs 62 81 12 <same content>
+	const long81 = '628112' + FCP_TRANSPARENT.slice(4);
+	const d1 = fcpDecode(long81);
+	assert.strictEqual(d1.ok, true);
+	assert.strictEqual(d1.items.find(it => it.key === '80').decoded, '9 bytes');
+
+	// 2-byte length form
+	const d2 = fcpDecode('62820004' + '80020009');
+	assert.strictEqual(d2.ok, true);
+	assert.strictEqual(d2.items.find(it => it.key === '80').decoded, '9 bytes');
+
+	// nested A5 with a long-form length (A5 81 05 …)
+	const d3 = fcpDecode('62138202412183026F078A0105A581058503000000');
+	assert.strictEqual(d3.ok, true);
+	assert.strictEqual(d3.items.find(it => it.key === 'A5/85').decoded, '0 bytes');
+
+	// FCP content >= 128 bytes uses a long-form outer length
+	let big = '';
+	for (let i = 0; i < 13; i++) big += '8808' + '0102030405060708'; // 13 x 10B = 130B
+	const d4 = fcpDecode('628182' + big);
+	assert.strictEqual(d4.ok, true);
+	assert.strictEqual(d4.items.filter(it => it.key === '88').length, 13);
+
+	global.t = s => s;
+	assert.ok(profilerFciPreviewItems(long81).includes('File size: '));
+	delete global.t;
+});
+
 test('fcpDiffHtml highlights differing FCP parameters', () => {
 	global.t = s => s;
 	const same = fcpDiffHtml(FCP_TRANSPARENT, FCP_TRANSPARENT);

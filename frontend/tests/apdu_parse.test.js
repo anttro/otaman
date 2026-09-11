@@ -165,6 +165,39 @@ test('parseTlvList handles BER-TLVs', () => {
 	assert.strictEqual(tlvs[1].tag, '82');
 });
 
+test('parseBerLen handles short and long form lengths (ISO 7816-4 5.2)', () => {
+	assert.deepStrictEqual(parseBerLen('1200', 0), { len: 18, consumed: 2 });
+	assert.deepStrictEqual(parseBerLen('8112', 0), { len: 18, consumed: 4 });
+	assert.deepStrictEqual(parseBerLen('820100', 0), { len: 256, consumed: 6 });
+	assert.deepStrictEqual(parseBerLen('820182' + '0102030405060708', 0), { len: 386, consumed: 6 });
+});
+
+test('parseTlvList parses long-form lengths (81/82)', () => {
+	const short = parseTlvList('6212' + '8202412183026F078A010580020009880110');
+	assert.strictEqual(short.length, 1);
+	assert.strictEqual(short[0].tag, '62');
+	assert.strictEqual(short[0].length, 18);
+
+	// same content with a long-form outer length
+	const long81 = parseTlvList('628112' + '8202412183026F078A010580020009880110');
+	assert.strictEqual(long81.length, 1);
+	assert.strictEqual(long81[0].length, 18);
+	assert.strictEqual(long81[0].value, short[0].value);
+
+	// 2-byte length form
+	const long82 = parseTlvList('62820004' + '80020009');
+	assert.strictEqual(long82.length, 1);
+	assert.strictEqual(long82[0].length, 4);
+	assert.strictEqual(long82[0].value, '80020009');
+
+	// inner TLV with a long-form length (A5 81 05 85 03 00 00 00)
+	const inner = parseTlvList('A581058503000000');
+	assert.strictEqual(inner.length, 1);
+	assert.strictEqual(inner[0].tag, 'A5');
+	assert.strictEqual(inner[0].length, 5);
+	assert.strictEqual(inner[0].value, '8503000000');
+});
+
 test('gsm7Decode unpacks "HI" from C824', () => {
 	const bytes = new Uint8Array([0xC8, 0x24]);
 	assert.strictEqual(gsm7Decode(bytes), 'HI');

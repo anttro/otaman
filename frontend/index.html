@@ -3127,8 +3127,8 @@ const PARSE_INS = {
 function parseBerLen(hex, i) {
 	const b = parseInt(hex.substr(i, 2), 16);
 	if (b < 128) return {len: b, consumed: 2};
-	const n = parseInt(hex.substr(i + 2, b * 2), 16);
-	return {len: n, consumed: 2 + b * 2};
+	const n = b & 0x7F;
+	return {len: parseInt(hex.substr(i + 2, n * 2), 16), consumed: 2 + n * 2};
 }
 
 function parseTlvList(hex) {
