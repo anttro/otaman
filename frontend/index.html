@@ -813,26 +813,26 @@
 
 		<div id="pysim-sub-profiler" class="hidden">
 			<div id="profiler-list">
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<div class="text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300" data-l10n="Profiles">Profiles</div>
-						<div class="flex flex-wrap gap-2 mb-3">
-							<button onclick="profilerNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New profile">New profile</button>
-							<button onclick="profilerFromCard()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Profile from card">Profile from card</button>
-							<button onclick="document.getElementById('profiler-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import profile">Import profile</button>
-							<input type="file" id="profiler-import-file" accept=".json,application/json" class="hidden" onchange="profilerImportFile(this)">
-						</div>
-						<div id="profiler-list-body"></div>
+				<div class="flex justify-center gap-2 mb-3">
+					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-list-tab="profiles" onclick="profilerListSwitch('profiles')" data-l10n="Profiles">Profiles</button>
+					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-list-tab="snapshots" onclick="profilerListSwitch('snapshots')" data-l10n="Card snapshots">Card snapshots</button>
+				</div>
+				<div id="profiler-list-profiles">
+					<div class="flex flex-wrap gap-2 mb-3">
+						<button onclick="profilerNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New profile">New profile</button>
+						<button onclick="profilerFromCard()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Profile from card">Profile from card</button>
+						<button onclick="document.getElementById('profiler-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import profile">Import profile</button>
+						<input type="file" id="profiler-import-file" accept=".json,application/json" class="hidden" onchange="profilerImportFile(this)">
 					</div>
-					<div>
-						<div class="text-sm font-semibold mb-2 text-gray-700 dark:text-slate-300" data-l10n="Card snapshots">Card snapshots</div>
-						<div class="flex flex-wrap gap-2 mb-3">
-							<button onclick="snapshotNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New snapshot">New snapshot</button>
-							<button onclick="document.getElementById('snapshot-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import snapshot">Import snapshot</button>
-							<input type="file" id="snapshot-import-file" accept=".json,application/json" class="hidden" onchange="snapshotImportFile(this)">
-						</div>
-						<div id="snapshot-list-body"></div>
+					<div id="profiler-list-body"></div>
+				</div>
+				<div id="profiler-list-snapshots" class="hidden">
+					<div class="flex flex-wrap gap-2 mb-3">
+						<button onclick="snapshotNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New snapshot">New snapshot</button>
+						<button onclick="document.getElementById('snapshot-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import snapshot">Import snapshot</button>
+						<input type="file" id="snapshot-import-file" accept=".json,application/json" class="hidden" onchange="snapshotImportFile(this)">
 					</div>
+					<div id="snapshot-list-body"></div>
 				</div>
 			</div>
 			<div id="profiler-editor" class="hidden">
@@ -6981,6 +6981,7 @@ let profilerResults = null;
 let snapshots = [];
 let snapshotViewId = null;
 let _scanTarget = 'profile';
+let profilerListTab = 'profiles';
 
 // Files whose contents are ignored (contents check omitted) when scanning.
 // Keyed by FID; display name is the pySim name.
@@ -7136,13 +7137,32 @@ function profilerRenderList() {
 	el.innerHTML = html;
 }
 
+function profilerListSwitch(name) {
+	profilerListTab = name;
+	document.querySelectorAll('.profiler-list-tab').forEach(btn => {
+		const active = btn.dataset.listTab === name;
+		btn.classList.toggle('bg-blue-600', active);
+		btn.classList.toggle('text-white', active);
+		btn.classList.toggle('bg-gray-200', !active);
+		btn.classList.toggle('dark:bg-slate-700', !active);
+		btn.classList.toggle('text-gray-700', !active);
+		btn.classList.toggle('dark:text-slate-300', !active);
+	});
+	document.getElementById('profiler-list-profiles').classList.toggle('hidden', name !== 'profiles');
+	document.getElementById('profiler-list-snapshots').classList.toggle('hidden', name !== 'snapshots');
+}
+
 function profilerSetView(view) {
 	profilerView = view;
 	document.getElementById('profiler-list').classList.toggle('hidden', view !== 'list');
 	document.getElementById('profiler-editor').classList.toggle('hidden', view !== 'editor');
 	document.getElementById('profiler-results').classList.toggle('hidden', view !== 'results');
 	document.getElementById('profiler-snapshot').classList.toggle('hidden', view !== 'snapshot');
-	if (view === 'list') { profilerRenderList(); profilerRenderSnapshotList(); }
+	if (view === 'list') {
+		profilerRenderList();
+		profilerRenderSnapshotList();
+		profilerListSwitch(profilerListTab);
+	}
 }
 
 function profilerRenderSnapshotList() {
@@ -7296,6 +7316,7 @@ async function profilerScanStart() {
 			snapshotsSave();
 			profilerScanCancel();
 			profilerSetView('list');
+			profilerListSwitch('snapshots');
 		} else {
 			const rules = await profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, maskFids);
 			const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
@@ -7481,6 +7502,7 @@ function profilerImportFile(input) {
 			profiles.push(obj);
 			profilerSave();
 			profilerRenderList();
+			profilerListSwitch('profiles');
 		} catch (e) {
 			alert('Import error: ' + e.message);
 		}
@@ -7544,6 +7566,7 @@ function snapshotImportFile(input) {
 			snapshots.push(obj);
 			snapshotsSave();
 			profilerRenderSnapshotList();
+			profilerListSwitch('snapshots');
 		} catch (e) {
 			alert('Import error: ' + e.message);
 		}

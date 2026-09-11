@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -913,4 +913,32 @@ test('profilerScanCard snapshot mode builds snapshot entries with ICCID', async 
 	// IMSI captured exactly (no mask)
 	assert.strictEqual(files.find(f => f.name === 'EF.IMSI').content.data, '082905911234567890');
 	delete global.pysimCustomFiles;
+});
+
+test('profilerListSwitch toggles the profiles/snapshots tabs', () => {
+	const mkBtn = tab => ({
+		dataset: { listTab: tab },
+		classList: { _c: new Set(), toggle(c, on) { if (on) this._c.add(c); else this._c.delete(c); } },
+	});
+	const btns = [mkBtn('profiles'), mkBtn('snapshots')];
+	const profilesEl = { hidden: false, classList: { toggle(cls, on) { profilesEl.hidden = on; } } };
+	const snapsEl = { hidden: true, classList: { toggle(cls, on) { snapsEl.hidden = on; } } };
+	global.document = {
+		querySelectorAll: sel => (sel === '.profiler-list-tab' ? btns : []),
+		getElementById: id => (id === 'profiler-list-profiles' ? profilesEl : id === 'profiler-list-snapshots' ? snapsEl : null),
+	};
+
+	profilerListSwitch('snapshots');
+	assert.strictEqual(profilesEl.hidden, true);
+	assert.strictEqual(snapsEl.hidden, false);
+	assert.ok(btns[0].classList._c.has('bg-gray-200'));
+	assert.ok(btns[1].classList._c.has('bg-blue-600'));
+
+	profilerListSwitch('profiles');
+	assert.strictEqual(profilesEl.hidden, false);
+	assert.strictEqual(snapsEl.hidden, true);
+	assert.ok(btns[0].classList._c.has('bg-blue-600'));
+	assert.ok(btns[1].classList._c.has('bg-gray-200'));
+
+	delete global.document;
 });
