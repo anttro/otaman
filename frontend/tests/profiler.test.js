@@ -116,17 +116,29 @@ test('profile validation', () => {
 
 function parseIgnoreFiles() {
 	const raw = html.match(/const PROFILER_IGNORE_FILES = \[([\s\S]*?)\n\];/)[1];
-	return [...raw.matchAll(/\{ fid: '([^']*)', name: '([^']*)' \}/g)].map(m => ({ fid: m[1], name: m[2] }));
+	return [...raw.matchAll(/\{ fid: '([^']*)', name: '([^']*)'(?:, checked: (true|false))? \}/g)]
+		.map(m => ({ fid: m[1], name: m[2], checked: m[3] !== 'false' }));
 }
 
 test('ignore list FIDs are well-formed and KcGPRS uses the TS 51.011 FID (6F52)', () => {
 	const files = parseIgnoreFiles();
-	assert.ok(files.length >= 12);
+	assert.ok(files.length >= 16);
 	for (const f of files) {
 		assert.match(f.fid, /^[0-9A-F]{4}$/, f.name + ' has a malformed FID');
 		assert.ok(f.name.startsWith('EF.'), f.fid + ' has a malformed name');
 	}
 	assert.strictEqual(files.find(f => f.name === 'EF.KcGPRS').fid, '6F52');
+	assert.strictEqual(files.find(f => f.name === 'EF.ACC').fid, '6F78');
+	assert.strictEqual(files.find(f => f.name === 'EF.EPSNSC').fid, '6FE4');
+	assert.strictEqual(files.find(f => f.name === 'EF.START-HFN').fid, '6F5B');
+	assert.strictEqual(files.find(f => f.name === 'EF.ARR').fid, '2F06');
+});
+
+test('ignore list checks every file by default except EF.ARR', () => {
+	const files = parseIgnoreFiles();
+	for (const f of files) {
+		assert.strictEqual(f.checked, f.name !== 'EF.ARR', f.name + ' default-checked mismatch');
+	}
 });
 
 test('ignore list has no duplicate FIDs or names', () => {

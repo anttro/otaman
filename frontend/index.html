@@ -6960,6 +6960,10 @@ const PROFILER_IGNORE_FILES = [
 	{ fid: '6F53', name: 'EF.LOCIGPRS' },
 	{ fid: '6F48', name: 'EF.CBMID' },
 	{ fid: '6F43', name: 'EF.SMSS' },
+	{ fid: '6F78', name: 'EF.ACC' },
+	{ fid: '6FE4', name: 'EF.EPSNSC' },
+	{ fid: '6F5B', name: 'EF.START-HFN' },
+	{ fid: '2F06', name: 'EF.ARR', checked: false },
 ];
 
 // Files where contents are captured as a mask matching only the first 4 bytes
@@ -7104,7 +7108,7 @@ function profilerFromCard() {
 	let html = '';
 	for (const f of PROFILER_IGNORE_FILES) {
 		html += '<label class="flex items-center gap-2 text-sm">' +
-			'<input type="checkbox" data-ignore-fid="' + f.fid + '" data-ignore-name="' + f.name + '" checked>' +
+			'<input type="checkbox" data-ignore-fid="' + f.fid + '" data-ignore-name="' + f.name + '"' + (f.checked === false ? '' : ' checked') + '>' +
 			'<span>' + esc(f.name) + '</span></label>';
 	}
 	ignore.innerHTML = html;
