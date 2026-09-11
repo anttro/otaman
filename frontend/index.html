@@ -7871,74 +7871,135 @@ function fcpDo(key, value) {
 
 // Decode a SELECT response (FCI): accepts the FCP template '62', an FCI template
 // '6F' wrapping FCP/FMD, or bare FCP content. Returns { ok, template, items }.
+// Partial-aware BER-TLV walk: parses as many complete TLVs as possible and
+// reports where/why it stopped (truncated header/length/value, trailing data).
+function fcpParseTlvs(hex) {
+	const tlvs = [];
+	let i = 0;
+	let error = '';
+	while (i < hex.length) {
+		const remaining = hex.length - i;
+		if (remaining < 2) { error = 'Truncated at offset ' + (i / 2) + ': incomplete tag'; break; }
+		const tag = hex.substr(i, 2);
+		let tagBytes = 2;
+		if ((parseInt(tag, 16) & 0x1F) === 0x1F) {
+			tagBytes = 4;
+			if (remaining < 4) { error = 'Truncated at offset ' + (i / 2) + ': incomplete 2-byte tag'; break; }
+		}
+		if (remaining < tagBytes + 2) { error = 'Truncated at offset ' + (i / 2) + ': incomplete TLV header'; break; }
+		const lb = parseInt(hex.substr(i + tagBytes, 2), 16);
+		const nLen = lb < 128 ? 0 : (lb & 0x7F);
+		if (i + tagBytes + 2 + nLen * 2 > hex.length) { error = 'Truncated length field at offset ' + ((i + tagBytes) / 2); break; }
+		const r = parseBerLen(hex, i + tagBytes);
+		if (!(r.len >= 0)) { error = 'Invalid length form at offset ' + ((i + tagBytes) / 2); break; }
+		const consumed = tagBytes + r.consumed;
+		const total = consumed + r.len * 2;
+		if (remaining < total) {
+			error = 'TLV ' + tag + ' declares ' + r.len + ' bytes, only ' + Math.floor(Math.max(remaining - consumed, 0) / 2) + ' available';
+			break;
+		}
+		tlvs.push({ tag, length: r.len, value: hex.substr(i + consumed, r.len * 2), raw: hex.substr(i, total) });
+		i += total;
+	}
+	return { tlvs, error, consumed: i };
+}
+
 function fcpDecode(hex) {
 	const h = (hex || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
-	if (!h) return { ok: false, template: null, items: [] };
+	if (!h) return { ok: false, template: null, items: [], error: '' };
 	let template = null;
 	let body = h;
-	const top = parseTlvList(h);
-	if (top.length === 1 && top[0].raw.length === h.length && (top[0].tag === '62' || top[0].tag === '6F' || top[0].tag === '64')) {
-		template = top[0].tag;
-		body = top[0].value;
-		if (template === '6F') {
-			const fcp = parseTlvList(body).find(t => t.tag === '62');
-			if (fcp) { template = '62'; body = fcp.value; }
+	let error = '';
+	const first = h.substr(0, 2);
+	if ((first === '62' || first === '64' || first === '6F') && h.length >= 4) {
+		const lb = parseInt(h.substr(2, 2), 16);
+		const nLen = lb < 128 ? 0 : (lb & 0x7F);
+		if (4 + nLen * 2 > h.length) {
+			error = 'TLV ' + first + ' has a truncated length field';
+			body = '';
+		} else {
+			const r = parseBerLen(h, 2);
+			const consumed = 2 + r.consumed;
+			const avail = h.length - consumed;
+			template = first;
+			body = h.substr(consumed, Math.min(r.len * 2, Math.max(avail, 0)));
+			if (r.len * 2 > avail) error = 'TLV ' + first + ' declares ' + r.len + ' bytes, only ' + Math.floor(Math.max(avail, 0) / 2) + ' available';
+			else if (consumed + r.len * 2 < h.length) error = 'Trailing data after TLV ' + first;
 		}
-	}
-	const tlvs = parseTlvList(body);
-	const consumed = tlvs.reduce((n, t) => n + t.raw.length, 0);
-	const ok = tlvs.length > 0 && consumed === body.length;
-	const items = [];
-	for (const t of tlvs) {
-		const d = fcpDo(t.tag, t.value);
-		items.push({ key: t.tag, tag: t.tag, name: d.name, value: t.value, decoded: d.decoded });
-		if (t.tag === 'A5' || t.tag === 'C6') {
-			for (const sub of parseTlvList(t.value)) {
-				const sd = fcpDo(t.tag + '/' + sub.tag, sub.value);
-				items.push({ key: t.tag + '/' + sub.tag, tag: sub.tag, name: sd.name, value: sub.value, decoded: sd.decoded });
+		if (template === '6F' && body) {
+			const inner = fcpParseTlvs(body);
+			const fcp = inner.tlvs.find(t => t.tag === '62');
+			if (fcp) {
+				template = '62';
+				body = fcp.value;
+				if (!error && inner.error) error = inner.error;
 			}
 		}
 	}
-	return { ok, template, items };
+	const parsed = fcpParseTlvs(body);
+	if (!error && parsed.error) error = parsed.error;
+	const items = [];
+	for (const t of parsed.tlvs) {
+		const d = fcpDo(t.tag, t.value);
+		items.push({ key: t.tag, tag: t.tag, name: d.name, value: t.value, decoded: d.decoded });
+		if (t.tag === 'A5' || t.tag === 'C6') {
+			const sub = fcpParseTlvs(t.value);
+			if (!error && sub.error) error = 'In ' + t.tag + ': ' + sub.error;
+			for (const s of sub.tlvs) {
+				const sd = fcpDo(t.tag + '/' + s.tag, s.value);
+				items.push({ key: t.tag + '/' + s.tag, tag: s.tag, name: sd.name, value: s.value, decoded: sd.decoded });
+			}
+		}
+	}
+	return { ok: !error && items.length > 0, template, items, error };
 }
 
 function fcpDiffHtml(expectedHex, actualHex) {
 	const e = fcpDecode(expectedHex);
 	const a = fcpDecode(actualHex);
-	if (!e.ok || !a.ok || !e.items.length || !a.items.length) return '';
+	const eBad = !!e.error, aBad = !!a.error;
+	if (!eBad && !aBad && (!e.items.length || !a.items.length)) return '';
 	const eMap = {}, aMap = {};
 	e.items.forEach(it => { eMap[it.key] = it; });
 	a.items.forEach(it => { aMap[it.key] = it; });
 	const keys = e.items.map(it => it.key);
 	for (const it of a.items) if (!eMap[it.key]) keys.push(it.key);
-	let html = '<div class="mt-1 text-xs text-gray-500 dark:text-slate-400">' + esc(t('FCP parameters')) + '</div>';
-	html += '<table class="w-full text-xs border-collapse">';
-	html += '<thead><tr class="border-b border-gray-200 dark:border-slate-700">' +
-		'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('Parameter')) + '</th>' +
-		'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('expected')) + '</th>' +
-		'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('actual')) + '</th></tr></thead><tbody>';
-	for (const k of keys) {
-		const ev = eMap[k], av = aMap[k];
-		const ed = ev ? (ev.decoded === null ? '' : (ev.decoded || ev.value)) : '—';
-		const ad = av ? (av.decoded === null ? '' : (av.decoded || av.value)) : '—';
-		const eq = !!ev && !!av && ev.decoded === av.decoded && ev.value === av.value;
-		const color = eq ? 'text-gray-500 dark:text-slate-400' : 'text-red-600 font-medium';
-		html += '<tr class="border-b border-gray-100 dark:border-slate-800">' +
-			'<td class="py-0.5 px-1 ' + color + '">' + esc((ev || av).name) + '</td>' +
-			'<td class="py-0.5 px-1 font-mono break-all ' + color + '">' + esc(ed) + '</td>' +
-			'<td class="py-0.5 px-1 font-mono break-all ' + color + '">' + esc(ad) + '</td></tr>';
+	let html = '';
+	if (keys.length) {
+		html += '<div class="mt-1 text-xs text-gray-500 dark:text-slate-400">' + esc(t('FCP parameters')) + '</div>';
+		html += '<table class="w-full text-xs border-collapse">';
+		html += '<thead><tr class="border-b border-gray-200 dark:border-slate-700">' +
+			'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('Parameter')) + '</th>' +
+			'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('expected')) + '</th>' +
+			'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('actual')) + '</th></tr></thead><tbody>';
+		for (const k of keys) {
+			const ev = eMap[k], av = aMap[k];
+			const ed = ev ? (ev.decoded === null ? '' : (ev.decoded || ev.value)) : '—';
+			const ad = av ? (av.decoded === null ? '' : (av.decoded || av.value)) : '—';
+			const eq = !!ev && !!av && ev.decoded === av.decoded && ev.value === av.value;
+			const color = eq ? 'text-gray-500 dark:text-slate-400' : 'text-red-600 font-medium';
+			html += '<tr class="border-b border-gray-100 dark:border-slate-800">' +
+				'<td class="py-0.5 px-1 ' + color + '">' + esc((ev || av).name) + '</td>' +
+				'<td class="py-0.5 px-1 font-mono break-all ' + color + '">' + esc(ed) + '</td>' +
+				'<td class="py-0.5 px-1 font-mono break-all ' + color + '">' + esc(ad) + '</td></tr>';
+		}
+		html += '</tbody></table>';
 	}
-	html += '</tbody></table>';
+	if (eBad) html += '<div class="text-xs text-red-600 mt-0.5 pl-2">' + esc(t('expected')) + ': ' + esc(e.error) + '</div>';
+	if (aBad) html += '<div class="text-xs text-red-600 mt-0.5 pl-2">' + esc(t('actual')) + ': ' + esc(a.error) + '</div>';
 	return html;
 }
 
 function profilerFciPreviewItems(hex) {
 	const d = fcpDecode(hex);
-	if (!d.ok || !d.items.length) return '';
+	if (!d.items.length && !d.error) return '';
 	let html = '';
 	for (const it of d.items) {
 		if (it.decoded === null) continue;
 		html += '<div>' + esc(it.name) + ': <span class="text-gray-800 dark:text-slate-200">' + esc(it.decoded || it.value) + '</span></div>';
+	}
+	if (d.error) {
+		html += '<div class="text-red-600">' + esc(t('Decode failed')) + ': ' + esc(d.error) + '</div>';
 	}
 	return html;
 }
@@ -8212,6 +8273,7 @@ const LANG_RU = {
 	'FCP parameters': 'Параметры FCP',
 	'Parameter': 'Параметр',
 	'Decoded FCP': 'Декодированный FCP',
+	'Decode failed': 'Ошибка декодирования',
 	'No profiles defined.': 'Профили не заданы.',
 	'rules': 'правил',
 	'Check card': 'Проверить карту',

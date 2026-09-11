@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -679,14 +679,15 @@ test('fcpDiffHtml highlights differing FCP parameters', () => {
 	assert.ok(diff.includes('9 bytes'));
 	assert.ok(diff.includes('10 bytes'));
 	assert.ok(diff.includes('text-red-600'));
-	assert.ok(!fcpDiffHtml('garbage', FCP_TRANSPARENT));
+	assert.ok(fcpDiffHtml('garbage', FCP_TRANSPARENT).includes('Truncated length field'));
+	assert.strictEqual(fcpDiffHtml('', ''), '');
 	delete global.t;
 });
 
 test('profilerFciPreviewItems renders decoded items and degrades gracefully', () => {
 	global.t = s => s;
 	assert.ok(profilerFciPreviewItems(FCP_TRANSPARENT).includes('File size: '));
-	assert.strictEqual(profilerFciPreviewItems('not hex'), '');
+	assert.ok(profilerFciPreviewItems('not hex').includes('Decode failed'));
 	assert.strictEqual(profilerFciPreviewItems(''), '');
 	delete global.t;
 });
@@ -718,5 +719,59 @@ test('profilerRenderReport shows the decoded FCI diff for a raw fci mismatch', (
 	assert.ok(html.includes('9 bytes'));
 	assert.ok(html.includes('10 bytes'));
 	assert.ok(html.includes('text-red-600'));
+	delete global.t;
+});
+
+// --- partial/corrupt FCI decoding ---
+
+test('fcpDecode reports truncation but keeps the TLVs parsed before it', () => {
+	// outer declares 22 bytes (0x16) but only the 18-byte body is present
+	const truncOuter = '6216' + FCP_TRANSPARENT.slice(4);
+	const d1 = fcpDecode(truncOuter);
+	assert.strictEqual(d1.ok, false);
+	assert.match(d1.error, /TLV 62 declares 22 bytes, only 18 available/);
+	assert.strictEqual(d1.items.find(it => it.key === '80').decoded, '9 bytes');
+
+	// correct outer length, truncated inner TLV (82 declares 5 bytes, 2 present)
+	const d2 = fcpDecode('620880020009820541 21'.replace(/ /g, ''));
+	assert.strictEqual(d2.ok, false);
+	assert.match(d2.error, /TLV 82 declares 5 bytes, only 2 available/);
+	assert.strictEqual(d2.items.find(it => it.key === '80').decoded, '9 bytes');
+	assert.ok(!d2.items.some(it => it.key === '82'));
+
+	// truncated length field
+	const d3 = fcpDecode('6281');
+	assert.strictEqual(d3.ok, false);
+	assert.match(d3.error, /truncated length field/);
+	assert.strictEqual(d3.items.length, 0);
+
+	// truncated inner A5 sub-TLV reports the context
+	const d4 = fcpDecode('620A82024121A50488050102');
+	assert.strictEqual(d4.ok, false);
+	assert.match(d4.error, /In A5: TLV 88 declares 5 bytes, only 2 available/);
+});
+
+test('profilerFciPreviewItems shows decoded data plus an explicit failure note', () => {
+	global.t = s => s;
+	const trunc = '6216' + FCP_TRANSPARENT.slice(4);
+	const html = profilerFciPreviewItems(trunc);
+	assert.ok(html.includes('File size: '), html);
+	assert.ok(html.includes('Decode failed'), html);
+	assert.ok(html.includes('declares 22 bytes'), html);
+	// empty input renders nothing; garbage reports the failure
+	assert.strictEqual(profilerFciPreviewItems(''), '');
+	assert.ok(profilerFciPreviewItems('not hex').includes('Decode failed'));
+	delete global.t;
+});
+
+test('fcpDiffHtml appends decode-failure notes for corrupt sides', () => {
+	global.t = s => s;
+	const trunc = '6216' + FCP_TRANSPARENT.slice(4);
+	const html = fcpDiffHtml(trunc, FCP_TRANSPARENT);
+	assert.ok(html.includes('FCP parameters'), html);
+	assert.ok(html.includes('9 bytes'));
+	assert.ok(html.includes('expected: ') && html.includes('TLV 62 declares 22 bytes'));
+	// both sides empty -> nothing rendered
+	assert.strictEqual(fcpDiffHtml('', ''), '');
 	delete global.t;
 });
