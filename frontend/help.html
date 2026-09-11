@@ -371,7 +371,7 @@
 		<li><strong>New profile</strong> — creates an empty ruleset after prompting for a name.</li>
 		<li><strong>Profile from card</strong> — scans the equipped card and generates one rule per existing file (see below), then opens the editor.</li>
 		<li><strong>Import profile</strong> — loads a ruleset from a JSON file (the name is stored inside the JSON).</li>
-		<li>Each profile row shows its name and creation time, with <strong>Check card ▶</strong>, <strong>Edit</strong>, <strong>Export</strong> (download JSON), and <strong>Delete</strong> actions.</li>
+		<li>Each profile row shows its name and creation time, with <strong>Check card ▶</strong>, <strong>Check card snapshot</strong>, <strong>Edit</strong>, <strong>Export</strong> (download JSON), and <strong>Delete</strong> actions.</li>
 	</ul>
 	<h4 class="font-medium mb-1">Filesystem rules</h4>
 	<p class="text-sm mb-2">Rules run sequentially. The editor shows the symbolic pySim name (when known) next to each rule&rsquo;s path; use <strong>Add rule</strong> to append one and <strong>Save</strong> to keep the changes. A filesystem rule is defined by:</p>
@@ -391,6 +391,7 @@
 		<li><strong>New snapshot</strong> &mdash; asks for a name and scans the card, then returns to the list.</li>
 		<li><strong>Import snapshot</strong> &mdash; loads a snapshot from a JSON file.</li>
 		<li>Each snapshot row has <strong>Open</strong>, <strong>Export</strong>, and <strong>Delete</strong>. <strong>Open</strong> shows all captured data read-only (raw FCI with the decoded FCI, contents); only the snapshot name is editable.</li>
+		<li><strong>Check card snapshot</strong> on a profile row runs the profile rules against a snapshot you pick from the list, without a card reader. The report is the same as a live check; files whose contents were not captured during the scan are reported as unverifiable errors.</li>
 	</ul>
 
 <h3 id="usage-scenarios" class="text-lg font-medium mb-2">5.7 Usage scenarios</h3>

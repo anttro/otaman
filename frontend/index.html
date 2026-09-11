@@ -961,6 +961,16 @@
 		</div>
 	</div>
 
+	<div id="snapshot-pick-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 max-h-[85vh] overflow-auto">
+			<h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="Select card snapshot">Select card snapshot</h3>
+			<div id="snapshot-pick-list" class="space-y-1 mb-4"></div>
+			<div class="flex gap-2 justify-end">
+				<button onclick="document.getElementById('snapshot-pick-modal').classList.add('hidden')" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
+			</div>
+		</div>
+	</div>
+
 	<div id="stk-menu-panel" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
 		<div class="bg-white dark:bg-slate-800 rounded-lg p-4 max-w-xs w-full max-h-[80vh] flex flex-col">
 			<div class="flex justify-between items-center mb-3">
@@ -7129,6 +7139,7 @@ function profilerRenderList() {
 		html += '<span class="text-xs text-gray-400 dark:text-slate-500">(' + p.rules.length + ' ' + esc(t('rules')) + ')</span>';
 		html += '<span class="ml-auto flex gap-1">';
 		html += '<button onclick="profilerCheck(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700">' + esc(t('Check card')) + ' ▶</button>';
+		html += '<button onclick="profilerCheckSnapshotPick(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-slate-600 text-white hover:bg-slate-700">' + esc(t('Check card snapshot')) + '</button>';
 		html += '<button onclick="profilerEdit(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + esc(t('Edit')) + '</button>';
 		html += '<button onclick="profilerExport(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">' + esc(t('Export')) + '</button>';
 		html += '<button onclick="profilerDelete(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
@@ -7878,8 +7889,12 @@ function profilerSaveProfile() {
 
 async function profilerCheck(i) {
 	const p = profiles[i];
+	await profilerRunProfile(p, null, p.name);
+}
+
+async function profilerRunProfile(p, source, title) {
 	profilerSetView('results');
-	document.getElementById('profiler-results-title').textContent = p.name;
+	document.getElementById('profiler-results-title').textContent = title;
 	const prog = document.getElementById('profiler-progress');
 	document.getElementById('profiler-summary').innerHTML = '';
 	document.getElementById('profiler-report').innerHTML = '';
@@ -7887,11 +7902,34 @@ async function profilerCheck(i) {
 	for (let ri = 0; ri < p.rules.length; ri++) {
 		const r = p.rules[ri];
 		prog.textContent = t('Checking') + ' ' + (ri + 1) + '/' + p.rules.length + ' — ' + r.path;
-		results.push(await profilerRunRule(r));
+		results.push(await profilerRunRule(r, source));
 	}
 	prog.textContent = '';
 	profilerResults = results;
 	profilerRenderResultsView();
+}
+
+function profilerCheckSnapshotPick(i) {
+	if (!snapshots.length) {
+		alert(t('No snapshots defined.'));
+		return;
+	}
+	let html = '';
+	for (let si = 0; si < snapshots.length; si++) {
+		const s = snapshots[si];
+		html += '<button onclick="profilerCheckSnapshot(' + i + ',' + si + ')" class="w-full text-left px-3 py-2 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700">' +
+			'<span class="font-semibold text-gray-800 dark:text-slate-200">' + esc(s.name) + '</span>' +
+			'<span class="block text-gray-500 dark:text-slate-400">' + esc(s.iccid || '') + ' · ' + esc(new Date(s.created).toLocaleString()) + ' · ' + (s.files ? s.files.length : 0) + ' ' + t('files') + '</span></button>';
+	}
+	document.getElementById('snapshot-pick-list').innerHTML = html;
+	document.getElementById('snapshot-pick-modal').classList.remove('hidden');
+}
+
+async function profilerCheckSnapshot(i, si) {
+	document.getElementById('snapshot-pick-modal').classList.add('hidden');
+	const p = profiles[i];
+	const s = snapshots[si];
+	await profilerRunProfile(p, profilerSnapshotSource(s), p.name + ' — ' + s.name);
 }
 
 function profilerRenderResultsView() {
@@ -7908,12 +7946,46 @@ function profilerRenderResultsView() {
 	document.getElementById('profiler-report').innerHTML = profilerRenderReport(profilerResults);
 }
 
-async function profilerRunRule(r) {
+function profilerLiveSource() {
+	return {
+		select: path => pysimFetch('/api/select', { path: path }),
+		read: path => pysimFetch('/api/read', { path: path, mode: 'raw' }),
+	};
+}
+
+function profilerSnapshotSource(snapshot) {
+	const find = path => (snapshot.files || []).find(f => (f.path || '').toUpperCase() === (path || '').toUpperCase());
+	return {
+		select: async path => {
+			const f = find(path);
+			if (!f) return { exists: false };
+			return {
+				name: f.name,
+				file_type: f.fileType,
+				file_size: f.fileSize,
+				record_len: f.recordLen,
+				num_of_rec: f.numRecords,
+				fci_hex: f.fciHex,
+				exists: true,
+			};
+		},
+		read: async path => {
+			const f = find(path);
+			if (!f) return { success: false };
+			if (!f.content) return { success: false, sw: 'not-captured' };
+			if (f.content.kind === 'record') return { success: true, records: f.content.records };
+			return { success: true, data: f.content.data };
+		},
+	};
+}
+
+async function profilerRunRule(r, source) {
+	source = source || profilerLiveSource();
 	const res = { path: r.path, name: null, status: 'pass', checks: [] };
 	let sizeMismatch = false;
 	let sel;
 	try {
-		sel = await pysimFetch('/api/select', { path: r.path });
+		sel = await source.select(r.path);
 	} catch (e) {
 		res.status = 'error';
 		res.error = e.message;
@@ -7960,15 +8032,21 @@ async function profilerRunRule(r) {
 	if (r.content) {
 		let rd;
 		try {
-			rd = await pysimFetch('/api/read', { path: r.path, mode: 'raw' });
+			rd = await source.read(r.path);
 		} catch (e) {
 			res.status = 'error';
 			res.error = e.message;
 			return res;
 		}
 		if (!rd || !rd.success) {
-			res.status = 'fail';
-			res.checks.push({ label: 'content', expected: 'readable', actual: 'read failed (' + (rd && rd.sw ? rd.sw : '?') + ')', ok: false });
+			if (rd && rd.sw === 'not-captured') {
+				res.status = 'error';
+				res.error = t('Content not captured in snapshot');
+				res.checks.push({ label: 'content', expected: 'captured', actual: t('not captured in snapshot'), ok: false });
+			} else {
+				res.status = 'fail';
+				res.checks.push({ label: 'content', expected: 'readable', actual: 'read failed (' + (rd && rd.sw ? rd.sw : '?') + ')', ok: false });
+			}
 		} else if (r.content.kind === 'record') {
 			const exp = r.content.records || [];
 			const act = rd.records || [];
@@ -8592,6 +8670,10 @@ const LANG_RU = {
 	'Import profile': 'Импорт профиля',
 	'Profiles': 'Профили',
 	'Card snapshots': 'Снимки карт',
+	'Check card snapshot': 'Проверить снимок карты',
+	'Select card snapshot': 'Выберите снимок карты',
+	'Content not captured in snapshot': 'Содержимое не захвачено в снимок',
+	'not captured in snapshot': 'не захвачено в снимок',
 	'New snapshot': 'Новый снимок',
 	'Import snapshot': 'Импорт снимка',
 	'Snapshot name': 'Имя снимка',
