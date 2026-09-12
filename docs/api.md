@@ -55,7 +55,7 @@ Returns server version for compatibility checking.
 
 **Example response:**
 ```json
-{"version": "1.9.12"}
+{"version": "1.9.28"}
 ```
 
 ### `GET /api/status`
@@ -213,60 +213,6 @@ and the decoded SPI fields.
  "diffs": [], "spi": {"counter": "counter_must_be_higher", ...}}
 ```
 
-### `POST /api/ram-install`
-
-Install a Java Card `.cap` file on the card via GlobalPlatform commands (INSTALL[for load] → LOAD ×N → INSTALL[for install (+ make selectable)]) wrapped in SCP80 secured packets. Each step is sent via ENVELOPE and its PoR is checked; the sequence aborts on the first PoR error. Requires pySim with `pySim.javacard.CapFile` and `pySim.global_platform` available on the server.
-
-**Request body:**
-```json
-{
-  "cap_hex": "DECAFFED...",
-  "sd_aid": "A000000003000000",
-  "install_params": "C90000",
-  "stk_params": "",
-  "nv_quota": 0,
-  "volatile_quota": 0,
-  "make_selectable": true,
-  "spi1": "0E", "spi2": "01",
-  "kic": "15", "kid": "15",
-  "tar": "000000",
-  "cntr": "0000000001",
-  "kicKey": "D6FCC023...",
-  "kidKey": "1B07E7E0..."
-}
-```
-
-| Field | Req | Description |
-|---|---|---|
-| `cap_hex` | yes | Even-length hex of the `.cap` file (zipped Java Card CAP), max 48 kB (98304 hex chars) |
-| `sd_aid` | no | Security Domain AID for INSTALL[for load]; empty → default ISD `A000000003000000` |
-| `install_params` | no | Hex C9 TLV install parameters; if empty, `gen_install_parameters()` is used with the quota/stk params |
-| `stk_params` | no | Hex CA TLV (TS 102 226 §8.2.1.3.2.1) for SIM toolkit app-specific params |
-| `nv_quota` / `volatile_quota` | no | Integer memory quotas (bytes) for `gen_install_parameters()` |
-| `make_selectable` | no | If true (default), final INSTALL uses P1=`0C` (install + make selectable) |
-
-**Response (success):**
-```json
-{"success": true, "failed_step": null,
- "steps": [{"name": "install_for_load", "apdu": "80E60200...", "por_status": "por_ok", "sw": "9000"},
-           {"name": "load_0", "apdu": "80E80000...", "por_status": "por_ok", "sw": "9000"},
-           {"name": "install_for_install", "apdu": "80E60C00...", "por_status": "por_ok", "sw": "9000"}],
- "final_cntr": "0000000004",
- "load_file_aid": "A000000003000000",
- "module_aid": "A000000003000000",
- "application_aid": "A000000003000000"}
-```
-
-**Response (failure):**
-```json
-{"success": false, "failed_step": "load_1",
- "steps": [{"name": "install_for_load", "por_status": "por_ok", "sw": "9000"},
-           {"name": "load_1", "por_status": "rc_error", "sw": null}],
- "error": "..."}
-```
-
-The `steps` array contains one entry per GP command. `final_cntr` is the counter value after all successful steps (use it to update the card preset). The response is not streamed — all steps run server-side before the JSON is returned.
-
 ### `GET /api/menu`
 
 Returns the SIM Toolkit SETUP MENU captured from the card's TERMINAL PROFILE
@@ -327,9 +273,15 @@ Read file content. Auto-detects transparent vs record files.
 {"name": "EF.ICCID", "fid": "2FE2", "parent_sel": "3F00", "mode": "raw"}
 ```
 
-Returns:
+Returns transparent data:
 ```json
 {"success": true, "sw": "9000", "file_type": "transparent", "data": "..."}
+```
+
+Returns records:
+```json
+{"success": true, "sw": "9000", "file_type": "linear_fixed",
+ "records": [{"num": 1, "data": "..."}, {"num": 2, "data": "..."}]}
 ```
 
 ### `POST /api/write`
@@ -360,8 +312,15 @@ Select a file by name or FID, with optional parent selection.
 
 Returns:
 ```json
-{"name": "EF.ICCID", "fid": "2FE2", "file_type": "transparent", "exists": true}
+{"name": "EF.ICCID", "fid": "2FE2", "file_type": "transparent",
+ "file_size": 10, "record_len": null, "num_of_rec": null,
+ "fci_hex": "621082024021...", "exists": true}
 ```
+
+`fci_hex` is the raw FCP template (`'62'`) from the SELECT response, used by
+the PWA's Exact FCI checks; `file_size` / `record_len` / `num_of_rec` drive
+the profiler's size and record checks. When the file does not exist the
+endpoint responds `404` with `{"error": "...", "exists": false}`.
 
 ### `POST /api/tree`
 
@@ -375,3 +334,90 @@ Returns:
 ```json
 {"exists": true, "name": "MF", "fid": "3F00", "file_type": "df", "children": [{"name": "EF.ICCID", "fid": "2fe2", "isDir": false}]}
 ```
+
+### `GET /api/events`
+
+Returns the event list captured from the card's SET UP EVENT LIST (an array of
+event byte values, or `[]` when none was received).
+
+### `POST /api/event-send`
+
+Sends an `ENVELOPE(Event Download)` for a subscribed event.
+
+```json
+{"event_type": 4, "event_data": "01A0"}
+```
+
+`event_type` is required (the SET UP EVENT LIST event byte); `event_data` is
+optional hex for events that carry data. Returns the SW and any response data:
+
+```json
+{"sw": "9000", "data": "..."}
+```
+
+### `GET /api/proactive-log`
+
+Returns the last 50 proactive commands fetched during CAT sessions, newest
+first:
+
+```json
+[{"type_hex": "25", "type_name": "SET UP MENU", "elapsed": 3.2, "bytes": 97}]
+```
+
+### `POST /api/status-poll`
+
+Manually sends `STATUS` (F2) and, if the card answers `91XX`, runs the
+proactive chain (FETCH → TERMINAL RESPONSE) until it settles. Returns:
+
+```json
+{"sw": "9000", "proactive": true}
+```
+
+### `POST /api/rescue`
+
+Recovers a stuck CAT session by clearing the pending state and re-sending the
+TERMINAL PROFILE. Returns whether a menu and event list were captured again:
+
+```json
+{"menu": true, "events": [4, 5]}
+```
+
+### `GET /api/poll-status`
+
+Background STATUS polling state.
+
+```json
+{"enabled": true, "interval": 300}
+```
+
+### `POST /api/poll-toggle`
+
+Turns background STATUS polling on or off.
+
+```json
+{"enabled": true}
+```
+
+Returns the new state (`{"enabled": ..., "interval": ...}`).
+
+### `GET /api/pli-qualifiers`
+
+Lists the PROVIDE LOCAL INFORMATION qualifier codes with their names.
+
+```json
+[{"code": "00", "name": "Location Information"}, {"code": "0A", "name": "Battery Charge Level"}]
+```
+
+### `GET /api/pli-dict`
+
+Returns the current PLI data dictionary as a qualifier-code map.
+
+```json
+{"00": "0291...", "0A": "64"}
+```
+
+### `POST /api/pli-dict`
+
+Updates dictionary entries. Body is a map of qualifier code to hex value; keys
+must be known qualifiers and values valid hex, otherwise they are ignored.
+Returns the updated dictionary.

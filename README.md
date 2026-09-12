@@ -31,13 +31,13 @@ npm run build
 
 ## Interface
 
-Four top-level tabs: **C-APDU**, **SCP80**, **Response parser**, **Card reader**. The C-APDU and SCP80 tabs each have sub-tabs.
+Four top-level tabs: **C-APDU**, **SCP80**, **Response parser**, **Card reader**. The **C-APDU** and **SCP80** tabs use pill sub-tabs, and the Card reader tab has six sub-tabs: **File manager**, **Custom files**, **Profiler**, **pySim command line**, **Raw APDU**, and **Proactive UICC**.
 
 ---
 
 ## C-APDU tab
 
-Builds command APDUs (C-APDUs). Five sub-tabs cover different card generations and command sets.
+Builds command APDUs (C-APDUs). Six sub-tabs cover different card generations and command sets.
 
 ### SIM RFM
 
@@ -312,6 +312,26 @@ Swaps nibble pairs of an even-length hex string.
 - ETSI TS 102 225: Secured packet structure for (U)SIM toolkit
 - pySim: enc_imsi() implementation
 
+### C-APDU Parser
+
+Pastes raw APDU hex and renders a collapsible tree. It auto-detects the container: an **Expanded Script** (leading `AA` or `AE80`, decoded per ETSI TS 102 226 §5.2.1) or a **Compact C-APDU chain** (a sequence of ISO 7816 C-APDUs). Each node shows its label, hex, and a short description; parent nodes expand to reveal their sub-elements.
+
+### HTTP OTA
+
+Builds the Remote Application Management over HTTP payloads defined in GlobalPlatform **GPC v2.2 Amendment B v1.1** (§4.7). Two modes:
+
+- **Trigger (Push SMS)** — administration session triggering parameters (`81 > 83 > 84/[85]/[86]/89`, Table 4-3). This is the message that asks the card's Security Domain to dial out and start an HTTP session.
+- **Store (SD admin params)** — writes the same parameters as card (Security Domain) data via **STORE DATA in TLV mode** (`80 E2 90 00`, P1=90 = last block + BER-TLV per GP v2.2 Amendment B v1.1.3), wrapped in tag `85` (or `A5`) per Table 4-4.
+
+| Section | Tag | Contents |
+|---|---|---|
+| Connection parameters | `84` | COMPREHENSION-TLVs needed to open the TCP connection (OPEN CHANNEL per TS 102 223): Device Identities `02`, Alpha `80`, Bearer `01`, vendor TLVs. Row editor + presets, editable hex. |
+| Security parameters | `85` | Table 4-6: LV PSK Identity (text), LV Key version/KID. Identifies the PSK TLS key (RFC 4279). |
+| Retry policy | `86` | Table 4-7: retry counter (2 bytes, e.g. `B000`), retry waiting delay as the TS 102 223 timer TLV (`25 03 HH MM SS`), optional vendor-specific report-failure TLV. |
+| HTTP POST | `89` | Tables 4-8/9/10: Host header (`8A`), X-Admin-From agent ID (`8B`), URI (`8C`) — text converted to octets. |
+
+The **Command Scripting template** checkbox wraps the whole `81` triggering command in the definite-length Expanded Remote Application data format (`AA`, ETSI TS 102 226 §5.2.1) for TARs that process the expanded format. **Pack into Secured packet** sends the built payload to the SCP80 tab for SPI/counter filling — insert the TAR the SD listens on (typically the OTASD TAR) there.
+
 ---
 
 ## SCP80 tab
@@ -517,6 +537,35 @@ Values persist on the server until restart. Apply → hex updates; Save → POST
 
 Type a command name in the **pySim command line** input. Usage hints appear as a tooltip after 300ms. Command autocomplete suggestions appear above the input.
 
+### Profiler
+
+Verifies that a card matches a named **profile** — an ordered set of rules describing the expected file system and, optionally, file contents. Profiles are stored in `localStorage`.
+
+- **New profile** creates an empty ruleset; **Profile from card** scans the equipped card and generates one rule per existing file; **Import profile** loads a ruleset from JSON (the name is stored inside the file).
+- Each profile row has **Check card ▶** (run against the equipped card), **Check card snapshot** (run offline against a saved snapshot), **Edit**, **Export**, and **Delete**.
+
+A filesystem rule is defined by:
+
+- **Path** — `MF`-rooted (e.g. `MF/7F10/6F3A`) or ADF AID-rooted (e.g. `A0000000871002/6F07`).
+- **FCP/FCI check** — **Filetype only (FCP)**, **Filetype + size (FCP)** (adds file size, or record length/count for record files), or **Exact FCI** (byte-for-byte comparison of the raw SELECT FCP template `'62'`, catching FID/AID, life-cycle status, security-attribute, and proprietary-parameter changes).
+- **File attributes** — file type, size, record length and record count, taken from the FCP template (any may be left unset).
+- **Check contents** (optional) — **Exact** hex equality, or **Mask** where `?` is a per-nibble wildcard (a mask with no `?` is a prefix match, e.g. `0891` for the IMSI MCC/MNC). Record files store a per-record list.
+
+The check report marks each verified aspect (e.g. *filetype ✓, size ✗, contents ✓*), lists mismatches as read-only monospace expected/actual fields aligned in one column, and shows a decoded per-parameter FCI comparison for FCI mismatches. Corrupt FCI data shows whatever decoded before the faulty part plus an explicit decode-failure note; record mismatches list the *matching records*. **Only mismatches** in the results header hides all passing files and keeps failures and errors only.
+
+#### “Profile from card” scan options
+
+The scan dialog asks for a profile name and offers the FCP/FCI mode described above, an **Ignore contents of files** checklist of frequently-overwritten files (all checked by default except `EF.ARR`; the header checkbox toggles the whole list) — `EF.LOCI`, `EF.PSLOCI`, `EF.EPSLOCI`, `EF.5GS3GPPLOCI`, `EF.Keys`, `EF.KeysPS`, `EF.SMS`, `EF.Kc`, `EF.KcGPRS`, `EF.LOCIGPRS`, `EF.CBMID`, `EF.SMSS`, `EF.ACC`, `EF.EPSNSC`, `EF.START-HFN`, `EF.ARR` — and two checked-by-default mask options that capture only the first 4 bytes of `EF.IMSI` and `EF.ICCID` (uncheck for exact matching). A progress line shows *N / total files* with the current path; the options are locked while scanning. Rules are created only for files that actually exist (a FCP template is returned); custom files from the **Custom files** sub-tab are included under the same existence check.
+
+#### Card snapshots
+
+The list view has two tabs — **Profiles** and **Card snapshots**. A snapshot is an immutable capture of the card filesystem: for every existing file it stores the path, symbolic name, file type, size (or record length/count), the raw FCI from the SELECT response, and the contents whenever the file is readable (no ignore list, no masking). The ICCID is decoded from EF.ICCID and shown next to the snapshot name.
+
+- **New snapshot** scans the card; **Import snapshot** loads JSON.
+- Each snapshot row has **Open** (all captured data read-only, raw FCI with decoded FCI and contents; only the name is editable), **Export**, and **Delete**.
+- **Check card snapshot** on a profile row runs the profile rules against a snapshot picked from the list, without a card reader. Files whose contents were not captured are reported as unverifiable errors.
+- **Compare snapshots** compares two snapshots offline exactly like a profile check: pick the *master* snapshot and the *snapshot to check*, optionally masking the first 4 bytes of EF.IMSI/EF.ICCID (on by default), and get the same report. Every file must match exactly (exact FCI, contents); files present only in the checked snapshot are reported as extra files.
+
 ---
 
 ## PWA
@@ -525,6 +574,14 @@ OTAMan is a Progressive Web App and can be installed for offline use. Use the **
 
 - Service worker pre-caches all assets on first visit
 - App icons at 192×192 and 512×512
+
+## Theme
+
+A dark theme is included. It follows the system preference and can be toggled manually with the header button (🌙/☀️); the choice is stored in `localStorage`.
+
+## Localization
+
+The interface is in English with Russian support. The language is detected from `navigator.language`; the header toggle (EN/RU) stores the choice in `localStorage`. Switching the language also re-renders visible dynamic views (profile lists, check reports, snapshots, cards, proactive views).
 
 ## Server (pysim-otaman-server)
 
