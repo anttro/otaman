@@ -54,9 +54,9 @@ test('tree error payload marks the directory as absent', async () => {
 	];
 	await pysimFsLoadChildren(node);
 	assert.strictEqual(node.exists, false);
-	assert.deepStrictEqual(node.children, []);
+	assert.strictEqual(node.children, null);
 	assert.strictEqual(renders, 1);
-	assert.strictEqual(calls.length, 2);
+	assert.strictEqual(calls.length, 1);
 	assert.strictEqual(calls[0].body.parent_sel, 'MF');
 });
 
@@ -68,23 +68,28 @@ test('error payload without exists is not treated as an empty listing', async ()
 	];
 	await pysimFsLoadChildren(node);
 	assert.strictEqual(node.exists, false);
-	assert.deepStrictEqual(node.children, []);
+	assert.strictEqual(node.children, null);
 	assert.strictEqual(renders, 1);
 	assert.strictEqual(calls.length, 1);
 });
 
-test('retry without parent_sel succeeds and maps children', async () => {
+test('a 200 exists:false response marks the directory absent without retrying', async () => {
 	const node = setup();
-	responses = [
-		{ exists: false },
-		{ exists: true, children: [{ name: 'EF.IMSI', fid: '6f07', isDir: false }] },
-	];
+	responses = [{ exists: false }];
+	await pysimFsLoadChildren(node);
+	assert.strictEqual(node.exists, false);
+	assert.strictEqual(node.children, null);
+	assert.strictEqual(calls.length, 1);
+});
+
+test('a node with loaded children is not fetched again', async () => {
+	const node = setup();
+	node.exists = true;
+	node.children = [{ name: 'EF.UPLMNWLAN', fid: '4f42', isDir: false, exists: true }];
 	await pysimFsLoadChildren(node);
 	assert.strictEqual(node.exists, true);
 	assert.strictEqual(node.children.length, 1);
-	assert.strictEqual(node.children[0].parent, node);
-	assert.strictEqual(node.children[0].exists, true);
-	assert.strictEqual(calls[1].body.parent_sel, undefined);
+	assert.strictEqual(calls.length, 0);
 });
 
 test('empty successful listing keeps the directory present', async () => {

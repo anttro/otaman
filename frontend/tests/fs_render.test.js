@@ -56,3 +56,12 @@ test('collapsed directory hides its children', () => {
 	const out = pysimFsRenderNode(node, 0);
 	assert.ok(!out.includes('EF.IMSI'), out);
 });
+
+test('non-existing directory hides previously loaded children', () => {
+	const node = df('DF.WLAN', '5f40', { exists: false, expanded: true, children: [ef('EF.UPLMNWLAN', '4f42')] });
+	const out = pysimFsRenderNode(node, 0);
+	assert.ok(out.includes('✗'), out);
+	assert.ok(!out.includes('EF.UPLMNWLAN'), out);
+	assert.ok(!out.includes('(empty)'), out);
+	assert.ok(!out.includes('pysimFsToggleDir'), out);
+});

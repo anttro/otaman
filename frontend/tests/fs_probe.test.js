@@ -104,7 +104,7 @@ test('an absent directory is marked and its subtree is never fetched', async () 
 	await pysimFsProbeAll();
 	assert.strictEqual(pysimFsTreeRoot.children[0].exists, false);
 	assert.deepStrictEqual(selectNames(), ['EF.ROOT']);
-	assert.strictEqual(calls.filter(c => c.path === '/api/tree' && c.body.name === 'DF.B').length, 2);
+	assert.strictEqual(calls.filter(c => c.path === '/api/tree' && c.body.name === 'DF.B').length, 1);
 	const status = els['pysim-fs-probe-status'].textContent;
 	assert.match(status, /2\/2 files/);
 	assert.match(status, /0 present/);
@@ -121,4 +121,23 @@ test('stop halts the walk and still reports a summary', async () => {
 	const status = els['pysim-fs-probe-status'].textContent;
 	assert.ok(status.startsWith('Stopped —'), status);
 	assert.strictEqual(els['pysim-fs-probe-btn'].textContent, 'Probe all files');
+});
+
+test('children of an absent directory are neither fetched nor selected', async () => {
+	const stale = Object.assign(df('DF.C', '5f03'), {
+		exists: false,
+		children: [{ name: 'EF.STALE', fid: '6f0e', isDir: false, exists: true, children: null }],
+	});
+	root([stale, ef('EF.ROOT', '2f01')]);
+	setup([
+		{ path: '/api/select', name: 'EF.ROOT', reply: { exists: true } },
+	]);
+	await pysimFsProbeAll();
+	assert.deepStrictEqual(selectNames(), ['EF.ROOT']);
+	assert.strictEqual(stale.exists, false);
+	assert.strictEqual(calls.filter(c => c.path === '/api/tree').length, 0);
+	const status = els['pysim-fs-probe-status'].textContent;
+	assert.match(status, /2\/2 files/);
+	assert.match(status, /1 present/);
+	assert.match(status, /1 absent/);
 });

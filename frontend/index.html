@@ -5940,14 +5940,10 @@ async function pysimFsRefresh() {
 async function pysimFsLoadChildren(node) {
 	if (node.children) return;
 	try {
-		let body = { name: node.name, fid: node.fid };
+		const body = { name: node.name, fid: node.fid };
 		const parentSel = getParentSel(node);
 		if (parentSel) body.parent_sel = parentSel;
-		let data = await pysimFetch('/api/tree', body);
-		if (!data || data.exists === false) {
-			body = { name: node.name, fid: node.fid };
-			data = await pysimFetch('/api/tree', body);
-		}
+		const data = await pysimFetch('/api/tree', body);
 		if (!data || data.exists === false || data.success === false || data.error) {
 			throw new Error((data && data.error) || 'File not found');
 		}
@@ -5965,7 +5961,6 @@ async function pysimFsLoadChildren(node) {
 		pysimCustomInject(node);
 	} catch (e) {
 		node.exists = false;
-		node.children = [];
 		pysimFsRenderTree();
 	}
 }
@@ -6007,7 +6002,7 @@ async function pysimFsProbeAll() {
 				if (probe.stop) return;
 				if (!child.isDir) continue;
 				await pysimFsLoadChildren(child);
-				const exists = child.exists !== false;
+				const exists = child.exists === true;
 				probe.dirs++;
 				count(exists);
 				pysimFsRenderTree();
@@ -6019,7 +6014,7 @@ async function pysimFsProbeAll() {
 		const files = [];
 		const collect = node => {
 			for (const child of (node.children || [])) {
-				if (child.isDir) { if (child.exists !== false) collect(child); }
+				if (child.isDir) { if (child.exists === true) collect(child); }
 				else files.push(child);
 			}
 		};
@@ -6031,7 +6026,6 @@ async function pysimFsProbeAll() {
 			const data = await pysimFetch('/api/select', pysimFsSelectBody(file));
 			const exists = !!(data && data.exists !== false && !data.error);
 			file.exists = exists;
-			if (!exists) file.children = [];
 			count(exists);
 			probe.done++;
 			pysimFsProbeUi(t('Probing:') + ' ' + probe.done + '/' + probe.total, true);
