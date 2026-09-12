@@ -584,7 +584,7 @@ test('profilerRenderReport renders raw-data mismatches as aligned readonly field
 	assert.ok(html.includes('font-mono'));
 	assert.ok(html.includes('value="621082024021"'));
 	assert.ok(html.includes('value="621082024022"'));
-	assert.ok(html.includes('w-24 text-right'));
+	assert.ok(html.includes('text-right shrink-0 w-24'));
 	// non-raw check stays inline
 	assert.ok(html.includes('content.records: expected'));
 	assert.ok(!fciBlock.includes(': expected'));
@@ -1225,5 +1225,44 @@ test('profilerSnapshotCountLabel appends the scan time when available', () => {
 	assert.strictEqual(noTime, '3 files');
 	const empty = profilerSnapshotCountLabel({ files: [], timing: {} });
 	assert.strictEqual(empty, '0 files');
+	delete global.t;
+});
+
+test('profilerRenderReport labels mismatches with custom names', () => {
+	global.t = s => s;
+	global.pysimCustomFiles = [];
+	const html = profilerRenderReport([{
+		path: 'MF/6F3A', name: 'EF.ADN', status: 'fail',
+		checks: [
+			{ label: 'content', expected: 'AABB', actual: 'CCDD', ok: false },
+			{ label: 'fileSize', expected: 4, actual: 9, ok: false },
+		],
+	}], { expected: 'Master snap', actual: 'Check snap' });
+	assert.ok(html.includes('Master snap'), html);
+	assert.ok(html.includes('Check snap'), html);
+	assert.ok(!html.includes('>expected<'), html);
+	assert.ok(!html.includes('>actual<'), html);
+	delete global.t;
+	delete global.pysimCustomFiles;
+});
+
+test('profilerRenderReport keeps expected/actual without labels', () => {
+	global.t = s => s;
+	global.pysimCustomFiles = [];
+	const html = profilerRenderReport([{
+		path: 'MF/6F3A', status: 'fail',
+		checks: [{ label: 'fileSize', expected: 4, actual: 9, ok: false }],
+	}]);
+	assert.ok(html.includes(' expected '), html);
+	assert.ok(html.includes(' actual '), html);
+	delete global.t;
+	delete global.pysimCustomFiles;
+});
+
+test('fcpDiffHtml headers use custom labels', () => {
+	global.t = s => s;
+	const diff = fcpDiffHtml(FCP_TRANSPARENT, '62128002000A8202412183026F078A0105880110', { expected: 'Master', actual: 'Candidate' });
+	assert.ok(diff.includes('>Master<'), diff);
+	assert.ok(diff.includes('>Candidate<'), diff);
 	delete global.t;
 });

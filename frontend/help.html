@@ -400,7 +400,7 @@
 		<li><strong>Import snapshot</strong> &mdash; loads a snapshot from a JSON file.</li>
 		<li>Each snapshot row has <strong>Open</strong>, <strong>Export</strong>, and <strong>Delete</strong>. <strong>Open</strong> shows all captured data read-only (raw FCI with the decoded FCI, contents); only the snapshot name is editable.</li>
 		<li><strong>Check card snapshot</strong> on a profile row runs the profile rules against a snapshot you pick from the list, without a card reader. The report is the same as a live check; files whose contents were not captured during the scan are reported as unverifiable errors.</li>
-		<li><strong>Compare snapshots</strong> compares two snapshots offline, exactly like a profile check: pick the <em>master</em> snapshot and the <em>snapshot to check</em>, optionally masking the first 4 bytes of EF.IMSI/EF.ICCID (on by default), and get the same pass/fail report. Files present only in the checked snapshot are reported as extra files. Back to list returns to the Card snapshots tab.</li>
+		<li><strong>Compare snapshots</strong> compares two snapshots offline, exactly like a profile check: pick the <em>master</em> snapshot and the <em>snapshot to check</em>, optionally masking the first 4 bytes of EF.IMSI/EF.ICCID (on by default), and get the same pass/fail report; in that report the mismatch fields and the FCI comparison columns are labeled with the master and checked snapshot names instead of expected/actual. Files present only in the checked snapshot are reported as extra files. Back to list returns to the Card snapshots tab.</li>
 	</ul>
 
 </section>

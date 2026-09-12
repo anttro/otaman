@@ -7089,6 +7089,7 @@ let profilerView = 'list';
 let profilerEditId = null;
 let profilerDraft = null;
 let profilerResults = null;
+let profilerResultsLabels = null;
 let profilerMismatchOnly = false;
 let snapshots = [];
 let snapshotViewId = null;
@@ -8113,7 +8114,7 @@ async function profilerCheck(i) {
 	await profilerRunProfile(p, null, p.name);
 }
 
-async function profilerRunProfile(p, source, title, extraResults) {
+async function profilerRunProfile(p, source, title, extraResults, labels) {
 	profilerSetView('results');
 	document.getElementById('profiler-results-title').textContent = title;
 	const prog = document.getElementById('profiler-progress');
@@ -8128,6 +8129,7 @@ async function profilerRunProfile(p, source, title, extraResults) {
 	if (extraResults && extraResults.length) results.push(...extraResults);
 	prog.textContent = '';
 	profilerResults = results;
+	profilerResultsLabels = labels || null;
 	profilerRenderResultsView();
 }
 
@@ -8238,7 +8240,8 @@ async function snapshotCompareRun() {
 	});
 	document.getElementById('snapshot-compare-modal').classList.add('hidden');
 	const pseudo = { name: master.name + ' → ' + check.name, rules: profilerRulesFromSnapshot(master, maskFids) };
-	await profilerRunProfile(pseudo, profilerSnapshotSource(check), pseudo.name, profilerExtraFileResults(master, check));
+	await profilerRunProfile(pseudo, profilerSnapshotSource(check), pseudo.name, profilerExtraFileResults(master, check),
+		{ expected: master.name, actual: check.name });
 }
 
 function profilerToggleMismatchOnly(checked) {
@@ -8263,7 +8266,7 @@ function profilerRenderResultsView() {
 		' · <span class="text-yellow-600 font-semibold">' + errors + ' ' + t('errors') + '</span>';
 	const shown = profilerVisibleResults(profilerResults, profilerMismatchOnly);
 	document.getElementById('profiler-report').innerHTML = shown.length
-		? profilerRenderReport(shown)
+		? profilerRenderReport(shown, profilerResultsLabels)
 		: '<div class="text-sm text-emerald-600">' + esc(t('No mismatches')) + '</div>';
 }
 
@@ -8684,7 +8687,9 @@ function fcpDecode(hex) {
 	return { ok: !error && items.length > 0, template, items, error };
 }
 
-function fcpDiffHtml(expectedHex, actualHex) {
+function fcpDiffHtml(expectedHex, actualHex, labels) {
+	const expLabel = (labels && labels.expected) ? labels.expected : t('expected');
+	const actLabel = (labels && labels.actual) ? labels.actual : t('actual');
 	const e = fcpDecode(expectedHex);
 	const a = fcpDecode(actualHex);
 	const eBad = !!e.error, aBad = !!a.error;
@@ -8700,8 +8705,8 @@ function fcpDiffHtml(expectedHex, actualHex) {
 		html += '<table class="w-full text-xs border-collapse">';
 		html += '<thead><tr class="border-b border-gray-200 dark:border-slate-700">' +
 			'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('Parameter')) + '</th>' +
-			'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('expected')) + '</th>' +
-			'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(t('actual')) + '</th></tr></thead><tbody>';
+			'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(expLabel) + '</th>' +
+			'<th class="text-left py-0.5 px-1 font-medium text-gray-500 dark:text-slate-400">' + esc(actLabel) + '</th></tr></thead><tbody>';
 		for (const k of keys) {
 			const ev = eMap[k], av = aMap[k];
 			const ed = ev ? (ev.decoded === null ? '' : (ev.decoded || ev.value)) : '—';
@@ -8744,7 +8749,10 @@ function profilerFciInput(i, value) {
 	profilerUpdateFciPreview(i, value);
 }
 
-function profilerRenderReport(results) {
+function profilerRenderReport(results, labels) {
+	const expLabel = (labels && labels.expected) ? labels.expected : t('expected');
+	const actLabel = (labels && labels.actual) ? labels.actual : t('actual');
+	const labelCls = 'text-xs text-gray-500 dark:text-slate-400 text-right shrink-0 ' + (labels ? 'w-40 break-all' : 'w-24');
 	let html = '';
 	for (const r of results) {
 		const color = r.status === 'pass' ? 'text-emerald-600' : (r.status === 'fail' ? 'text-red-600' : 'text-yellow-600');
@@ -8768,15 +8776,15 @@ function profilerRenderReport(results) {
 				html += '<div class="mt-1">';
 				html += '<div class="text-xs text-red-600 font-mono pl-2">' + esc(c.label) + '</div>';
 				html += '<div class="flex items-center gap-2 mt-0.5 pl-2">' +
-					'<span class="text-xs text-gray-500 dark:text-slate-400 w-24 text-right shrink-0">' + esc(t('expected')) + '</span>' +
+					'<span class="' + labelCls + '">' + esc(expLabel) + '</span>' +
 					'<input readonly title="' + escHtml(String(c.expected)) + '" value="' + escHtml(String(c.expected)) + '" class="flex-1 min-w-0 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800"></div>';
 				html += '<div class="flex items-center gap-2 mt-0.5 pl-2">' +
-					'<span class="text-xs text-gray-500 dark:text-slate-400 w-24 text-right shrink-0">' + esc(t('actual')) + '</span>' +
+					'<span class="' + labelCls + '">' + esc(actLabel) + '</span>' +
 					'<input readonly title="' + escHtml(String(c.actual)) + '" value="' + escHtml(String(c.actual)) + '" class="flex-1 min-w-0 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800"></div>';
-				if (c.label === 'fci') html += fcpDiffHtml(String(c.expected), String(c.actual));
+				if (c.label === 'fci') html += fcpDiffHtml(String(c.expected), String(c.actual), labels);
 				html += '</div>';
 			} else {
-				html += '<div class="text-xs text-red-600 mt-1">' + esc(c.label) + ': ' + esc(t('expected')) + ' <b>' + esc(String(c.expected)) + '</b>, ' + esc(t('actual')) + ' <b>' + esc(String(c.actual)) + '</b></div>';
+				html += '<div class="text-xs text-red-600 mt-1">' + esc(c.label) + ': ' + esc(expLabel) + ' <b>' + esc(String(c.expected)) + '</b>, ' + esc(actLabel) + ' <b>' + esc(String(c.actual)) + '</b></div>';
 			}
 		}
 		const recFailed = r.recordsMismatch || (r.checks || []).some(c => /^content\.rec\d+$/.test(c.label) && !c.ok);

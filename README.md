@@ -534,7 +534,7 @@ The list view has two tabs — **Profiles** and **Card snapshots**. A snapshot i
 - **New snapshot** scans the card; **Import snapshot** loads JSON.
 - Each snapshot row has **Open** (all captured data read-only, raw FCI with decoded FCI and contents; only the name is editable), **Export**, and **Delete**.
 - **Check card snapshot** on a profile row runs the profile rules against a snapshot picked from the list, without a card reader. Files whose contents were not captured are reported as unverifiable errors.
-- **Compare snapshots** compares two snapshots offline exactly like a profile check: pick the *master* snapshot and the *snapshot to check*, optionally masking the first 4 bytes of EF.IMSI/EF.ICCID (on by default), and get the same report. Every file must match exactly (exact FCI, contents); files present only in the checked snapshot are reported as extra files.
+- **Compare snapshots** compares two snapshots offline exactly like a profile check: pick the *master* snapshot and the *snapshot to check*, optionally masking the first 4 bytes of EF.IMSI/EF.ICCID (on by default), and get the same report. Every file must match exactly (exact FCI, contents); files present only in the checked snapshot are reported as extra files. In the comparison report the mismatch fields and FCI comparison columns are labeled with the master/checked snapshot names instead of expected/actual.
 
 ---
 
