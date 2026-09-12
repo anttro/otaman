@@ -6582,7 +6582,7 @@ function pysimCardStateUpdate(status) {
 	pysimSetConnected(false);
 	const statusEl = document.getElementById('pysim-status');
 	if (statusEl && statusEl.textContent.trim() !== '') {
-		if (status.equipping || status.auto_equip) {
+		if (status.equipping || (status.card_present && status.auto_equip)) {
 			statusEl.innerHTML = '<span class="text-gray-500">' + esc(t('Card inserted — initializing...')) + '</span>';
 		} else if (status.card_present) {
 			statusEl.innerHTML = '<span class="text-amber-600">' + esc(t('Card inserted — press Equip')) + '</span>';

@@ -120,3 +120,10 @@ test('availability state and control gating follow server/card state', () => {
 	assert.strictEqual(pysimControlDisabled('card', 'card'), false);
 	assert.strictEqual(pysimControlDisabled('server', 'card'), false);
 });
+
+test('no card with auto-equip enabled still shows the no-card message', () => {
+	const { el } = setup();
+	pysimCardStateUpdate(status({ connected: false, card_present: false, auto_equip: true }));
+	assert.ok(el.innerHTML.includes('No card detected'), el.innerHTML);
+	assert.ok(!el.innerHTML.includes('initializing'), el.innerHTML);
+});
