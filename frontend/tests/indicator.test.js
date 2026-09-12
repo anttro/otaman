@@ -38,6 +38,7 @@ function fakeEl() {
 			contains: c => classes.has(c),
 		},
 		setAttribute(k, v) { this.attrs[k] = v; },
+		removeAttribute(k) { delete this.attrs[k]; },
 	};
 }
 
@@ -63,6 +64,7 @@ test('unprobed server shows a gray dot and a Connecting title', () => {
 	assert.ok(!dot.classes.has('hidden'));
 	assert.ok(img.classes.has('hidden'));
 	assert.strictEqual(wrap.attrs.title, 'Connecting...');
+	assert.strictEqual(dot.attrs.title, 'Connecting...');
 });
 
 test('unreachable server shows a red dot', () => {
@@ -74,6 +76,7 @@ test('unreachable server shows a red dot', () => {
 	assert.ok(!dot.classes.has('text-gray-400'));
 	assert.ok(img.classes.has('hidden'));
 	assert.strictEqual(wrap.attrs.title, 'No server connection');
+	assert.strictEqual(dot.attrs.title, 'No server connection');
 });
 
 test('server up without a card shows nosim.svg', () => {
@@ -85,6 +88,7 @@ test('server up without a card shows nosim.svg', () => {
 	assert.ok(!img.classes.has('hidden'));
 	assert.strictEqual(img.src, 'nosim.svg');
 	assert.strictEqual(wrap.attrs.title, 'Server connected, no card equipped');
+	assert.strictEqual(dot.attrs.title, undefined);
 });
 
 test('equipped card shows sim.svg', () => {

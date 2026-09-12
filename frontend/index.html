@@ -21,7 +21,7 @@
 		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.0.0</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center" title="Connecting...">
-				<span id="state-indicator-dot" class="text-xs text-gray-400">●</span>
+				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
 				<img id="state-indicator-img" class="hidden dark:invert" style="width:18px;height:18px" alt="" src="nosim.svg">
 			</span>
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
@@ -4406,16 +4406,19 @@ function pysimUpdateStateIndicator() {
 	if (_pysimServerAvailable === true) {
 		const state = pysimAvailabilityState();
 		dot.classList.add('hidden');
+		dot.removeAttribute('title');
 		img.classList.remove('hidden');
 		img.src = _pysimEquipping ? 'sim_anim.svg' : (state === 'card' ? 'sim.svg' : 'nosim.svg');
 		el.setAttribute('title', _pysimEquipping ? t('Card inserted — initializing...')
 			: (state === 'card' ? t('Card equipped') : t('Server connected, no card equipped')));
 	} else {
+		const serverState = _pysimServerAvailable === false ? t('No server connection') : t('Connecting...');
 		img.classList.add('hidden');
 		dot.classList.remove('hidden');
 		dot.classList.remove('text-red-500', 'text-gray-400');
 		dot.classList.add(_pysimServerAvailable === false ? 'text-red-500' : 'text-gray-400');
-		el.setAttribute('title', _pysimServerAvailable === false ? t('No server connection') : t('Connecting...'));
+		dot.setAttribute('title', serverState);
+		el.setAttribute('title', serverState);
 	}
 }
 
