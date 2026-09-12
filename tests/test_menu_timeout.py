@@ -87,3 +87,42 @@ class TestMenuSendResponse(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestFinishPendingMenu(unittest.TestCase):
+    def make_server(self):
+        return types.SimpleNamespace(
+            stk_pending={'type': 'select_item', 'cmd_num': 1, 'cmd_type': 0x24,
+                         'dev_src': 0x81, 'dev_dst': 0x83, 'items': []},
+            menu_active=True, scc=None)
+
+    def make_scc(self, sent, sw='9000'):
+        return types.SimpleNamespace(
+            cat_cla='80',
+            _tp=types.SimpleNamespace(send_apdu=lambda h: (sent.append(h) or ('', sw))))
+
+    def test_no_pending_is_noop(self):
+        sent = []
+        S._finish_pending_menu(types.SimpleNamespace(stk_pending=None), self.make_scc(sent))
+        self.assertEqual(sent, [])
+
+    def test_pending_finished_with_cancel_tr(self):
+        server = self.make_server()
+        sent = []
+        scc = self.make_scc(sent)
+        server.scc = scc
+        S._finish_pending_menu(server, scc)
+        self.assertEqual(len(sent), 1)
+        tr = sent[0]
+        self.assertTrue(tr.startswith('801400000d'), tr)
+        self.assertIn('83021000', tr)  # general result 0x10 = cancel
+        self.assertIsNone(server.stk_pending)
+        self.assertFalse(server.menu_active)
+
+    def test_91xx_answer_drains_chain(self):
+        server = self.make_server()
+        scc = self.make_scc([], sw='9120')
+        server.scc = scc
+        with mock.patch.object(S, '_handle_proactive_chain') as chain:
+            S._finish_pending_menu(server, scc)
+            chain.assert_called_once_with(scc, '9120')

@@ -5486,9 +5486,13 @@ async function stkMenuRespond(result) {
 	try {
 		const data = await pysimFetch('/api/menu-respond', { result: result });
 		if (result === 'cancel' || result === 'back' || result === 'timeout') {
-			stkMenuRenderItems();
-			document.getElementById('stk-menu-buttons').classList.add('hidden');
-			document.getElementById('stk-back-btn').style.display = 'none';
+			if (data && (data.type === 'select_item' || data.type === 'display_text')) {
+				stkMenuHandleResponse(data);
+			} else {
+				stkMenuRenderItems();
+				document.getElementById('stk-menu-buttons').classList.add('hidden');
+				document.getElementById('stk-back-btn').style.display = 'none';
+			}
 			return;
 		}
 		stkMenuHandleResponse(data);

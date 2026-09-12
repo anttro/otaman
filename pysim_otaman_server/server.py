@@ -1601,6 +1601,21 @@ def _menu_send_response(server, result, item_id=None):
     return resp, 200
 
 
+def _finish_pending_menu(server, scc):
+    """A new menu selection must never shadow a FETCHed command that awaits its
+    TERMINAL RESPONSE: answer it with a cancel TR (0x10) first, then drain any
+    follow-up proactive command so the card is ready for the new selection."""
+    pd = server.stk_pending
+    if not pd:
+        return
+    sys.stderr.write('MENU-SELECT: finishing pending cmd=%02x type=%02x with cancel TR\n'
+                     % (pd['cmd_num'], pd['cmd_type']))
+    resp, _ = _menu_send_response(server, 'cancel', None)
+    sw = (resp or {}).get('sw', '')
+    if sw.startswith('91'):
+        _handle_proactive_chain(scc, sw)
+
+
 class PysimHandler(BaseHTTPRequestHandler):
     def _send_json(self, data, status=200):
         self.send_response(status)
@@ -2179,6 +2194,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 return
             body = self._read_body()
             self._log_req(body)
+            _finish_pending_menu(self.server, scc)
             item_id = body.get('item_id', 0)
             if not isinstance(item_id, int):
                 item_id = int(item_id)
