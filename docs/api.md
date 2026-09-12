@@ -277,14 +277,21 @@ Read file content. Auto-detects transparent vs record files.
 
 Returns transparent data:
 ```json
-{"success": true, "sw": "9000", "file_type": "transparent", "data": "..."}
+{"success": true, "sw": "9000", "file_type": "transparent", "data": "...",
+ "apdu_times": [{"type": "select", "ms": 12}, {"type": "read_binary", "ms": 9}]}
 ```
 
 Returns records:
 ```json
 {"success": true, "sw": "9000", "file_type": "linear_fixed",
- "records": [{"num": 1, "data": "..."}, {"num": 2, "data": "..."}]}
+ "records": [{"num": 1, "data": "..."}, {"num": 2, "data": "..."}],
+ "apdu_times": [{"type": "select", "ms": 12},
+                {"type": "read_record", "ms": 11}, {"type": "read_record", "ms": 13}]}
 ```
+
+`apdu_times` reports each command's duration (command sent to response
+received) classified as `select`, `read_binary` or `read_record`; the PWA uses
+it for snapshot timing statistics. Other commands are not reported.
 
 ### `POST /api/write`
 
@@ -316,7 +323,8 @@ Returns:
 ```json
 {"name": "EF.ICCID", "fid": "2FE2", "file_type": "transparent",
  "file_size": 10, "record_len": null, "num_of_rec": null,
- "fci_hex": "621082024021...", "exists": true}
+ "fci_hex": "621082024021...",
+ "apdu_times": [{"type": "select", "ms": 12}], "exists": true}
 ```
 
 `fci_hex` is the raw FCP template (`'62'`) from the SELECT response, used by

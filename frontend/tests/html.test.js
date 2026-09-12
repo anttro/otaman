@@ -37,3 +37,7 @@ test('phone simulator has Phone / TR Config pills', () => {
 test('scan name input starts scanning on Enter', () => {
     assert.match(html, /id="profiler-scan-name"[^>]*onkeydown="profilerScanNameKeydown\(event\)"/);
 });
+
+test('snapshot view has a timing summary block', () => {
+    assert.ok(html.includes('id="snapshot-summary"'));
+});

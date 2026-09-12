@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown', 'profilerTimingStats', 'profilerTimingAccumulator', 'profilerFormatMs', 'profilerRenderSnapshotSummary'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -1129,4 +1129,90 @@ test('profilerScanNameKeydown starts the scan on Enter only', () => {
 	assert.strictEqual(prevented, 1);
 	delete global.document;
 	delete global.profilerScanStart;
+});
+
+// --- snapshot command timings ---
+
+test('profilerTimingStats computes min, max and average', () => {
+	assert.deepStrictEqual(profilerTimingStats([10, 20, 30]), { min: 10, max: 30, avg: 20, count: 3 });
+	assert.deepStrictEqual(profilerTimingStats([7, 7.5, 8]), { min: 7, max: 8, avg: 7.5, count: 3 });
+	assert.strictEqual(profilerTimingStats([]), null);
+	assert.strictEqual(profilerTimingStats(null), null);
+});
+
+test('profilerFormatMs formats milliseconds and seconds', () => {
+	assert.strictEqual(profilerFormatMs(12), '12 ms');
+	assert.strictEqual(profilerFormatMs(999), '999 ms');
+	assert.strictEqual(profilerFormatMs(1500), '1.50 s');
+	assert.strictEqual(profilerFormatMs(null), 'n/a');
+});
+
+test('profilerTimingAccumulator aggregates per command type', () => {
+	const acc = profilerTimingAccumulator();
+	acc.add('select', 10);
+	acc.add('select', 20);
+	acc.add('read_record', 5);
+	acc.add('bogus', 1);
+	assert.deepStrictEqual(acc.stats(), {
+		select: { min: 10, max: 20, avg: 15, count: 2 },
+		read_record: { min: 5, max: 5, avg: 5, count: 1 },
+	});
+});
+
+test('profilerBuildSnapshotFile records per-command timings', async () => {
+	const acc = profilerTimingAccumulator();
+	mockFetch({
+		'/api/select': () => ({ exists: true, name: 'EF.ADN', file_type: 'linear_fixed', file_size: null, record_len: 2, num_of_rec: 2,
+			apdu_times: [{ type: 'select', ms: 5 }, { type: 'select', ms: 7 }] }),
+		'/api/read': () => ({ success: true, file_type: 'linear_fixed', records: [{ num: 1, data: 'AA' }, { num: 2, data: 'BB' }],
+			apdu_times: [{ type: 'select', ms: 4 }, { type: 'read_record', ms: 11 }, { type: 'read_record', ms: 13 }] }),
+	});
+	const file = await profilerBuildSnapshotFile('MF/6F3A', { name: 'EF.ADN' }, acc);
+	assert.deepStrictEqual(file.timing, { select_ms: 12, read_ms: 24 });
+	assert.strictEqual(file.content.records[0].ms, 11);
+	assert.strictEqual(file.content.records[1].ms, 13);
+	const stats = acc.stats();
+	assert.strictEqual(stats.select.count, 2);
+	assert.strictEqual(stats.read_record.count, 2);
+});
+
+test('profilerBuildSnapshotFile without apdu_times has empty timing', async () => {
+	mockFetch({
+		'/api/select': () => ({ exists: true, name: 'EF.ADN', file_type: 'transparent', file_size: 2, record_len: null, num_of_rec: null }),
+		'/api/read': () => ({ success: true, file_type: 'transparent', data: 'AABB' }),
+	});
+	const file = await profilerBuildSnapshotFile('MF/6F3A', { name: 'EF.ADN' }, null);
+	assert.strictEqual(file.timing, null);
+	assert.deepStrictEqual(file.content, { kind: 'transparent', data: 'AABB' });
+});
+
+test('profilerRenderSnapshotSummary shows counts, scan time and stats', () => {
+	global.t = s => s;
+	const snap = {
+		files: [
+			{ content: { kind: 'record', records: [{ num: 1, data: 'AA', ms: 5 }, { num: 2, data: 'BB', ms: 7 }] } },
+			{ content: { kind: 'transparent', data: 'AA' } },
+		],
+		timing: {
+			select: { min: 3, max: 9, avg: 6, count: 3 },
+			read_record: { min: 5, max: 7, avg: 6, count: 2 },
+			total_ms: 1500,
+		},
+	};
+	const html = profilerRenderSnapshotSummary(snap);
+	assert.ok(html.includes('Files: <b>2</b>'), html);
+	assert.ok(html.includes('Records: <b>2</b>'), html);
+	assert.ok(html.includes('Scan time: <b>1.50 s</b>'), html);
+	assert.ok(html.includes('Select: min 3 ms'), html);
+	assert.ok(html.includes('Read record: min 5 ms'), html);
+	assert.ok(!html.includes('Read binary'), html);
+	delete global.t;
+});
+
+test('profilerRenderSnapshotSummary notes missing timing data', () => {
+	global.t = s => s;
+	const html = profilerRenderSnapshotSummary({ files: [], timing: undefined });
+	assert.ok(html.includes('Files: <b>0</b>'), html);
+	assert.ok(html.includes('No timing data'), html);
+	delete global.t;
 });

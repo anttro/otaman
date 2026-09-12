@@ -57,6 +57,38 @@ def _tlog(msg):
     sys.stderr.write('TIMING [+%7.3fs] %s\n' % (time.time() - _T0, msg))
 
 
+_APDU_TIMES = []
+_APDU_TIME_COLLECT = False
+
+def _classify_apdu(cmd):
+    """Map a command APDU to a snapshot timing category by instruction byte."""
+    if not cmd or len(cmd) < 4:
+        return None
+    return {'A4': 'select', 'B0': 'read_binary', 'B2': 'read_record'}.get(cmd[2:4].upper())
+
+
+def _collect_apdu_times():
+    """Start collecting per-command times. (Re)attaches our tracer if pySim
+    nulled it (equip does). Callers hold _CARD_LOCK, so collection cannot be
+    interleaved by the background poll thread."""
+    global _APDU_TIME_COLLECT
+    scc = getattr(_server_ref, 'scc', None) if _server_ref else None
+    tp = getattr(scc, '_tp', None) if scc else None
+    if tp is not None and tp.apdu_tracer is None:
+        tp.apdu_tracer = _LoggingApduTracer()
+    _APDU_TIMES.clear()
+    _APDU_TIME_COLLECT = True
+
+
+def _end_apdu_time_collection():
+    """Stop collecting and return the collected [{type, ms}, ...] list."""
+    global _APDU_TIME_COLLECT
+    _APDU_TIME_COLLECT = False
+    times = list(_APDU_TIMES)
+    _APDU_TIMES.clear()
+    return times
+
+
 class StderrApduTracer(ApduTracer):
     def __init__(self):
         super().__init__()
@@ -75,6 +107,10 @@ class StderrApduTracer(ApduTracer):
         global _APDU_N
         _APDU_N += 1
         elapsed = int((time.time() - self._cmd_start) * 1000)
+        if _APDU_TIME_COLLECT:
+            category = _classify_apdu(cmd)
+            if category:
+                _APDU_TIMES.append({'type': category, 'ms': elapsed})
         if _TIMING:
             msg = 'APDU-TRACE(+%7.3fs #%d, %dms): %s → SW: %s' % (time.time() - _T0, _APDU_N, elapsed, cmd, sw)
         else:
@@ -1916,10 +1952,14 @@ class PysimHandler(BaseHTTPRequestHandler):
                 return
             lchan = rs.lchan[0]
             try:
-                if path:
-                    _select_path(lchan, path, app)
-                else:
-                    _select_with_parent(lchan, name, parent_sel, app)
+                _collect_apdu_times()
+                try:
+                    if path:
+                        _select_path(lchan, path, app)
+                    else:
+                        _select_with_parent(lchan, name, parent_sel, app)
+                finally:
+                    apdu_times = _end_apdu_time_collection()
                 cur = lchan.selected_file
                 data = {
                     'name': cur.name if cur else None,
@@ -1929,6 +1969,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                     'record_len': lchan.selected_file_record_len() if lchan else None,
                     'num_of_rec': lchan.selected_file_num_of_rec() if lchan else None,
                     'fci_hex': (lchan.selected_file_fcp_hex or '').upper() if lchan and lchan.selected_file_fcp_hex else None,
+                    'apdu_times': apdu_times,
                     'exists': True,
                 }
                 self._send_json(data)
@@ -1957,28 +1998,32 @@ class PysimHandler(BaseHTTPRequestHandler):
                 return
             lchan = rs.lchan[0]
             try:
-                sel = fid if fid else name
-                if path:
-                    _select_path(lchan, path, app)
-                else:
-                    _select_with_parent(lchan, sel, parent_sel, app)
-                ft = _get_file_type(lchan, lchan.selected_file)
-                is_record = ft in ('linear_fixed', 'cyclic')
-                if mode == 'decoded':
-                    cmd = 'read_records_decoded' if is_record else 'read_binary_decoded'
-                else:
-                    cmd = 'read_records' if is_record else 'read_binary'
-                out = StringIO()
-                old_stdout = app.stdout
-                old_stderr = sys.stderr
-                app.stdout = out
-                sys.stderr = out
+                _collect_apdu_times()
                 try:
-                    app.onecmd_plus_hooks(cmd)
-                    output = _strip_ansi(out.getvalue())
+                    sel = fid if fid else name
+                    if path:
+                        _select_path(lchan, path, app)
+                    else:
+                        _select_with_parent(lchan, sel, parent_sel, app)
+                    ft = _get_file_type(lchan, lchan.selected_file)
+                    is_record = ft in ('linear_fixed', 'cyclic')
+                    if mode == 'decoded':
+                        cmd = 'read_records_decoded' if is_record else 'read_binary_decoded'
+                    else:
+                        cmd = 'read_records' if is_record else 'read_binary'
+                    out = StringIO()
+                    old_stdout = app.stdout
+                    old_stderr = sys.stderr
+                    app.stdout = out
+                    sys.stderr = out
+                    try:
+                        app.onecmd_plus_hooks(cmd)
+                        output = _strip_ansi(out.getvalue())
+                    finally:
+                        app.stdout = old_stdout
+                        sys.stderr = old_stderr
                 finally:
-                    app.stdout = old_stdout
-                    sys.stderr = old_stderr
+                    apdu_times = _end_apdu_time_collection()
                 sw_match = re.search(r'SW:\s*(\w+)', output)
                 err_match = re.search(r'got (\w+)', output)
                 if err_match:
@@ -1995,18 +2040,18 @@ class PysimHandler(BaseHTTPRequestHandler):
                 if mode == 'decoded':
                     try:
                         parsed = json.loads(clean)
-                        resp = {'success': True, 'sw': sw, 'file_type': ft, 'decoded': parsed}
+                        resp = {'success': True, 'sw': sw, 'file_type': ft, 'decoded': parsed, 'apdu_times': apdu_times}
                     except json.JSONDecodeError:
-                        resp = {'success': True, 'sw': sw, 'file_type': ft, 'data': clean}
+                        resp = {'success': True, 'sw': sw, 'file_type': ft, 'data': clean, 'apdu_times': apdu_times}
                 elif is_record:
                     records = []
                     for line in clean.split('\n'):
                         m = re.match(r'^(\d+)\s(.+)', line)
                         if m:
                             records.append({'num': int(m.group(1)), 'data': m.group(2)})
-                    resp = {'success': True, 'sw': sw, 'file_type': ft, 'records': records}
+                    resp = {'success': True, 'sw': sw, 'file_type': ft, 'records': records, 'apdu_times': apdu_times}
                 else:
-                    resp = {'success': True, 'sw': sw, 'file_type': ft, 'data': clean}
+                    resp = {'success': True, 'sw': sw, 'file_type': ft, 'data': clean, 'apdu_times': apdu_times}
                 self._send_json(resp)
                 self._log_resp(resp)
             except Exception as e:

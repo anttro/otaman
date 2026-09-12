@@ -892,6 +892,7 @@
 					<span id="snapshot-iccid" class="text-xs font-mono text-gray-500 dark:text-slate-400"></span>
 					<button onclick="snapshotSaveName()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
 				</div>
+				<div id="snapshot-summary" class="mb-3"></div>
 				<div id="snapshot-files"></div>
 			</div>
 		</div>
@@ -7443,8 +7444,12 @@ async function profilerScanStart() {
 			progEl.textContent = done + ' / ' + total + ' ' + t('files') + (path ? ' — ' + path : '');
 		};
 		if (_scanTarget === 'snapshot') {
-			const files = await profilerScanCard(new Set(), new Set(), 'exact', onProgress, new Set(), 'snapshot');
-			const snapshot = { id: profilerNewId(), name: name, created: new Date().toISOString(), iccid: profilerSnapshotIccid(files), files: files };
+			const timing = profilerTimingAccumulator();
+			const scanStart = performance.now();
+			const files = await profilerScanCard(new Set(), new Set(), 'exact', onProgress, new Set(), 'snapshot', timing);
+			const stats = timing.stats();
+			stats.total_ms = Math.round(performance.now() - scanStart);
+			const snapshot = { id: profilerNewId(), name: name, created: new Date().toISOString(), iccid: profilerSnapshotIccid(files), files: files, timing: stats };
 			snapshots.push(snapshot);
 			snapshotsSave();
 			profilerScanCancel();
@@ -7476,7 +7481,7 @@ async function profilerScanStart() {
 // Phase 1 discovers every file (tree calls only) to know the total; phase 2
 // builds a rule per file, reporting progress via the optional onProgress
 // callback as onProgress(done, total, path).
-async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, maskFids, mode) {
+async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, maskFids, mode, timing) {
 	const rules = [];
 	const files = [];
 	const seen = new Set();
@@ -7531,7 +7536,7 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, ma
 		const entry = files[i];
 		if (onProgress) onProgress(i + 1, total, entry.path);
 		const rule = mode === 'snapshot'
-			? await profilerBuildSnapshotFile(entry.path, entry.child)
+			? await profilerBuildSnapshotFile(entry.path, entry.child, timing)
 			: await profilerBuildFileRule(entry.path, entry.child, ignoreFids, ignoreNames, fciMode, maskFids);
 		if (rule) rules.push(rule);
 	}
@@ -7583,7 +7588,42 @@ async function profilerBuildFileRule(path, c, ignoreFids, ignoreNames, fciMode, 
 
 // Card snapshot entry: metadata + raw FCI + exact contents for every readable
 // file (no ignore list, no masking, no FCP/FCI check mode).
-async function profilerBuildSnapshotFile(path, c) {
+function profilerTimingStats(values) {
+	const vals = (values || []).filter(v => typeof v === 'number' && isFinite(v));
+	if (!vals.length) return null;
+	let min = vals[0], max = vals[0], sum = 0;
+	for (const v of vals) {
+		if (v < min) min = v;
+		if (v > max) max = v;
+		sum += v;
+	}
+	return { min: Math.round(min), max: Math.round(max), avg: Math.round(sum / vals.length * 10) / 10, count: vals.length };
+}
+
+function profilerTimingAccumulator() {
+	const buckets = { select: [], read_binary: [], read_record: [] };
+	return {
+		add(type, ms) {
+			if (buckets[type]) buckets[type].push(ms);
+		},
+		stats() {
+			const out = {};
+			for (const type in buckets) {
+				const s = profilerTimingStats(buckets[type]);
+				if (s) out[type] = s;
+			}
+			return out;
+		},
+	};
+}
+
+function profilerFormatMs(ms) {
+	if (ms === null || ms === undefined) return 'n/a';
+	if (ms >= 1000) return (ms / 1000).toFixed(2) + ' s';
+	return Math.round(ms) + ' ms';
+}
+
+async function profilerBuildSnapshotFile(path, c, timing) {
 	let sel;
 	try {
 		sel = await pysimFetch('/api/select', { path: path });
@@ -7599,14 +7639,37 @@ async function profilerBuildSnapshotFile(path, c) {
 		numRecords: (sel.num_of_rec === null || sel.num_of_rec === undefined) ? null : sel.num_of_rec,
 		fciHex: sel.fci_hex || null,
 		content: null,
+		timing: null,
 	};
+	const selectTimes = (sel.apdu_times || []).filter(t => t.type === 'select').map(t => t.ms);
+	if (selectTimes.length) {
+		if (timing) selectTimes.forEach(ms => timing.add('select', ms));
+		file.timing = { select_ms: selectTimes.reduce((a, b) => a + b, 0), read_ms: null };
+	}
 	try {
 		const rd = await pysimFetch('/api/read', { path: path, mode: 'raw' });
 		if (rd && rd.success) {
+			const readTimes = rd.apdu_times || [];
+			const recTimes = readTimes.filter(t => t.type === 'read_record').map(t => t.ms);
+			const binTimes = readTimes.filter(t => t.type === 'read_binary').map(t => t.ms);
 			if (rd.records) {
-				file.content = { kind: 'record', records: rd.records.map(r => ({ num: r.num, data: r.data })) };
+				file.content = { kind: 'record', records: rd.records.map((r, i) => {
+					const rec = { num: r.num, data: r.data };
+					if (recTimes[i] !== undefined) rec.ms = recTimes[i];
+					return rec;
+				}) };
+				if (timing) recTimes.forEach(ms => timing.add('read_record', ms));
+				if (recTimes.length) {
+					file.timing = file.timing || { select_ms: null, read_ms: null };
+					file.timing.read_ms = recTimes.reduce((a, b) => a + b, 0);
+				}
 			} else if (rd.data) {
 				file.content = { kind: 'transparent', data: rd.data };
+				if (timing) binTimes.forEach(ms => timing.add('read_binary', ms));
+				if (binTimes.length) {
+					file.timing = file.timing || { select_ms: null, read_ms: null };
+					file.timing.read_ms = binTimes.reduce((a, b) => a + b, 0);
+				}
 			}
 		}
 	} catch (e) {}
@@ -7734,7 +7797,36 @@ function profilerRenderSnapshotData() {
 	const s = snapshots.find(x => x.id === snapshotViewId);
 	if (!s) return;
 	document.getElementById('snapshot-iccid').textContent = s.iccid || '';
+	document.getElementById('snapshot-summary').innerHTML = profilerRenderSnapshotSummary(s);
 	document.getElementById('snapshot-files').innerHTML = profilerRenderSnapshotFiles(s);
+}
+
+function profilerRenderSnapshotSummary(s) {
+	const files = (s.files || []).length;
+	let records = 0;
+	for (const f of (s.files || [])) {
+		if (f.content && f.content.kind === 'record' && f.content.records) records += f.content.records.length;
+	}
+	let html = '<div class="text-xs text-gray-500 dark:text-slate-400">' +
+		esc(t('Files')) + ': <b>' + files + '</b> · ' + esc(t('Records')) + ': <b>' + records + '</b>';
+	const timing = s.timing;
+	if (timing && timing.total_ms !== undefined) {
+		html += ' · ' + esc(t('Scan time')) + ': <b>' + esc(profilerFormatMs(timing.total_ms)) + '</b>';
+	}
+	html += '</div>';
+	const labels = [['select', 'Select'], ['read_binary', 'Read binary'], ['read_record', 'Read record']];
+	let rows = '';
+	if (timing) {
+		for (const [key, label] of labels) {
+			const st = timing[key];
+			if (!st) continue;
+			rows += '<div>' + esc(t(label)) + ': ' + esc(t('min')) + ' ' + st.min + ' ms · ' + esc(t('avg')) + ' ' + st.avg + ' ms · ' + esc(t('max')) + ' ' + st.max + ' ms (n=' + st.count + ')</div>';
+		}
+	}
+	html += rows
+		? '<div class="text-xs font-mono text-gray-600 dark:text-slate-400 mt-0.5">' + rows + '</div>'
+		: '<div class="text-xs text-gray-400 dark:text-slate-500 mt-0.5">' + esc(t('No timing data')) + '</div>';
+	return html;
 }
 
 function snapshotSaveName() {
@@ -7763,6 +7855,15 @@ function profilerRenderSnapshotFiles(s) {
 		if (f.recordLen !== null && f.recordLen !== undefined) attrs.push(esc(t('Record length')) + ': ' + esc(String(f.recordLen)));
 		if (f.numRecords !== null && f.numRecords !== undefined) attrs.push(esc(t('Record count')) + ': ' + esc(String(f.numRecords)));
 		if (attrs.length) html += '<div class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">' + attrs.join(' · ') + '</div>';
+		if (f.timing) {
+			const parts = [];
+			if (f.timing.select_ms !== null && f.timing.select_ms !== undefined) parts.push(esc(t('Select')) + ': ' + esc(profilerFormatMs(f.timing.select_ms)));
+			if (f.timing.read_ms !== null && f.timing.read_ms !== undefined) {
+				const readKey = profilerContentKindForFileType(f.fileType) === 'record' ? 'Read record' : 'Read binary';
+				parts.push(esc(t(readKey)) + ': ' + esc(profilerFormatMs(f.timing.read_ms)));
+			}
+			if (parts.length) html += '<div class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">' + parts.join(' · ') + '</div>';
+		}
 		if (f.fciHex) {
 			html += '<div class="mt-1 flex gap-3 items-start">';
 			html += '<div class="flex-1 min-w-0"><div class="text-xs text-gray-500 dark:text-slate-400 mb-0.5">' + esc(t('FCI hex (raw SELECT response)')) + '</div>' +
@@ -7778,7 +7879,9 @@ function profilerRenderSnapshotFiles(s) {
 			html += '<div class="space-y-0.5">';
 			for (const rec of (f.content.records || [])) {
 				html += '<div class="flex items-center gap-2"><span class="text-xs text-gray-500 w-8 shrink-0">' + rec.num + '</span>' +
-					'<input readonly value="' + escHtml(rec.data) + '" class="flex-1 min-w-0 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800"></div>';
+					'<input readonly value="' + escHtml(rec.data) + '" class="flex-1 min-w-0 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800">' +
+					(rec.ms !== undefined ? '<span class="text-xs text-gray-400 w-16 text-right shrink-0">' + esc(profilerFormatMs(rec.ms)) + '</span>' : '') +
+					'</div>';
 			}
 			html += '</div>';
 		} else {
@@ -8845,6 +8948,13 @@ const LANG_RU = {
 	'Verify vs pySim': 'Проверить в pySim',
 	'Send to Card': 'Отправить на карту',
 	'Phone simulator': 'Симулятор телефона',
+	'Files': 'Файлов',
+	'Records': 'Записей',
+	'Scan time': 'Время сканирования',
+	'No timing data': 'Нет данных о времени',
+	'min': 'мин',
+	'avg': 'сред',
+	'max': 'макс',
 	'Phone': 'Телефон',
 	'TR Config': 'Конфигурация TR',
 	'Events that the card monitors (SET UP EVENT LIST):': 'События, отслеживаемые картой (SET UP EVENT LIST):',

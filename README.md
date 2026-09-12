@@ -529,7 +529,7 @@ The scan dialog asks for a profile name and offers the FCP/FCI mode described ab
 
 #### Card snapshots
 
-The list view has two tabs — **Profiles** and **Card snapshots**. A snapshot is an immutable capture of the card filesystem: for every existing file it stores the path, symbolic name, file type, size (or record length/count), the raw FCI from the SELECT response, and the contents whenever the file is readable (no ignore list, no masking). The ICCID is decoded from EF.ICCID and shown next to the snapshot name.
+The list view has two tabs — **Profiles** and **Card snapshots**. A snapshot is an immutable capture of the card filesystem: for every existing file it stores the path, symbolic name, file type, size (or record length/count), the raw FCI from the SELECT response, and the contents whenever the file is readable (no ignore list, no masking). The ICCID is decoded from EF.ICCID and shown next to the snapshot name. The scan also measures every card command (SELECT / READ BINARY / READ RECORD) from command to response and stores min/avg/max per type plus the total scan time; the snapshot view shows these in the summary and the select/read time per file (read time per record). Timings are display-only and ignored by checks/comparisons.
 
 - **New snapshot** scans the card; **Import snapshot** loads JSON.
 - Each snapshot row has **Open** (all captured data read-only, raw FCI with decoded FCI and contents; only the name is editable), **Export**, and **Delete**.
