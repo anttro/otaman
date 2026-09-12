@@ -21,7 +21,7 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-let code = 'var _pysimLastConnected = null;\n';
+let code = 'var _pysimCardStateKey = null;\nvar _pysimCardSession = null;\n';
 code += extractFunc(html, 'pysimCardStateUpdate') + '\n';
 code += '\nglobalThis.esc = s => s;\n';
 code += 'globalThis.t = s => s;\n';
@@ -29,47 +29,70 @@ eval(code);
 
 function setup() {
 	const el = { textContent: 'status line', innerHTML: '' };
-	const calls = { connected: [], refresh: 0 };
+	const calls = { connected: [], resets: [], refreshStatus: [] };
+	_pysimCardStateKey = null;
+	_pysimCardSession = null;
 	globalThis.document = { getElementById: () => el };
 	globalThis.pysimSetConnected = v => calls.connected.push(v);
-	globalThis.pysimRefresh = () => { calls.refresh++; };
+	globalThis.pysimResetCardData = refresh => calls.resets.push(refresh);
 	return { el, calls };
 }
 
+function status(extra) {
+	return Object.assign({ connected: false, card_present: false, equipping: false, auto_equip: false, card_session: 1 }, extra);
+}
+
 test('disconnect without card shows the no-card message', () => {
-	_pysimLastConnected = true;
 	const { el, calls } = setup();
-	pysimCardStateUpdate({ connected: false, card_present: false });
+	pysimCardStateUpdate(status({}));
 	assert.deepStrictEqual(calls.connected, [false]);
 	assert.ok(el.innerHTML.includes('No card detected'), el.innerHTML);
 });
 
-test('disconnect with card present shows the Equip hint', () => {
-	_pysimLastConnected = true;
+test('disconnect with card present shows the Equip hint when auto-equip is off', () => {
 	const { el } = setup();
-	pysimCardStateUpdate({ connected: false, card_present: true });
-	assert.ok(el.innerHTML.includes('Card inserted'), el.innerHTML);
+	pysimCardStateUpdate(status({ card_present: true }));
+	assert.ok(el.innerHTML.includes('Card inserted — press Equip'), el.innerHTML);
 });
 
-test('unchanged state does not touch the UI again', () => {
-	_pysimLastConnected = false;
+test('disconnect with auto-equip shows the initializing message', () => {
+	const { el } = setup();
+	pysimCardStateUpdate(status({ card_present: true, auto_equip: true }));
+	assert.ok(el.innerHTML.includes('initializing'), el.innerHTML);
+});
+
+test('unchanged state key does not touch the UI again', () => {
 	const { el, calls } = setup();
+	pysimCardStateUpdate(status({ card_session: 7 }));
 	el.innerHTML = 'unchanged';
-	pysimCardStateUpdate({ connected: false, card_present: false });
+	calls.connected.length = 0;
+	pysimCardStateUpdate(status({ card_session: 7 }));
 	assert.deepStrictEqual(calls.connected, []);
 	assert.strictEqual(el.innerHTML, 'unchanged');
 });
 
-test('reconnect restores the connected UI and refreshes', () => {
-	_pysimLastConnected = false;
+test('connected restores the UI and reloads card data', () => {
 	const { calls } = setup();
-	pysimCardStateUpdate({ connected: true, card_present: true });
+	pysimCardStateUpdate(status({ connected: true, card_present: true, card_session: 2 }));
 	assert.deepStrictEqual(calls.connected, [true]);
-	assert.strictEqual(calls.refresh, 1);
+	assert.deepStrictEqual(calls.resets, [true]);
+});
+
+test('card session change triggers a data reset', () => {
+	const { calls } = setup();
+	pysimCardStateUpdate(status({ card_session: 3 }));
+	calls.resets.length = 0;
+	pysimCardStateUpdate(status({ card_session: 4 }));
+	assert.deepStrictEqual(calls.resets, [false]);
+});
+
+test('first observation does not trigger a reset on its own', () => {
+	const { calls } = setup();
+	pysimCardStateUpdate(status({ card_session: 9 }));
+	assert.deepStrictEqual(calls.resets, []);
 });
 
 test('payload without connected flag is ignored', () => {
-	_pysimLastConnected = null;
 	const { calls } = setup();
 	pysimCardStateUpdate({ reader: 'x' });
 	pysimCardStateUpdate(null);

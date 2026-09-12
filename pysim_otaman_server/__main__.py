@@ -12,7 +12,7 @@ from pySim.cards import UiccCardBase
 
 from .shell import load_pysim_app
 from . import fastinit
-from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog, _set_menu_timeout, start_card_monitor
+from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog, _set_menu_timeout, start_card_monitor, set_auto_equip
 
 
 _server_start = 0
@@ -55,6 +55,8 @@ def main():
                         help="Use pysim's stock init_card/equip (multiple physical card resets) instead of the default reset-free fast init")
     parser.add_argument('--menu-timeout', type=int, default=60, metavar='SECS',
                         help='Auto-send a timeout TERMINAL RESPONSE if a paused STK command is not answered (default: 60, 0 disables)')
+    parser.add_argument('--no-auto-equip', action='store_true', default=False,
+                        help='Do not automatically initialize a card right after it is inserted (default: auto-equip on)')
 
     opts = parser.parse_args()
     opts.skip_card_init = opts.no_card_init
@@ -63,6 +65,7 @@ def main():
         _timing_on()
     if opts.menu_timeout is not None:
         _set_menu_timeout(opts.menu_timeout)
+    set_auto_equip(not opts.no_auto_equip and not opts.skip_card_init)
     sl = None
     scc = None
     card = None
@@ -93,8 +96,6 @@ def main():
         t_phase = time.time()
         sl = mod.init_reader(opts, **kwargs)
         _tlog('init_reader: %.0fms' % ((time.time() - t_phase) * 1000))
-        if getattr(sl, '_reader', None) is not None:
-            start_card_monitor(str(sl._reader))
         scc = SimCardCommands(sl)
         scc.cat_cla = '80'  # UICC CLA default; overridden for SIM after init_card
         scc._tp.proactive_handler = _DefaultProactiveHandler()
@@ -182,6 +183,8 @@ def main():
     server.menu_active = False
     server.stk_pending = None
     server.card_present = card is not None
+    server.card_session = 1 if card is not None else 0
+    server.equipping = False
     # Set server reference for polling timer and mark the card session state
     import pysim_otaman_server.server
     pysim_otaman_server.server._server_ref = server
@@ -191,6 +194,12 @@ def main():
     # Auto-enable polling if card initialized successfully (unless interval is 0)
     if server.scc and server.card and opts.poll_interval != 0:
         pysim_otaman_server.server._poll_enable()
+    # Start presence monitoring only after the startup init: pyscard reports an
+    # already-present card as "added" on the first pass, and we must not
+    # auto-equip over a session we just initialized. If startup init failed,
+    # that event triggers auto-equip instead — the desired retry.
+    if sl is not None and getattr(sl, '_reader', None) is not None:
+        start_card_monitor(str(sl._reader))
     print("─" * 70)
     print("  pysim-otaman-server v%s listening on http://%s:%s" % (VERSION, opts.http_host, opts.http_port))
     print("  Open http://%s:%s in your browser for the OTAMan UI (served by this server)."

@@ -4455,6 +4455,7 @@ async function pysimConnect() {
 
 function pysimDisconnect() {
 	if (_pysimPollTimer) { clearInterval(_pysimPollTimer); _pysimPollTimer = null; }
+	if (_pysimStatusTimer) { clearInterval(_pysimStatusTimer); _pysimStatusTimer = null; }
 	pysimShowConnected(false);
 	document.getElementById('pysim-status').textContent = '';
 	pysimSetConnected(false);
@@ -6400,7 +6401,9 @@ async function pysimStatusPoll() {
 }
 
 let _pysimPollTimer = null;
-let _pysimLastConnected = null;
+let _pysimStatusTimer = null;
+let _pysimCardStateKey = null;
+let _pysimCardSession = null;
 
 async function pysimPollToggle() {
 	const btn = document.getElementById('pli-pause-btn');
@@ -6436,41 +6439,64 @@ async function pysimPollStatusInit() {
 	} catch (e) { /* ignore */ }
 }
 
+async function pysimResetCardData(refreshStatus) {
+	stkMenuClose();
+	stkMenuStack = [];
+	pysimFsRefresh();
+	stkCheckMenu();
+	pysimEventsRender();
+	pysimProactiveLogRender();
+	pysimPliRender();
+	if (refreshStatus) await pysimRefresh();
+}
+
 function pysimCardStateUpdate(status) {
 	if (!status || typeof status.connected !== 'boolean') return;
-	const statusEl = document.getElementById('pysim-status');
-	if (status.connected === _pysimLastConnected) return;
-	_pysimLastConnected = status.connected;
+	const key = [status.connected, !!status.card_present, !!status.equipping, !!status.auto_equip, status.card_session].join('|');
+	if (key === _pysimCardStateKey) return;
+	_pysimCardStateKey = key;
+	const sessionChanged = _pysimCardSession !== null
+		&& status.card_session !== undefined && status.card_session !== _pysimCardSession;
+	if (status.card_session !== undefined) _pysimCardSession = status.card_session;
 	if (status.connected) {
 		pysimSetConnected(true);
-		pysimRefresh();
+		pysimResetCardData(true);
 		return;
 	}
 	pysimSetConnected(false);
+	const statusEl = document.getElementById('pysim-status');
 	if (statusEl && statusEl.textContent.trim() !== '') {
-		if (status.card_present) {
+		if (status.equipping || status.auto_equip) {
+			statusEl.innerHTML = '<span class="text-gray-500">' + esc(t('Card inserted — initializing...')) + '</span>';
+		} else if (status.card_present) {
 			statusEl.innerHTML = '<span class="text-amber-600">' + esc(t('Card inserted — press Equip')) + '</span>';
 		} else {
 			statusEl.innerHTML = '<span class="text-red-500">' + esc(t('No card detected. Insert card and click Equip card button')) + '</span>';
 		}
 	}
+	if (sessionChanged) pysimResetCardData(false);
 }
 
 function pysimStartBackendPoll() {
 	if (_pysimPollTimer) clearInterval(_pysimPollTimer);
-	_pysimLastConnected = null;
+	if (_pysimStatusTimer) clearInterval(_pysimStatusTimer);
+	_pysimCardStateKey = null;
+	_pysimCardSession = null;
+	_pysimStatusTimer = setInterval(async () => {
+		try {
+			pysimCardStateUpdate(await pysimFetch('/api/status'));
+		} catch (e) { /* ignore */ }
+	}, 2000);
 	_pysimPollTimer = setInterval(async () => {
 		try {
-			const [log, stk, ps, status] = await Promise.all([
+			const [log, stk, ps] = await Promise.all([
 				pysimFetch('/api/proactive-log'),
 				pysimFetch('/api/stk-status'),
 				pysimFetch('/api/poll-status'),
-				pysimFetch('/api/status'),
 			]);
 			pysimUpdatePollUI(ps.enabled, ps.interval);
-			pysimCardStateUpdate(status);
 		} catch (e) { /* ignore */ }
-	}, 2000);
+	}, 5000);
 }
 
 // ===== proactive command log =====
@@ -8762,6 +8788,7 @@ const LANG_RU = {
 	'pysim-unreachable-hint': 'Не удалось подключиться к серверу карт. Проверьте, что pysim-otaman-server запущен и адрес указан верно ({url}). Если эта страница открыта по HTTPS, также разрешите доступ к локальной сети в браузере (Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → Разрешить).',
 	'No card detected. Insert card and click Equip card button': 'Карта не обнаружена. Вставьте карту и нажмите Подключить карту',
 	'Card inserted — press Equip': 'Карта вставлена — нажмите «Подключить карту»',
+	'Card inserted — initializing...': 'Карта вставлена — инициализация...',
 	'Checking...': 'Проверка...',
 	'Resetting...': 'Сброс...',
 	'Equipping...': 'Подключение...',

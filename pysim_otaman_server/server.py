@@ -1032,7 +1032,80 @@ def _handle_card_disconnect():
         _server_ref.menu_active = False
         _server_ref.event_list = None
         _server_ref.sim_menu = None
+        _server_ref.equipping = False
+        _server_ref.card_session = getattr(_server_ref, 'card_session', 0) + 1
     _reset_proactive_log()
+
+
+def _apply_equipped_card(server):
+    """Common post-equip state refresh + TERMINAL PROFILE, shared by the
+    /api/command equip branch and the auto-equip worker."""
+    global _CARD_CONNECTED
+    server.stk_pending = None
+    server.menu_active = False
+    _cancel_menu_timeout()
+    server.event_list = None
+    _reset_proactive_log()
+    server.card = server.app.card
+    server.scc = server.app.card._scc
+    server.scc.cat_cla = '80' if isinstance(server.card, UiccCardBase) else 'a0'
+    _CARD_CONNECTED = True
+    server.card_present = True
+    server.card_session = getattr(server, 'card_session', 0) + 1
+    _poll_enable()
+    sm, el = _send_terminal_profile(server.scc, server.terminal_profile)
+    server.sim_menu = sm
+    server.event_list = el
+    _tlog('equip: terminal profile done')
+
+
+_AUTO_EQUIP = True
+_AUTO_EQUIP_BUSY = False
+
+def set_auto_equip(enabled):
+    global _AUTO_EQUIP
+    _AUTO_EQUIP = bool(enabled)
+
+def _auto_equip_trigger():
+    """Spawn a one-shot worker; never run equip in the pyscard monitor thread."""
+    global _AUTO_EQUIP_BUSY
+    if not _AUTO_EQUIP or _AUTO_EQUIP_BUSY:
+        return
+    _AUTO_EQUIP_BUSY = True
+    threading.Thread(target=_auto_equip_worker, name='auto-equip', daemon=True).start()
+
+def _auto_equip_worker():
+    global _AUTO_EQUIP_BUSY
+    try:
+        with _CARD_LOCK:
+            server = _server_ref
+            if not server or _CARD_CONNECTED or not getattr(server, 'card_present', False):
+                return
+            app = server.app
+            if app is None or not getattr(server, 'terminal_profile', None):
+                return
+            server.equipping = True
+            try:
+                sys.stderr.write('AUTO-EQUIP: card inserted, initializing\n')
+                old_stdout, old_stderr = app.stdout, sys.stderr
+                app.stdout = StringIO()
+                sys.stderr = app.stdout
+                try:
+                    app.onecmd_plus_hooks('equip')
+                finally:
+                    app.stdout = old_stdout
+                    sys.stderr = old_stderr
+                if not getattr(server, 'card_present', False) or server.app.card is None:
+                    sys.stderr.write('AUTO-EQUIP: card gone during initialization\n')
+                    return
+                _apply_equipped_card(server)
+                sys.stderr.write('AUTO-EQUIP: done\n')
+            except Exception as e:
+                sys.stderr.write('AUTO-EQUIP failed: %s\n' % e)
+            finally:
+                server.equipping = False
+    finally:
+        _AUTO_EQUIP_BUSY = False
 
 
 class _CardPresenceObserver(CardObserver):
@@ -1046,6 +1119,7 @@ class _CardPresenceObserver(CardObserver):
     def update(self, observable, handlers):
         addedcards, removedcards = handlers
         try:
+            trigger_auto = False
             for card in removedcards:
                 if str(getattr(card, 'reader', '')) == self.reader_name:
                     sys.stderr.write('CARD-WATCH: card removed from %s\n' % self.reader_name)
@@ -1055,10 +1129,13 @@ class _CardPresenceObserver(CardObserver):
                         _handle_card_disconnect()
             for card in addedcards:
                 if str(getattr(card, 'reader', '')) == self.reader_name:
-                    sys.stderr.write('CARD-WATCH: card inserted into %s (press Equip)\n' % self.reader_name)
+                    sys.stderr.write('CARD-WATCH: card inserted into %s\n' % self.reader_name)
                     with _CARD_LOCK:
                         if _server_ref:
                             _server_ref.card_present = True
+                    trigger_auto = True
+            if trigger_auto and _AUTO_EQUIP:
+                _auto_equip_trigger()
         except Exception as e:
             sys.stderr.write('CARD-WATCH error: %s\n' % e)
 
@@ -1551,6 +1628,13 @@ class PysimHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        # /api/status is pure cached state (no card I/O); keeping it out of the
+        # lock lets the UI report 'initializing' while a long equip holds the
+        # card lock. Result-shaping masks everything card-derived when the
+        # session is not connected.
+        if self.path == '/api/status':
+            self._do_GET()
+            return
         # Serialize all card access: the background STATUS poll runs in its own
         # thread and must never interleave with a FETCH/TERMINAL RESPONSE pair.
         with _CARD_LOCK:
@@ -1581,6 +1665,9 @@ class PysimHandler(BaseHTTPRequestHandler):
                 'reader': str(self.server.sl) if self.server.sl else None,
                 'connected': connected,
                 'card_present': bool(getattr(self.server, 'card_present', False)),
+                'card_session': int(getattr(self.server, 'card_session', 0)),
+                'equipping': bool(getattr(self.server, 'equipping', False)),
+                'auto_equip': bool(_AUTO_EQUIP),
                 'card': card.name if card else None,
                 'profile': str(rs.profile) if rs and rs.profile else None,
                 'app_ready': app is not None,
@@ -1715,22 +1802,7 @@ class PysimHandler(BaseHTTPRequestHandler):
             if is_equip:
                 _tlog('equip: onecmd_plus_hooks %dms' % elapsed)
             if is_equip and self.server.app and self.server.app.card and self.server.terminal_profile:
-                global _CARD_CONNECTED
-                self.server.stk_pending = None
-                self.server.menu_active = False
-                _cancel_menu_timeout()
-                self.server.event_list = None
-                _reset_proactive_log()
-                self.server.card = self.server.app.card
-                self.server.scc = self.server.app.card._scc
-                self.server.scc.cat_cla = '80' if isinstance(self.server.card, UiccCardBase) else 'a0'
-                _CARD_CONNECTED = True
-                self.server.card_present = True
-                _poll_enable()
-                sm, el = _send_terminal_profile(self.server.scc, self.server.terminal_profile)
-                self.server.sim_menu = sm
-                self.server.event_list = el
-                _tlog('equip: terminal profile done')
+                _apply_equipped_card(self.server)
             sys.stderr.write("CMD: %s → %s (%dms)\n" % (cmd, status, elapsed))
             resp = {'output': output, 'stop': bool(stop)}
             self._send_json(resp)
