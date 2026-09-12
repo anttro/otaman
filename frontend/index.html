@@ -4721,7 +4721,7 @@ async function pysimVerifySp() {
 			resultEl.classList.add('text-red-600');
 		}
 	} catch (e) {
-		resultEl.textContent = 'Error: ' + e.message;
+		resultEl.textContent = t('Error') + ': ' + e.message;
 		resultEl.classList.remove('text-green-600');
 		resultEl.classList.add('text-red-600');
 	}
@@ -4830,6 +4830,7 @@ function ramOpChanged() {
 	const op = document.getElementById('ram-op').value;
 	document.getElementById('ram-install-params').classList.toggle('hidden', op !== 'install-cap');
 	if (op !== 'explore') {
+		_ramExplorerData = null;
 		document.getElementById('ram-explorer').classList.add('hidden');
 		document.getElementById('ram-explorer').innerHTML = '';
 	}
@@ -4846,6 +4847,7 @@ function ramHideProgress() {
 }
 
 function ramClearResults() {
+	_ramExplorerData = null;
 	document.getElementById('ram-result').classList.add('hidden');
 	document.getElementById('ram-explorer').classList.add('hidden');
 	document.getElementById('ram-explorer').innerHTML = '';
@@ -5060,7 +5062,7 @@ function ramFmtLifecycle(hex) {
 // Decode GP Card Spec privileges TLV (tag C5) into human-readable strings
 function ramFmtPrivileges(hex) {
 	const p = hex || '';
-	if (!p) return '(none)';
+	if (!p) return t('(none)');
 	const bytes = p.match(/.{2}/g) || [];
 	const privs = [];
 	const b1 = parseInt(bytes[0] || '00', 16);
@@ -5084,7 +5086,7 @@ function ramFmtPrivileges(hex) {
 	if (b3 & 0x04) privs.push('Delegated Perso');
 	if (b3 & 0x08) privs.push('Trusted Path');
 	if (b3 & 0x10) privs.push('Authorized Mgmt');
-	return privs.length ? privs.join(', ') : '(none)';
+	return privs.length ? privs.join(', ') : t('(none)');
 }
 
 // Merge ELF-module entries (P1=10, carry module AIDs) into ELF entries (P1=20).
@@ -5108,62 +5110,62 @@ function ramRenderExploreHtml(mem, isd, apps, elfs) {
 	let html = '';
 	if (mem && (mem.appCount != null || mem.freeNV != null || mem.freeV != null)) {
 		html += '<div class="mb-4 p-3 bg-gray-50 dark:bg-slate-800 rounded">';
-		html += '<div class="font-semibold text-sm mb-1" data-l10n="Memory (GET DATA FF21)">Memory (GET DATA FF21)</div>';
-		html += '<div>Applications: ' + (mem.appCount != null ? mem.appCount : '?') + '</div>';
-		html += '<div>Free NV: ' + (mem.freeNV != null ? mem.freeNV + ' B' : '?') + '</div>';
-		html += '<div>Free Volatile: ' + (mem.freeV != null ? mem.freeV + ' B' : '?') + '</div>';
+		html += '<div class="font-semibold text-sm mb-1">' + esc(t('Memory (GET DATA FF21)')) + '</div>';
+		html += '<div>' + esc(t('Applications:')) + ' ' + (mem.appCount != null ? mem.appCount : '?') + '</div>';
+		html += '<div>' + esc(t('Free NV:')) + ' ' + (mem.freeNV != null ? mem.freeNV + ' B' : '?') + '</div>';
+		html += '<div>' + esc(t('Free Volatile:')) + ' ' + (mem.freeV != null ? mem.freeV + ' B' : '?') + '</div>';
 		html += '</div>';
 	}
 	if (isd && isd.length) {
 		html += '<div class="mb-4">';
-		html += '<div class="font-semibold text-sm mb-1" data-l10n="ISD (Issuer Security Domain)">ISD (Issuer Security Domain)</div>';
+		html += '<div class="font-semibold text-sm mb-1">' + esc(t('ISD (Issuer Security Domain)')) + '</div>';
 		isd.forEach(o => {
 			html += '<div class="mb-1 pl-2 border-l-2 border-blue-400">';
-			html += '<div>AID: ' + (o.aid || '?') + '</div>';
-			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
-			if (o.privileges) html += '<div>Privileges: ' + ramFmtPrivileges(o.privileges) + ' (' + o.privileges + ')</div>';
-			if (o.sdAid) html += '<div>SD AID: ' + o.sdAid + '</div>';
+			html += '<div>' + esc(t('AID:')) + ' ' + (o.aid || '?') + '</div>';
+			html += '<div>' + esc(t('Lifecycle:')) + ' ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
+			if (o.privileges) html += '<div>' + esc(t('Privileges:')) + ' ' + ramFmtPrivileges(o.privileges) + ' (' + o.privileges + ')</div>';
+			if (o.sdAid) html += '<div>' + esc(t('SD AID:')) + ' ' + o.sdAid + '</div>';
 			html += '</div>';
 		});
 		html += '</div>';
 	}
 	if (apps && apps.length) {
 		html += '<div class="mb-4">';
-		html += '<div class="font-semibold text-sm mb-1" data-l10n="Applications / Applet Instances">Applications / Applet Instances</div>';
+		html += '<div class="font-semibold text-sm mb-1">' + esc(t('Applications / Applet Instances')) + '</div>';
 		apps.forEach(o => {
 			html += '<div class="mb-1 pl-2 border-l-2 border-green-400">';
-			html += '<div>Application / Instance AID: ' + (o.aid || '?');
+			html += '<div>' + esc(t('Application / Instance AID:')) + ' ' + (o.aid || '?');
 			if (o.aid) {
-				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', false)" data-needs="card" class="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Delete">Delete</button>';
+				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', false)" data-needs="card" class="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed">' + esc(t('Delete')) + '</button>';
 			}
 			html += '</div>';
-			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
-			if (o.privileges) html += '<div>Privileges: ' + ramFmtPrivileges(o.privileges) + ' (' + o.privileges + ')</div>';
-			if (o.implicitSel) html += '<div>Implicit sel: ' + o.implicitSel + '</div>';
-			if (o.elfAid) html += '<div>Load File AID / Package AID: ' + o.elfAid + '</div>';
-			if (o.sdAid) html += '<div>SD AID: ' + o.sdAid + '</div>';
+			html += '<div>' + esc(t('Lifecycle:')) + ' ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
+			if (o.privileges) html += '<div>' + esc(t('Privileges:')) + ' ' + ramFmtPrivileges(o.privileges) + ' (' + o.privileges + ')</div>';
+			if (o.implicitSel) html += '<div>' + esc(t('Implicit sel:')) + ' ' + o.implicitSel + '</div>';
+			if (o.elfAid) html += '<div>' + esc(t('Load File AID / Package AID:')) + ' ' + o.elfAid + '</div>';
+			if (o.sdAid) html += '<div>' + esc(t('SD AID:')) + ' ' + o.sdAid + '</div>';
 			html += '</div>';
 		});
 		html += '</div>';
 	}
 	if (elfs && elfs.length) {
 		html += '<div class="mb-4">';
-		html += '<div class="font-semibold text-sm mb-1" data-l10n="Executable Load Files (ELFs) / Packages">Executable Load Files (ELFs) / Packages</div>';
+		html += '<div class="font-semibold text-sm mb-1">' + esc(t('Executable Load Files (ELFs) / Packages')) + '</div>';
 		elfs.forEach(o => {
 			html += '<div class="mb-1 pl-2 border-l-2 border-purple-400">';
-			html += '<div>Load File AID / Package AID: ' + (o.aid || '?');
+			html += '<div>' + esc(t('Load File AID / Package AID:')) + ' ' + (o.aid || '?');
 			if (o.aid) {
-				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', false)" data-needs="card" class="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Delete">Delete</button>';
-				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', true)" data-needs="card" class="ml-1 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Delete All">Delete All</button>';
+				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', false)" data-needs="card" class="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed">' + esc(t('Delete')) + '</button>';
+				html += ' <button onclick="ramDeleteFromExplorer(\'' + o.aid + '\', true)" data-needs="card" class="ml-1 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed">' + esc(t('Delete All')) + '</button>';
 			}
 			html += '</div>';
-			html += '<div>Lifecycle: ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
-			if (o.version) html += '<div>Version: ' + o.version + '</div>';
+			html += '<div>' + esc(t('Lifecycle:')) + ' ' + ramFmtLifecycle(o.lifecycle || '') + '</div>';
+			if (o.version) html += '<div>' + esc(t('Version:')) + ' ' + o.version + '</div>';
 			if (o.moduleAids && o.moduleAids.length) {
-				html += '<div>Executable Module AIDs / Applet Class AIDs:</div>';
+				html += '<div>' + esc(t('Executable Module AIDs / Applet Class AIDs:')) + '</div>';
 				o.moduleAids.forEach(m => { html += '<div class="pl-4">- ' + m + '</div>'; });
 			}
-			if (o.sdAid) html += '<div>SD AID: ' + o.sdAid + '</div>';
+			if (o.sdAid) html += '<div>' + esc(t('SD AID:')) + ' ' + o.sdAid + '</div>';
 			html += '</div>';
 		});
 		html += '</div>';
@@ -5171,10 +5173,25 @@ function ramRenderExploreHtml(mem, isd, apps, elfs) {
 	return html;
 }
 
+let _ramExplorerData = null;
+
+function ramRenderExplorer() {
+	const explorerEl = document.getElementById('ram-explorer');
+	if (!explorerEl) return;
+	if (!_ramExplorerData) {
+		explorerEl.classList.add('hidden');
+		explorerEl.innerHTML = '';
+		return;
+	}
+	const html = ramRenderExploreHtml(_ramExplorerData.mem, _ramExplorerData.isd, _ramExplorerData.apps, _ramExplorerData.elfs);
+	explorerEl.innerHTML = html || esc(t('(no data)'));
+	explorerEl.classList.remove('hidden');
+	pysimApplyAvailability();
+}
+
 // ===== Operation handlers =====
 async function ramExplore(sp) {
 	const resultEl = document.getElementById('ram-result');
-	const explorerEl = document.getElementById('ram-explorer');
 	const stepsEl = document.getElementById('ram-steps');
 	let cntr = sp.cntr;
 	const errors = [];
@@ -5204,7 +5221,7 @@ async function ramExplore(sp) {
 				const res = await ramSendOta(apdu, Object.assign({}, sp, { cntr, spi2 }));
 				cntr = ramIncrementCntr(cntr);
 				if (!res.success || !res.por || res.por.response_status !== 'por_ok') {
-					const errorMsg = res.por ? res.por.response_status : (res.error || 'no data');
+					const errorMsg = res.por ? res.por.response_status : (res.error || t('no data'));
 					errors.push(label + ': ' + errorMsg);
 					tlvFailed = true;
 					break;
@@ -5229,7 +5246,7 @@ async function ramExplore(sp) {
 				if (sw === '6F00') { tlvFailed = true; break; }
 				if (!data) {
 					if (sw !== '9000') {
-						errors.push(label + ': (no data) — SW ' + sw);
+						errors.push(label + ': ' + t('(no data)') + ' — SW ' + sw);
 						tlvFailed = true;
 					}
 					break;
@@ -5244,62 +5261,60 @@ async function ramExplore(sp) {
 		}
 	}
 
-	 ramShowProgress('GET DATA FF21 (memory)...');
+	 ramShowProgress(t('Memory (GET DATA FF21)') + '...');
 	try {
 		const memRes = await ramSendOta('80CAFF2100', Object.assign({}, sp, { spi2: '01' }));
 		cntr = ramIncrementCntr(cntr);
 		if (memRes.success && memRes.por && memRes.por.response_status === 'por_ok') {
 			const data = memRes.por.decoded ? memRes.por.decoded.last_response_data : '';
 			if (!data) {
-				errors.push('Memory: (no data)');
+				errors.push(t('Memory') + ': ' + t('(no data)'));
 			} else {
 				const m = ramParseGetMemory(data);
 				if (m) Object.assign(mem, m);
 			}
 		} else {
 			const errorMsg = memRes.por ? memRes.por.response_status : (memRes.error || 'no data');
-			errors.push('Memory: ' + errorMsg);
+			errors.push(t('Memory') + ': ' + errorMsg);
 		}
 	} catch (e) {
-		errors.push('Memory: ' + e.message);
+		errors.push(t('Memory') + ': ' + e.message);
 	}
 
 	// 2-5. GET STATUS for ISD / Apps / ELFs / ELF modules
 	// P1 per GP Card Spec v2.3.1 table 11-33:
 	//   80=ISD, 40=Applications, 20=Executable Load Files (ELFs), 10=ELF+modules
-	await paginate('80', isd, ramParseAppStatus, 'ISD');
-	await paginate('40', apps, ramParseAppStatus, 'Apps');
-	await paginate('20', elfs, ramParseElfStatus, 'ELFs');
-	await paginate('10', modules, ramParseElfStatus, 'ELF Modules');
+	await paginate('80', isd, ramParseAppStatus, t('ISD'));
+	await paginate('40', apps, ramParseAppStatus, t('Apps'));
+	await paginate('20', elfs, ramParseElfStatus, t('ELFs'));
+	await paginate('10', modules, ramParseElfStatus, t('ELF Modules'));
 
 	ramMergeElfData(elfs, modules);
 	ramSaveCntr(cntr);
 	ramHideProgress();
 
 	if (errors.length) {
-		resultEl.textContent = 'Partial — ' + errors.join('; ');
+		resultEl.textContent = t('Partial') + ' — ' + errors.join('; ');
 		resultEl.classList.remove('hidden', 'text-green-600'); resultEl.classList.add('text-red-600');
 		stepsEl.classList.remove('hidden');
 		stepsEl.textContent = errors.join('\n');
 	} else {
-		resultEl.textContent = 'OK — ' + isd.length + ' ISD, ' + apps.length + ' apps, ' + elfs.length + ' ELFs' + (mem.freeNV ? ', ' + mem.freeNV + ' free NV' : '');
+		resultEl.textContent = t('OK') + ' — ' + isd.length + ' ' + t('ISD') + ', ' + apps.length + ' ' + t('Apps') + ', ' + elfs.length + ' ' + t('ELFs') + (mem.freeNV ? ', ' + mem.freeNV + ' ' + t('free NV') : '');
 		resultEl.classList.remove('hidden', 'text-red-600'); resultEl.classList.add('text-green-600');
 	}
 
-	const html = ramRenderExploreHtml(mem, isd, apps, elfs);
-	explorerEl.innerHTML = html || '(no data)';
-	explorerEl.classList.remove('hidden');
-	pysimApplyAvailability();
+	_ramExplorerData = { mem: mem, isd: isd, apps: apps, elfs: elfs };
+	ramRenderExplorer();
 }
 
 async function ramDeleteFromExplorer(aid, withCascade) {
 	const sp = getRamSpParams();
 	if (!sp.kicKey || !sp.kidKey) {
-		alert('Select a card preset with keys first (RAM subtab → Card preset)');
+		alert(t('Select a card preset with keys first (RAM subtab → Card preset)'));
 		return;
 	}
-	const label = withCascade ? 'DELETE (cascade)' : 'DELETE';
-	if (!confirm(label + ' — AID: ' + aid + '?')) return;
+	const label = withCascade ? t('Delete') + ' (' + t('cascade') + ')' : t('Delete');
+	if (!confirm(label + ' — ' + t('AID:') + ' ' + aid + '?')) return;
 	const p2 = withCascade ? '80' : '00';
 	const aidLen = (aid.length / 2).toString(16).padStart(2, '0');
 	const apdu = '80E400' + p2 + _ber_len(2 + aid.length / 2) + '4F' + aidLen + aid;
@@ -5309,7 +5324,7 @@ async function ramDeleteFromExplorer(aid, withCascade) {
 	const resultEl = document.getElementById('ram-result');
 	const stepsEl = document.getElementById('ram-steps');
 	if (!res.success || !res.por || res.por.response_status !== 'por_ok') {
-		resultEl.textContent = 'Failed: ' + (res.por ? res.por.response_status : res.error || res.sw);
+		resultEl.textContent = t('Failed') + ': ' + (res.por ? res.por.response_status : res.error || res.sw);
 		resultEl.classList.remove('hidden', 'text-green-600'); resultEl.classList.add('text-red-600');
 		return;
 	}
@@ -5317,7 +5332,7 @@ async function ramDeleteFromExplorer(aid, withCascade) {
 	const sw = res.por.decoded ? res.por.decoded.last_status_word : '';
 	stepsEl.classList.remove('hidden');
 	stepsEl.textContent = label + ' ' + aid + ' -> ' + sw;
-	resultEl.textContent = 'OK';
+	resultEl.textContent = t('OK');
 	resultEl.classList.remove('hidden', 'text-red-600'); resultEl.classList.add('text-green-600');
 	await ramExplore(sp);
 }
@@ -5325,12 +5340,12 @@ async function ramDeleteFromExplorer(aid, withCascade) {
 async function ramInstallCap(sp) {
 	const fileInput = document.getElementById('ram-cap-file');
 	const file = fileInput.files[0];
-	if (!file) { alert('Select a .cap file'); return; }
-	if (file.size > 48 * 1024) { alert('CAP file exceeds 48 kB limit'); return; }
+	if (!file) { alert(t('Select a .cap file')); return; }
+	if (file.size > 48 * 1024) { alert(t('CAP file exceeds 48 kB limit')); return; }
 
-	ramShowProgress('Reading CAP file...');
+	ramShowProgress(t('Reading CAP file...'));
 	const capHex = await ramReadFileHex(file);
-	ramShowProgress('Sending to server for install...');
+	ramShowProgress(t('Sending to server for install...'));
 
 	const body = {
 		cap_hex: capHex,
@@ -5353,16 +5368,16 @@ async function ramInstallCap(sp) {
 	let txt = '';
 	(data.steps || []).forEach((s, idx) => {
 		const mark = s.por_status === 'por_ok' ? '✅' : '❌';
-		txt += mark + ' Step ' + (idx + 1) + ': ' + s.name + ' — ' + s.por_status + ' (SW ' + s.sw + ')\n';
+		txt += mark + ' ' + t('Step') + ' ' + (idx + 1) + ': ' + s.name + ' — ' + s.por_status + ' (SW ' + s.sw + ')\n';
 	});
 	stepsEl.textContent = txt;
 
 	if (data.success) {
 		ramSaveCntr(data.final_cntr);
-		resultEl.textContent = 'Install OK — load_file_aid=' + data.load_file_aid + ' module_aid=' + data.module_aid;
+		resultEl.textContent = t('Install OK') + ' — load_file_aid=' + data.load_file_aid + ' module_aid=' + data.module_aid;
 		resultEl.classList.remove('hidden', 'text-red-600'); resultEl.classList.add('text-green-600');
 	} else {
-		resultEl.textContent = 'Install FAILED at step: ' + data.failed_step + (data.error ? ' (' + data.error + ')' : '');
+		resultEl.textContent = t('Install FAILED at step:') + ' ' + data.failed_step + (data.error ? ' (' + data.error + ')' : '');
 		resultEl.classList.remove('hidden', 'text-green-600'); resultEl.classList.add('text-red-600');
 	}
 }
@@ -5372,7 +5387,7 @@ async function ramExecute() {
 	const op = document.getElementById('ram-op').value;
 	const sp = getRamSpParams();
 	if (!sp.kicKey || !sp.kidKey) {
-		alert('Select a card preset with keys first (RAM subtab → Card preset)');
+		alert(t('Select a card preset with keys first (RAM subtab → Card preset)'));
 		return;
 	}
 	try {
@@ -5380,7 +5395,7 @@ async function ramExecute() {
 		else if (op === 'install-cap') await ramInstallCap(sp);
 	} catch (e) {
 		const resultEl = document.getElementById('ram-result');
-		resultEl.textContent = 'Error: ' + e.message;
+		resultEl.textContent = t('Error') + ': ' + e.message;
 		resultEl.classList.remove('hidden', 'text-green-600'); resultEl.classList.add('text-red-600');
 		ramHideProgress();
 	}
@@ -9199,6 +9214,36 @@ const LANG_RU = {
 	'Application / Instance AID:': 'AID приложения / экземпляра:',
 	'Load File AID / Package AID:': 'AID Load File / пакета:',
 	'Executable Module AIDs / Applet Class AIDs:': 'AID исполняемых модулей / классов апплетов:',
+	'Applications:': 'Приложения:',
+	'Free NV:': 'Свободно NV:',
+	'Free Volatile:': 'Свободно volatile:',
+	'AID:': 'AID:',
+	'Lifecycle:': 'Жизненный цикл:',
+	'Privileges:': 'Привилегии:',
+	'SD AID:': 'AID SD:',
+	'Implicit sel:': 'Неявный выбор:',
+	'Version:': 'Версия:',
+	'(none)': '(нет)',
+	'Partial': 'Частично',
+	'OK': 'OK',
+	'ISD': 'ISD',
+	'Apps': 'Приложения',
+	'ELFs': 'ELF',
+	'ELF Modules': 'Модули ELF',
+	'Memory': 'Память',
+	'no data': 'нет данных',
+	'(no data)': '(нет данных)',
+	'free NV': 'свободно NV',
+	'Failed': 'Ошибка',
+	'cascade': 'каскадно',
+	'Select a card preset with keys first (RAM subtab → Card preset)': 'Сначала выберите пресет карты с ключами (RAM → Пресет карты)',
+	'Select a .cap file': 'Выберите файл .cap',
+	'CAP file exceeds 48 kB limit': 'Файл CAP превышает лимит 48 кБ',
+	'Reading CAP file...': 'Чтение файла CAP...',
+	'Sending to server for install...': 'Отправка на сервер для установки...',
+	'Step': 'Шаг',
+	'Install OK': 'Установка OK',
+	'Install FAILED at step:': 'Установка не удалась на шаге:',
 	'No cards defined.': 'Карты не заданы.',
 	'Card presets': 'Выбор карты',
 	'Card preset': 'Пресет карты',
@@ -9467,6 +9512,7 @@ function refreshDynamicI18n() {
 	if (isViewVisible('profiler-scan-modal')) profilerScanRefreshOptions();
 	pysimUpdateStateIndicator();
 	if (isViewVisible('scp80-sub-cards')) cardsRender();
+	if (_ramExplorerData && isViewVisible('ram-explorer')) ramRenderExplorer();
 	if (isViewVisible('tab-phone')) {
 		if (isViewVisible('phone-sub-phone')) {
 			pysimEventsRender();

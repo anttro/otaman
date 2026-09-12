@@ -22,13 +22,15 @@ function extractFunc(src, name) {
 }
 
 // Extract chain builder functions and dependencies
-const FNS = ['berLenStr', 'buildApdu', 'escHtml', 'chainInit', 'chainRamBuildRowHex'];
+const FNS = ['berLenStr', 'buildApdu', 'escHtml', 'esc', 'chainInit', 'chainRamBuildRowHex', 'ramFmtLifecycle', 'ramFmtPrivileges', 'ramRenderExploreHtml'];
 let code = '';
 for (const f of FNS) {
 	code += extractFunc(html, f) + '\n';
 }
 const m = html.match(/const _chains = \{\};/);
 if (m) code += m[0].replace(/^const /, 'var ') + '\n';
+const lc = html.match(/const RAM_LIFECYCLE = \{[\s\S]*?\n\};/);
+if (lc) code += lc[0].replace(/^const /, 'var ') + '\n';
 eval(code);
 
 const els = {};
@@ -160,4 +162,38 @@ test('STORE DATA ram-enc P1 values 00/40/80/C0/E0', () => {
 		const apdu = genRamResult({ cmd: 'store-data', data: 'AABB', enc: enc, block: '0' });
 		assert.ok(apdu.startsWith('80E2' + p1 + '00'), enc + ' -> P1 ' + p1);
 	}
+});
+
+test('ramRenderExploreHtml localizes every label and button', () => {
+	const seen = [];
+	global.t = s => { seen.push(s); return 'XX' + s; };
+	const out = ramRenderExploreHtml(
+		{ appCount: 5, freeNV: 100, freeV: 50 },
+		[{ aid: 'A000000151000000', lifecycle: '07', privileges: '', sdAid: 'A000000151000000' }],
+		[{ aid: 'A1130001180001', lifecycle: '07', privileges: '80', implicitSel: '00', elfAid: 'ELF1' }],
+		[{ aid: 'ELF1', lifecycle: '01', version: '1.0', moduleAids: ['M1'], sdAid: null }]
+	);
+	delete global.t;
+	assert.ok(out.includes('XXDelete'), out);
+	assert.ok(out.includes('XXDelete All'), out);
+	assert.ok(out.includes('XXApplications:'), out);
+	assert.ok(out.includes('XXFree NV:'), out);
+	assert.ok(out.includes('XXFree Volatile:'), out);
+	assert.ok(out.includes('XXAID:'), out);
+	assert.ok(out.includes('XXLifecycle:'), out);
+	assert.ok(out.includes('XXPrivileges:'), out);
+	assert.ok(out.includes('XXSD AID:'), out);
+	assert.ok(out.includes('XXImplicit sel:'), out);
+	assert.ok(out.includes('XXVersion:'), out);
+	assert.ok(seen.includes('Application / Instance AID:'));
+	assert.ok(seen.includes('Load File AID / Package AID:'));
+	assert.ok(seen.includes('Executable Module AIDs / Applet Class AIDs:'));
+	assert.ok(!out.includes('data-l10n'), out);
+});
+
+test('ramFmtPrivileges uses the translated (none) placeholder', () => {
+	global.t = s => 'XX' + s;
+	assert.strictEqual(ramFmtPrivileges(''), 'XX(none)');
+	assert.strictEqual(ramFmtPrivileges('00'), 'XX(none)');
+	delete global.t;
 });
