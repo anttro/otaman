@@ -12,7 +12,7 @@ from pySim.cards import UiccCardBase
 
 from .shell import load_pysim_app
 from . import fastinit
-from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog, _set_menu_timeout
+from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog, _set_menu_timeout, start_card_monitor
 
 
 _server_start = 0
@@ -93,6 +93,8 @@ def main():
         t_phase = time.time()
         sl = mod.init_reader(opts, **kwargs)
         _tlog('init_reader: %.0fms' % ((time.time() - t_phase) * 1000))
+        if getattr(sl, '_reader', None) is not None:
+            start_card_monitor(str(sl._reader))
         scc = SimCardCommands(sl)
         scc.cat_cla = '80'  # UICC CLA default; overridden for SIM after init_card
         scc._tp.proactive_handler = _DefaultProactiveHandler()
@@ -179,10 +181,11 @@ def main():
     server.event_list = event_list
     server.menu_active = False
     server.stk_pending = None
-    # Set server reference for polling timer and mark card as connected
+    server.card_present = card is not None
+    # Set server reference for polling timer and mark the card session state
     import pysim_otaman_server.server
     pysim_otaman_server.server._server_ref = server
-    pysim_otaman_server.server._CARD_CONNECTED = True
+    pysim_otaman_server.server._CARD_CONNECTED = card is not None
     if opts.poll_interval is not None:
         pysim_otaman_server.server._set_poll_interval(opts.poll_interval)
     # Auto-enable polling if card initialized successfully (unless interval is 0)

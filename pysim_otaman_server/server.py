@@ -11,6 +11,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from io import StringIO
 from pySim.transport import ApduTracer, ProactiveHandler
 from pySim.cards import UiccCardBase
+from smartcard.CardMonitoring import CardMonitor, CardObserver
 
 import gsm0338  # registers 'gsm03.38' codec
 from construct import GreedyBytes
@@ -1034,6 +1035,48 @@ def _handle_card_disconnect():
     _reset_proactive_log()
 
 
+class _CardPresenceObserver(CardObserver):
+    """Passive PC/SC presence watcher: pyscard's CardMonitor only polls
+    SCardGetStatusChange (no connection, no APDUs), so it can never interleave
+    with our APDU traffic. We only update flags and tear down card state."""
+
+    def __init__(self, reader_name):
+        self.reader_name = reader_name
+
+    def update(self, observable, handlers):
+        addedcards, removedcards = handlers
+        try:
+            for card in removedcards:
+                if str(getattr(card, 'reader', '')) == self.reader_name:
+                    sys.stderr.write('CARD-WATCH: card removed from %s\n' % self.reader_name)
+                    with _CARD_LOCK:
+                        if _server_ref:
+                            _server_ref.card_present = False
+                        _handle_card_disconnect()
+            for card in addedcards:
+                if str(getattr(card, 'reader', '')) == self.reader_name:
+                    sys.stderr.write('CARD-WATCH: card inserted into %s (press Equip)\n' % self.reader_name)
+                    with _CARD_LOCK:
+                        if _server_ref:
+                            _server_ref.card_present = True
+        except Exception as e:
+            sys.stderr.write('CARD-WATCH error: %s\n' % e)
+
+
+_card_presence_observer = None
+
+def start_card_monitor(reader_name):
+    """Start the process-wide pyscard monitor (one daemon thread, no process)
+    and register our reader's presence observer."""
+    global _card_presence_observer
+    if not reader_name:
+        return None
+    if _card_presence_observer is None:
+        _card_presence_observer = _CardPresenceObserver(reader_name)
+        CardMonitor().addObserver(_card_presence_observer)
+    return _card_presence_observer
+
+
 def _init_proactive_session():
     global _PROACTIVE_SESSION_START
     _PROACTIVE_SESSION_START = time.time()
@@ -1526,9 +1569,19 @@ class PysimHandler(BaseHTTPRequestHandler):
             lchan = rs.lchan[0] if rs else None
             cur_file = lchan.selected_file if lchan else None
             scc = app.card._scc if app and app.card else None
+            card = app.card if app else None
+            connected = bool(_CARD_CONNECTED and card is not None)
+            if not connected:
+                rs = None
+                lchan = None
+                cur_file = None
+                scc = None
+                card = None
             data = {
                 'reader': str(self.server.sl) if self.server.sl else None,
-                'card': app.card.name if app and app.card else None,
+                'connected': connected,
+                'card_present': bool(getattr(self.server, 'card_present', False)),
+                'card': card.name if card else None,
                 'profile': str(rs.profile) if rs and rs.profile else None,
                 'app_ready': app is not None,
                 'adm_verified': rs.adm_verified if rs else False,
@@ -1672,6 +1725,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 self.server.scc = self.server.app.card._scc
                 self.server.scc.cat_cla = '80' if isinstance(self.server.card, UiccCardBase) else 'a0'
                 _CARD_CONNECTED = True
+                self.server.card_present = True
                 _poll_enable()
                 sm, el = _send_terminal_profile(self.server.scc, self.server.terminal_profile)
                 self.server.sim_menu = sm

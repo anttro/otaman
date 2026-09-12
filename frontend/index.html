@@ -6400,6 +6400,7 @@ async function pysimStatusPoll() {
 }
 
 let _pysimPollTimer = null;
+let _pysimLastConnected = null;
 
 async function pysimPollToggle() {
 	const btn = document.getElementById('pli-pause-btn');
@@ -6435,27 +6436,41 @@ async function pysimPollStatusInit() {
 	} catch (e) { /* ignore */ }
 }
 
+function pysimCardStateUpdate(status) {
+	if (!status || typeof status.connected !== 'boolean') return;
+	const statusEl = document.getElementById('pysim-status');
+	if (status.connected === _pysimLastConnected) return;
+	_pysimLastConnected = status.connected;
+	if (status.connected) {
+		pysimSetConnected(true);
+		pysimRefresh();
+		return;
+	}
+	pysimSetConnected(false);
+	if (statusEl && statusEl.textContent.trim() !== '') {
+		if (status.card_present) {
+			statusEl.innerHTML = '<span class="text-amber-600">' + esc(t('Card inserted — press Equip')) + '</span>';
+		} else {
+			statusEl.innerHTML = '<span class="text-red-500">' + esc(t('No card detected. Insert card and click Equip card button')) + '</span>';
+		}
+	}
+}
+
 function pysimStartBackendPoll() {
 	if (_pysimPollTimer) clearInterval(_pysimPollTimer);
-	let _hadData = false;
+	_pysimLastConnected = null;
 	_pysimPollTimer = setInterval(async () => {
 		try {
-			const [log, stk, ps] = await Promise.all([
+			const [log, stk, ps, status] = await Promise.all([
 				pysimFetch('/api/proactive-log'),
 				pysimFetch('/api/stk-status'),
 				pysimFetch('/api/poll-status'),
+				pysimFetch('/api/status'),
 			]);
 			pysimUpdatePollUI(ps.enabled, ps.interval);
-			if (Array.isArray(log) && log.length > 0) _hadData = true;
-			if (_hadData && !ps.enabled && Array.isArray(log) && log.length === 0) {
-				_hadData = false;
-				const statusEl = document.getElementById('pysim-status');
-				if (statusEl && statusEl.textContent.trim() !== '') {
-					statusEl.innerHTML = '<span class="text-red-500">Card disconnected</span>';
-				}
-			}
+			pysimCardStateUpdate(status);
 		} catch (e) { /* ignore */ }
-	}, 5000);
+	}, 2000);
 }
 
 // ===== proactive command log =====
@@ -8746,6 +8761,7 @@ const LANG_RU = {
 	'pysim-blocked-hint': 'Браузер, вероятно, заблокировал доступ к локальному серверу карт. Разрешите доступ к локальной сети для этого сайта (Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → Разрешить). Также проверьте, что pysim-otaman-server запущен по адресу {url}.',
 	'pysim-unreachable-hint': 'Не удалось подключиться к серверу карт. Проверьте, что pysim-otaman-server запущен и адрес указан верно ({url}). Если эта страница открыта по HTTPS, также разрешите доступ к локальной сети в браузере (Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → Разрешить).',
 	'No card detected. Insert card and click Equip card button': 'Карта не обнаружена. Вставьте карту и нажмите Подключить карту',
+	'Card inserted — press Equip': 'Карта вставлена — нажмите «Подключить карту»',
 	'Checking...': 'Проверка...',
 	'Resetting...': 'Сброс...',
 	'Equipping...': 'Подключение...',
