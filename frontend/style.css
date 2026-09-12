@@ -1702,7 +1702,7 @@ video {
 
 /* Dark theme: lighten softer (muted) text one step for higher contrast */
 .dark\:text-slate-500:is(.dark *) {
-  color: rgb(148 163 184 / var(--tw-text-opacity, 1));
+  color: rgb(203 213 225 / var(--tw-text-opacity, 1));
 }
 .dark\:text-slate-400:is(.dark *) {
   color: rgb(203 213 225 / var(--tw-text-opacity, 1));
@@ -1753,8 +1753,44 @@ video {
 
 /* Dark theme: lighten gray fonts */
 .dark\:text-gray-400:is(.dark *) {
-  color: rgb(156 163 175 / var(--tw-text-opacity, 1));
+  color: rgb(203 213 225 / var(--tw-text-opacity, 1));
 }
 .dark\:text-gray-600:is(.dark *) {
-  color: rgb(156 163 175 / var(--tw-text-opacity, 1));
+  color: rgb(203 213 225 / var(--tw-text-opacity, 1));
+}
+
+/* Dark theme: gray text without an explicit dark variant (ids, timestamps,
+   expand markers, ...) — match the lighten-on-dark level used above */
+.dark .text-gray-300:not([class*="dark:text-"]) {
+  color: rgb(148 163 184 / var(--tw-text-opacity, 1));
+}
+.dark .text-gray-400:not([class*="dark:text-"]) {
+  color: rgb(203 213 225 / var(--tw-text-opacity, 1));
+}
+.dark .text-gray-500:not([class*="dark:text-"]) {
+  color: rgb(203 213 225 / var(--tw-text-opacity, 1));
+}
+.dark .text-gray-600:not([class*="dark:text-"]) {
+  color: rgb(203 213 225 / var(--tw-text-opacity, 1));
+}
+.dark .text-gray-700:not([class*="dark:text-"]) {
+  color: rgb(226 232 240 / var(--tw-text-opacity, 1));
+}
+.dark .text-gray-800:not([class*="dark:text-"]) {
+  color: rgb(241 245 249 / var(--tw-text-opacity, 1));
+}
+
+/* Dark theme: brighten gray borders one step so they stay visible on dark
+   backgrounds */
+.dark\:border-slate-600:is(.dark *) {
+  border-color: rgb(100 116 139 / var(--tw-border-opacity, 1));
+}
+.dark\:border-slate-700:is(.dark *) {
+  border-color: rgb(71 85 105 / var(--tw-border-opacity, 1));
+}
+.dark\:border-slate-700\/50:is(.dark *) {
+  border-color: rgb(71 85 105 / 0.5);
+}
+.dark\:border-slate-800:is(.dark *) {
+  border-color: rgb(51 65 85 / var(--tw-border-opacity, 1));
 }
