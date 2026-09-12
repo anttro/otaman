@@ -1,4 +1,4 @@
-const CACHE = 'otaman-v97';
+const CACHE = 'otaman-v98';
 const URLS = [
   'index.html',
   'help.html',
@@ -31,19 +31,33 @@ self.addEventListener('activate', e => {
   );
 });
 
+const OFFLINE_RESPONSE = new Response('Offline: page not cached', {
+  status: 503,
+  statusText: 'Offline',
+  headers: { 'Content-Type': 'text/plain' },
+});
+
 self.addEventListener('fetch', e => {
   if (!e.request.url.startsWith('http')) return;
-  if (new URL(e.request.url).pathname.startsWith('/api/')) return;  // live data, never cache
+  const path = new URL(e.request.url).pathname;
+  if (path.startsWith('/api/')) return;  // live data, never cache
   if (e.request.method !== 'GET') return;
-  const isNavigate = e.request.mode === 'navigate' || e.request.url.endsWith('sw.js');
+  const isNavigate = e.request.mode === 'navigate';
+  const isSwScript = path.endsWith('/sw.js');
   if (isNavigate) {
     e.respondWith(
       fetch(e.request).then(res => {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
         return res;
-      }).catch(() => caches.match(e.request))
+      }).catch(() =>
+        caches.match(e.request)
+          .then(r => r || caches.match('index.html'))
+          .then(r => r || OFFLINE_RESPONSE)
+      )
     );
+  } else if (isSwScript) {
+    e.respondWith(fetch(e.request).catch(() => OFFLINE_RESPONSE));
   } else {
     e.respondWith(
       caches.match(e.request).then(r => r || fetch(e.request).then(res => {
