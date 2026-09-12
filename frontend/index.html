@@ -7293,7 +7293,7 @@ function profilerRenderSnapshotList() {
 		html += '<b>' + esc(s.name) + '</b>';
 		if (s.iccid) html += '<span class="text-xs font-mono text-gray-500 dark:text-slate-400">' + esc(s.iccid) + '</span>';
 		html += '<span class="text-xs text-gray-400 dark:text-slate-500">' + esc(new Date(s.created).toLocaleString()) + '</span>';
-		html += '<span class="text-xs text-gray-400 dark:text-slate-500">(' + s.files.length + ' ' + esc(t('files')) + ')</span>';
+		html += '<span class="text-xs text-gray-400 dark:text-slate-500">(' + esc(profilerSnapshotCountLabel(s)) + ')</span>';
 		html += '<span class="ml-auto flex gap-1">';
 		html += '<button onclick="snapshotOpen(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + esc(t('Open')) + '</button>';
 		html += '<button onclick="snapshotExport(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">' + esc(t('Export')) + '</button>';
@@ -7621,6 +7621,14 @@ function profilerFormatMs(ms) {
 	if (ms === null || ms === undefined) return 'n/a';
 	if (ms >= 1000) return (ms / 1000).toFixed(2) + ' s';
 	return Math.round(ms) + ' ms';
+}
+
+function profilerSnapshotCountLabel(s) {
+	let label = (s.files ? s.files.length : 0) + ' ' + t('files');
+	if (s.timing && s.timing.total_ms !== undefined) {
+		label += ', ' + t('scanned in') + ' ' + (s.timing.total_ms / 1000).toFixed(2) + ' ' + t('sec');
+	}
+	return label;
 }
 
 async function profilerBuildSnapshotFile(path, c, timing) {
@@ -8951,6 +8959,8 @@ const LANG_RU = {
 	'Files': 'Файлов',
 	'Records': 'Записей',
 	'Scan time': 'Время сканирования',
+	'scanned in': 'за',
+	'sec': 'сек',
 	'No timing data': 'Нет данных о времени',
 	'min': 'мин',
 	'avg': 'сред',

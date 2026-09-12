@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown', 'profilerTimingStats', 'profilerTimingAccumulator', 'profilerFormatMs', 'profilerRenderSnapshotSummary'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown', 'profilerTimingStats', 'profilerTimingAccumulator', 'profilerFormatMs', 'profilerRenderSnapshotSummary', 'profilerSnapshotCountLabel'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -1214,5 +1214,16 @@ test('profilerRenderSnapshotSummary notes missing timing data', () => {
 	const html = profilerRenderSnapshotSummary({ files: [], timing: undefined });
 	assert.ok(html.includes('Files: <b>0</b>'), html);
 	assert.ok(html.includes('No timing data'), html);
+	delete global.t;
+});
+
+test('profilerSnapshotCountLabel appends the scan time when available', () => {
+	global.t = s => (s === 'scanned in' ? 'scanned in' : s);
+	const withTime = profilerSnapshotCountLabel({ files: new Array(95).fill({}), timing: { total_ms: 21320 } });
+	assert.strictEqual(withTime, '95 files, scanned in 21.32 sec');
+	const noTime = profilerSnapshotCountLabel({ files: new Array(3).fill({}) });
+	assert.strictEqual(noTime, '3 files');
+	const empty = profilerSnapshotCountLabel({ files: [], timing: {} });
+	assert.strictEqual(empty, '0 files');
 	delete global.t;
 });
