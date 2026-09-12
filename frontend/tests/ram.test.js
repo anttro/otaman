@@ -6,7 +6,7 @@ const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
 function extractFunc(src, name) {
-	const re = new RegExp('function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{');
+	const re = new RegExp('(?:async\\s+)?function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{');
 	const m = re.exec(src);
 	if (!m) throw new Error('function ' + name + ' not found');
 	let i = m.index + m[0].length - 1;
@@ -22,7 +22,8 @@ function extractFunc(src, name) {
 }
 
 // Extract chain builder functions and dependencies
-const FNS = ['berLenStr', 'buildApdu', 'escHtml', 'esc', 'chainInit', 'chainRamBuildRowHex', 'ramFmtLifecycle', 'ramFmtPrivileges', 'ramRenderExploreHtml'];
+const FNS = ['berLenStr', 'buildApdu', 'escHtml', 'esc', 'chainInit', 'chainRamBuildRowHex', 'ramFmtLifecycle', 'ramFmtPrivileges', 'ramRenderExploreHtml',
+	'ramCardIdxAfterRemove', 'ramClearResults', 'ramHideProgress', 'ramOpChanged', 'ramRender', 'ramApplyCard', 'ramExecute'];
 let code = '';
 for (const f of FNS) {
 	code += extractFunc(html, f) + '\n';
@@ -31,6 +32,8 @@ const m = html.match(/const _chains = \{\};/);
 if (m) code += m[0].replace(/^const /, 'var ') + '\n';
 const lc = html.match(/const RAM_LIFECYCLE = \{[\s\S]*?\n\};/);
 if (lc) code += lc[0].replace(/^const /, 'var ') + '\n';
+eval(code);
+code += 'var _ramCardIdx = null;\nvar _ramOpLast = null;\nvar _ramExplorerData = null;\n';
 eval(code);
 
 const els = {};
@@ -196,4 +199,124 @@ test('ramFmtPrivileges uses the translated (none) placeholder', () => {
 	assert.strictEqual(ramFmtPrivileges(''), 'XX(none)');
 	assert.strictEqual(ramFmtPrivileges('00'), 'XX(none)');
 	delete global.t;
+});
+
+function fakeClassList() {
+	const set = new Set();
+	return {
+		add: (...cs) => cs.forEach(c => set.add(c)),
+		remove: (...cs) => cs.forEach(c => set.delete(c)),
+		contains: c => set.has(c),
+		toggle: (c, on) => { if (on === undefined ? !set.has(c) : on) set.add(c); else set.delete(c); },
+	};
+}
+
+function fakeEl(id) {
+	return {
+		id,
+		value: '',
+		innerHTML: '',
+		textContent: '',
+		classList: fakeClassList(),
+		options: [],
+		appendChild(opt) { this.options.push(opt); },
+	};
+}
+
+function fakeRamDocument(ids) {
+	const els = {};
+	for (const id of ids) els[id] = fakeEl(id);
+	const sel = els['ram-card-sel'];
+	if (sel) {
+		Object.defineProperty(sel, 'innerHTML', {
+			get() { return this._html || ''; },
+			set(v) { this._html = v; this.value = ''; },
+		});
+	}
+	globalThis.document = {
+		getElementById: id => els[id] || null,
+		createElement: () => fakeEl('option'),
+	};
+	return els;
+}
+
+test('ramOpChanged clears the executed status only on a real op change', () => {
+	const els = fakeRamDocument(['ram-op', 'ram-install-params', 'ram-result', 'ram-explorer', 'ram-steps', 'ram-progress']);
+	_ramOpLast = null;
+	els['ram-op'].value = 'explore';
+	ramOpChanged();
+	assert.ok(!els['ram-result'].classList.contains('hidden'));
+	els['ram-result'].classList.remove('hidden');
+	els['ram-steps'].classList.remove('hidden');
+	ramOpChanged();
+	assert.ok(!els['ram-result'].classList.contains('hidden'), 'same op must keep the result');
+	els['ram-op'].value = 'install-cap';
+	ramOpChanged();
+	assert.ok(els['ram-result'].classList.contains('hidden'));
+	assert.ok(els['ram-steps'].classList.contains('hidden'));
+	assert.ok(els['ram-explorer'].classList.contains('hidden'));
+	assert.ok(els['ram-progress'].classList.contains('hidden'));
+	assert.ok(!els['ram-install-params'].classList.contains('hidden'));
+});
+
+test('ramRender keeps the selected card preset across rebuilds', () => {
+	const els = fakeRamDocument(['ram-card-sel', 'ram-op', 'ram-install-params', 'ram-result', 'ram-explorer', 'ram-steps', 'ram-progress']);
+	globalThis.cards = [{ name: 'A' }, { name: 'B' }, { name: 'C' }];
+	_ramCardIdx = null;
+	_ramOpLast = 'explore';
+	els['ram-op'].value = 'explore';
+	ramRender();
+	assert.strictEqual(els['ram-card-sel'].value, '');
+	els['ram-card-sel'].value = '1';
+	ramRender();
+	assert.strictEqual(els['ram-card-sel'].value, '1');
+	els['ram-card-sel'].value = '';
+	_ramCardIdx = 2;
+	ramRender();
+	assert.strictEqual(els['ram-card-sel'].value, '2');
+	globalThis.cards = [{ name: 'A' }];
+	_ramCardIdx = 2;
+	ramRender();
+	assert.strictEqual(els['ram-card-sel'].value, '');
+	delete globalThis.cards;
+});
+
+test('ramApplyCard remembers a valid picked preset', () => {
+	globalThis.cards = [{ name: 'A' }, { name: 'B' }];
+	let applied = null;
+	globalThis.cardsApply = i => { applied = i; };
+	_ramCardIdx = null;
+	ramApplyCard('1');
+	assert.strictEqual(_ramCardIdx, 1);
+	assert.strictEqual(applied, '1');
+	ramApplyCard('');
+	assert.strictEqual(_ramCardIdx, 1, 'invalid pick must not forget the preset');
+	delete globalThis.cards;
+	delete globalThis.cardsApply;
+});
+
+test('ramExecute commits the dropdown selection before running', async () => {
+	const els = fakeRamDocument(['ram-card-sel', 'ram-op', 'ram-install-params', 'ram-result', 'ram-explorer', 'ram-steps', 'ram-progress']);
+	globalThis.cards = [{ name: 'A' }];
+	globalThis.getRamSpParams = () => ({ kicKey: '11', kidKey: '22' });
+	let explored = false;
+	globalThis.ramExplore = async () => { explored = true; };
+	globalThis.alert = () => {};
+	_ramCardIdx = null;
+	els['ram-card-sel'].value = '0';
+	els['ram-op'].value = 'explore';
+	await ramExecute();
+	assert.strictEqual(_ramCardIdx, 0);
+	assert.ok(explored);
+	delete globalThis.cards;
+	delete globalThis.getRamSpParams;
+	delete globalThis.ramExplore;
+	delete globalThis.alert;
+});
+
+test('ramCardIdxAfterRemove keeps the remembered index aligned', () => {
+	assert.strictEqual(ramCardIdxAfterRemove(2, 0), 1);
+	assert.strictEqual(ramCardIdxAfterRemove(0, 0), null);
+	assert.strictEqual(ramCardIdxAfterRemove(0, 2), 0);
+	assert.strictEqual(ramCardIdxAfterRemove(null, 1), null);
 });

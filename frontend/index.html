@@ -4806,10 +4806,16 @@ async function pysimSendOta() {
 // reuse /api/send-ota. Install Package sends the .cap hex to /api/ram-install
 // which orchestrates INSTALL[for load] -> LOAD x N -> INSTALL[for install].
 
+let _ramCardIdx = null;
+let _ramOpLast = null;
+
 function ramRender() {
-	// populate the card preset selector from the in-memory cards[] array
+	// populate the card preset selector from the in-memory cards[] array,
+	// keeping the current/remembered selection across rebuilds
 	const sel = document.getElementById('ram-card-sel');
 	if (!sel) return;
+	const prev = parseInt(sel.value, 10);
+	const keep = (!isNaN(prev) && cards[prev]) ? prev : _ramCardIdx;
 	sel.innerHTML = '<option value="" data-l10n="— Select card —">— Select card —</option>';
 	cards.forEach((c, i) => {
 		const opt = document.createElement('option');
@@ -4817,23 +4823,23 @@ function ramRender() {
 		opt.textContent = c.name || ('Card ' + i);
 		sel.appendChild(opt);
 	});
+	if (keep !== null && keep !== undefined && cards[keep]) sel.value = String(keep);
 	ramOpChanged();
 }
 
 function ramApplyCard(idx) {
 	// copy the selected card preset into the SP form fields so that
 	// getRamSpParams() picks up the right SPI/KIc/KID/TAR/CNTR/keys
+	const i = parseInt(idx, 10);
+	if (!isNaN(i) && cards[i]) _ramCardIdx = i;
 	cardsApply(idx);
 }
 
 function ramOpChanged() {
 	const op = document.getElementById('ram-op').value;
+	if (_ramOpLast !== null && op !== _ramOpLast) ramClearResults();
+	_ramOpLast = op;
 	document.getElementById('ram-install-params').classList.toggle('hidden', op !== 'install-cap');
-	if (op !== 'explore') {
-		_ramExplorerData = null;
-		document.getElementById('ram-explorer').classList.add('hidden');
-		document.getElementById('ram-explorer').innerHTML = '';
-	}
 }
 
 function ramShowProgress(text) {
@@ -4848,6 +4854,7 @@ function ramHideProgress() {
 
 function ramClearResults() {
 	_ramExplorerData = null;
+	ramHideProgress();
 	document.getElementById('ram-result').classList.add('hidden');
 	document.getElementById('ram-explorer').classList.add('hidden');
 	document.getElementById('ram-explorer').innerHTML = '';
@@ -5384,6 +5391,8 @@ async function ramInstallCap(sp) {
 
 async function ramExecute() {
 	ramClearResults();
+	const cardIdx = parseInt(document.getElementById('ram-card-sel').value, 10);
+	if (!isNaN(cardIdx) && cards[cardIdx]) _ramCardIdx = cardIdx;
 	const op = document.getElementById('ram-op').value;
 	const sp = getRamSpParams();
 	if (!sp.kicKey || !sp.kidKey) {
@@ -5589,7 +5598,14 @@ function cardsAdd() {
 	});
 }
 
+function ramCardIdxAfterRemove(idx, removedIdx) {
+	if (idx === null || idx === undefined || idx < 0) return null;
+	if (idx === removedIdx) return null;
+	return idx > removedIdx ? idx - 1 : idx;
+}
+
 function cardsRemove(i) {
+	_ramCardIdx = ramCardIdxAfterRemove(_ramCardIdx, i);
 	cards.splice(i, 1);
 	cardsSave();
 	cardsRender();
