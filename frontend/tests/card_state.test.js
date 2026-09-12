@@ -22,23 +22,29 @@ function extractFunc(src, name) {
 }
 
 let code = 'var _pysimCardStateKey = null;\nvar _pysimCardSession = null;\n'
-	+ 'var _pysimServerAvailable = null;\nvar _pysimCardEquipped = false;\n';
+	+ 'var _pysimServerAvailable = null;\nvar _pysimCardEquipped = false;\n'
+	+ 'var _pysimProactiveSeq = null;\nvar _pysimStkSig = null;\n';
 code += extractFunc(html, 'pysimCardStateUpdate') + '\n';
 code += extractFunc(html, 'pysimAvailabilityState') + '\n';
 code += extractFunc(html, 'pysimControlDisabled') + '\n';
+code += extractFunc(html, 'pysimProactiveSeqChanged') + '\n';
+code += extractFunc(html, 'pysimStkStatusChanged') + '\n';
 code += '\nglobalThis.esc = s => s;\n';
 code += 'globalThis.t = s => s;\n';
 eval(code);
 
 function setup() {
 	const el = { textContent: 'status line', innerHTML: '' };
-	const calls = { connected: [], resets: [], refreshStatus: [] };
+	const calls = { connected: [], resets: [], refreshStatus: [], proactive: 0 };
 	_pysimCardStateKey = null;
 	_pysimCardSession = null;
+	_pysimProactiveSeq = null;
 	globalThis.document = { getElementById: () => el, querySelectorAll: () => [] };
 	globalThis.pysimSetConnected = v => calls.connected.push(v);
 	globalThis.pysimResetCardData = refresh => calls.resets.push(refresh);
 	globalThis.pysimApplyAvailability = () => {};
+	globalThis.isViewVisible = () => true;
+	globalThis.pysimProactiveLogRender = () => { calls.proactive++; };
 	return { el, calls };
 }
 
@@ -126,4 +132,39 @@ test('no card with auto-equip enabled still shows the no-card message', () => {
 	pysimCardStateUpdate(status({ connected: false, card_present: false, auto_equip: true }));
 	assert.ok(el.innerHTML.includes('No card detected'), el.innerHTML);
 	assert.ok(!el.innerHTML.includes('initializing'), el.innerHTML);
+});
+
+test('proactive log refreshes when the status sequence changes', () => {
+	const { calls } = setup();
+	pysimCardStateUpdate(status({ proactive_seq: 7 }));
+	pysimCardStateUpdate(status({ proactive_seq: 7 }));
+	assert.strictEqual(calls.proactive, 1);
+	pysimCardStateUpdate(status({ proactive_seq: 8 }));
+	assert.strictEqual(calls.proactive, 2);
+});
+
+test('proactive log is not refreshed while the phone view is hidden', () => {
+	const { calls } = setup();
+	globalThis.isViewVisible = () => false;
+	pysimCardStateUpdate(status({ proactive_seq: 3 }));
+	assert.strictEqual(calls.proactive, 0);
+});
+
+test('pysimProactiveSeqChanged tracks the last sequence', () => {
+	_pysimProactiveSeq = null;
+	assert.ok(pysimProactiveSeqChanged(4));
+	assert.ok(!pysimProactiveSeqChanged(4));
+	assert.ok(pysimProactiveSeqChanged(5));
+	assert.ok(!pysimProactiveSeqChanged(undefined));
+	assert.ok(!pysimProactiveSeqChanged(null));
+});
+
+test('pysimStkStatusChanged detects menu state transitions', () => {
+	_pysimStkSig = null;
+	assert.ok(pysimStkStatusChanged({ active: false, pending: false }));
+	assert.ok(!pysimStkStatusChanged({ active: false, pending: false }));
+	assert.ok(pysimStkStatusChanged({ active: true, pending: true, pending_type: 'select_item' }));
+	assert.ok(!pysimStkStatusChanged({ active: true, pending: true, pending_type: 'select_item' }));
+	assert.ok(pysimStkStatusChanged({ active: true, pending: false }));
+	assert.ok(!pysimStkStatusChanged(null));
 });

@@ -6713,6 +6713,10 @@ function pysimCardStateUpdate(status) {
 	_pysimCardEquipped = !!status.connected;
 	_pysimEquipping = !!status.equipping;
 	pysimApplyAvailability();
+	if (pysimProactiveSeqChanged(status.proactive_seq)
+		&& isViewVisible('tab-phone') && isViewVisible('phone-sub-phone')) {
+		pysimProactiveLogRender();
+	}
 	const key = [status.connected, !!status.card_present, !!status.equipping, !!status.auto_equip, status.card_session].join('|');
 	if (key === _pysimCardStateKey) return;
 	_pysimCardStateKey = key;
@@ -6752,17 +6756,35 @@ function pysimStartBackendPoll() {
 	}, 2000);
 	_pysimPollTimer = setInterval(async () => {
 		try {
-			const [log, stk, ps] = await Promise.all([
-				pysimFetch('/api/proactive-log'),
+			const [stk, ps] = await Promise.all([
 				pysimFetch('/api/stk-status'),
 				pysimFetch('/api/poll-status'),
 			]);
 			pysimUpdatePollUI(ps.enabled, ps.interval);
+			if (pysimStkStatusChanged(stk) && isViewVisible('tab-phone')) stkCheckMenu();
 		} catch (e) { /* ignore */ }
 	}, 5000);
 }
 
+let _pysimStkSig = null;
+
+function pysimStkStatusChanged(stk) {
+	if (!stk) return false;
+	const sig = [!!stk.active, !!stk.pending, stk.pending_type || ''].join('|');
+	if (sig === _pysimStkSig) return false;
+	_pysimStkSig = sig;
+	return true;
+}
+
 // ===== proactive command log =====
+let _pysimProactiveSeq = null;
+
+function pysimProactiveSeqChanged(seq) {
+	if (seq === undefined || seq === null) return false;
+	if (_pysimProactiveSeq === seq) return false;
+	_pysimProactiveSeq = seq;
+	return true;
+}
 const CMD_NAMES = {
     '03': 'POLL INTERVAL', '05': 'SET UP EVENT LIST',
     '13': 'SEND SHORT MESSAGE', '20': 'PLAY TONE',
@@ -6818,7 +6840,8 @@ function pysimLogFields(decoded) {
 
 async function pysimProactiveLogRender() {
     const el = document.getElementById('pysim-proactive-log');
-    el.innerHTML = '<span class="text-gray-400">' + t('Loading...') + '</span>';
+    const scrollTop = el.scrollTop;
+    if (!el.firstChild) el.innerHTML = '<span class="text-gray-400">' + t('Loading...') + '</span>';
     try {
         const log = await pysimFetch('/api/proactive-log');
         if (!log || !log.length) {
@@ -6865,6 +6888,7 @@ async function pysimProactiveLogRender() {
             html += '</div></div>';
         });
         el.innerHTML = html;
+        el.scrollTop = scrollTop;
     } catch (err) {
         el.innerHTML = '<span class="text-red-500">Error: ' + esc(err.message) + '</span>';
     }

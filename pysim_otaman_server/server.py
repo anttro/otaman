@@ -1821,6 +1821,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 'connected': connected,
                 'card_present': bool(getattr(self.server, 'card_present', False)),
                 'card_session': int(getattr(self.server, 'card_session', 0)),
+                'proactive_seq': _PROACTIVE_ENTRY_ID,
                 'equipping': bool(getattr(self.server, 'equipping', False)),
                 'auto_equip': bool(_AUTO_EQUIP),
                 'card': card.name if card else None,
