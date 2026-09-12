@@ -866,7 +866,6 @@
 				</div>
 				<div class="flex-1">
 					<div id="pysim-fs-detail" class="hidden">
-						<div class="text-xs font-mono mb-1"><span data-l10n="File:">File:</span> <b id="pysim-fs-filename"></b></div>
 						<div id="pysim-fs-info" class="mb-1"></div>
 						<div id="pysim-fs-content" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800 min-h-20 overflow-y-auto"></div>
 						<div class="flex gap-2 mt-1 items-center">
@@ -6125,6 +6124,8 @@ async function pysimFsToggleDir(name) {
 	if (node.expanded) pysimRefresh();
 }
 
+let pysimFsSelected = null;
+
 function pysimFsInfoHtml(sel) {
 	if (!sel) return '';
 	const num = v => (v === null || v === undefined) ? null : String(v);
@@ -6153,10 +6154,7 @@ async function pysimFsClickFile(name) {
 		if (!exists) node.children = [];
 		pysimFsRenderTree();
 	}
-	const ft = exists ? sel.file_type : null;
-	const label = ({ transparent: 'TR', linear_fixed: 'LF', cyclic: 'CY', ber_tlv: 'BT', df: 'DF' })[ft] || '';
-	const prefix = exists ? '' : '✗ ';
-	document.getElementById('pysim-fs-filename').textContent = prefix + name + (label ? ' [' + label + ']' : '');
+	pysimFsSelected = name;
 	document.getElementById('pysim-fs-info').innerHTML = exists ? pysimFsInfoHtml(sel) : '';
 	document.getElementById('pysim-fs-content').innerHTML = '';
 	document.getElementById('pysim-fs-status').textContent = exists ? '' : '✗ File not found on card';
@@ -6169,7 +6167,7 @@ async function pysimFsClickFile(name) {
 }
 
 async function pysimFsRead() {
-	const rawName = document.getElementById('pysim-fs-filename').textContent.replace(/ \[.*?\]$/, '').replace(/^✗ /, '');
+	const rawName = pysimFsSelected;
 	const out = document.getElementById('pysim-fs-content');
 	const statusEl = document.getElementById('pysim-fs-status');
 	out.innerHTML = '';
@@ -6202,18 +6200,6 @@ async function pysimFsRead() {
 	} catch (e) {
 		statusEl.textContent = 'Error: ' + e.message;
 	}
-}
-
-async function pysimFsSelect() {
-	const name = document.getElementById('pysim-fs-filename').textContent;
-	const node = pysimFsFindNode(name, pysimFsTreeRoot);
-	if (node && node.fid) {
-		await pysimFetch('/api/command', { cmd: 'select ' + node.fid });
-	} else {
-		await pysimFetch('/api/command', { cmd: 'select ' + name });
-	}
-	pysimFsRefresh();
-	pysimRefresh();
 }
 
 let pysimFsEditMode = false;
@@ -6249,7 +6235,7 @@ function pysimFsCancel() {
 }
 
 async function pysimFsSave() {
-	const rawName = document.getElementById('pysim-fs-filename').textContent.replace(/ \[.*?\]$/, '').replace(/^✗ /, '');
+	const rawName = pysimFsSelected;
 	const statusEl = document.getElementById('pysim-fs-status');
 	const out = document.getElementById('pysim-fs-content');
 	const node = pysimFsFindNode(rawName, pysimFsTreeRoot);
@@ -9220,7 +9206,6 @@ const LANG_RU = {
 	'Execute': 'Выполнить',
 	'Send': 'Отправить',
 	'Custom files are added in file manager tree and included in card scan.': 'Пользовательские файлы добавляются в менеджер файлов и учитываются при чтении карт.',
-	'File:': 'Файл:',
 	'Cancel': 'Отмена',
 	'Timeout': 'Таймаут',
 	'OK': 'OK',
