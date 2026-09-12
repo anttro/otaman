@@ -54,3 +54,10 @@ test('file manager has FID / Name sort pills', () => {
     assert.match(html, /data-fs-sort="name" onclick="pysimFsSetSort\('name'\)"/);
     assert.ok(html.includes('pysim-fs-sort-pill'));
 });
+
+test('custom files form has add/save and cancel controls', () => {
+    assert.match(html, /id="pysim-cf-add-btn"[^>]*data-l10n="Add"/);
+    assert.match(html, /id="pysim-cf-cancel-btn"[^>]*class="hidden[^"]*"[^>]*data-l10n="Cancel"/);
+    assert.ok(html.includes("event.key==='Enter')pysimCustomSubmit()"));
+    assert.ok(!html.includes('pysimCustomAdd'));
+});

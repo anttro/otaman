@@ -767,9 +767,10 @@
 			<div id="profiler-list-custom" class="hidden">
 				<div class="mb-2 text-xs font-mono text-gray-600 dark:text-slate-400" data-l10n="Add known file paths and aliases to the file tree.">Add known file paths and aliases to the file tree.</div>
 				<div class="flex gap-2 items-center mb-2">
-					<input id="pysim-cf-path" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00/6F46" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
-					<input id="pysim-cf-name" class="font-mono w-48 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="EF.SPN" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
-					<button onclick="pysimCustomAdd()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
+					<input id="pysim-cf-path" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00/6F46" onkeydown="if(event.key==='Enter')pysimCustomSubmit()">
+					<input id="pysim-cf-name" class="font-mono w-48 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="EF.SPN" onkeydown="if(event.key==='Enter')pysimCustomSubmit()">
+					<button id="pysim-cf-add-btn" onclick="pysimCustomSubmit()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
+					<button id="pysim-cf-cancel-btn" onclick="pysimCustomEditCancel()" class="hidden px-3 py-2.5 bg-gray-600 text-white text-sm font-medium rounded hover:bg-gray-700 whitespace-nowrap" data-l10n="Cancel">Cancel</button>
 				</div>
 				<div id="pysim-cf-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 			<input type="file" id="pysim-cf-file" accept=".json,application/json" class="hidden" onchange="pysimCustomImportFile(this)">
@@ -7118,7 +7119,9 @@ function pysimCustomSave() {
 	localStorage.setItem('pysim_custom_files', JSON.stringify(pysimCustomFiles));
 }
 
-function pysimCustomAdd() {
+let pysimCustomEditIndex = null;
+
+function pysimCustomSubmit() {
 	const pathEl = document.getElementById('pysim-cf-path');
 	const nameEl = document.getElementById('pysim-cf-name');
 	const path = pathEl.value.trim().toUpperCase();
@@ -7132,15 +7135,46 @@ function pysimCustomAdd() {
 	if (parts.length < 2) { alert('Path must have at least 2 parts, e.g. 3F00/6F46'); return; }
 	const fid = parts[parts.length - 1];
 	const parentFid = parts[parts.length - 2];
-	if (pysimCustomFiles.some(c => c.path.toUpperCase() === path)) { alert('Path already exists'); return; }
-	pysimCustomFiles.push({ path, name, fid, parentFid });
+	if (pysimCustomFiles.some((c, i) => i !== pysimCustomEditIndex && c.path.toUpperCase() === path)) { alert('Path already exists'); return; }
+	if (pysimCustomEditIndex !== null) {
+		pysimCustomFiles[pysimCustomEditIndex] = { path, name, fid, parentFid };
+	} else {
+		pysimCustomFiles.push({ path, name, fid, parentFid });
+	}
 	pysimCustomSave();
 	pysimCustomRender();
-	pathEl.value = '';
-	nameEl.value = '';
+	pysimCustomEditCancel();
+}
+
+function pysimCustomEdit(i) {
+	const c = pysimCustomFiles[i];
+	if (!c) return;
+	pysimCustomEditIndex = i;
+	const pathEl = document.getElementById('pysim-cf-path');
+	document.getElementById('pysim-cf-name').value = c.name;
+	pathEl.value = c.path;
+	const btn = document.getElementById('pysim-cf-add-btn');
+	btn.textContent = t('Save');
+	btn.setAttribute('data-l10n', 'Save');
+	document.getElementById('pysim-cf-cancel-btn').classList.remove('hidden');
+	pathEl.focus();
+}
+
+function pysimCustomEditCancel() {
+	pysimCustomEditIndex = null;
+	document.getElementById('pysim-cf-path').value = '';
+	document.getElementById('pysim-cf-name').value = '';
+	const btn = document.getElementById('pysim-cf-add-btn');
+	btn.textContent = t('Add');
+	btn.setAttribute('data-l10n', 'Add');
+	document.getElementById('pysim-cf-cancel-btn').classList.add('hidden');
 }
 
 function pysimCustomRemove(i) {
+	if (pysimCustomEditIndex !== null) {
+		if (i === pysimCustomEditIndex) pysimCustomEditCancel();
+		else if (i < pysimCustomEditIndex) pysimCustomEditIndex--;
+	}
 	pysimCustomFiles.splice(i, 1);
 	pysimCustomSave();
 	pysimCustomRender();
@@ -7154,7 +7188,10 @@ function pysimCustomRender() {
 		const c = pysimCustomFiles[i];
 		html += '<div class="flex items-center gap-2 py-1 border-b border-gray-200 dark:border-slate-700">';
 		html += '<span class="text-gray-500">' + esc(c.path) + '</span> <span class="text-blue-600 dark:text-blue-400">→</span> <b>' + esc(c.name) + '</b>';
-		html += '<span onclick="pysimCustomRemove(' + i + ')" class="ml-auto cursor-pointer text-red-400 hover:text-red-600">✕</span>';
+		html += '<span class="ml-auto flex gap-2">';
+		html += '<button onclick="pysimCustomEdit(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + esc(t('Edit')) + '</button>';
+		html += '<button onclick="pysimCustomRemove(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
+		html += '</span>';
 		html += '</div>';
 	}
 	el.innerHTML = html;

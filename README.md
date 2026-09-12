@@ -538,7 +538,8 @@ Files not in pysim's model can be added manually:
 1. Switch to the **Custom files** tab in the Profiler list
 2. Enter the file path (e.g., `3F00/6F46`) and an alias (e.g., `EF.SPN`)
 3. Click **Add** — the file appears in the tree in italics (unverified)
-4. Click the file to verify existence — on success, it behaves like a model file
+4. Use **Edit** on a row to reload it into the form (the button becomes **Save** and a **Cancel** button appears) or **Delete** to remove it
+5. Click the file to verify existence — on success, it behaves like a model file
 
 Custom files persist in `localStorage` across sessions. Export/import as JSON for sharing.
 
