@@ -12,7 +12,7 @@ from pySim.cards import UiccCardBase
 
 from .shell import load_pysim_app
 from . import fastinit
-from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog
+from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog, _set_menu_timeout
 
 
 _server_start = 0
@@ -52,11 +52,15 @@ def main():
                         help='Log phase durations, card resets and APDU counters with elapsed timestamps')
     parser.add_argument('--fast-init', action='store_true', default=False,
                         help='Init/equip without redundant card resets (reset only on explicit equip/reset)')
+    parser.add_argument('--menu-timeout', type=int, default=60, metavar='SECS',
+                        help='Auto-send a timeout TERMINAL RESPONSE if a paused STK command is not answered (default: 60, 0 disables)')
 
     opts = parser.parse_args()
     opts.skip_card_init = opts.no_card_init
     if opts.timing:
         _timing_on()
+    if opts.menu_timeout is not None:
+        _set_menu_timeout(opts.menu_timeout)
     sl = None
     scc = None
     card = None

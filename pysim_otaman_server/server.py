@@ -688,6 +688,45 @@ def _poll_enable():
     _POLL_ENABLED = True
     _reset_poll_timer()
 
+_MENU_TIMEOUT = 60
+_MENU_TIMER = None
+
+def _set_menu_timeout(seconds):
+    global _MENU_TIMEOUT
+    _MENU_TIMEOUT = max(0, min(3600, int(seconds)))
+
+def _cancel_menu_timeout():
+    global _MENU_TIMER
+    if _MENU_TIMER is not None:
+        _MENU_TIMER.cancel()
+        _MENU_TIMER = None
+
+def _arm_menu_timeout():
+    """Watchdog: a paused proactive command must always get a TERMINAL RESPONSE,
+    even if the user never answers. Fires 0x12 ('timeout') via the same path as
+    an explicit user response."""
+    global _MENU_TIMER
+    _cancel_menu_timeout()
+    if _MENU_TIMEOUT <= 0:
+        return
+    _MENU_TIMER = threading.Timer(_MENU_TIMEOUT, _menu_timeout_fire)
+    _MENU_TIMER.daemon = True
+    _MENU_TIMER.start()
+
+def _menu_timeout_fire():
+    global _MENU_TIMER
+    _MENU_TIMER = None
+    with _CARD_LOCK:
+        server = _server_ref
+        if not server or not getattr(server, 'stk_pending', None) or not getattr(server, 'scc', None):
+            return
+        pd = server.stk_pending
+        sys.stderr.write('MENU-TIMEOUT: auto TR timeout (cmd=%02x type=%02x)\n' % (pd['cmd_num'], pd['cmd_type']))
+        try:
+            _menu_send_response(server, 'timeout', None)
+        except Exception as e:
+            sys.stderr.write('MENU-TIMEOUT error: %s\n' % e)
+
 def _poll_disable():
     global _POLL_ENABLED, _POLL_TIMER
     _POLL_ENABLED = False
@@ -983,6 +1022,7 @@ def _record_tr(entry, tr_tlv, tr_sw=None):
 def _handle_card_disconnect():
     global _CARD_CONNECTED
     _poll_disable()
+    _cancel_menu_timeout()
     _CARD_CONNECTED = False
     if _server_ref:
         _server_ref.card = None
@@ -1332,6 +1372,79 @@ def _send_terminal_profile(scc, tp_hex):
     return sim_menu, event_list
 
 
+def _make_menu_fetch_handler(server, resp):
+    """on_fetch callback for the menu chain: pauses on user-interactive commands
+    and stores the pending command so a TERMINAL RESPONSE can be sent later."""
+    def _on_menu_fetch(raw, cmd_num, cmd_type, dev_src, dev_dst):
+        if cmd_type == 0x21:
+            text = _parse_display_text(raw) if raw else None
+            if text:
+                server.stk_pending = {'type': 'display_text',
+                    'cmd_num': cmd_num, 'cmd_type': cmd_type,
+                    'dev_src': dev_src, 'dev_dst': dev_dst, 'text': text}
+                resp.update(type='display_text', text=text)
+                return 'pause'
+        elif cmd_type == 0x24:
+            items = _parse_select_item(raw) if raw else []
+            server.stk_pending = {'type': 'select_item',
+                'cmd_num': cmd_num, 'cmd_type': cmd_type,
+                'dev_src': dev_src, 'dev_dst': dev_dst, 'items': items}
+            resp.update(type='select_item', items=items)
+            return 'pause'
+        elif cmd_type == 0x25:
+            items = _parse_setup_menu_items(raw) if raw else []
+            server.stk_pending = {'type': 'select_item',
+                'cmd_num': cmd_num, 'cmd_type': cmd_type,
+                'dev_src': dev_src, 'dev_dst': dev_dst, 'items': items}
+            resp.update(type='select_item', items=items)
+            return 'pause'
+    return _on_menu_fetch
+
+
+def _menu_send_response(server, result, item_id=None):
+    """Send the pending command's TERMINAL RESPONSE and continue the chain.
+    Shared by /api/menu-respond and the user-input timeout watchdog. Returns
+    (payload, http_status)."""
+    if not server.stk_pending:
+        return {'error': 'no pending command'}, 400
+    scc = server.scc
+    RESULT_MAP = {'ok': 0x00, 'cancel': 0x10, 'back': 0x11, 'timeout': 0x12}
+    gr = RESULT_MAP.get(result, 0x00)
+    pd = server.stk_pending
+    cd = bytes([0x81, 0x03, pd['cmd_num'], pd['cmd_type'], 0x00])
+    di = bytes([0x82, 0x02, pd['dev_dst'], pd['dev_src']])
+    tr_data = cd + di
+    if isinstance(item_id, int) and result == 'ok' and pd['type'] == 'select_item':
+        tr_data += bytes([0x90, 0x01, item_id])
+    tr_data += bytes([0x83, 0x02, gr, 0x00])
+    tr_hex = '%s140000%02x%s' % (scc.cat_cla, len(tr_data), tr_data.hex())
+    tr_rv = scc._tp.send_apdu(tr_hex)
+    sys.stderr.write('TR(menu): cmd=%02x type=%02x result=%02x -> %s\n' % (pd['cmd_num'], pd['cmd_type'], gr, tr_rv[1]))
+    for entry in reversed(_PROACTIVE_LOG):
+        if (entry.get('cmd_num') == pd['cmd_num']
+                and entry.get('type_hex') == '%02x' % pd['cmd_type']
+                and 'tr_hex' not in entry):
+            _record_tr(entry, tr_data, tr_rv[1])
+            break
+    sw = tr_rv[1]
+    resp = {'sw': sw}
+    if result == 'cancel':
+        server.stk_pending = None
+        server.menu_active = False
+    else:
+        server.stk_pending = None
+        if sw.startswith('91'):
+            _handle_proactive_chain(scc, sw, _make_menu_fetch_handler(server, resp))
+        else:
+            server.menu_active = False
+            resp['type'] = 'done'
+    if server.stk_pending:
+        _arm_menu_timeout()
+    else:
+        _cancel_menu_timeout()
+    return resp, 200
+
+
 class PysimHandler(BaseHTTPRequestHandler):
     def _send_json(self, data, status=200):
         self.send_response(status)
@@ -1552,6 +1665,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 global _CARD_CONNECTED
                 self.server.stk_pending = None
                 self.server.menu_active = False
+                _cancel_menu_timeout()
                 self.server.event_list = None
                 _reset_proactive_log()
                 self.server.card = self.server.app.card
@@ -1624,6 +1738,7 @@ class PysimHandler(BaseHTTPRequestHandler):
             sys.stderr.write('RESCUE: re-sending TERMINAL PROFILE\n')
             self.server.stk_pending = None
             self.server.menu_active = False
+            _cancel_menu_timeout()
             self.server.event_list = None
             _reset_proactive_log()
             sm, el = _send_terminal_profile(scc, self.server.terminal_profile)
@@ -1902,31 +2017,9 @@ class PysimHandler(BaseHTTPRequestHandler):
             env_hex = '%sc20000%02x%s' % (scc.cat_cla, len(menu_tlv), menu_tlv.hex())
             data, sw = scc._tp.send_apdu(env_hex)
             resp = {'type': 'done', 'sw': sw}
+            on_fetch = _make_menu_fetch_handler(self.server, resp)
             if sw.startswith('91'):
-                def _on_menu_fetch(raw, cmd_num, cmd_type, dev_src, dev_dst):
-                    if cmd_type == 0x21:
-                        text = _parse_display_text(raw) if raw else None
-                        if text:
-                            self.server.stk_pending = {'type': 'display_text',
-                                'cmd_num': cmd_num, 'cmd_type': cmd_type,
-                                'dev_src': dev_src, 'dev_dst': dev_dst, 'text': text}
-                            resp.update(type='display_text', text=text)
-                            return 'pause'
-                    elif cmd_type == 0x24:
-                        items = _parse_select_item(raw) if raw else []
-                        self.server.stk_pending = {'type': 'select_item',
-                            'cmd_num': cmd_num, 'cmd_type': cmd_type,
-                            'dev_src': dev_src, 'dev_dst': dev_dst, 'items': items}
-                        resp.update(type='select_item', items=items)
-                        return 'pause'
-                    elif cmd_type == 0x25:
-                        items = _parse_setup_menu_items(raw) if raw else []
-                        self.server.stk_pending = {'type': 'select_item',
-                            'cmd_num': cmd_num, 'cmd_type': cmd_type,
-                            'dev_src': dev_src, 'dev_dst': dev_dst, 'items': items}
-                        resp.update(type='select_item', items=items)
-                        return 'pause'
-                _handle_proactive_chain(scc, sw, _on_menu_fetch)
+                _handle_proactive_chain(scc, sw, on_fetch)
             else:
                 self.server.menu_active = False
                 self.server.stk_pending = None
@@ -1935,73 +2028,18 @@ class PysimHandler(BaseHTTPRequestHandler):
                     st_data, st_sw = _send_status(scc)
                     sys.stderr.write('STATUS -> %s\n' % st_sw)
                     if st_sw.startswith('91'):
-                        _handle_proactive_chain(scc, st_sw, _on_menu_fetch)
+                        _handle_proactive_chain(scc, st_sw, on_fetch)
+            if self.server.stk_pending:
+                _arm_menu_timeout()
+            else:
+                _cancel_menu_timeout()
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path == '/api/menu-respond':
-            scc = self.server.scc
-            if not self.server.stk_pending:
-                self._send_json({'error': 'no pending command'}, 400)
-                return
             body = self._read_body()
             self._log_req(body)
-            result = body.get('result', 'ok')
-            item_id = body.get('item_id')
-            RESULT_MAP = {'ok': 0x00, 'cancel': 0x10, 'back': 0x11, 'timeout': 0x12}
-            gr = RESULT_MAP.get(result, 0x00)
-            pd = self.server.stk_pending
-            # Build TERMINAL RESPONSE
-            cd = bytes([0x81, 0x03, pd['cmd_num'], pd['cmd_type'], 0x00])
-            di = bytes([0x82, 0x02, pd['dev_dst'], pd['dev_src']])
-            tr_data = cd + di
-            if isinstance(item_id, int) and result == 'ok' and pd['type'] == 'select_item':
-                tr_data += bytes([0x90, 0x01, item_id])
-            tr_data += bytes([0x83, 0x02, gr, 0x00])
-            tr_hex = '%s140000%02x%s' % (scc.cat_cla, len(tr_data), tr_data.hex())
-            tr_rv = scc._tp.send_apdu(tr_hex)
-            sys.stderr.write('TR(menu): cmd=%02x type=%02x result=%02x -> %s\n' % (pd['cmd_num'], pd['cmd_type'], gr, tr_rv[1]))
-            for entry in reversed(_PROACTIVE_LOG):
-                if (entry.get('cmd_num') == pd['cmd_num']
-                        and entry.get('type_hex') == '%02x' % pd['cmd_type']
-                        and 'tr_hex' not in entry):
-                    _record_tr(entry, tr_data, tr_rv[1])
-                    break
-            sw = tr_rv[1]
-            resp = {'sw': sw}
-            if result == 'cancel':
-                self.server.stk_pending = None
-                self.server.menu_active = False
-            else:
-                self.server.stk_pending = None
-                if sw.startswith('91'):
-                    def _on_menu_fetch(raw, cmd_num, cmd_type, dev_src, dev_dst):
-                        if cmd_type == 0x21:
-                            text = _parse_display_text(raw) if raw else None
-                            if text:
-                                self.server.stk_pending = {'type': 'display_text',
-                                    'cmd_num': cmd_num, 'cmd_type': cmd_type,
-                                    'dev_src': dev_src, 'dev_dst': dev_dst, 'text': text}
-                                resp.update(type='display_text', text=text)
-                                return 'pause'
-                        elif cmd_type == 0x24:
-                            items = _parse_select_item(raw) if raw else []
-                            self.server.stk_pending = {'type': 'select_item',
-                                'cmd_num': cmd_num, 'cmd_type': cmd_type,
-                                'dev_src': dev_src, 'dev_dst': dev_dst, 'items': items}
-                            resp.update(type='select_item', items=items)
-                            return 'pause'
-                        elif cmd_type == 0x25:
-                            items = _parse_setup_menu_items(raw) if raw else []
-                            self.server.stk_pending = {'type': 'select_item',
-                                'cmd_num': cmd_num, 'cmd_type': cmd_type,
-                                'dev_src': dev_src, 'dev_dst': dev_dst, 'items': items}
-                            resp.update(type='select_item', items=items)
-                            return 'pause'
-                    _handle_proactive_chain(scc, sw, _on_menu_fetch)
-                else:
-                    self.server.menu_active = False
-                    resp['type'] = 'done'
-            self._send_json(resp)
+            resp, code = _menu_send_response(self.server, body.get('result', 'ok'), body.get('item_id'))
+            self._send_json(resp, code)
             self._log_resp(resp)
         elif self.path == '/api/event-send':
             scc = self.server.scc

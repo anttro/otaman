@@ -336,7 +336,7 @@
 	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session: the STK menu, subscribed events, the proactive command log, the PROVIDE LOCAL INFORMATION data dictionary, and STATUS polling.</p>
 
 	<h4 id="stk-menu" class="font-medium mb-1">5.5.1 STK menu</h4>
-	<p class="text-sm mb-3">When the card has issued a SET UP MENU command, a &ldquo;STK menu&rdquo; block appears at the top of this view with an emerald <strong>STK: &lt;title&gt;</strong> button that opens the menu overlay (same as the card&rsquo;s STK menu browser). If the card has not set up a menu, the block shows &ldquo;No menu set by the card&rdquo; instead. The menu state is refreshed each time the view is opened.</p>
+	<p class="text-sm mb-3">When the card has issued a SET UP MENU command, a &ldquo;STK menu&rdquo; block appears at the top of this view with an emerald <strong>STK: &lt;title&gt;</strong> button that opens the menu overlay (same as the card&rsquo;s STK menu browser). If the card has not set up a menu, the block shows &ldquo;No menu set by the card&rdquo; instead. The menu state is refreshed each time the view is opened. User-interactive proactive commands always get a TERMINAL RESPONSE: the overlay pauses for your choice, and if you neither answer nor press <strong>Timeout</strong>, the server answers with a timeout result after the <code class="font-mono text-sm">--menu-timeout</code> seconds (default 60, <code class="font-mono text-sm">0</code> disables).</p>
 
 	<h4 id="subscribed-events" class="font-medium mb-1">5.5.2 Subscribed events (SET UP EVENT LIST)</h4>
 	<p class="text-sm mb-2">The events the card monitors. Each event has a <strong>Send</strong> button that opens a form specific to the event type:</p>

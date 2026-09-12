@@ -245,7 +245,9 @@ or
 ### `POST /api/menu-respond`
 
 Sends `TERMINAL RESPONSE` to the current proactive command with the given result
-code. Continues the proactive chain if the card responds with `91XX`.
+code. Continues the proactive chain if the card responds with `91XX`. If no
+response arrives within `--menu-timeout` seconds (default 60, `0` disables), the
+server watchdog sends the `timeout` result itself.
 
 ```json
 {"result": "ok", "item_id": 1}
@@ -254,9 +256,9 @@ code. Continues the proactive chain if the card responds with `91XX`.
 | `result` | TERMINAL RESPONSE code | Meaning |
 |---|---|---|
 | `ok` | `0x00` | Command performed successfully |
-| `back` | `0x12` | Backward move requested |
-| `cancel` | `0x10` | Proactive session terminated |
-| `timeout` | `0x11` | No response from user |
+| `cancel` | `0x10` | Proactive session terminated by the user |
+| `back` | `0x11` | Backward move in the proactive session requested by the user |
+| `timeout` | `0x12` | No response from the user |
 
 ### `GET /api/stk-status`
 
