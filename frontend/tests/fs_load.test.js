@@ -23,6 +23,7 @@ function extractFunc(src, name) {
 
 let code = '';
 code += extractFunc(html, 'getParentSel') + '\n';
+code += extractFunc(html, 'getParentPath') + '\n';
 code += extractFunc(html, 'pysimFsLoadChildren') + '\n';
 code += 'globalThis.pysimCustomInject = () => {};\n';
 eval(code);
@@ -58,6 +59,7 @@ test('tree error payload marks the directory as absent', async () => {
 	assert.strictEqual(renders, 1);
 	assert.strictEqual(calls.length, 1);
 	assert.strictEqual(calls[0].body.parent_sel, 'MF');
+	assert.deepStrictEqual(calls[0].body.parent_path, ['MF']);
 });
 
 test('error payload without exists is not treated as an empty listing', async () => {

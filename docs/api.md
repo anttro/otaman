@@ -272,7 +272,7 @@ Returns the current STK session state.
 Read file content. Auto-detects transparent vs record files.
 
 ```json
-{"name": "EF.ICCID", "fid": "2FE2", "parent_sel": "3F00", "mode": "raw"}
+{"name": "EF.ICCID", "fid": "2FE2", "parent_path": ["MF"], "mode": "raw"}
 ```
 
 Returns transparent data:
@@ -298,12 +298,12 @@ it for snapshot timing statistics. Other commands are not reported.
 Write raw hex data to a file.
 
 ```json
-{"name": "EF.ICCID", "fid": "2FE2", "data": "A0A1A2...", "parent_sel": "3F00"}
+{"name": "EF.ICCID", "fid": "2FE2", "data": "A0A1A2...", "parent_path": ["MF"]}
 ```
 
 For record files:
 ```json
-{"name": "EF.ADN", "fid": "6F3A", "data": "A0A1...", "record_nr": 1, "parent_sel": "7F10"}
+{"name": "EF.ADN", "fid": "6F3A", "data": "A0A1...", "record_nr": 1, "parent_path": ["MF", "7F10"]}
 ```
 
 Returns:
@@ -316,8 +316,18 @@ Returns:
 Select a file by name or FID, with optional parent selection.
 
 ```json
-{"name": "EF.ICCID", "fid": "2FE2", "parent_sel": "3F00"}
+{"name": "EF.ICCID", "fid": "2FE2", "parent_path": ["MF"]}
 ```
+
+`parent_path` lists the path segments from MF to the parent (ADF names or
+FIDs); the legacy single-segment `parent_sel` is still accepted but is only
+unambiguous for ADFs. Resolution is strictly parent-scoped: model-known files
+are selected through the requested parent only (pySim `select_file()`), never
+via pySim's global selectables or its `probe_file()` model injection, so a
+same-FID file under another parent is never picked and the filesystem model
+is not modified. `allow_probe: true` (PWA custom files) additionally allows a
+model-unknown 4-hex FID to be selected directly; any temporary model object
+created for it is detached again before the response is sent.
 
 Returns:
 ```json
@@ -339,6 +349,9 @@ Get directory listing with typed children.
 ```json
 {"name": "MF", "fid": "3F00"}
 ```
+
+Use `parent_path` (or the legacy `parent_sel`) to list a subdirectory, e.g.
+`{"name": "DF.GSM-ACCESS", "fid": "5F3B", "parent_path": ["MF", "ADF.USIM"]}`.
 
 Returns:
 ```json

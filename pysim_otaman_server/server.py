@@ -214,39 +214,143 @@ def _get_file_type(lchan, cur_file):
     return None
 
 
-def _select_with_parent(lchan, name, parent_sel, app):
-    if parent_sel:
-        lchan.select(parent_sel, app)
-    fcp = lchan.select(name, app)
-    return fcp
+def _fid4(sel):
+    """True if sel is a 4-digit hex FID."""
+    return bool(re.fullmatch(r'[0-9a-fA-F]{4}', str(sel or '')))
+
+
+def _file_by_sel(parent, sel):
+    """Resolve sel (FID or symbolic name, case-insensitive) among parent's direct children."""
+    if parent is None or not sel:
+        return None
+    s = str(sel).strip().lower()
+    for f in (getattr(parent, 'children', None) or {}).values():
+        if f.fid and f.fid.lower() == s:
+            return f
+        if f.name and f.name.lower() == s:
+            return f
+    return None
+
+
+def _app_by_sel(rs, sel):
+    """Resolve an ADF by AID or application name (case-insensitive)."""
+    if rs is None or not sel:
+        return None
+    s = str(sel).strip().lower()
+    for aid, adf in (rs.mf.applications or {}).items():
+        if aid.lower() == s or (adf.name and adf.name.lower() == s):
+            return adf
+    return None
+
+
+def _find_in_tree(root, sel):
+    """All model files matching sel (fid or name) below root; unique-match helper."""
+    s = str(sel or '').strip().lower()
+    found = []
+    seen = set()
+    stack = [root]
+    while stack:
+        cur = stack.pop()
+        if id(cur) in seen:
+            continue
+        seen.add(id(cur))
+        candidates = list((getattr(cur, 'children', None) or {}).values())
+        candidates += list((getattr(cur, 'applications', None) or {}).values())
+        for f in candidates:
+            if (f.fid and f.fid.lower() == s) or (f.name and f.name.lower() == s):
+                found.append(f)
+            stack.append(f)
+    return found
+
+
+def _select_with_parent(lchan, name, parent_sel, app, parent_path=None, allow_probe=False):
+    """Select name strictly within the requested parent.
+
+    Every model-known FID/name is resolved through the parent's children and
+    selected with lchan.select_file(); pySim's global selectables and its
+    probe_file() fallback are never used for model files, so a same-FID file
+    under a different parent can no longer be picked and the model is not
+    mutated. Model-unknown 4-hex segments (custom files) are probed only when
+    allow_probe is set and are detached again via the returned cleanup.
+
+    Returns (selected_file, cleanup): cleanup is None unless a probe happened;
+    handlers must call it in a finally block after using the selection.
+    """
+    rs = app.rs
+    prev = lchan.selected_file
+    probes = []
+    parent = rs.mf
+    lchan.select_file(parent, app)
+    segs = [s for s in (parent_path or ([parent_sel] if parent_sel else [])) if s]
+    for seg in segs:
+        if str(seg).upper() in ('MF', '3F00'):
+            continue
+        f = _app_by_sel(rs, seg) or _file_by_sel(parent, seg)
+        if f is None and not parent_path:
+            matches = _find_in_tree(rs.mf, seg)
+            if len(matches) > 1:
+                raise RuntimeError('Ambiguous parent selector: %s' % seg)
+            if matches:
+                f = matches[0]
+        if f is None:
+            if allow_probe and _fid4(seg):
+                fid = str(seg).lower()
+                probes.append((parent, fid))
+                lchan.probe_file(fid, app)
+                parent = lchan.selected_file
+                continue
+            raise RuntimeError('File not found: %s' % seg)
+        lchan.select_file(f, app)
+        parent = f
+    target = None
+    if str(name).upper() in ('MF', '3F00'):
+        target = rs.mf
+    if target is None:
+        target = _file_by_sel(parent, name) or _app_by_sel(rs, name)
+    if target is None and not parent_path and not parent_sel:
+        matches = _find_in_tree(rs.mf, name)
+        if len(matches) > 1:
+            raise RuntimeError('Ambiguous file selector: %s' % name)
+        if matches:
+            target = matches[0]
+    if target is not None:
+        lchan.select_file(target, app)
+    elif allow_probe and _fid4(name):
+        fid = str(name).lower()
+        probes.append((parent, fid))
+        lchan.probe_file(fid, app)
+    else:
+        raise RuntimeError('File not found: %s' % name)
+    cleanup = None
+    if probes:
+        def cleanup():
+            for p, fid in reversed(probes):
+                try:
+                    (getattr(p, 'children', None) or {}).pop(fid, None)
+                except Exception:
+                    pass
+            try:
+                lchan.select_file(prev, app)
+            except Exception:
+                try:
+                    lchan.select_file(rs.mf, app)
+                except Exception:
+                    pass
+    return lchan.selected_file, cleanup
 
 
 def _select_path(lchan, path, app):
     """Select a file described by a full path.
 
-    Path is '/' separated; the first element is either 'MF' (or the MF fid
-    '3F00') or an ADF AID (hex). Remaining elements are FIDs or file names.
-    pySim's lchan.select() cannot select an ADF by its raw AID (selectables are
-    keyed by name/fid only), so ADF roots are resolved through rs.mf.applications.
+    Path is '/' separated; the first element is 'MF' (or '3F00'), an ADF AID,
+    or an ADF name; remaining elements are FIDs or file names. Resolution is
+    strictly parent-scoped (see _select_with_parent); unknown 4-hex segments
+    are custom files and are probed without touching the model tree.
     """
     parts = [p for p in (path or '').split('/') if p]
     if not parts:
         raise RuntimeError('Empty path')
-    rs = app.rs
-    first = parts[0]
-    if first.upper() in ('MF', '3F00'):
-        lchan.select('MF', app)
-    else:
-        aid = first.lower()
-        adf = rs.mf.applications.get(aid)
-        if not adf:
-            adf = next((v for k, v in rs.mf.applications.items() if k.lower() == aid), None)
-        if not adf:
-            raise RuntimeError('ADF not found: %s' % first)
-        lchan.select_file(adf, app)
-    for seg in parts[1:]:
-        lchan.select(seg, app)
-    return lchan.selected_file
+    return _select_with_parent(lchan, parts[-1], None, app, parent_path=parts[:-1], allow_probe=True)
 
 
 def _parse_tree_output(output):
@@ -1960,22 +2064,25 @@ class PysimHandler(BaseHTTPRequestHandler):
             fid = body.get('fid')
             name = fid if fid else body.get('name', '')
             parent_sel = body.get('parent_sel')
+            parent_path = body.get('parent_path')
+            allow_probe = bool(body.get('allow_probe'))
             rs = app.rs
             if not rs:
                 self._send_json({'error': _err('no_card_state', lang)}, 503)
                 self._log_resp({'error': _err('no_card_state', lang)})
                 return
             lchan = rs.lchan[0]
+            cleanup = None
             try:
                 _collect_apdu_times()
                 try:
                     if path:
-                        _select_path(lchan, path, app)
+                        cur, cleanup = _select_path(lchan, path, app)
                     else:
-                        _select_with_parent(lchan, name, parent_sel, app)
+                        cur, cleanup = _select_with_parent(lchan, name, parent_sel, app, parent_path, allow_probe)
                 finally:
                     apdu_times = _end_apdu_time_collection()
-                cur = lchan.selected_file
+                cur = cur or lchan.selected_file
                 data = {
                     'name': cur.name if cur else None,
                     'fid': cur.fid.upper() if cur and cur.fid else None,
@@ -1993,6 +2100,9 @@ class PysimHandler(BaseHTTPRequestHandler):
                 err = {'error': str(e), 'exists': False}
                 self._send_json(err, 404)
                 self._log_resp(err)
+            finally:
+                if cleanup:
+                    cleanup()
         elif self.path == '/api/read':
             app = self.server.app
             if not app:
@@ -2005,6 +2115,8 @@ class PysimHandler(BaseHTTPRequestHandler):
             fid = body.get('fid')
             name = fid if fid else body.get('name', '')
             parent_sel = body.get('parent_sel')
+            parent_path = body.get('parent_path')
+            allow_probe = bool(body.get('allow_probe'))
             mode = body.get('mode', 'raw')
             rs = app.rs
             if not rs:
@@ -2012,14 +2124,15 @@ class PysimHandler(BaseHTTPRequestHandler):
                 self._log_resp({'error': _err('no_card_state', lang)})
                 return
             lchan = rs.lchan[0]
+            cleanup = None
             try:
                 _collect_apdu_times()
                 try:
                     sel = fid if fid else name
                     if path:
-                        _select_path(lchan, path, app)
+                        _, cleanup = _select_path(lchan, path, app)
                     else:
-                        _select_with_parent(lchan, sel, parent_sel, app)
+                        _, cleanup = _select_with_parent(lchan, sel, parent_sel, app, parent_path, allow_probe)
                     ft = _get_file_type(lchan, lchan.selected_file)
                     is_record = ft in ('linear_fixed', 'cyclic')
                     if mode == 'decoded':
@@ -2073,6 +2186,9 @@ class PysimHandler(BaseHTTPRequestHandler):
                 err = {'success': False, 'error': str(e)}
                 self._send_json(err, 500)
                 self._log_resp(err)
+            finally:
+                if cleanup:
+                    cleanup()
         elif self.path == '/api/write':
             app = self.server.app
             if not app:
@@ -2086,15 +2202,18 @@ class PysimHandler(BaseHTTPRequestHandler):
             fid = body.get('fid')
             record_nr = body.get('record_nr')
             parent_sel = body.get('parent_sel')
+            parent_path = body.get('parent_path')
+            allow_probe = bool(body.get('allow_probe'))
             rs = app.rs
             if not rs:
                 self._send_json({'error': _err('no_card_state', lang)}, 503)
                 self._log_resp({'error': _err('no_card_state', lang)})
                 return
             lchan = rs.lchan[0]
+            cleanup = None
             try:
                 sel = fid if fid else name
-                _select_with_parent(lchan, sel, parent_sel, app)
+                _, cleanup = _select_with_parent(lchan, sel, parent_sel, app, parent_path, allow_probe)
                 ft = _get_file_type(lchan, lchan.selected_file)
                 is_record = ft in ('linear_fixed', 'cyclic')
                 if record_nr:
@@ -2131,6 +2250,9 @@ class PysimHandler(BaseHTTPRequestHandler):
                 err = {'success': False, 'error': str(e)}
                 self._send_json(err, 500)
                 self._log_resp(err)
+            finally:
+                if cleanup:
+                    cleanup()
         elif self.path == '/api/tree':
             app = self.server.app
             if not app:
@@ -2143,15 +2265,18 @@ class PysimHandler(BaseHTTPRequestHandler):
             name = fid if fid else body.get('name', '')
             fid = body.get('fid')
             parent_sel = body.get('parent_sel')
+            parent_path = body.get('parent_path')
+            allow_probe = bool(body.get('allow_probe'))
             rs = app.rs
             if not rs:
                 self._send_json({'error': _err('no_card_state', lang)}, 503)
                 self._log_resp({'error': _err('no_card_state', lang)})
                 return
             lchan = rs.lchan[0]
+            cleanup = None
             try:
                 sel = fid if fid else name
-                _select_with_parent(lchan, sel, parent_sel, app)
+                _, cleanup = _select_with_parent(lchan, sel, parent_sel, app, parent_path, allow_probe)
                 cur = lchan.selected_file
                 out = StringIO()
                 old_stdout = app.stdout
@@ -2187,6 +2312,9 @@ class PysimHandler(BaseHTTPRequestHandler):
                 err = {'success': False, 'error': str(e), 'exists': False}
                 self._send_json(err, 500)
                 self._log_resp(err)
+            finally:
+                if cleanup:
+                    cleanup()
         elif self.path == '/api/menu-select':
             scc = self.server.scc
             if not scc:

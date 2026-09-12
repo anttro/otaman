@@ -5846,6 +5846,18 @@ function getParentSel(node) {
 	return p.name;
 }
 
+function getParentPath(node) {
+	const segs = [];
+	let n = node && node.parent;
+	while (n) {
+		if (n.name === 'MF') segs.unshift('MF');
+		else if (n.name && n.name.startsWith('ADF.')) segs.unshift(n.name);
+		else segs.unshift(n.fid || n.name);
+		n = n.parent;
+	}
+	return segs;
+}
+
 function pysimCustomInject(node) {
 	if (!node || !node.fid) return;
 	const pfid = node.fid.toLowerCase();
@@ -5940,9 +5952,8 @@ async function pysimFsRefresh() {
 async function pysimFsLoadChildren(node) {
 	if (node.children) return;
 	try {
-		const body = { name: node.name, fid: node.fid };
-		const parentSel = getParentSel(node);
-		if (parentSel) body.parent_sel = parentSel;
+		const body = { name: node.name, fid: node.fid, parent_sel: getParentSel(node), parent_path: getParentPath(node) };
+		if (node.custom) body.allow_probe = true;
 		const data = await pysimFetch('/api/tree', body);
 		if (!data || data.exists === false || data.success === false || data.error) {
 			throw new Error((data && data.error) || 'File not found');
@@ -5968,9 +5979,8 @@ async function pysimFsLoadChildren(node) {
 let _pysimFsProbe = null;
 
 function pysimFsSelectBody(node) {
-	const body = { name: node.name, fid: node.fid };
-	const parentSel = getParentSel(node);
-	if (parentSel) body.parent_sel = parentSel;
+	const body = { name: node.name, fid: node.fid, parent_sel: getParentSel(node), parent_path: getParentPath(node) };
+	if (node.custom) body.allow_probe = true;
 	return body;
 }
 
@@ -6118,15 +6128,8 @@ async function pysimFsClickFile(name) {
 	pysimFsResetEdit();
 	pysimFsSetMode('raw');
 	const node = pysimFsFindNode(name, pysimFsTreeRoot);
-	let body = { name: name, fid: node ? node.fid : null };
-	const parentSel = getParentSel(node);
-	if (parentSel) body.parent_sel = parentSel;
-	let sel = await pysimFetch('/api/select', body);
-	if (!sel || sel.exists === false) {
-		body = { name: name, fid: node ? node.fid : null };
-		sel = await pysimFetch('/api/select', body);
-	}
-	const exists = sel && sel.exists !== false;
+	const sel = await pysimFetch('/api/select', pysimFsSelectBody(node || { name: name, fid: null }));
+	const exists = !!(sel && sel.exists !== false && !sel.error);
 	if (node) {
 		node.exists = exists;
 		if (!exists) node.children = [];
@@ -6154,14 +6157,9 @@ async function pysimFsRead() {
 	statusEl.textContent = 'Loading...';
 	try {
 		const node = pysimFsFindNode(rawName, pysimFsTreeRoot);
-		let body = { name: rawName, fid: node ? node.fid : null, mode: pysimFsDecodedMode ? 'decoded' : 'raw' };
-		const parentSel = getParentSel(node);
-		if (parentSel) body.parent_sel = parentSel;
-		let data = await pysimFetch('/api/read', body);
-		if (!data.success) {
-			body = { name: rawName, fid: node ? node.fid : null, mode: pysimFsDecodedMode ? 'decoded' : 'raw' };
-			data = await pysimFetch('/api/read', body);
-		}
+		const body = pysimFsSelectBody(node || { name: rawName, fid: null });
+		body.mode = pysimFsDecodedMode ? 'decoded' : 'raw';
+		const data = await pysimFetch('/api/read', body);
 		if (!data.success) {
 			statusEl.textContent = 'SW: ' + (data.sw || '?') + ' — ' + (data.error || 'Error');
 			return;
@@ -6241,9 +6239,8 @@ async function pysimFsSave() {
 		const textareas = out.querySelectorAll('textarea');
 		if (textareas.length === 1) {
 			// Transparent file
-			const body = { name: rawName, fid: node ? node.fid : null, data: textareas[0].value.replace(/[^0-9a-fA-F]/g, '') };
-			const parentSel = getParentSel(node);
-			if (parentSel) body.parent_sel = parentSel;
+			const body = pysimFsSelectBody(node || { name: rawName, fid: null });
+			body.data = textareas[0].value.replace(/[^0-9a-fA-F]/g, '');
 			const data = await pysimFetch('/api/write', body);
 			if (data.success) {
 				statusEl.textContent = 'SW: ' + data.sw + ' OK';
@@ -6263,9 +6260,9 @@ async function pysimFsSave() {
 				wroteAny = true;
 				const num = row?.querySelector('span')?.textContent;
 				if (num) {
-					const body = { name: rawName, fid: node ? node.fid : null, data: inp.value.replace(/[^0-9a-fA-F]/g, ''), record_nr: parseInt(num) };
-					const parentSel = getParentSel(node);
-					if (parentSel) body.parent_sel = parentSel;
+					const body = pysimFsSelectBody(node || { name: rawName, fid: null });
+					body.data = inp.value.replace(/[^0-9a-fA-F]/g, '');
+					body.record_nr = parseInt(num);
 					const data = await pysimFetch('/api/write', body);
 					if (!data.success) {
 						statusEl.textContent = 'SW: ' + (data.sw || '?') + ' — ' + (data.error || 'Error') + ' (record ' + num + ')';
@@ -7751,6 +7748,7 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, ma
 	// dir: { name, fid, parentSel (to select this dir), pathPrefix (rule-path segs for its children) }
 	async function walkDir(dir) {
 		let body = { name: dir.name, fid: dir.fid };
+		if (dir.parentPath && dir.parentPath.length) body.parent_path = dir.parentPath;
 		if (dir.parentSel) body.parent_sel = dir.parentSel;
 		let data;
 		try {
@@ -7766,7 +7764,8 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, ma
 				// ADF roots use the AID, not the generic ADF fid
 				const childPrefix = c.aid ? [c.aid.toUpperCase()]
 					: dir.pathPrefix.concat(c.fid ? c.fid.toUpperCase() : c.name);
-				await walkDir({ name: c.name, fid: c.fid, parentSel: parentSel, pathPrefix: childPrefix });
+				const childParentPath = (dir.parentPath || []).concat(c.aid ? c.aid.toUpperCase() : (c.fid ? c.fid : c.name));
+				await walkDir({ name: c.name, fid: c.fid, parentSel: parentSel, parentPath: childParentPath, pathPrefix: childPrefix });
 			} else {
 				const childPath = dir.pathPrefix.concat(c.fid ? c.fid.toUpperCase() : c.name).join('/');
 				if (seen.has(childPath)) continue;
@@ -7777,7 +7776,7 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, ma
 	}
 
 	// MF-rooted walk
-	await walkDir({ name: 'MF', fid: null, parentSel: null, pathPrefix: ['MF'] });
+	await walkDir({ name: 'MF', fid: null, parentSel: null, parentPath: ['MF'], pathPrefix: ['MF'] });
 
 	// Sweep custom files not already covered (map leading MF fid 3F00 -> MF)
 	for (const cf of pysimCustomFiles) {

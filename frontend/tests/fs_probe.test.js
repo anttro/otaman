@@ -22,7 +22,7 @@ function extractFunc(src, name) {
 }
 
 let code = 'var pysimFsTreeRoot = null;\nvar _pysimFsProbe = null;\nvar pysimFsSort = "fid";\n';
-for (const fn of ['getParentSel', 'pysimFsSortChildren', 'pysimFsLoadChildren', 'pysimFsSelectBody', 'pysimFsProbeUi', 'pysimFsProbeAll']) {
+for (const fn of ['getParentSel', 'getParentPath', 'pysimFsSortChildren', 'pysimFsLoadChildren', 'pysimFsSelectBody', 'pysimFsProbeUi', 'pysimFsProbeAll']) {
 	code += extractFunc(html, fn) + '\n';
 }
 code += 'globalThis.esc = s => s;\nglobalThis.t = s => s;\nglobalThis.pysimCustomInject = () => {};\n';
@@ -121,6 +121,19 @@ test('stop halts the walk and still reports a summary', async () => {
 	const status = els['pysim-fs-probe-status'].textContent;
 	assert.ok(status.startsWith('Stopped —'), status);
 	assert.strictEqual(els['pysim-fs-probe-btn'].textContent, 'Probe all files');
+});
+
+test('select bodies carry the parent path and set allow_probe only for custom files', async () => {
+	root([df('DF.A', '5f01'), Object.assign(ef('EF.CUSTOM', '6fcc'), { custom: true })]);
+	const body = pysimFsSelectBody(pysimFsTreeRoot.children[0]);
+	assert.deepStrictEqual(body.parent_path, ['MF']);
+	assert.strictEqual(body.parent_sel, 'MF');
+	assert.ok(!body.allow_probe);
+	const custom = pysimFsSelectBody(pysimFsTreeRoot.children[1]);
+	assert.deepStrictEqual(custom.parent_path, ['MF']);
+	assert.strictEqual(custom.allow_probe, true);
+	const nested = { name: 'EF.1', fid: '6f01', isDir: false, parent: pysimFsTreeRoot.children[0] };
+	assert.deepStrictEqual(pysimFsSelectBody(nested).parent_path, ['MF', '5f01']);
 });
 
 test('children of an absent directory are neither fetched nor selected', async () => {
