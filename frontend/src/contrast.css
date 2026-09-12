@@ -105,3 +105,8 @@
 .dark\:border-slate-800:is(.dark *) {
   border-color: rgb(51 65 85 / var(--tw-border-opacity, 1));
 }
+/* Dark theme: normal (non-muted) UI text — keep one step brighter than the
+   muted gray level so the two remain distinguishable */
+.dark\:text-slate-300:is(.dark *) {
+  color: rgb(226 232 240 / var(--tw-text-opacity, 1));
+}
