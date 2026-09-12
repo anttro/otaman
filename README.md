@@ -626,7 +626,9 @@ pysim-otaman-server --http-port 8080
 | `--log-requests` | Log request/response payloads to stderr |
 | `--sms-oa` / `--sms-sm-sc` | SMS-DELIVER originating address / SM-SC for PoR-in-submit |
 | `--terminal-profile` | TERMINAL PROFILE payload hex (default 10-byte GSM profile) |
-| `--poll-interval` | Idle interval before automatic STATUS polling (default 30s) |
+| `--poll-interval` | Idle interval before automatic STATUS polling (default 30s; `0` disables polling) |
+| `--fast-init` | Init/equip without redundant card resets (only explicit equip/reset resets the card) |
+| `--timing` | Log phase durations, card resets and APDU counters with elapsed timestamps |
 
 ### Troubleshooting
 

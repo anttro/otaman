@@ -362,7 +362,7 @@
 	<p class="text-sm mb-3">Values persist server-side until restart. When the card issues PLI, the server injects the dictionary values into the TERMINAL RESPONSE.</p>
 
 	<h4 id="status-polling" class="font-medium mb-1">5.5.5 STATUS polling</h4>
-	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
+	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s, <code class="font-mono text-sm">0</code> disables polling) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
 
 	<h3 id="profiler" class="text-lg font-medium mb-2">5.6 Profiler</h3>
 	<p class="text-sm mb-2">Verifies that a card matches a named <strong>profile</strong> — an ordered set of rules describing the expected file system and (optionally) file contents. Profiles are stored in <code class="font-mono text-sm">localStorage</code>.</p>

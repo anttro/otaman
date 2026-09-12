@@ -1,0 +1,160 @@
+"""Fast card initialization for pysim-otaman-server.
+
+pySim's ``init_card()`` performs several physical card resets: one per profile
+candidate tried by ``CardProfile.pick()`` plus one at the end of
+``RuntimeState.__init__``, and ``PysimApp.equip()`` resets yet again. On common
+readers each disconnect/connect costs around a second, so the stock path spends
+most of its time re-establishing a clean state (MF selected) that can also be
+restored in software.
+
+This module mirrors ``pySim.app.init_card()`` with those resets removed: all
+profile probes run back-to-back on the same connection and the runtime state
+uses a software reset. The explicit ``equip`` and ``reset`` commands keep a
+real reconnect/physical reset.
+"""
+
+import operator
+
+from pySim.cards import CardBase, SimCardBase, UiccCardBase, card_detect
+from pySim.commands import SimCardCommands
+from pySim.exceptions import SwMatchError
+from pySim.filesystem import CardApplication, CardModel
+from pySim.profile import CardProfile
+from pySim.runtime import RuntimeState
+from pySim.ts_102_221 import CardProfileUICC
+from pySim.utils import all_subclasses
+
+import pySim.euicc
+
+from .server import _tlog
+
+
+class FastRuntimeState(RuntimeState):
+    """RuntimeState whose reset() restores software state (selects MF) instead
+    of power-cycling the card. Use hard_reset() for an explicit reset."""
+
+    def reset(self, cmd_app=None):
+        return self.soft_reset(cmd_app)
+
+    def soft_reset(self, cmd_app=None):
+        for lchan_nr in list(self.lchan.keys()):
+            self.lchan[lchan_nr].scc.scp = None
+            if lchan_nr == 0:
+                continue
+            del self.lchan[lchan_nr]
+        self.adm_verified = False
+        try:
+            atr = self.card._scc.get_atr()
+        except Exception:
+            atr = None
+        if cmd_app:
+            cmd_app.lchan = self.lchan[0]
+        self.lchan[0].select('MF', cmd_app)
+        self.lchan[0].selected_adf = None
+        self.identity['ATR'] = atr
+        return atr
+
+    def hard_reset(self, cmd_app=None):
+        return super().reset(cmd_app)
+
+
+def pick_profile_no_reset(scc):
+    """Like CardProfile.pick(), but without a physical reset between
+    candidates. Each probe selects its own discriminating file, so a reset only
+    costs a reconnect without changing the outcome."""
+    original_reset = scc.reset_card
+    scc.reset_card = lambda: None
+    try:
+        profiles = sorted(all_subclasses(CardProfile), key=operator.attrgetter('ORDER'))
+        for p in profiles:
+            if p.match_with_card(scc):
+                return p()
+        return None
+    finally:
+        scc.reset_card = original_reset
+
+
+def init_card_fast(sl, skip_card_init=False, wait=True):
+    """Replacement for pySim.app.init_card() that avoids redundant resets.
+
+    ``wait`` performs the single disconnect/connect of this init (explicit
+    equip passes True; startup already connects via wait_for_card)."""
+    scc = SimCardCommands(transport=sl)
+    if wait:
+        sl.wait_for_card(3)
+    if skip_card_init:
+        return None, CardBase(scc)
+
+    generic_card = False
+    card = card_detect(scc)
+    if card is None:
+        card = SimCardBase(scc)
+        generic_card = True
+
+    profile = pick_profile_no_reset(scc)
+    if profile is None:
+        return None, card
+
+    if generic_card and isinstance(profile, CardProfileUICC):
+        card._adm_chv_num = 0x0A
+
+    if isinstance(profile, CardProfileUICC):
+        for app_cls in all_subclasses(CardApplication):
+            if hasattr(app_cls, '_' + app_cls.__name__ + '__intermediate'):
+                continue
+            profile.add_application(app_cls())
+        if generic_card:
+            card = UiccCardBase(scc)
+
+    rs = FastRuntimeState(card, profile)
+
+    CardModel.apply_matching_models(scc, rs)
+
+    sl.set_sw_interpreter(rs)
+
+    isd_r = rs.mf.applications.get(pySim.euicc.AID_ISD_R.lower(), None)
+    if isd_r:
+        rs.lchan[0].select_file(isd_r)
+        try:
+            rs.identity['EID'] = pySim.euicc.CardApplicationISDR.get_eid(scc)
+        except SwMatchError:
+            pass
+        finally:
+            rs.soft_reset()
+
+    return rs, card
+
+
+def do_equip_fast(app):
+    """Explicit equip: one real reconnect (wait_for_card) then reset-free init."""
+    if app.rs and app.rs.profile:
+        for cmd_set in app.rs.profile.shell_cmdsets:
+            app.unregister_command_set(cmd_set)
+    rs, card = init_card_fast(app.sl, wait=True)
+    app.equip(card, rs)
+
+
+def do_reset_fast(app):
+    """Explicit reset: always a physical card reset."""
+    if app.rs is None:
+        app.card._scc.reset_card()
+        atr = app.card._scc.get_atr()
+    else:
+        atr = app.rs.hard_reset(app)
+    app.poutput('Card ATR: %s' % atr)
+
+
+def install(app):
+    """Route the pySim-shell equip/reset commands through the fast paths."""
+    def _do_equip(statement):
+        _tlog('do_equip_fast: start')
+        do_equip_fast(app)
+        _tlog('do_equip_fast: done')
+
+    def _do_reset(statement):
+        _tlog('do_reset_fast: start')
+        do_reset_fast(app)
+        _tlog('do_reset_fast: done')
+
+    app.do_equip = _do_equip
+    app.do_reset = _do_reset

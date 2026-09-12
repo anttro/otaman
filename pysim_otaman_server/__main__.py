@@ -11,6 +11,7 @@ from pySim.log import PySimLogger
 from pySim.cards import UiccCardBase
 
 from .shell import load_pysim_app
+from . import fastinit
 from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog
 
 
@@ -49,6 +50,8 @@ def main():
                         help='Skip pysim card initialization (preserve CAT session — no file manager)')
     parser.add_argument('--timing', action='store_true', default=False,
                         help='Log phase durations, card resets and APDU counters with elapsed timestamps')
+    parser.add_argument('--fast-init', action='store_true', default=False,
+                        help='Init/equip without redundant card resets (reset only on explicit equip/reset)')
 
     opts = parser.parse_args()
     opts.skip_card_init = opts.no_card_init
@@ -88,8 +91,11 @@ def main():
         scc.cat_cla = '80'  # UICC CLA default; overridden for SIM after init_card
         scc._tp.proactive_handler = _DefaultProactiveHandler()
         t_phase = time.time()
-        sl.wait_for_card(3)
-        rs, card = mod.init_card(sl, opts.skip_card_init)
+        if opts.fast_init:
+            rs, card = fastinit.init_card_fast(sl, opts.skip_card_init, wait=True)
+        else:
+            sl.wait_for_card(3)
+            rs, card = mod.init_card(sl, opts.skip_card_init)
         _tlog('card_init: %.0fms' % ((time.time() - t_phase) * 1000))
         scc.cat_cla = '80' if isinstance(card, UiccCardBase) else 'a0'
     except Exception:
@@ -104,6 +110,8 @@ def main():
         traceback.print_exc()
         app = None
     _tlog('pysim_app: %.0fms' % ((time.time() - t_phase) * 1000))
+    if app is not None and opts.fast_init:
+        fastinit.install(app)
     if scc and hasattr(scc, '_tp'):
         scc._tp.apdu_tracer = _LoggingApduTracer()
         try:
