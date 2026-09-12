@@ -126,3 +126,11 @@ test('indicator markup carries the dot and image elements', () => {
 	assert.match(html, /id="state-indicator-dot"/);
 	assert.match(html, /id="state-indicator-img"[^>]*src="nosim\.svg"/);
 });
+
+test('indicator image stays within the 32px header row budget', () => {
+	const m = /id="state-indicator-img"[^>]*style="width:(\d+)px;height:(\d+)px"/.exec(html);
+	assert.ok(m, 'inline image size not found');
+	assert.strictEqual(m[1], m[2]);
+	const size = Number(m[1]);
+	assert.ok(size >= 24 && size <= 32, 'size ' + size + 'px would change the header height');
+});
