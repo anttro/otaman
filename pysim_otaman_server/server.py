@@ -41,6 +41,21 @@ _STATIC_MIME = {
 }
 
 
+_T0 = time.time()
+_TIMING = False
+_APDU_N = 0
+_RESET_N = 0
+
+def _timing_on():
+    global _TIMING
+    _TIMING = True
+
+def _tlog(msg):
+    if not _TIMING:
+        return
+    sys.stderr.write('TIMING [+%7.3fs] %s\n' % (time.time() - _T0, msg))
+
+
 class StderrApduTracer(ApduTracer):
     def __init__(self):
         super().__init__()
@@ -49,9 +64,20 @@ class StderrApduTracer(ApduTracer):
     def trace_command(self, cmd):
         self._cmd_start = time.time()
 
+    def trace_reset(self):
+        global _RESET_N
+        _RESET_N += 1
+        if _TIMING:
+            sys.stderr.write('TIMING [+%7.3fs] RESET #%d\n' % (time.time() - _T0, _RESET_N))
+
     def trace_response(self, cmd, sw, resp):
+        global _APDU_N
+        _APDU_N += 1
         elapsed = int((time.time() - self._cmd_start) * 1000)
-        msg = 'APDU-TRACE(%dms): %s → SW: %s' % (elapsed, cmd, sw)
+        if _TIMING:
+            msg = 'APDU-TRACE(+%7.3fs #%d, %dms): %s → SW: %s' % (time.time() - _T0, _APDU_N, elapsed, cmd, sw)
+        else:
+            msg = 'APDU-TRACE(%dms): %s → SW: %s' % (elapsed, cmd, sw)
         if resp:
             msg += ' RESP: %s' % resp
         os.write(2, (msg + '\n').encode())
@@ -618,19 +644,19 @@ _PLI_DATA = {q: '' for q in PLI_QUALIFIER_NAMES}
 _POLL_ENABLED = False
 _POLL_INTERVAL = 30
 _POLL_TIMER = None
-_POLL_LOCK = threading.Lock()
+_CARD_LOCK = threading.RLock()
 _CARD_CONNECTED = False
 
 def _set_poll_interval(seconds):
     global _POLL_INTERVAL
-    _POLL_INTERVAL = max(1, min(255, int(seconds)))
+    _POLL_INTERVAL = max(0, min(255, int(seconds)))
 
 def _reset_poll_timer():
     global _POLL_TIMER
     if _POLL_TIMER is not None:
         _POLL_TIMER.cancel()
         _POLL_TIMER = None
-    if _POLL_ENABLED:
+    if _POLL_ENABLED and _POLL_INTERVAL > 0:
         _POLL_TIMER = threading.Timer(_POLL_INTERVAL, _do_status_poll)
         _POLL_TIMER.daemon = True
         _POLL_TIMER.start()
@@ -640,7 +666,7 @@ def _do_status_poll():
     _POLL_TIMER = None
     if not _POLL_ENABLED:
         return
-    with _POLL_LOCK:
+    with _CARD_LOCK:
         try:
             scc = getattr(_server_ref, 'scc', None) if _server_ref else None
             if not scc:
@@ -656,6 +682,9 @@ def _do_status_poll():
 
 def _poll_enable():
     global _POLL_ENABLED
+    if _POLL_INTERVAL <= 0:
+        _POLL_ENABLED = False
+        return
     _POLL_ENABLED = True
     _reset_poll_timer()
 
@@ -1366,6 +1395,12 @@ class PysimHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        # Serialize all card access: the background STATUS poll runs in its own
+        # thread and must never interleave with a FETCH/TERMINAL RESPONSE pair.
+        with _CARD_LOCK:
+            self._do_GET()
+
+    def _do_GET(self):
         lang = _get_lang(self.headers)
         if self.path == '/api/version':
             self._log_req()
@@ -1477,8 +1512,14 @@ class PysimHandler(BaseHTTPRequestHandler):
             self._serve_static()
 
     def do_POST(self):
+        # Serialize all card access: the background STATUS poll runs in its own
+        # thread and must never interleave with a FETCH/TERMINAL RESPONSE pair.
+        with _CARD_LOCK:
+            _reset_poll_timer()
+            self._do_POST()
+
+    def _do_POST(self):
         lang = _get_lang(self.headers)
-        _reset_poll_timer()
         if self.path == '/api/command':
             app = self.server.app
             if not app:
@@ -1504,7 +1545,10 @@ class PysimHandler(BaseHTTPRequestHandler):
                 sys.stderr = old_stderr
             elapsed = int((time.time() - t0) * 1000)
             status = 'OK' if not output or 'not a recognized command' not in output else 'ERROR'
-            if str(cmd).strip().startswith('equip') and self.server.app and self.server.app.card and self.server.terminal_profile:
+            is_equip = str(cmd).strip().startswith('equip')
+            if is_equip:
+                _tlog('equip: onecmd_plus_hooks %dms' % elapsed)
+            if is_equip and self.server.app and self.server.app.card and self.server.terminal_profile:
                 global _CARD_CONNECTED
                 self.server.stk_pending = None
                 self.server.menu_active = False
@@ -1518,6 +1562,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 sm, el = _send_terminal_profile(self.server.scc, self.server.terminal_profile)
                 self.server.sim_menu = sm
                 self.server.event_list = el
+                _tlog('equip: terminal profile done')
             sys.stderr.write("CMD: %s → %s (%dms)\n" % (cmd, status, elapsed))
             resp = {'output': output, 'stop': bool(stop)}
             self._send_json(resp)

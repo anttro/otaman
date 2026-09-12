@@ -11,7 +11,7 @@ from pySim.log import PySimLogger
 from pySim.cards import UiccCardBase
 
 from .shell import load_pysim_app
-from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session
+from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog
 
 
 _server_start = 0
@@ -47,9 +47,13 @@ def main():
                         help='Idle interval before automatic STATUS polling (1-255 seconds, default: 30). Disable with --poll-interval 0')
     parser.add_argument('--no-card-init', action='store_true', default=False,
                         help='Skip pysim card initialization (preserve CAT session — no file manager)')
+    parser.add_argument('--timing', action='store_true', default=False,
+                        help='Log phase durations, card resets and APDU counters with elapsed timestamps')
 
     opts = parser.parse_args()
     opts.skip_card_init = opts.no_card_init
+    if opts.timing:
+        _timing_on()
     sl = None
     scc = None
     card = None
@@ -77,27 +81,34 @@ def main():
         kwargs = {}
         if opts.apdu_trace:
             kwargs['apdu_tracer'] = _LoggingApduTracer()
+        t_phase = time.time()
         sl = mod.init_reader(opts, **kwargs)
+        _tlog('init_reader: %.0fms' % ((time.time() - t_phase) * 1000))
         scc = SimCardCommands(sl)
         scc.cat_cla = '80'  # UICC CLA default; overridden for SIM after init_card
         scc._tp.proactive_handler = _DefaultProactiveHandler()
+        t_phase = time.time()
         sl.wait_for_card(3)
         rs, card = mod.init_card(sl, opts.skip_card_init)
+        _tlog('card_init: %.0fms' % ((time.time() - t_phase) * 1000))
         scc.cat_cla = '80' if isinstance(card, UiccCardBase) else 'a0'
     except Exception:
         print("Warning: reader/card initialization failed:", file=sys.stderr)
         traceback.print_exc()
     ch = CardHandler(sl) if sl else None
+    t_phase = time.time()
     try:
         app = mod.PysimApp(verbose=opts.verbose, card=card, rs=rs, sl=sl, ch=ch)
     except Exception:
         print("Warning: PysimApp creation failed:", file=sys.stderr)
         traceback.print_exc()
         app = None
+    _tlog('pysim_app: %.0fms' % ((time.time() - t_phase) * 1000))
     if scc and hasattr(scc, '_tp'):
         scc._tp.apdu_tracer = _LoggingApduTracer()
         try:
             _init_proactive_session()
+            t_phase = time.time()
             sys.stderr.write('INIT: sending TERMINAL PROFILE %s (CLA=%s)\n' % (opts.terminal_profile, scc.cat_cla))
             sm, el = _send_terminal_profile(scc, opts.terminal_profile)
             sys.stderr.write('INIT: TP done, menu=%s events=%s\n' % ('yes' if sm else 'no', 'yes' if el else 'no'))
@@ -109,6 +120,7 @@ def main():
                 if not st_sw.startswith('91'):
                     break
                 _handle_proactive_chain(scc, st_sw)
+            _tlog('terminal_profile_drain: %.0fms' % ((time.time() - t_phase) * 1000))
         except Exception:
             traceback.print_exc(file=sys.stderr)
     if app is not None and opts.apdu_trace:
