@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown', 'profilerTimingStats', 'profilerTimingAccumulator', 'profilerFormatMs', 'profilerRenderSnapshotSummary', 'profilerSnapshotCountLabel'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown', 'profilerTimingStats', 'profilerTimingAccumulator', 'profilerFormatMs', 'profilerRenderSnapshotSummary', 'profilerSnapshotCountLabel', 'pysimFsInfoHtml'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -695,6 +695,33 @@ test('fcpDiffHtml highlights differing FCI parameters', () => {
 	assert.ok(diff.includes('text-red-600'));
 	assert.ok(fcpDiffHtml('garbage', FCP_TRANSPARENT).includes('Truncated length field'));
 	assert.strictEqual(fcpDiffHtml('', ''), '');
+	delete global.t;
+});
+
+test('pysimFsInfoHtml shows FID, type, size and the decoded FCI', () => {
+	global.t = s => s;
+	const hex = '621A82054221000F0583026F4F8A01058B036F06098002004B8801B0';
+	const out = pysimFsInfoHtml({ fid: '6f4f', file_type: 'linear_fixed', file_size: 75, record_len: 15, num_of_rec: 5, fci_hex: hex });
+	assert.ok(out.includes('FID: 6F4F'), out);
+	assert.ok(out.includes('File type: linear_fixed'), out);
+	assert.ok(out.includes('Size: 75'), out);
+	assert.ok(out.includes('Record length: 15'), out);
+	assert.ok(out.includes('Record count: 5'), out);
+	assert.ok(out.includes('Decoded FCI'), out);
+	assert.ok(out.includes('File descriptor'), out);
+	assert.ok(out.includes('75 bytes'), out);
+	delete global.t;
+});
+
+test('pysimFsInfoHtml omits the FCI block without fci_hex and skips null fields', () => {
+	global.t = s => s;
+	const out = pysimFsInfoHtml({ fid: '6f07', file_type: 'transparent', file_size: null, record_len: null, num_of_rec: undefined, fci_hex: null });
+	assert.ok(out.includes('FID: 6F07'), out);
+	assert.ok(!out.includes('Size:'), out);
+	assert.ok(!out.includes('Record length:'), out);
+	assert.ok(!out.includes('Record count:'), out);
+	assert.ok(!out.includes('Decoded FCI'), out);
+	assert.strictEqual(pysimFsInfoHtml(null), '');
 	delete global.t;
 });
 

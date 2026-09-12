@@ -68,3 +68,12 @@ test('file manager has a probe-all-files button and status line', () => {
     assert.ok(html.includes('onclick="pysimFsProbeAll()"'));
     assert.ok(html.includes('id="pysim-fs-probe-status"'));
 });
+
+test('file manager shows decoded FCI info under the file name', () => {
+    const name = html.indexOf('id="pysim-fs-filename"');
+    const info = html.indexOf('id="pysim-fs-info"');
+    const content = html.indexOf('id="pysim-fs-content"');
+    assert.ok(name !== -1 && info > name && info < content, 'pysim-fs-info must sit between filename and content');
+    assert.ok(html.includes('function pysimFsInfoHtml'));
+    assert.ok(html.includes("pysimFsInfoHtml(sel)"));
+});

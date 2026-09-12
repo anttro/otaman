@@ -867,6 +867,7 @@
 				<div class="flex-1">
 					<div id="pysim-fs-detail" class="hidden">
 						<div class="text-xs font-mono mb-1"><span data-l10n="File:">File:</span> <b id="pysim-fs-filename"></b></div>
+						<div id="pysim-fs-info" class="mb-1"></div>
 						<div id="pysim-fs-content" class="w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800 min-h-20 overflow-y-auto"></div>
 						<div class="flex gap-2 mt-1 items-center">
 							<button data-needs="card" onclick="pysimFsRead()" id="pysim-fs-read-btn" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Read">Read</button>
@@ -6124,6 +6125,24 @@ async function pysimFsToggleDir(name) {
 	if (node.expanded) pysimRefresh();
 }
 
+function pysimFsInfoHtml(sel) {
+	if (!sel) return '';
+	const num = v => (v === null || v === undefined) ? null : String(v);
+	const attrs = [];
+	if (sel.fid) attrs.push('FID: ' + esc(String(sel.fid).toUpperCase()));
+	if (sel.file_type) attrs.push(esc(t('File type')) + ': ' + esc(sel.file_type));
+	if (num(sel.file_size) !== null) attrs.push(esc(t('Size')) + ': ' + esc(num(sel.file_size)));
+	if (num(sel.record_len) !== null) attrs.push(esc(t('Record length')) + ': ' + esc(num(sel.record_len)));
+	if (num(sel.num_of_rec) !== null) attrs.push(esc(t('Record count')) + ': ' + esc(num(sel.num_of_rec)));
+	let html = '';
+	if (attrs.length) html += '<div class="text-xs font-mono text-gray-500 dark:text-slate-400">' + attrs.join(' · ') + '</div>';
+	if (sel.fci_hex) {
+		html += '<div class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">' + esc(t('Decoded FCI')) + '</div>';
+		html += '<div class="text-xs font-mono leading-relaxed text-gray-600 dark:text-slate-400 break-all">' + profilerFciPreviewItems(sel.fci_hex) + '</div>';
+	}
+	return html;
+}
+
 async function pysimFsClickFile(name) {
 	pysimFsResetEdit();
 	pysimFsSetMode('raw');
@@ -6139,6 +6158,7 @@ async function pysimFsClickFile(name) {
 	const label = ({ transparent: 'TR', linear_fixed: 'LF', cyclic: 'CY', ber_tlv: 'BT', df: 'DF' })[ft] || '';
 	const prefix = exists ? '' : '✗ ';
 	document.getElementById('pysim-fs-filename').textContent = prefix + name + (label ? ' [' + label + ']' : '');
+	document.getElementById('pysim-fs-info').innerHTML = exists ? pysimFsInfoHtml(sel) : '';
 	document.getElementById('pysim-fs-content').innerHTML = '';
 	document.getElementById('pysim-fs-status').textContent = exists ? '' : '✗ File not found on card';
 	if (exists) {
