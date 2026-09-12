@@ -50,13 +50,15 @@ def main():
                         help='Skip pysim card initialization (preserve CAT session — no file manager)')
     parser.add_argument('--timing', action='store_true', default=False,
                         help='Log phase durations, card resets and APDU counters with elapsed timestamps')
-    parser.add_argument('--fast-init', action='store_true', default=False,
-                        help='Init/equip without redundant card resets (reset only on explicit equip/reset)')
+    parser.add_argument('--fast-init', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('--full-pysim-init', action='store_true', default=False,
+                        help="Use pysim's stock init_card/equip (multiple physical card resets) instead of the default reset-free fast init")
     parser.add_argument('--menu-timeout', type=int, default=60, metavar='SECS',
                         help='Auto-send a timeout TERMINAL RESPONSE if a paused STK command is not answered (default: 60, 0 disables)')
 
     opts = parser.parse_args()
     opts.skip_card_init = opts.no_card_init
+    opts.fast_init = not opts.full_pysim_init
     if opts.timing:
         _timing_on()
     if opts.menu_timeout is not None:

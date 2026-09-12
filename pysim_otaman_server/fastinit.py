@@ -9,8 +9,9 @@ restored in software.
 
 This module mirrors ``pySim.app.init_card()`` with those resets removed: all
 profile probes run back-to-back on the same connection and the runtime state
-uses a software reset. The explicit ``equip`` and ``reset`` commands keep a
-real reconnect/physical reset.
+uses a software reset. It is the default init/equip path; ``--full-pysim-init``
+restores pysim's stock behavior, and the explicit ``equip``/``reset`` commands
+keep a real reconnect/physical reset.
 """
 
 import operator
