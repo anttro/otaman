@@ -28,23 +28,25 @@
 		</div>
 	</div>
 
-	<div class="flex gap-1 mb-4 border-b border-gray-300 dark:border-slate-600">
-		<button class="tab-btn active px-4 py-1.5 text-sm rounded-t bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-tab="c-apdu">C-APDU</button>
+	<div class="flex flex-wrap gap-1 mb-4 border-b border-gray-300 dark:border-slate-600">
+		<button class="tab-btn active px-4 py-1.5 text-sm rounded-t bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-tab="c-apdu">Remote APDU</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="scp80">SCP80</button>
-		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="response" data-l10n="Response parser">Response parser</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="pysim" data-l10n="Card reader">Card reader</button>
+		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="profiler" data-l10n="Profiler">Profiler</button>
+		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="phone" data-l10n="Phone simulator">Phone simulator</button>
 	</div>
 
 	<div id="tab-c-apdu" class="tab-content">
 		<div class="flex gap-4">
 		<div class="flex-1">
-		<div class="flex justify-center gap-2 mb-3">
+		<div class="flex flex-wrap justify-center gap-2 mb-3">
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-sub="sim" onclick="cApduSwitchSubtab('sim')">SIM RFM</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="usim" onclick="cApduSwitchSubtab('usim')">USIM RFM</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ber" onclick="cApduSwitchSubtab('ber')">Expanded Script</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="ram" onclick="cApduSwitchSubtab('ram')">RAM/GP</button>
 			<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="httpota" onclick="cApduSwitchSubtab('httpota')">HTTP OTA</button>
 		<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="parse" onclick="cApduSwitchSubtab('parse')" data-l10n="C-APDU Parser">C-APDU Parser</button>
+		<button class="c-apdu-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-sub="response" onclick="cApduSwitchSubtab('response')" data-l10n="Response parser">Response parser</button>
 		</div>
 			<div id="c-apdu-sub-sim">
 		<div id="chain-sim-rows"></div>
@@ -255,6 +257,76 @@
 
 		<textarea id="hota-preview" rows="5" readonly oninput="hotaPreviewEdited()" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800 mb-3" placeholder="RAM-over-HTTP payload will appear here..."></textarea>
 		<button onclick="packToSp('hota-preview')" id="hota-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
+	</div>
+
+			<div id="c-apdu-sub-response" class="hidden">
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
+			<select id="resp-cmd" onchange="updateRespCmd()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+				<option value="" data-l10n="— Select command —">— Select command —</option>
+				<optgroup label="SIM / USIM">
+					<option value="sim-select">SELECT</option>
+					<option value="sim-status">STATUS</option>
+					<option value="sim-read-binary">READ BINARY</option>
+					<option value="sim-update-binary">UPDATE BINARY</option>
+					<option value="sim-read-record">READ RECORD</option>
+					<option value="sim-update-record">UPDATE RECORD</option>
+					<option value="sim-verify">VERIFY PIN</option>
+					<option value="sim-change">CHANGE PIN</option>
+					<option value="sim-disable">DISABLE PIN</option>
+					<option value="sim-enable">ENABLE PIN</option>
+					<option value="sim-unblock">UNBLOCK PIN</option>
+					<option value="sim-deactivate">DEACTIVATE FILE</option>
+					<option value="sim-activate">ACTIVATE FILE</option>
+					<option value="sim-challenge">GET CHALLENGE</option>
+					<option value="sim-auth">AUTHENTICATE</option>
+					<option value="sim-profile">TERMINAL PROFILE</option>
+					<option value="sim-envelope">ENVELOPE</option>
+					<option value="sim-fetch">FETCH</option>
+					<option value="sim-terminal-rsp">TERMINAL RESPONSE</option>
+					<option value="sim-manage-channel">MANAGE CHANNEL</option>
+					<option value="sim-msc">MANAGE SECURE CHANNEL</option>
+					<option value="sim-retrieve">RETRIEVE DATA</option>
+					<option value="sim-set-data">SET DATA</option>
+					<option value="sim-suspend">SUSPEND UICC</option>
+				</optgroup>
+				<optgroup label="RAM (GlobalPlatform)">
+					<option value="ram-install-load">INSTALL [for load]</option>
+					<option value="ram-install-install">INSTALL [for install]</option>
+					<option value="ram-install-make-sel">INSTALL [for make selectable]</option>
+					<option value="ram-install-reg-update">INSTALL [for registry update]</option>
+					<option value="ram-install-extradition">INSTALL [for extradition]</option>
+					<option value="ram-load">LOAD</option>
+					<option value="ram-delete">DELETE</option>
+					<option value="ram-get-status">GET STATUS</option>
+					<option value="ram-get-data">GET DATA</option>
+					<option value="ram-store-data">STORE DATA</option>
+					<option value="ram-set-status">SET STATUS</option>
+					<option value="ram-ext-auth">EXTERNAL AUTHENTICATE</option>
+					<option value="ram-int-auth">INTERNAL AUTHENTICATE</option>
+					<option value="ram-select">SELECT</option>
+					<option value="ram-init-update">INITIALIZE UPDATE</option>
+					<option value="ram-put-key">PUT KEY</option>
+					<option value="ram-manage-channel">MANAGE CHANNEL</option>
+				</optgroup>
+			</select>
+		</div>
+		<div class="flex gap-3 mb-3">
+			<div class="w-24">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SW</label>
+				<input id="resp-sw" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" maxlength="4" placeholder="9000">
+			</div>
+			<div class="flex-1">
+				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Context</label>
+				<input id="resp-ctx" readonly class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800" value="generic">
+			</div>
+		</div>
+		<div class="mb-3">
+			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Response data (hex)">Response data (hex)</label>
+			<textarea id="resp-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="E3 1A 4F 08 A0 00 00 00 03 00 00 00 9F 70 01 07 C5 03 80 00 00"></textarea>
+		</div>
+		<button onclick="decodeResponse()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Decode">Decode</button>
+		<div id="resp-output" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800 whitespace-pre-wrap" style="min-height:100px"></div>
 	</div>
 	</div>
 	<div class="w-1/4">
@@ -661,75 +733,6 @@
 		</div>
 	</div>
 
-	<div id="tab-response" class="tab-content hidden">
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Command">Command</label>
-			<select id="resp-cmd" onchange="updateRespCmd()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				<option value="" data-l10n="— Select command —">— Select command —</option>
-				<optgroup label="SIM / USIM">
-					<option value="sim-select">SELECT</option>
-					<option value="sim-status">STATUS</option>
-					<option value="sim-read-binary">READ BINARY</option>
-					<option value="sim-update-binary">UPDATE BINARY</option>
-					<option value="sim-read-record">READ RECORD</option>
-					<option value="sim-update-record">UPDATE RECORD</option>
-					<option value="sim-verify">VERIFY PIN</option>
-					<option value="sim-change">CHANGE PIN</option>
-					<option value="sim-disable">DISABLE PIN</option>
-					<option value="sim-enable">ENABLE PIN</option>
-					<option value="sim-unblock">UNBLOCK PIN</option>
-					<option value="sim-deactivate">DEACTIVATE FILE</option>
-					<option value="sim-activate">ACTIVATE FILE</option>
-					<option value="sim-challenge">GET CHALLENGE</option>
-					<option value="sim-auth">AUTHENTICATE</option>
-					<option value="sim-profile">TERMINAL PROFILE</option>
-					<option value="sim-envelope">ENVELOPE</option>
-					<option value="sim-fetch">FETCH</option>
-					<option value="sim-terminal-rsp">TERMINAL RESPONSE</option>
-					<option value="sim-manage-channel">MANAGE CHANNEL</option>
-					<option value="sim-msc">MANAGE SECURE CHANNEL</option>
-					<option value="sim-retrieve">RETRIEVE DATA</option>
-					<option value="sim-set-data">SET DATA</option>
-					<option value="sim-suspend">SUSPEND UICC</option>
-				</optgroup>
-				<optgroup label="RAM (GlobalPlatform)">
-					<option value="ram-install-load">INSTALL [for load]</option>
-					<option value="ram-install-install">INSTALL [for install]</option>
-					<option value="ram-install-make-sel">INSTALL [for make selectable]</option>
-					<option value="ram-install-reg-update">INSTALL [for registry update]</option>
-					<option value="ram-install-extradition">INSTALL [for extradition]</option>
-					<option value="ram-load">LOAD</option>
-					<option value="ram-delete">DELETE</option>
-					<option value="ram-get-status">GET STATUS</option>
-					<option value="ram-get-data">GET DATA</option>
-					<option value="ram-store-data">STORE DATA</option>
-					<option value="ram-set-status">SET STATUS</option>
-					<option value="ram-ext-auth">EXTERNAL AUTHENTICATE</option>
-					<option value="ram-int-auth">INTERNAL AUTHENTICATE</option>
-					<option value="ram-select">SELECT</option>
-					<option value="ram-init-update">INITIALIZE UPDATE</option>
-					<option value="ram-put-key">PUT KEY</option>
-					<option value="ram-manage-channel">MANAGE CHANNEL</option>
-				</optgroup>
-			</select>
-		</div>
-		<div class="flex gap-3 mb-3">
-			<div class="w-24">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">SW</label>
-				<input id="resp-sw" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" maxlength="4" placeholder="9000">
-			</div>
-			<div class="flex-1">
-				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Context</label>
-				<input id="resp-ctx" readonly class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800" value="generic">
-			</div>
-		</div>
-		<div class="mb-3">
-			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Response data (hex)">Response data (hex)</label>
-			<textarea id="resp-data" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="E3 1A 4F 08 A0 00 00 00 03 00 00 00 9F 70 01 07 C5 03 80 00 00"></textarea>
-		</div>
-		<button onclick="decodeResponse()" class="mb-3 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700" data-l10n="Decode">Decode</button>
-		<div id="resp-output" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800 whitespace-pre-wrap" style="min-height:100px"></div>
-	</div>
 
 		<div id="tab-pysim" class="tab-content hidden">
 		<div id="pysim-connect-row" class="mb-3">
@@ -762,10 +765,8 @@
 			<div class="flex gap-1 mb-2">
 				<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-blue-600 text-white" data-pysim-sub="files" data-l10n="File manager">File manager</button>
 				<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="custom" data-l10n="Custom files">Custom files</button>
-			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="profiler" data-l10n="Profiler">Profiler</button>
 			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="cmd" data-l10n="pySim command line">pySim command line</button>
 			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="apdu" data-l10n="Raw APDU">Raw APDU</button>
-			<button class="pysim-subtab px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-pysim-sub="proactive">Proactive UICC</button>
 		</div>
 
 		<div id="pysim-sub-files">
@@ -811,7 +812,33 @@
 			<textarea id="pysim-cf-io" class="hidden mt-2 w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800" rows="6"></textarea>
 		</div>
 
-		<div id="pysim-sub-profiler" class="hidden">
+
+		<div id="pysim-sub-cmd" class="hidden">
+			<div class="flex gap-2 items-center mb-2">
+				<div class="relative flex-1">
+					<input id="pysim-cmd" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" onkeydown="pysimCmdKeydown(event)" oninput="pysimCmdInput()">
+					<div id="pysim-cmd-suggest" class="hidden absolute bottom-full left-0 right-0 mb-1 max-h-32 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-xs font-mono shadow-lg z-10"></div>
+				</div>
+				<button onclick="pysimExec()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Execute">Execute</button>
+			</div>
+			<div id="pysim-cmd-hint" class="hidden mb-2 text-xs font-mono text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-slate-700 rounded p-2 bg-gray-50 dark:bg-slate-800 whitespace-pre-wrap"></div>
+			<textarea id="pysim-cmd-output" rows="10" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		</div>
+
+		<div id="pysim-sub-apdu" class="hidden">
+			<div class="flex gap-2 items-center mb-2">
+				<input id="pysim-apdu" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00A4040000" onkeydown="if(event.key==='Enter')pysimApdu()">
+				<button onclick="pysimApdu()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Send">Send</button>
+			</div>
+			<textarea id="pysim-apdu-output" rows="5" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
+		</div>
+
+	</div>
+
+
+</div>
+
+	<div id="tab-profiler" class="tab-content hidden">
 			<div id="profiler-list">
 				<div class="flex gap-1 mb-3 border-b border-gray-300 dark:border-slate-600">
 					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-t bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-list-tab="profiles" onclick="profilerListSwitch('profiles')" data-l10n="Profiles">Profiles</button>
@@ -869,26 +896,7 @@
 			</div>
 		</div>
 
-		<div id="pysim-sub-cmd" class="hidden">
-			<div class="flex gap-2 items-center mb-2">
-				<div class="relative flex-1">
-					<input id="pysim-cmd" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="select MF" autocomplete="off" onkeydown="pysimCmdKeydown(event)" oninput="pysimCmdInput()">
-					<div id="pysim-cmd-suggest" class="hidden absolute bottom-full left-0 right-0 mb-1 max-h-32 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-xs font-mono shadow-lg z-10"></div>
-				</div>
-				<button onclick="pysimExec()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Execute">Execute</button>
-			</div>
-			<div id="pysim-cmd-hint" class="hidden mb-2 text-xs font-mono text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-slate-700 rounded p-2 bg-gray-50 dark:bg-slate-800 whitespace-pre-wrap"></div>
-			<textarea id="pysim-cmd-output" rows="10" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		</div>
-
-		<div id="pysim-sub-apdu" class="hidden">
-			<div class="flex gap-2 items-center mb-2">
-				<input id="pysim-apdu" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="00A4040000" onkeydown="if(event.key==='Enter')pysimApdu()">
-				<button onclick="pysimApdu()" class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700" data-l10n="Send">Send</button>
-			</div>
-			<textarea id="pysim-apdu-output" rows="5" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 bg-gray-100 dark:bg-slate-800"></textarea>
-		</div>
-		<div id="pysim-sub-proactive" class="hidden">
+	<div id="tab-phone" class="tab-content hidden">
 			<div class="flex gap-6">
 				<div>
 					<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="STK menu">STK menu</div>
@@ -932,7 +940,6 @@
 				<button id="event-send-btn" onclick="pysimEventSend()" class="px-4 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Send">Send</button>
 			</div>
 		</div>
-	</div>
 	</div>
 
 	<div id="profiler-scan-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
@@ -1007,8 +1014,6 @@
 		</div>
 	</div>
 
-</div>
-
 <script>
 // ===== Tab switching =====
 function switchTab(name) {
@@ -1023,8 +1028,9 @@ function switchTab(name) {
 	active.classList.add('bg-blue-600', 'text-white', 'dark:bg-blue-500', 'dark:text-white');
 	if (name === 'c-apdu') cApduSwitchSubtab('sim');
 	else if (name === 'scp80') setHelpAnchor(scp80HelpAnchor);
-	else if (name === 'response') setHelpAnchor('response-parser');
 	else if (name === 'pysim') setHelpAnchor(pysimHelpAnchor);
+	else if (name === 'profiler') { profilerSetView('list'); setHelpAnchor('profiler'); }
+	else if (name === 'phone') { stkCheckMenu(); pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); pysimPollStatusInit(); setHelpAnchor('proactive-uicc'); }
 }
 
 let scp80HelpAnchor = 'secured-packet';
@@ -1057,11 +1063,11 @@ function cApduSwitchSubtab(name) {
 		btn.classList.toggle('text-gray-700', !active);
 		btn.classList.toggle('dark:text-slate-300', !active);
 	});
-	['sim', 'usim', 'ber', 'ram', 'parse', 'httpota'].forEach(s => {
+	['sim', 'usim', 'ber', 'ram', 'parse', 'httpota', 'response'].forEach(s => {
 		const el = document.getElementById('c-apdu-sub-' + s);
 		if (el) el.classList.toggle('hidden', s !== name);
 	});
-	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp', parse:'c-apdu-parser', httpota:'http-ota'}[name] || 'c-apdu');
+	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp', parse:'c-apdu-parser', httpota:'http-ota', response:'response-parser'}[name] || 'c-apdu');
 }
 
 // ===== HTTP OTA constructor =====
@@ -4602,7 +4608,8 @@ async function pysimSendOta() {
 			if (data.por && data.por.decoded) {
 				document.getElementById('resp-sw').value = data.por.decoded.last_status_word || '';
 				document.getElementById('resp-data').value = data.por.decoded.last_response_data || '';
-				switchTab('response');
+				switchTab('c-apdu');
+				cApduSwitchSubtab('response');
 			}
 			let msg = 'OTA sent. SW: ' + data.sw;
 			const por = data.por;
@@ -5271,7 +5278,7 @@ async function stkCheckMenu() {
 }
 
 function stkSetPillsDisabled(disabled) {
-	document.querySelectorAll('.pysim-subtab').forEach(b => {
+	document.querySelectorAll('.tab-btn, .pysim-subtab').forEach(b => {
 		b.disabled = disabled;
 		b.classList.toggle('opacity-50', disabled);
 	});
@@ -5579,13 +5586,11 @@ function pysimSwitchSubtab(name) {
 		btn.classList.toggle('text-gray-700', !isActive);
 		btn.classList.toggle('dark:text-slate-300', !isActive);
 	});
-	['cmd', 'apdu', 'files', 'custom', 'proactive', 'profiler'].forEach(s => {
+	['cmd', 'apdu', 'files', 'custom'].forEach(s => {
 		document.getElementById('pysim-sub-' + s).classList.toggle('hidden', s !== name);
 	});
 	if (name === 'custom') pysimCustomRender();
-	if (name === 'proactive') { stkCheckMenu(); pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); pysimPollStatusInit(); }
-	if (name === 'profiler') profilerSetView('list');
-	pysimHelpAnchor = {cmd:'pysim-cmdline', apdu:'raw-apdu', files:'file-manager', custom:'custom-files', proactive:'proactive-uicc', profiler:'profiler'}[name] || 'card-reader';
+	pysimHelpAnchor = {cmd:'pysim-cmdline', apdu:'raw-apdu', files:'file-manager', custom:'custom-files'}[name] || 'card-reader';
 	setHelpAnchor(pysimHelpAnchor);
 }
 
@@ -8796,7 +8801,7 @@ const LANG_RU = {
 	'Verifying against pySim reference...': 'Сверка с эталоном pySim...',
 	'Verify vs pySim': 'Проверить в pySim',
 	'Send to Card': 'Отправить на карту',
-	'Proactive UICC': 'Проактивный UICC',
+	'Phone simulator': 'Симулятор телефона',
 	'Events that the card monitors (SET UP EVENT LIST):': 'События, отслеживаемые картой (SET UP EVENT LIST):',
 	'No events configured.': 'Нет настроенных событий.',
 	'Fetched proactive commands:': 'Извлечённые проактивные команды:',
@@ -8974,7 +8979,7 @@ function isViewVisible(id) {
 // Dynamic views build their labels with t() at render time; re-render the
 // visible ones after a language switch so they don't stay in the old language.
 function refreshDynamicI18n() {
-	if (isViewVisible('pysim-sub-profiler')) {
+	if (isViewVisible('tab-profiler')) {
 		if (profilerView === 'list') { profilerRenderList(); profilerRenderSnapshotList(); }
 		else if (profilerView === 'editor') profilerRenderEditor();
 		else if (profilerView === 'results') profilerRenderResultsView();
@@ -8982,7 +8987,7 @@ function refreshDynamicI18n() {
 	}
 	if (isViewVisible('profiler-scan-modal')) profilerScanRefreshOptions();
 	if (isViewVisible('scp80-sub-cards')) cardsRender();
-	if (isViewVisible('pysim-sub-proactive')) {
+	if (isViewVisible('tab-phone')) {
 		pysimEventsRender();
 		pysimProactiveLogRender();
 		pysimPliRender();

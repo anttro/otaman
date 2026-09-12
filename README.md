@@ -31,13 +31,13 @@ npm run build
 
 ## Interface
 
-Four top-level tabs: **C-APDU**, **SCP80**, **Response parser**, **Card reader**. The **C-APDU** and **SCP80** tabs use pill sub-tabs, and the Card reader tab has six sub-tabs: **File manager**, **Custom files**, **Profiler**, **pySim command line**, **Raw APDU**, and **Proactive UICC**.
+Five top-level tabs: **Remote APDU**, **SCP80**, **Card reader**, **Profiler**, and **Phone simulator**. **Remote APDU** and **SCP80** use pill sub-tabs; the Card reader tab has four sub-tabs: **File manager**, **Custom files**, **pySim command line**, and **Raw APDU**.
 
 ---
 
-## C-APDU tab
+## Remote APDU tab
 
-Builds command APDUs (C-APDUs). Six sub-tabs cover different card generations and command sets.
+Builds command APDUs (C-APDUs). Seven sub-tabs cover different card generations, command sets and decoding tools: **SIM RFM**, **USIM RFM**, **Expanded Script**, **RAM/GP**, **HTTP OTA**, **C-APDU Parser**, and **Response parser**.
 
 ### SIM RFM
 
@@ -334,6 +334,19 @@ The **Command Scripting template** checkbox wraps the whole `81` triggering comm
 
 ---
 
+
+### Response parser
+
+Decodes a raw command response: pick the command that was sent, enter the SW (e.g. `9000`) and the response data hex, then press **Decode**.
+
+- **Command** — SIM/USIM group (SELECT, STATUS, READ/UPDATE, PIN ops, CAT commands like TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, ...) or RAM/GP group (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP commands).
+- **SW decode** — status words resolved against generic, UICC (TS 102 221), and GlobalPlatform maps, with context auto-detected.
+- **Privilege decode** — GET DATA / INSTALL response payloads decode the privilege bytes into human-readable flags.
+- **Response data** — raw hex rendered and interpreted per command (e.g. SELECT FCP templates).
+
+---
+
+
 ## SCP80 tab
 
 The **SCP80** top-level tab groups SCP80-related views, switched by three pills: **Secured Packet**, **Cards**, and **RAM**. Assembles secured packets per ETSI TS 102 225.
@@ -463,17 +476,6 @@ Delete confirms via a browser prompt before sending the GP `DELETE` command via 
 
 ---
 
-## Response parser tab
-
-Decodes a raw command response: pick the command that was sent, enter the SW (e.g. `9000`) and the response data hex, then press **Decode**.
-
-- **Command** — SIM/USIM group (SELECT, STATUS, READ/UPDATE, PIN ops, CAT commands like TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, ...) or RAM/GP group (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP commands).
-- **SW decode** — status words resolved against generic, UICC (TS 102 221), and GlobalPlatform maps, with context auto-detected.
-- **Privilege decode** — GET DATA / INSTALL response payloads decode the privilege bytes into human-readable flags.
-- **Response data** — raw hex rendered and interpreted per command (e.g. SELECT FCP templates).
-
----
-
 ## Card Reader (pySim integration)
 
 Connects to the bundled [`pysim-otaman-server`](pysim_otaman_server/) for live card operations.
@@ -499,9 +501,48 @@ Files not in pysim's model can be added manually:
 
 Custom files persist in `localStorage` across sessions. Export/import as JSON for sharing.
 
-### Proactive UICC Pill
+### Command Hints
 
-The **Proactive UICC** sub-tab in the Card Reader provides real-time CAT session interaction:
+Type a command name in the **pySim command line** input. Usage hints appear as a tooltip after 300ms. Command autocomplete suggestions appear above the input.
+
+---
+
+## Profiler
+
+Verifies that a card matches a named **profile** — an ordered set of rules describing the expected file system and, optionally, file contents. Profiles are stored in `localStorage`.
+
+- **New profile** creates an empty ruleset; **Profile from card** scans the equipped card and generates one rule per existing file; **Import profile** loads a ruleset from JSON (the name is stored inside the file).
+- Each profile row has **Check card ▶** (run against the equipped card), **Check card snapshot** (run offline against a saved snapshot), **Edit**, **Export**, and **Delete**.
+
+A filesystem rule is defined by:
+
+- **Path** — `MF`-rooted (e.g. `MF/7F10/6F3A`) or ADF AID-rooted (e.g. `A0000000871002/6F07`).
+- **FCP/FCI check** — **Filetype only (FCP)**, **Filetype + size (FCP)** (adds file size, or record length/count for record files), or **Exact FCI** (byte-for-byte comparison of the raw SELECT FCP template `'62'`, catching FID/AID, life-cycle status, security-attribute, and proprietary-parameter changes).
+- **File attributes** — file type, size, record length and record count, taken from the FCP template (any may be left unset).
+- **Check contents** (optional) — **Exact** hex equality, or **Mask** where `?` is a per-nibble wildcard (a mask with no `?` is a prefix match, e.g. `0891` for the IMSI MCC/MNC). Record files store a per-record list.
+
+The check report marks each verified aspect (e.g. *filetype ✓, size ✗, contents ✓*), lists mismatches as read-only monospace expected/actual fields aligned in one column, and shows a decoded per-parameter FCI comparison for FCI mismatches. Corrupt FCI data shows whatever decoded before the faulty part plus an explicit decode-failure note; record mismatches list the *matching records*. **Only mismatches** in the results header hides all passing files and keeps failures and errors only.
+
+#### “Profile from card” scan options
+
+The scan dialog asks for a profile name and offers the FCP/FCI mode described above, an **Ignore contents of files** checklist of frequently-overwritten files (all checked by default except `EF.ARR`; the header checkbox toggles the whole list) — `EF.LOCI`, `EF.PSLOCI`, `EF.EPSLOCI`, `EF.5GS3GPPLOCI`, `EF.Keys`, `EF.KeysPS`, `EF.SMS`, `EF.Kc`, `EF.KcGPRS`, `EF.LOCIGPRS`, `EF.CBMID`, `EF.SMSS`, `EF.ACC`, `EF.EPSNSC`, `EF.START-HFN`, `EF.ARR` — and two checked-by-default mask options that capture only the first 4 bytes of `EF.IMSI` and `EF.ICCID` (uncheck for exact matching). A progress line shows *N / total files* with the current path; the options are locked while scanning. Rules are created only for files that actually exist (a FCP template is returned); custom files from the **Custom files** sub-tab are included under the same existence check.
+
+#### Card snapshots
+
+The list view has two tabs — **Profiles** and **Card snapshots**. A snapshot is an immutable capture of the card filesystem: for every existing file it stores the path, symbolic name, file type, size (or record length/count), the raw FCI from the SELECT response, and the contents whenever the file is readable (no ignore list, no masking). The ICCID is decoded from EF.ICCID and shown next to the snapshot name.
+
+- **New snapshot** scans the card; **Import snapshot** loads JSON.
+- Each snapshot row has **Open** (all captured data read-only, raw FCI with decoded FCI and contents; only the name is editable), **Export**, and **Delete**.
+- **Check card snapshot** on a profile row runs the profile rules against a snapshot picked from the list, without a card reader. Files whose contents were not captured are reported as unverifiable errors.
+- **Compare snapshots** compares two snapshots offline exactly like a profile check: pick the *master* snapshot and the *snapshot to check*, optionally masking the first 4 bytes of EF.IMSI/EF.ICCID (on by default), and get the same report. Every file must match exactly (exact FCI, contents); files present only in the checked snapshot are reported as extra files.
+
+---
+
+---
+
+## Phone simulator
+
+The **Phone simulator** tab provides real-time CAT session interaction:
 
 **Subscribed Events** — the card's SET UP EVENT LIST is displayed with per-event **Send** buttons. Clicking opens a form specific to the event type:
 
@@ -532,41 +573,6 @@ The **Proactive UICC** sub-tab in the Card Reader provides real-time CAT session
 | 0E | Multiple Access Technologies (comma-list) |
 
 Values persist on the server until restart. Apply → hex updates; Save → POSTs to server. The server will use these values to populate TERMINAL RESPONSE data for future PLI proactive commands.
-
-### Command Hints
-
-Type a command name in the **pySim command line** input. Usage hints appear as a tooltip after 300ms. Command autocomplete suggestions appear above the input.
-
-### Profiler
-
-Verifies that a card matches a named **profile** — an ordered set of rules describing the expected file system and, optionally, file contents. Profiles are stored in `localStorage`.
-
-- **New profile** creates an empty ruleset; **Profile from card** scans the equipped card and generates one rule per existing file; **Import profile** loads a ruleset from JSON (the name is stored inside the file).
-- Each profile row has **Check card ▶** (run against the equipped card), **Check card snapshot** (run offline against a saved snapshot), **Edit**, **Export**, and **Delete**.
-
-A filesystem rule is defined by:
-
-- **Path** — `MF`-rooted (e.g. `MF/7F10/6F3A`) or ADF AID-rooted (e.g. `A0000000871002/6F07`).
-- **FCP/FCI check** — **Filetype only (FCP)**, **Filetype + size (FCP)** (adds file size, or record length/count for record files), or **Exact FCI** (byte-for-byte comparison of the raw SELECT FCP template `'62'`, catching FID/AID, life-cycle status, security-attribute, and proprietary-parameter changes).
-- **File attributes** — file type, size, record length and record count, taken from the FCP template (any may be left unset).
-- **Check contents** (optional) — **Exact** hex equality, or **Mask** where `?` is a per-nibble wildcard (a mask with no `?` is a prefix match, e.g. `0891` for the IMSI MCC/MNC). Record files store a per-record list.
-
-The check report marks each verified aspect (e.g. *filetype ✓, size ✗, contents ✓*), lists mismatches as read-only monospace expected/actual fields aligned in one column, and shows a decoded per-parameter FCI comparison for FCI mismatches. Corrupt FCI data shows whatever decoded before the faulty part plus an explicit decode-failure note; record mismatches list the *matching records*. **Only mismatches** in the results header hides all passing files and keeps failures and errors only.
-
-#### “Profile from card” scan options
-
-The scan dialog asks for a profile name and offers the FCP/FCI mode described above, an **Ignore contents of files** checklist of frequently-overwritten files (all checked by default except `EF.ARR`; the header checkbox toggles the whole list) — `EF.LOCI`, `EF.PSLOCI`, `EF.EPSLOCI`, `EF.5GS3GPPLOCI`, `EF.Keys`, `EF.KeysPS`, `EF.SMS`, `EF.Kc`, `EF.KcGPRS`, `EF.LOCIGPRS`, `EF.CBMID`, `EF.SMSS`, `EF.ACC`, `EF.EPSNSC`, `EF.START-HFN`, `EF.ARR` — and two checked-by-default mask options that capture only the first 4 bytes of `EF.IMSI` and `EF.ICCID` (uncheck for exact matching). A progress line shows *N / total files* with the current path; the options are locked while scanning. Rules are created only for files that actually exist (a FCP template is returned); custom files from the **Custom files** sub-tab are included under the same existence check.
-
-#### Card snapshots
-
-The list view has two tabs — **Profiles** and **Card snapshots**. A snapshot is an immutable capture of the card filesystem: for every existing file it stores the path, symbolic name, file type, size (or record length/count), the raw FCI from the SELECT response, and the contents whenever the file is readable (no ignore list, no masking). The ICCID is decoded from EF.ICCID and shown next to the snapshot name.
-
-- **New snapshot** scans the card; **Import snapshot** loads JSON.
-- Each snapshot row has **Open** (all captured data read-only, raw FCI with decoded FCI and contents; only the name is editable), **Export**, and **Delete**.
-- **Check card snapshot** on a profile row runs the profile rules against a snapshot picked from the list, without a card reader. Files whose contents were not captured are reported as unverifiable errors.
-- **Compare snapshots** compares two snapshots offline exactly like a profile check: pick the *master* snapshot and the *snapshot to check*, optionally masking the first 4 bytes of EF.IMSI/EF.ICCID (on by default), and get the same report. Every file must match exactly (exact FCI, contents); files present only in the checked snapshot are reported as extra files.
-
----
 
 ## PWA
 

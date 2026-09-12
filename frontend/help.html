@@ -44,13 +44,14 @@
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Header</strong> — the app version, an <strong>INSTALL PWA</strong> button (shown when the browser offers installation, enabling offline use), links to the project on GitHub and to this help, an <strong>EN/RU</strong> language toggle, and a dark/light <strong>theme</strong> toggle.</li>
 		<li>Language and theme choices are stored in <code class="font-mono text-sm">localStorage</code> and persist across reloads.</li>
-		<li>The <strong>help</strong> link opens this documentation at the section matching the current view (e.g. the Profiler sub-tab opens &sect;5.6).</li>
+		<li>Top-level tabs: <strong>Remote APDU</strong> (<strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong>, <strong>C-APDU Parser</strong>, <strong>Response parser</strong>), <strong>SCP80</strong> (<strong>Secured Packet</strong>, <strong>Cards</strong>, <strong>RAM</strong>), <strong>Card reader</strong> (<strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>), <strong>Profiler</strong>, and <strong>Phone simulator</strong>.</li>
+		<li>The <strong>help</strong> link opens this documentation at the section matching the current view (e.g. the Profiler tab opens &sect;5).</li>
 	</ul>
 
 
 <section class="mb-10">
-	<h2 id="c-apdu" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">2. C-APDU tab</h2>
-	<p class="mb-3">Builds command APDUs (C-APDUs). Six sub-tabs cover different card generations and command sets: <strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong>, and <strong>C-APDU Parser</strong>.</p>
+	<h2 id="c-apdu" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">2. Remote APDU tab</h2>
+	<p class="mb-3">Builds command APDUs (C-APDUs). Seven sub-tabs cover different card generations, command sets and decoding tools: <strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong>, <strong>C-APDU Parser</strong>, and <strong>Response parser</strong>.</p>
 
 	<h3 id="sim-rfm" class="text-lg font-medium mb-2">2.1 SIM RFM</h3>
 	<p class="mb-2">CLA = <code class="font-mono text-sm">A0</code> (GSM 11.11 / TS 151 011, ISO 7816-4). Remote File Management for classic SIM cards.</p>
@@ -138,7 +139,7 @@
 	</ul>
 
 	<h4 id="expanded-response" class="font-medium mb-2 text-base">Response decoding (TS 102 226 §5.2.2)</h4>
-	<p class="text-sm mb-2">Incoming Proof-of-Receipt responses are decoded by the server — expanded Remote Application response data (TS 102 226 §5.2.2) or the compact format. The Secured Packet view shows the outcome after <strong>Send to Card</strong> (see <a href="#secured-packet" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;3.1</a>): the PoR status (TAR, counter, raw PoR), with the last command&rsquo;s status word and response data filled into the <strong>Response parser</strong> tab.</p>
+	<p class="text-sm mb-2">Incoming Proof-of-Receipt responses are decoded by the server — expanded Remote Application response data (TS 102 226 §5.2.2) or the compact format. The Secured Packet view shows the outcome after <strong>Send to Card</strong> (see <a href="#secured-packet" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;3.1</a>): the PoR status (TAR, counter, raw PoR), with the last command&rsquo;s status word and response data filled into the <strong>Response parser</strong> pill under Remote APDU.</p>
 
 	<h3 id="ram-gp" class="text-lg font-medium mb-2">2.4 RAM/GP</h3>
 	<p class="mb-2">CLA = <code class="font-mono text-sm">80</code> (GlobalPlatform Card Specification v2.3.1). Remote Application Management commands for card content management. Built with the same chain builder as SIM/USIM: add rows, fill fields, and the chain preview updates automatically.</p>
@@ -227,6 +228,17 @@
 	<p class="text-sm mb-2"><strong>Pack into Secured packet</strong> sends the built payload to the SCP80 tab for SPI/counter filling &mdash; insert the TAR the SD listens on (typically the OTASD TAR) there.</p>
 
 
+
+	<h3 id="response-parser" class="text-lg font-medium mb-2">2.8 Response parser</h3>
+	<p class="mb-3">Decodes a raw command response: pick the command that was sent, enter the SW (e.g. <code class="font-mono text-sm">9000</code>) and the response data hex, then press <strong>Decode</strong>. The fields are also auto-filled with the last command&rsquo;s status word and response data after a successful &ldquo;Send to Card&rdquo; (see <a href="#secured-packet" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;3.1</a>).</p>
+	<ul class="list-disc list-inside text-sm space-y-1">
+		<li><strong>Command</strong> — SIM/USIM group (SELECT, STATUS, READ/UPDATE, PIN ops, CAT commands like TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, &hellip;) or RAM/GP group (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP commands).</li>
+		<li><strong>SW decode</strong> — status words resolved against generic, UICC (TS 102 221), and GlobalPlatform maps, with context auto-detected.</li>
+		<li><strong>Privilege decode</strong> — GET DATA / INSTALL response payloads decode the privilege bytes into human-readable flags.</li>
+		<li><strong>Response data</strong> — raw hex rendered and interpreted per command (e.g. SELECT FCP templates).</li>
+	</ul>
+
+
 <section class="mb-10">
 	<h2 id="scp80" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">3. SCP80 tab</h2>
 	<p class="mb-3">The <strong>SCP80</strong> top-level tab groups the SCP80-related views. It is switched by three pills: <strong>Secured Packet</strong>, <strong>Cards</strong>, and <strong>RAM</strong>. Assembles SCP80 secured packets per ETSI TS 102 225.</p>
@@ -301,21 +313,10 @@
 
 
 <section class="mb-10">
-	<h2 id="response-parser" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Response parser tab</h2>
-	<p class="mb-3">Decodes a raw command response: pick the command that was sent, enter the SW (e.g. <code class="font-mono text-sm">9000</code>) and the response data hex, then press <strong>Decode</strong>. The fields are also auto-filled with the last command&rsquo;s status word and response data after a successful &ldquo;Send to Card&rdquo; (see <a href="#secured-packet" class="text-blue-600 dark:text-blue-400 hover:underline">&sect;3.1</a>).</p>
-	<ul class="list-disc list-inside text-sm space-y-1">
-		<li><strong>Command</strong> — SIM/USIM group (SELECT, STATUS, READ/UPDATE, PIN ops, CAT commands like TERMINAL PROFILE/ENVELOPE/FETCH/TERMINAL RESPONSE, MANAGE CHANNEL, &hellip;) or RAM/GP group (INSTALL, LOAD, DELETE, GET/STORE DATA, auth, SCP commands).</li>
-		<li><strong>SW decode</strong> — status words resolved against generic, UICC (TS 102 221), and GlobalPlatform maps, with context auto-detected.</li>
-		<li><strong>Privilege decode</strong> — GET DATA / INSTALL response payloads decode the privilege bytes into human-readable flags.</li>
-		<li><strong>Response data</strong> — raw hex rendered and interpreted per command (e.g. SELECT FCP templates).</li>
-	</ul>
+	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Card reader (pySim) tab</h2>
+	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations: enter the server URL (default <code class="font-mono text-sm">http://127.0.0.1:8080</code>) and press <strong>Connect</strong>. The status area shows the reader/card state, and <strong>Equip card</strong> (re)initializes the card after insertion. Sub-tabs: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, and <strong>Raw APDU</strong>. The <strong>Profiler</strong> and <strong>Phone simulator</strong> are separate top-level tabs.</p>
 
-
-<section class="mb-10">
-	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Card reader (pySim) tab</h2>
-	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations: enter the server URL (default <code class="font-mono text-sm">http://127.0.0.1:8080</code>) and press <strong>Connect</strong>. The status area shows the reader/card state, and <strong>Equip card</strong> (re)initializes the card after insertion. Sub-tabs: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>Profiler</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>, and <strong>Proactive UICC</strong>.</p>
-
-	<h3 id="file-manager" class="text-lg font-medium mb-2">5.1 File manager</h3>
+	<h3 id="file-manager" class="text-lg font-medium mb-2">4.1 File manager</h3>
 	<p class="text-sm mb-2">The file system tree is displayed on the left; selecting a file opens its detail pane on the right.</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Read</strong> — reads the selected file (auto-detects transparent vs record files)</li>
@@ -323,48 +324,55 @@
 		<li><strong>Raw / Decoded</strong> — toggle between hex dump and pySim-decoded JSON</li>
 	</ul>
 
-	<h3 id="custom-files" class="text-lg font-medium mb-2">5.2 Custom files</h3>
+	<h3 id="custom-files" class="text-lg font-medium mb-2">4.2 Custom files</h3>
 	<p class="text-sm mb-3">Add files that pySim&rsquo;s model does not cover: enter the full path (e.g. <code class="font-mono text-sm">3F00/7F20/6F46</code>) and an alias (e.g. <code class="font-mono text-sm">EF.SPN</code>), then press <strong>Add</strong>; added files appear in the File manager tree. The list persists in <code class="font-mono text-sm">localStorage</code> and can be shared with <strong>Export as JSON</strong> / <strong>Export to file</strong> and restored with <strong>Import from file</strong> / <strong>Paste &amp; import</strong> / <strong>Import JSON from clipboard</strong>.</p>
 
-	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">5.3 pySim command line</h3>
+	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">4.3 pySim command line</h3>
 	<p class="text-sm mb-3">Execute any pySim-shell command with usage hints (300&nbsp;ms) and autocomplete.</p>
 
-	<h3 id="raw-apdu" class="text-lg font-medium mb-2">5.4 Raw APDU</h3>
+	<h3 id="raw-apdu" class="text-lg font-medium mb-2">4.4 Raw APDU</h3>
 	<p class="text-sm mb-3">Send an arbitrary APDU and view the raw response.</p>
 
-	<h3 id="proactive-uicc" class="text-lg font-medium mb-2">5.5 Proactive UICC</h3>
-	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session: the STK menu, subscribed events, the proactive command log, the PROVIDE LOCAL INFORMATION data dictionary, and STATUS polling.</p>
+<h3 id="usage-scenarios" class="text-lg font-medium mb-2">4.5 Usage scenarios</h3>
 
-	<h4 id="stk-menu" class="font-medium mb-1">5.5.1 STK menu</h4>
-	<p class="text-sm mb-3">When the card has issued a SET UP MENU command, a &ldquo;STK menu&rdquo; block appears at the top of this view with an emerald <strong>STK: &lt;title&gt;</strong> button that opens the menu overlay (same as the card&rsquo;s STK menu browser). If the card has not set up a menu, the block shows &ldquo;No menu set by the card&rdquo; instead. The menu state is refreshed each time the view is opened. User-interactive proactive commands always get a TERMINAL RESPONSE: the overlay pauses for your choice, and if you neither answer nor press <strong>Timeout</strong>, the server answers with a timeout result after the <code class="font-mono text-sm">--menu-timeout</code> seconds (default 60, <code class="font-mono text-sm">0</code> disables).</p>
+	<h4 id="scenario-a" class="font-medium mb-1">Scenario A &mdash; Working with files not in pySim&rsquo;s model (Custom files)</h4>
+	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
+		<li>Obtain the FID of the target file (vendor documentation or ATR/file-system analysis; such files are often not in public specs).</li>
+		<li>Open the <strong>Card reader</strong> tab &rarr; <strong>Custom files</strong> sub-tab.</li>
+		<li>Enter the full path (e.g. <code class="font-mono text-sm">3F00/7F20/6F46</code>) and an alias (e.g. <code class="font-mono text-sm">EF.SPN</code>).</li>
+		<li>Click <strong>Add</strong> — the file appears in the tree in italics (unverified).</li>
+		<li>Click the file to verify existence; on success (<code class="font-mono text-sm">9000</code>) it behaves like a normal file.</li>
+		<li>Read, edit and save hex data; toggle Raw/Decoded views.</li>
+		<li>Export the custom-file list as JSON to share with other machines.</li>
+	</ol>
 
-	<h4 id="subscribed-events" class="font-medium mb-1">5.5.2 Subscribed events (SET UP EVENT LIST)</h4>
-	<p class="text-sm mb-2">The events the card monitors. Each event has a <strong>Send</strong> button that opens a form specific to the event type:</p>
+	<h4 id="scenario-b" class="font-medium mb-1">Scenario B &mdash; Simulating a real network environment for SIM testing</h4>
+	<p class="text-sm mb-1"><strong>B.1 Answer PROVIDE LOCAL INFORMATION (PLI)</strong></p>
+	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
+		<li>Open <strong>Phone simulator</strong> &rarr; <strong>PROVIDE LOCAL INFORMATION response data</strong>.</li>
+		<li>Use the decode/encode forms to set IMEI (<code class="font-mono text-sm">01</code>), Location Info (<code class="font-mono text-sm">00</code>), Access Technology (<code class="font-mono text-sm">06</code>), etc.</li>
+		<li>Click <strong>Save</strong> — values persist server-side.</li>
+		<li>Enable <strong>Polling</strong> (interval 30&nbsp;s) so the card issues PLI periodically.</li>
+		<li>The server injects the dictionary values into each TERMINAL RESPONSE.</li>
+		<li>Verify in the proactive log: the PLI entry shows the decoded response.</li>
+	</ol>
+	<p class="text-sm mb-1"><strong>B.2 Simulate network actions via ENVELOPE (event download)</strong></p>
+	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
+		<li>Check the <strong>subscribed events</strong> list (from SET UP EVENT LIST).</li>
+		<li>Click <strong>Send</strong> on an event (e.g. Location Status) and fill the form; an <code class="font-mono text-sm">ENVELOPE(Event Download)</code> is sent.</li>
+		<li>For <strong>Network Rejection</strong>, select registration type &rarr; location fields &rarr; access technology &rarr; rejection cause.</li>
+		<li>The card may respond with a proactive command, which the chain handler logs and answers automatically.</li>
+	</ol>
+	<p class="text-sm mb-1"><strong>B.3 Verify the simulated environment</strong></p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
-		<li><strong>No-data events</strong> (User Activity, Idle Screen, Data Available, &hellip;) — one-click notification</li>
-		<li><strong>Location Status</strong> — dropdown: Normal / Limited / No service (tag <code class="font-mono text-sm">9B</code>)</li>
-		<li><strong>Access Technology Change</strong> — 13 RAT types (tag <code class="font-mono text-sm">BF</code>)</li>
-		<li><strong>Network Rejection</strong> — full adaptive form: registration type (LU / GPRS / EPS / 5GS), location fields (MCC, MNC, LAC, RAC, TAC), access technology, and a 53-cause unified rejection cause dropdown covering EMM, GMM, 5GMM and LU causes</li>
+		<li>The proactive command log shows the full round-trip (command + TERMINAL RESPONSE bytes).</li>
+		<li>The STATUS button / auto-polling keep the CAT session alive (drain loop).</li>
 	</ul>
-	<p class="text-sm mb-3">Sending an event uses <code class="font-mono text-sm">ENVELOPE(Event Download)</code> per TS 102 223 / TS 131 111.</p>
 
-	<h4 id="proactive-log" class="font-medium mb-1">5.5.3 Proactive command log</h4>
-	<p class="text-sm mb-2">Chronological list of fetched proactive commands. Each row shows the elapsed time, type code, name, and a decoded qualifier (for commands that have one). Commands with response data show a <code class="font-mono text-sm">Response:</code> line with the TERMINAL RESPONSE bytes (boilerplate TLVs stripped); PROVIDE LOCAL INFORMATION responses are decoded using the PLI data dictionary decoders.</p>
 
-	<h4 id="pli-dict" class="font-medium mb-1">5.5.4 PROVIDE LOCAL INFORMATION data dictionary</h4>
-	<p class="text-sm mb-2">Editable hex values for all 22 PLI qualifiers (TS 102 223 &sect;8.6 + TS 131 111). Ten qualifiers have inline decode/encode forms:</p>
-	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
-		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
-		<li><strong>01</strong> IMEI &middot; <strong>03</strong> Date/Time/TZ &middot; <strong>04</strong> Language &middot; <strong>05</strong> Timing Advance</li>
-		<li><strong>06</strong> Access Technology &middot; <strong>08</strong> IMEISV &middot; <strong>09</strong> Search Mode</li>
-		<li><strong>0A</strong> Battery &middot; <strong>0E</strong> Multiple Access Technologies</li>
-	</ul>
-	<p class="text-sm mb-3">Values persist server-side until restart. When the card issues PLI, the server injects the dictionary values into the TERMINAL RESPONSE.</p>
 
-	<h4 id="status-polling" class="font-medium mb-1">5.5.5 STATUS polling</h4>
-	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s, <code class="font-mono text-sm">0</code> disables polling) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
-
-	<h3 id="profiler" class="text-lg font-medium mb-2">5.6 Profiler</h3>
+<section class="mb-10">
+	<h2 id="profiler" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Profiler</h2>
 	<p class="text-sm mb-2">Verifies that a card matches a named <strong>profile</strong> — an ordered set of rules describing the expected file system and (optionally) file contents. Profiles are stored in <code class="font-mono text-sm">localStorage</code>.</p>
 	<h4 class="font-medium mb-1">Profile list</h4>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
@@ -395,48 +403,49 @@
 		<li><strong>Compare snapshots</strong> compares two snapshots offline, exactly like a profile check: pick the <em>master</em> snapshot and the <em>snapshot to check</em>, optionally masking the first 4 bytes of EF.IMSI/EF.ICCID (on by default), and get the same pass/fail report. Files present only in the checked snapshot are reported as extra files. Back to list returns to the Card snapshots tab.</li>
 	</ul>
 
-<h3 id="usage-scenarios" class="text-lg font-medium mb-2">5.7 Usage scenarios</h3>
-
-	<h4 id="scenario-a" class="font-medium mb-1">Scenario A &mdash; Working with files not in pySim&rsquo;s model (Custom files)</h4>
-	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
-		<li>Obtain the FID of the target file (vendor documentation or ATR/file-system analysis; such files are often not in public specs).</li>
-		<li>Open the <strong>Card reader</strong> tab &rarr; <strong>Custom files</strong> sub-tab.</li>
-		<li>Enter the full path (e.g. <code class="font-mono text-sm">3F00/7F20/6F46</code>) and an alias (e.g. <code class="font-mono text-sm">EF.SPN</code>).</li>
-		<li>Click <strong>Add</strong> — the file appears in the tree in italics (unverified).</li>
-		<li>Click the file to verify existence; on success (<code class="font-mono text-sm">9000</code>) it behaves like a normal file.</li>
-		<li>Read, edit and save hex data; toggle Raw/Decoded views.</li>
-		<li>Export the custom-file list as JSON to share with other machines.</li>
-	</ol>
-
-	<h4 id="scenario-b" class="font-medium mb-1">Scenario B &mdash; Simulating a real network environment for SIM testing</h4>
-	<p class="text-sm mb-1"><strong>B.1 Answer PROVIDE LOCAL INFORMATION (PLI)</strong></p>
-	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
-		<li>Open <strong>Proactive UICC</strong> &rarr; <strong>PROVIDE LOCAL INFORMATION response data</strong>.</li>
-		<li>Use the decode/encode forms to set IMEI (<code class="font-mono text-sm">01</code>), Location Info (<code class="font-mono text-sm">00</code>), Access Technology (<code class="font-mono text-sm">06</code>), etc.</li>
-		<li>Click <strong>Save</strong> — values persist server-side.</li>
-		<li>Enable <strong>Polling</strong> (interval 30&nbsp;s) so the card issues PLI periodically.</li>
-		<li>The server injects the dictionary values into each TERMINAL RESPONSE.</li>
-		<li>Verify in the proactive log: the PLI entry shows the decoded response.</li>
-	</ol>
-	<p class="text-sm mb-1"><strong>B.2 Simulate network actions via ENVELOPE (event download)</strong></p>
-	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
-		<li>Check the <strong>subscribed events</strong> list (from SET UP EVENT LIST).</li>
-		<li>Click <strong>Send</strong> on an event (e.g. Location Status) and fill the form; an <code class="font-mono text-sm">ENVELOPE(Event Download)</code> is sent.</li>
-		<li>For <strong>Network Rejection</strong>, select registration type &rarr; location fields &rarr; access technology &rarr; rejection cause.</li>
-		<li>The card may respond with a proactive command, which the chain handler logs and answers automatically.</li>
-	</ol>
-	<p class="text-sm mb-1"><strong>B.3 Verify the simulated environment</strong></p>
-	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
-		<li>The proactive command log shows the full round-trip (command + TERMINAL RESPONSE bytes).</li>
-		<li>The STATUS button / auto-polling keep the CAT session alive (drain loop).</li>
-	</ul>
+</section>
 
 
 <section class="mb-10">
-	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Server installation</h2>
-	<p class="mb-3">Live card operations (Card reader tab, Proactive UICC, OTA delivery) require the local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — a small HTTP server bundled with OTAMan that wraps pySim, talks to the reader over PC/SC or serial, and also serves the PWA itself (open <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
+	<h2 id="proactive-uicc" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Phone simulator</h2>
+	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session: the STK menu, subscribed events, the proactive command log, the PROVIDE LOCAL INFORMATION data dictionary, and STATUS polling.</p>
 
-	<h3 id="prerequisites" class="text-lg font-medium mb-2">6.1 Prerequisites</h3>
+	<h3 id="stk-menu" class="text-lg font-medium mb-2">STK menu</h3>
+	<p class="text-sm mb-3">When the card has issued a SET UP MENU command, a &ldquo;STK menu&rdquo; block appears at the top of this view with an emerald <strong>STK: &lt;title&gt;</strong> button that opens the menu overlay (same as the card&rsquo;s STK menu browser). If the card has not set up a menu, the block shows &ldquo;No menu set by the card&rdquo; instead. The menu state is refreshed each time the view is opened. User-interactive proactive commands always get a TERMINAL RESPONSE: the overlay pauses for your choice, and if you neither answer nor press <strong>Timeout</strong>, the server answers with a timeout result after the <code class="font-mono text-sm">--menu-timeout</code> seconds (default 60, <code class="font-mono text-sm">0</code> disables).</p>
+
+	<h3 id="subscribed-events" class="text-lg font-medium mb-2">6.2 Subscribed events (SET UP EVENT LIST)</h3>
+	<p class="text-sm mb-2">The events the card monitors. Each event has a <strong>Send</strong> button that opens a form specific to the event type:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>No-data events</strong> (User Activity, Idle Screen, Data Available, &hellip;) — one-click notification</li>
+		<li><strong>Location Status</strong> — dropdown: Normal / Limited / No service (tag <code class="font-mono text-sm">9B</code>)</li>
+		<li><strong>Access Technology Change</strong> — 13 RAT types (tag <code class="font-mono text-sm">BF</code>)</li>
+		<li><strong>Network Rejection</strong> — full adaptive form: registration type (LU / GPRS / EPS / 5GS), location fields (MCC, MNC, LAC, RAC, TAC), access technology, and a 53-cause unified rejection cause dropdown covering EMM, GMM, 5GMM and LU causes</li>
+	</ul>
+	<p class="text-sm mb-3">Sending an event uses <code class="font-mono text-sm">ENVELOPE(Event Download)</code> per TS 102 223 / TS 131 111.</p>
+
+	<h3 id="proactive-log" class="text-lg font-medium mb-2">6.3 Proactive command log</h3>
+	<p class="text-sm mb-2">Chronological list of fetched proactive commands. Each row shows the elapsed time, type code, name, and a decoded qualifier (for commands that have one). Commands with response data show a <code class="font-mono text-sm">Response:</code> line with the TERMINAL RESPONSE bytes (boilerplate TLVs stripped); PROVIDE LOCAL INFORMATION responses are decoded using the PLI data dictionary decoders.</p>
+
+	<h3 id="pli-dict" class="text-lg font-medium mb-2">6.4 PROVIDE LOCAL INFORMATION data dictionary</h3>
+	<p class="text-sm mb-2">Editable hex values for all 22 PLI qualifiers (TS 102 223 &sect;8.6 + TS 131 111). Ten qualifiers have inline decode/encode forms:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
+		<li><strong>01</strong> IMEI &middot; <strong>03</strong> Date/Time/TZ &middot; <strong>04</strong> Language &middot; <strong>05</strong> Timing Advance</li>
+		<li><strong>06</strong> Access Technology &middot; <strong>08</strong> IMEISV &middot; <strong>09</strong> Search Mode</li>
+		<li><strong>0A</strong> Battery &middot; <strong>0E</strong> Multiple Access Technologies</li>
+	</ul>
+	<p class="text-sm mb-3">Values persist server-side until restart. When the card issues PLI, the server injects the dictionary values into the TERMINAL RESPONSE.</p>
+
+	<h3 id="status-polling" class="text-lg font-medium mb-2">6.5 STATUS polling</h3>
+	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s, <code class="font-mono text-sm">0</code> disables polling) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
+
+</section>
+
+<section class="mb-10">
+	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Server installation</h2>
+	<p class="mb-3">Live card operations (Card reader tab, Phone simulator, OTA delivery) require the local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — a small HTTP server bundled with OTAMan that wraps pySim, talks to the reader over PC/SC or serial, and also serves the PWA itself (open <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
+
+	<h3 id="prerequisites" class="text-lg font-medium mb-2">7.1 Prerequisites</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Python 3.8+</strong> with <code class="font-mono text-sm">pip</code></li>
 		<li><strong>Git</strong></li>
@@ -444,20 +453,20 @@
 		<li><strong>Windows only</strong> — use <strong>Python 3.10&ndash;3.13</strong> (3.13 recommended): <code class="font-mono text-sm">pyscard</code> (the PC/SC driver wrapper) ships precompiled wheels for these versions. On Python 3.9 / 3.14 pip builds <code class="font-mono text-sm">pyscard</code> from source, which requires Microsoft C++ Build Tools (&ldquo;Desktop development with C++&rdquo;). The SMPP bridge (<code class="font-mono text-sm">smpp.twisted3</code>) is intentionally not installed on Windows, so no C++ Build Tools are needed for Python 3.10&ndash;3.13.</li>
 	</ul>
 
-	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">6.2 Quick start — Linux / macOS</h3>
+	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Quick start — Linux / macOS</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 chmod +x setup.sh start.sh
 ./setup.sh          # creates .venv, installs pysim + server (run once)
 ./start.sh          # starts the server (serves PWA + API, auto-detects reader)</pre>
 
-	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">6.3 Quick start — Windows</h3>
+	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">7.3 Quick start — Windows</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 setup.bat           # creates .venv, installs pysim + server (run once)
 start.bat           # starts the server (serves PWA + API)</pre>
 
-	<h3 id="helper-scripts" class="text-lg font-medium mb-2">6.4 Helper scripts</h3>
+	<h3 id="helper-scripts" class="text-lg font-medium mb-2">7.4 Helper scripts</h3>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Script</th><th class="text-left py-1 px-2">Purpose</th></tr></thead>
 		<tbody>
@@ -466,7 +475,7 @@ start.bat           # starts the server (serves PWA + API)</pre>
 		</tbody>
 	</table>
 
-	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">6.5 Reader auto-detection</h3>
+	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">7.5 Reader auto-detection</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>PC/SC (Linux)</strong> — <code class="font-mono text-sm">start.sh</code> passes <code class="font-mono text-sm">-p 0</code> when the <code class="font-mono text-sm">pcscd</code> daemon is running</li>
 		<li><strong>PC/SC (Windows)</strong> — <code class="font-mono text-sm">start.bat</code> always uses <code class="font-mono text-sm">-p 0</code> (PC/SC is built into Windows)</li>
@@ -475,7 +484,7 @@ start.bat           # starts the server (serves PWA + API)</pre>
 	</ul>
 	<p class="text-sm mb-3">If no card is present, the Card reader tab shows &ldquo;No card detected&rdquo;. Insert the card and click <strong>Equip card</strong> to initialize it.</p>
 
-	<h3 id="manual-install" class="text-lg font-medium mb-2">6.6 Manual installation</h3>
+	<h3 id="manual-install" class="text-lg font-medium mb-2">7.6 Manual installation</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3"># Create and activate a venv
 python3 -m venv .venv
 source .venv/bin/activate   # Linux/macOS
@@ -494,7 +503,7 @@ pysim-otaman-server --http-port 8080</pre>
 
 
 <section class="mb-10">
-	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Version compatibility</h2>
+	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">8. Version compatibility</h2>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (OTAMan)</th><th class="text-left py-1 px-2">Server</th><th class="text-left py-1 px-2">Status</th></tr></thead>
 		<tbody>
