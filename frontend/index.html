@@ -20,7 +20,10 @@
 	<div class="flex items-center justify-between mb-3">
 		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.0.0</span></h1>
 		<div class="flex items-center gap-4">
-			<span id="state-indicator" class="text-xs text-gray-400" title="">●</span>
+			<span id="state-indicator" class="flex items-center" title="Connecting...">
+				<span id="state-indicator-dot" class="text-xs text-gray-400">●</span>
+				<img id="state-indicator-img" class="hidden dark:invert" style="width:18px;height:18px" alt="" src="nosim.svg">
+			</span>
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
 			<a id="help-link" href="help.html" target="_blank" rel="noopener" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300" data-l10n="help">help</a>
@@ -4377,6 +4380,7 @@ async function pysimFetch(path, body) {
 // ===== UI availability (server / card) =====
 let _pysimServerAvailable = null;  // null until probed
 let _pysimCardEquipped = false;
+let _pysimEquipping = false;
 let _pysimAvailabilityTimer = null;
 
 function pysimAvailabilityState() {
@@ -4396,16 +4400,23 @@ function pysimNeedsHint(needs, state) {
 
 function pysimUpdateStateIndicator() {
 	const el = document.getElementById('state-indicator');
-	if (!el) return;
-	const state = pysimAvailabilityState();
-	const entry = {
-		'server-down': ['text-red-500', t('No server connection')],
-		'no-card': ['text-yellow-600', t('Server connected, no card equipped')],
-		'card': ['text-emerald-600', t('Card equipped')],
-	}[state];
-	['text-red-500', 'text-yellow-600', 'text-emerald-600', 'text-gray-400'].forEach(c => el.classList.remove(c));
-	el.classList.add(entry[0]);
-	el.setAttribute('title', entry[1]);
+	const dot = document.getElementById('state-indicator-dot');
+	const img = document.getElementById('state-indicator-img');
+	if (!el || !dot || !img) return;
+	if (_pysimServerAvailable === true) {
+		const state = pysimAvailabilityState();
+		dot.classList.add('hidden');
+		img.classList.remove('hidden');
+		img.src = _pysimEquipping ? 'sim_anim.svg' : (state === 'card' ? 'sim.svg' : 'nosim.svg');
+		el.setAttribute('title', _pysimEquipping ? t('Card inserted — initializing...')
+			: (state === 'card' ? t('Card equipped') : t('Server connected, no card equipped')));
+	} else {
+		img.classList.add('hidden');
+		dot.classList.remove('hidden');
+		dot.classList.remove('text-red-500', 'text-gray-400');
+		dot.classList.add(_pysimServerAvailable === false ? 'text-red-500' : 'text-gray-400');
+		el.setAttribute('title', _pysimServerAvailable === false ? t('No server connection') : t('Connecting...'));
+	}
 }
 
 function pysimApplyAvailability() {
@@ -6614,6 +6625,7 @@ function pysimCardStateUpdate(status) {
 	if (!status || typeof status.connected !== 'boolean') return;
 	_pysimServerAvailable = true;
 	_pysimCardEquipped = !!status.connected;
+	_pysimEquipping = !!status.equipping;
 	pysimApplyAvailability();
 	const key = [status.connected, !!status.card_present, !!status.equipping, !!status.auto_equip, status.card_session].join('|');
 	if (key === _pysimCardStateKey) return;
