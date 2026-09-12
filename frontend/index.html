@@ -6137,8 +6137,7 @@ function pysimFsInfoHtml(sel) {
 	let html = '';
 	if (attrs.length) html += '<div class="text-xs font-mono text-gray-500 dark:text-slate-400">' + attrs.join(' · ') + '</div>';
 	if (sel.fci_hex) {
-		html += '<div class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">' + esc(t('Decoded FCI')) + '</div>';
-		html += '<div class="text-xs font-mono leading-relaxed text-gray-600 dark:text-slate-400 break-all">' + profilerFciPreviewItems(sel.fci_hex) + '</div>';
+		html += '<div class="text-xs font-mono leading-relaxed text-gray-600 dark:text-slate-400 break-all mt-0.5">' + profilerFciPreviewItems(sel.fci_hex) + '</div>';
 	}
 	return html;
 }

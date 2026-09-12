@@ -707,7 +707,7 @@ test('pysimFsInfoHtml shows FID, type, size and the decoded FCI', () => {
 	assert.ok(out.includes('Size: 75'), out);
 	assert.ok(out.includes('Record length: 15'), out);
 	assert.ok(out.includes('Record count: 5'), out);
-	assert.ok(out.includes('Decoded FCI'), out);
+	assert.ok(!out.includes('Decoded FCI'), out);
 	assert.ok(out.includes('File descriptor'), out);
 	assert.ok(out.includes('75 bytes'), out);
 	delete global.t;
