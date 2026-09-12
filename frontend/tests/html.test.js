@@ -41,3 +41,10 @@ test('scan name input starts scanning on Enter', () => {
 test('snapshot view has a timing summary block', () => {
     assert.ok(html.includes('id="snapshot-summary"'));
 });
+
+test('header state indicator and profiler custom-files tab', () => {
+    assert.ok(html.includes('id="state-indicator"'));
+    assert.ok(html.includes('id="profiler-list-custom"'));
+    assert.ok(html.includes('data-list-tab="custom"'));
+    assert.ok(!html.includes('data-pysim-sub="custom"'));
+});

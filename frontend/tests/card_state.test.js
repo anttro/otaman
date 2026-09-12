@@ -21,8 +21,11 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-let code = 'var _pysimCardStateKey = null;\nvar _pysimCardSession = null;\n';
+let code = 'var _pysimCardStateKey = null;\nvar _pysimCardSession = null;\n'
+	+ 'var _pysimServerAvailable = null;\nvar _pysimCardEquipped = false;\n';
 code += extractFunc(html, 'pysimCardStateUpdate') + '\n';
+code += extractFunc(html, 'pysimAvailabilityState') + '\n';
+code += extractFunc(html, 'pysimControlDisabled') + '\n';
 code += '\nglobalThis.esc = s => s;\n';
 code += 'globalThis.t = s => s;\n';
 eval(code);
@@ -32,9 +35,10 @@ function setup() {
 	const calls = { connected: [], resets: [], refreshStatus: [] };
 	_pysimCardStateKey = null;
 	_pysimCardSession = null;
-	globalThis.document = { getElementById: () => el };
+	globalThis.document = { getElementById: () => el, querySelectorAll: () => [] };
 	globalThis.pysimSetConnected = v => calls.connected.push(v);
 	globalThis.pysimResetCardData = refresh => calls.resets.push(refresh);
+	globalThis.pysimApplyAvailability = () => {};
 	return { el, calls };
 }
 
@@ -97,4 +101,22 @@ test('payload without connected flag is ignored', () => {
 	pysimCardStateUpdate({ reader: 'x' });
 	pysimCardStateUpdate(null);
 	assert.deepStrictEqual(calls.connected, []);
+});
+
+test('availability state and control gating follow server/card state', () => {
+	_pysimServerAvailable = null;
+	assert.strictEqual(pysimAvailabilityState(), 'server-down');
+	assert.strictEqual(pysimControlDisabled('server', 'server-down'), true);
+	assert.strictEqual(pysimControlDisabled('card', 'server-down'), true);
+
+	_pysimServerAvailable = true;
+	_pysimCardEquipped = false;
+	assert.strictEqual(pysimAvailabilityState(), 'no-card');
+	assert.strictEqual(pysimControlDisabled('server', 'no-card'), false);
+	assert.strictEqual(pysimControlDisabled('card', 'no-card'), true);
+
+	_pysimCardEquipped = true;
+	assert.strictEqual(pysimAvailabilityState(), 'card');
+	assert.strictEqual(pysimControlDisabled('card', 'card'), false);
+	assert.strictEqual(pysimControlDisabled('server', 'card'), false);
 });

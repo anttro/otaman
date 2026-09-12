@@ -44,7 +44,7 @@
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Header</strong> — the app version, an <strong>INSTALL PWA</strong> button (shown when the browser offers installation, enabling offline use), links to the project on GitHub and to this help, an <strong>EN/RU</strong> language toggle, and a dark/light <strong>theme</strong> toggle.</li>
 		<li>Language and theme choices are stored in <code class="font-mono text-sm">localStorage</code> and persist across reloads.</li>
-		<li>Top-level tabs: <strong>Remote APDU</strong> (<strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong>, <strong>C-APDU Parser</strong>, <strong>Response parser</strong>), <strong>SCP80</strong> (<strong>Secured Packet</strong>, <strong>Cards</strong>, <strong>RAM</strong>), <strong>Card reader</strong> (<strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>), <strong>Profiler</strong>, and <strong>Phone simulator</strong>.</li>
+		<li>Top-level tabs: <strong>Remote APDU</strong> (<strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong>, <strong>C-APDU Parser</strong>, <strong>Response parser</strong>), <strong>SCP80</strong> (<strong>Secured Packet</strong>, <strong>Cards</strong>, <strong>RAM</strong>), <strong>Card reader</strong> (<strong>File manager</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>), <strong>Profiler</strong> (list tabs <strong>Profiles</strong>, <strong>Card snapshots</strong>, <strong>Custom files</strong>), and <strong>Phone simulator</strong>.</li>
 		<li>The <strong>help</strong> link opens this documentation at the section matching the current view (e.g. the Profiler tab opens &sect;5).</li>
 	</ul>
 
@@ -314,7 +314,7 @@
 
 <section class="mb-10">
 	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Card reader (pySim) tab</h2>
-	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations: enter the server URL (default <code class="font-mono text-sm">http://127.0.0.1:8080</code>) and press <strong>Connect</strong>. The status area shows the reader/card state, and <strong>Equip card</strong> (re)initializes the card after insertion. Sub-tabs: <strong>File manager</strong>, <strong>Custom files</strong>, <strong>pySim command line</strong>, and <strong>Raw APDU</strong>. The <strong>Profiler</strong> and <strong>Phone simulator</strong> are separate top-level tabs.</p>
+	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations: enter the server URL (default <code class="font-mono text-sm">http://127.0.0.1:8080</code>) and press <strong>Connect</strong>. The status area shows the reader/card state, and <strong>Equip card</strong> (re)initializes the card after insertion. Sub-tabs: <strong>File manager</strong>, <strong>pySim command line</strong>, and <strong>Raw APDU</strong>. The <strong>Profiler</strong> and <strong>Phone simulator</strong> are separate top-level tabs.</p>
 
 	<h3 id="file-manager" class="text-lg font-medium mb-2">4.1 File manager</h3>
 	<p class="text-sm mb-2">The file system tree is displayed on the left; selecting a file opens its detail pane on the right.</p>
@@ -324,16 +324,13 @@
 		<li><strong>Raw / Decoded</strong> — toggle between hex dump and pySim-decoded JSON</li>
 	</ul>
 
-	<h3 id="custom-files" class="text-lg font-medium mb-2">4.2 Custom files</h3>
-	<p class="text-sm mb-3">Add files that pySim&rsquo;s model does not cover: enter the full path (e.g. <code class="font-mono text-sm">3F00/7F20/6F46</code>) and an alias (e.g. <code class="font-mono text-sm">EF.SPN</code>), then press <strong>Add</strong>; added files appear in the File manager tree. The list persists in <code class="font-mono text-sm">localStorage</code> and can be shared with <strong>Export as JSON</strong> / <strong>Export to file</strong> and restored with <strong>Import from file</strong> / <strong>Paste &amp; import</strong> / <strong>Import JSON from clipboard</strong>.</p>
-
-	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">4.3 pySim command line</h3>
+	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">4.2 pySim command line</h3>
 	<p class="text-sm mb-3">Execute any pySim-shell command with usage hints (300&nbsp;ms) and autocomplete.</p>
 
-	<h3 id="raw-apdu" class="text-lg font-medium mb-2">4.4 Raw APDU</h3>
+	<h3 id="raw-apdu" class="text-lg font-medium mb-2">4.3 Raw APDU</h3>
 	<p class="text-sm mb-3">Send an arbitrary APDU and view the raw response.</p>
 
-<h3 id="usage-scenarios" class="text-lg font-medium mb-2">4.5 Usage scenarios</h3>
+<h3 id="usage-scenarios" class="text-lg font-medium mb-2">4.4 Usage scenarios</h3>
 
 	<h4 id="scenario-a" class="font-medium mb-1">Scenario A &mdash; Working with files not in pySim&rsquo;s model (Custom files)</h4>
 	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
@@ -405,6 +402,10 @@
 
 </section>
 
+
+
+		<h4 id="custom-files" class="font-medium mb-1">Custom files</h4>
+	<p class="text-sm mb-3">Add files that pySim&rsquo;s model does not cover: enter the full path (e.g. <code class="font-mono text-sm">3F00/7F20/6F46</code>) and an alias (e.g. <code class="font-mono text-sm">EF.SPN</code>), then press <strong>Add</strong>; added files appear in the File manager tree. The list persists in <code class="font-mono text-sm">localStorage</code> and can be shared with <strong>Export as JSON</strong> / <strong>Export to file</strong> and restored with <strong>Import from file</strong> / <strong>Paste &amp; import</strong> / <strong>Import JSON from clipboard</strong>.</p>
 
 <section class="mb-10">
 	<h2 id="proactive-uicc" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Phone simulator</h2>

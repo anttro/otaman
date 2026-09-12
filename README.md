@@ -31,7 +31,7 @@ npm run build
 
 ## Interface
 
-Five top-level tabs: **Remote APDU**, **SCP80**, **Card reader**, **Profiler**, and **Phone simulator**. **Remote APDU** and **SCP80** use pill sub-tabs; the Card reader tab has four sub-tabs: **File manager**, **Custom files**, **pySim command line**, and **Raw APDU**.
+Five top-level tabs: **Remote APDU**, **SCP80**, **Card reader**, **Profiler**, and **Phone simulator**. **Remote APDU** and **SCP80** use pill sub-tabs; the Card reader tab has three sub-tabs: **File manager**, **pySim command line**, and **Raw APDU**; the Profiler tab lists **Profiles**, **Card snapshots**, and **Custom files**.
 
 ---
 
@@ -490,17 +490,6 @@ Browse the UICC filesystem in a tree view. Files are shown with names, FIDs, and
 - **Edit** — switch to edit mode, modify hex data, click **Save** to write back
 - **Raw / Decoded** — toggle between hex dump and pysim-decoded JSON view
 
-### Custom Files
-
-Files not in pysim's model can be added manually:
-
-1. Switch to the **Custom files** sub-tab
-2. Enter the file path (e.g., `3F00/6F46`) and an alias (e.g., `EF.SPN`)
-3. Click **Add** — the file appears in the tree in italics (unverified)
-4. Click the file to verify existence — on success, it behaves like a model file
-
-Custom files persist in `localStorage` across sessions. Export/import as JSON for sharing.
-
 ### Command Hints
 
 Type a command name in the **pySim command line** input. Usage hints appear as a tooltip after 300ms. Command autocomplete suggestions appear above the input.
@@ -539,6 +528,18 @@ The list view has two tabs — **Profiles** and **Card snapshots**. A snapshot i
 ---
 
 ---
+
+
+#### Custom files
+
+Files not in pysim's model can be added manually:
+
+1. Switch to the **Custom files** tab in the Profiler list
+2. Enter the file path (e.g., `3F00/6F46`) and an alias (e.g., `EF.SPN`)
+3. Click **Add** — the file appears in the tree in italics (unverified)
+4. Click the file to verify existence — on success, it behaves like a model file
+
+Custom files persist in `localStorage` across sessions. Export/import as JSON for sharing.
 
 ## Phone simulator
 
