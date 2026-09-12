@@ -98,7 +98,12 @@ def main():
         scc._tp.proactive_handler = _DefaultProactiveHandler()
         t_phase = time.time()
         if opts.fast_init:
-            rs, card = fastinit.init_card_fast(sl, opts.skip_card_init, wait=True)
+            try:
+                rs, card = fastinit.init_card_fast(sl, opts.skip_card_init, wait=True)
+            except Exception:
+                print("Warning: fast card initialization failed, falling back to pysim init:", file=sys.stderr)
+                traceback.print_exc()
+                rs, card = mod.init_card(sl, opts.skip_card_init)
         else:
             sl.wait_for_card(3)
             rs, card = mod.init_card(sl, opts.skip_card_init)
@@ -118,7 +123,7 @@ def main():
     _tlog('pysim_app: %.0fms' % ((time.time() - t_phase) * 1000))
     if app is not None and opts.fast_init:
         fastinit.install(app)
-    if scc and hasattr(scc, '_tp'):
+    if scc and card is not None and hasattr(scc, '_tp'):
         scc._tp.apdu_tracer = _LoggingApduTracer()
         try:
             _init_proactive_session()
@@ -137,6 +142,8 @@ def main():
             _tlog('terminal_profile_drain: %.0fms' % ((time.time() - t_phase) * 1000))
         except Exception:
             traceback.print_exc(file=sys.stderr)
+    elif scc is not None:
+        sys.stderr.write('INIT: card not initialized — use Equip once the card is readable\n')
     if app is not None and opts.apdu_trace:
         # PysimApp.__init__ routes PySimLogger through app.poutput() (app.stdout)
         # and drops the root level to INFO. Re-route pysim's own APDU trace logging

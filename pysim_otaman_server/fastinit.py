@@ -15,10 +15,11 @@ keep a real reconnect/physical reset.
 """
 
 import operator
+import sys
 
 from pySim.cards import CardBase, SimCardBase, UiccCardBase, card_detect
 from pySim.commands import SimCardCommands
-from pySim.exceptions import SwMatchError
+from pySim.exceptions import ProtocolError, SwMatchError
 from pySim.filesystem import CardApplication, CardModel
 from pySim.profile import CardProfile
 from pySim.runtime import RuntimeState
@@ -35,7 +36,11 @@ class FastRuntimeState(RuntimeState):
     of power-cycling the card. Use hard_reset() for an explicit reset."""
 
     def reset(self, cmd_app=None):
-        return self.soft_reset(cmd_app)
+        try:
+            return self.soft_reset(cmd_app)
+        except (SwMatchError, ProtocolError) as e:
+            sys.stderr.write('FAST-RESET: soft reset failed (%s), falling back to physical reset\n' % e)
+            return self.hard_reset(cmd_app)
 
     def soft_reset(self, cmd_app=None):
         for lchan_nr in list(self.lchan.keys()):
@@ -79,7 +84,18 @@ def init_card_fast(sl, skip_card_init=False, wait=True):
     """Replacement for pySim.app.init_card() that avoids redundant resets.
 
     ``wait`` performs the single disconnect/connect of this init (explicit
-    equip passes True; startup already connects via wait_for_card)."""
+    equip passes True; startup already connects via wait_for_card). If probing
+    leaves the card in a state the software reset cannot clear, retry once
+    after a physical reset."""
+    try:
+        return _init_card_once(sl, skip_card_init, wait)
+    except (SwMatchError, ProtocolError) as e:
+        sys.stderr.write('FAST-INIT: %s; retrying after physical reset\n' % e)
+        sl.reset_card()
+        return _init_card_once(sl, skip_card_init, wait=False)
+
+
+def _init_card_once(sl, skip_card_init, wait):
     scc = SimCardCommands(transport=sl)
     if wait:
         sl.wait_for_card(3)
@@ -127,10 +143,9 @@ def init_card_fast(sl, skip_card_init=False, wait=True):
 
 
 def do_equip_fast(app):
-    """Explicit equip: one real reconnect (wait_for_card) then reset-free init."""
-    if app.rs and app.rs.profile:
-        for cmd_set in app.rs.profile.shell_cmdsets:
-            app.unregister_command_set(cmd_set)
+    """Explicit equip: one real reconnect (wait_for_card) then reset-free init.
+    PysimApp.equip() unregisters the old command sets itself after the new init
+    succeeds, so a failed init leaves the previous card state intact."""
     rs, card = init_card_fast(app.sl, wait=True)
     app.equip(card, rs)
 
