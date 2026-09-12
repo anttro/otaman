@@ -143,7 +143,7 @@ The SPI2 `por_in_submit` bit (0x20) selects submit-mode PoR.
 
 ### `POST /api/ram-install`
 
-Install a Java Card `.cap` file on the card via GlobalPlatform commands (INSTALL[for load] → LOAD ×N → INSTALL[for install (+ make selectable)]) wrapped in SCP80 secured packets. Each step is sent via ENVELOPE and its PoR is checked; the sequence aborts on the first PoR error. Requires pySim with `pySim.javacard.CapFile` and `pySim.global_platform` available on the server.
+Install a Java Card `.cap` file on the card via GlobalPlatform commands (INSTALL[for load] → LOAD ×N → INSTALL[for install (+ make selectable)]) wrapped in SCP80 secured packets. Each step is sent via ENVELOPE and its PoR is checked; the sequence aborts on the first PoR error. The `.cap` archive (a ZIP of nested components) is parsed server-side in `_cap_parse`; no external tooling is required.
 
 **Request body:**
 ```json
