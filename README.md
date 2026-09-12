@@ -490,6 +490,8 @@ Browse the UICC filesystem in a tree view. Files are shown with names, FIDs, and
 - **Read** — reads the selected file (auto-detects transparent vs record files)
 - **Edit** — switch to edit mode, modify hex data, click **Save** to write back
 - **Raw / Decoded** — toggle between hex dump and pysim-decoded JSON view
+- Missing files are shown in red (✗); a present but empty DF shows `(empty)`
+- **Probe all files** — walks the whole tree (incl. custom files), marks every entry present/absent with *N / total* progress, stoppable, and ends with a summary; browsing itself stays lazy
 
 ### Command Hints
 

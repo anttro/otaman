@@ -2184,7 +2184,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 sys.stderr.write('Handler error: %s\n' % e)
                 if 'Card' in str(e) or 'Transaction' in str(e) or 'Transmit' in str(e):
                     _handle_card_disconnect()
-                err = {'success': False, 'error': str(e)}
+                err = {'success': False, 'error': str(e), 'exists': False}
                 self._send_json(err, 500)
                 self._log_resp(err)
         elif self.path == '/api/menu-select':

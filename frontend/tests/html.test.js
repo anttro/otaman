@@ -61,3 +61,10 @@ test('custom files form has add/save and cancel controls', () => {
     assert.ok(html.includes("event.key==='Enter')pysimCustomSubmit()"));
     assert.ok(!html.includes('pysimCustomAdd'));
 });
+
+test('file manager has a probe-all-files button and status line', () => {
+    assert.match(html, /id="pysim-fs-probe-btn"[^>]*data-needs="card"/);
+    assert.match(html, /id="pysim-fs-probe-btn"[^>]*data-l10n="Probe all files"/);
+    assert.ok(html.includes('onclick="pysimFsProbeAll()"'));
+    assert.ok(html.includes('id="pysim-fs-probe-status"'));
+});

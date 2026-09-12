@@ -860,6 +860,8 @@
 						<span class="pysim-fs-sort-pill px-2 py-0.5 rounded cursor-pointer bg-blue-600 text-white" data-fs-sort="fid" onclick="pysimFsSetSort('fid')">FID</span>
 						<span class="pysim-fs-sort-pill px-2 py-0.5 rounded cursor-pointer bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300" data-fs-sort="name" onclick="pysimFsSetSort('name')" data-l10n="Name">Name</span>
 					</div>
+					<button id="pysim-fs-probe-btn" data-needs="card" onclick="pysimFsProbeAll()" class="w-full mb-1 px-2 py-0.5 rounded bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Probe all files">Probe all files</button>
+					<div id="pysim-fs-probe-status" class="hidden mb-1 text-gray-500 dark:text-slate-400"></div>
 					<div id="pysim-fs-tree"></div>
 				</div>
 				<div class="flex-1">
@@ -5946,8 +5948,8 @@ async function pysimFsLoadChildren(node) {
 			body = { name: node.name, fid: node.fid };
 			data = await pysimFetch('/api/tree', body);
 		}
-		if (!data || data.exists === false) {
-			throw new Error('File not found');
+		if (!data || data.exists === false || data.success === false || data.error) {
+			throw new Error((data && data.error) || 'File not found');
 		}
 		node.children = (data.children || []).map(c => ({
 			name: c.name,
@@ -5966,6 +5968,86 @@ async function pysimFsLoadChildren(node) {
 		node.children = [];
 		pysimFsRenderTree();
 	}
+}
+
+let _pysimFsProbe = null;
+
+function pysimFsSelectBody(node) {
+	const body = { name: node.name, fid: node.fid };
+	const parentSel = getParentSel(node);
+	if (parentSel) body.parent_sel = parentSel;
+	return body;
+}
+
+function pysimFsProbeUi(text, stopLabel) {
+	const status = document.getElementById('pysim-fs-probe-status');
+	if (status) {
+		status.textContent = text;
+		status.classList.toggle('hidden', !text);
+	}
+	const btn = document.getElementById('pysim-fs-probe-btn');
+	if (btn) {
+		btn.textContent = stopLabel ? t('Stop') : t('Probe all files');
+		btn.setAttribute('data-l10n', stopLabel ? 'Stop' : 'Probe all files');
+	}
+}
+
+async function pysimFsProbeAll() {
+	if (_pysimFsProbe) { _pysimFsProbe.stop = true; return; }
+	if (!pysimFsTreeRoot) return;
+	const probe = { stop: false, dirs: 0, done: 0, total: 0, present: 0, absent: 0 };
+	_pysimFsProbe = probe;
+	const started = Date.now();
+	let error = null;
+	const count = exists => { if (exists) probe.present++; else probe.absent++; };
+	try {
+		if (!pysimFsTreeRoot.children) await pysimFsLoadChildren(pysimFsTreeRoot);
+		const discover = async node => {
+			for (const child of pysimFsSortChildren(node.children, pysimFsSort)) {
+				if (probe.stop) return;
+				if (!child.isDir) continue;
+				await pysimFsLoadChildren(child);
+				const exists = child.exists !== false;
+				probe.dirs++;
+				count(exists);
+				pysimFsRenderTree();
+				pysimFsProbeUi(t('Probing:') + ' ' + t('discovering') + ' (' + probe.dirs + ')', true);
+				if (exists) await discover(child);
+			}
+		};
+		await discover(pysimFsTreeRoot);
+		const files = [];
+		const collect = node => {
+			for (const child of (node.children || [])) {
+				if (child.isDir) { if (child.exists !== false) collect(child); }
+				else files.push(child);
+			}
+		};
+		collect(pysimFsTreeRoot);
+		probe.total = files.length + probe.dirs;
+		probe.done = probe.dirs;
+		for (const file of files) {
+			if (probe.stop) break;
+			const data = await pysimFetch('/api/select', pysimFsSelectBody(file));
+			const exists = !!(data && data.exists !== false && !data.error);
+			file.exists = exists;
+			if (!exists) file.children = [];
+			count(exists);
+			probe.done++;
+			pysimFsProbeUi(t('Probing:') + ' ' + probe.done + '/' + probe.total, true);
+			if (probe.done % 10 === 0 || probe.done === probe.total) pysimFsRenderTree();
+		}
+	} catch (e) {
+		error = (e && e.message) ? e.message : String(e);
+	}
+	pysimFsRenderTree();
+	const secs = ((Date.now() - started) / 1000).toFixed(1);
+	let summary = t('Probed:') + ' ' + probe.done + '/' + probe.total + ' ' + t('files') + ' — '
+		+ probe.present + ' ' + t('present') + ', ' + probe.absent + ' ' + t('absent') + ' (' + secs + 's)';
+	if (error) summary = t('Error') + ': ' + error + ' — ' + summary;
+	else if (probe.stop) summary = t('Stopped') + ' — ' + summary;
+	_pysimFsProbe = null;
+	pysimFsProbeUi(summary, false);
 }
 
 function pysimFsRenderTree() {
@@ -6004,8 +6086,12 @@ function pysimFsRenderNode(node, depth) {
 	}
 	html += '</div>';
 	if (isDir && node.children && node.expanded) {
-		for (const child of pysimFsSortChildren(node.children, pysimFsSort)) {
-			html += pysimFsRenderNode(child, depth + 1);
+		if (!node.children.length) {
+			html += '<div class="text-gray-400 dark:text-slate-500">' + pad + '&nbsp;&nbsp;&nbsp;&nbsp;' + esc(t('(empty)')) + '</div>';
+		} else {
+			for (const child of pysimFsSortChildren(node.children, pysimFsSort)) {
+				html += pysimFsRenderNode(child, depth + 1);
+			}
 		}
 	}
 	return html;
@@ -9147,6 +9233,17 @@ const LANG_RU = {
 	'Phone simulator': 'Симулятор телефона',
 	'Sort:': 'Сортировка:',
 	'Name': 'Имя',
+	'Probe all files': 'Проверить все файлы',
+	'Stop': 'Остановить',
+	'Probing:': 'Проверка:',
+	'discovering': 'поиск файлов',
+	'files': 'файлов',
+	'present': 'есть',
+	'absent': 'нет',
+	'Probed:': 'Проверено:',
+	'Stopped': 'Остановлено',
+	'(empty)': '(пусто)',
+	'Error': 'Ошибка',
 	'No server connection': 'Нет соединения с сервером',
 	'Server connected, no card equipped': 'Сервер подключён, карта не подключена',
 	'Card equipped': 'Карта подключена',
