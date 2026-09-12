@@ -408,9 +408,9 @@
 
 <section class="mb-10">
 	<h2 id="proactive-uicc" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Симулятор телефона</h2>
-	<p class="text-sm mb-3">Работа с сессией Card Application Toolkit: меню STK, подписанные события, журнал проактивных команд, словарь данных PROVIDE LOCAL INFORMATION и опрос STATUS.</p>
+	<p class="text-sm mb-3">Работа с сессией Card Application Toolkit. Две подвкладки: <strong>&laquo;Телефон&raquo;</strong> (меню STK, STATUS и опрос, подписанные события, журнал проактивных команд) и <strong>&laquo;Конфигурация TR&raquo;</strong> (данные ответов, подставляемые в TERMINAL RESPONSE для проактивных команд).</p>
 
-	<h3 id="stk-menu" class="text-lg font-medium mb-2">Меню STK</h3>
+	<h3 id="stk-menu" class="text-lg font-medium mb-2">6.1 Меню STK</h3>
 	<p class="text-sm mb-3">Если карта выдала команду SET UP MENU, вверху этого представления появляется блок &laquo;Меню STK&raquo; с изумрудной кнопкой <strong>STK: &lt;название&gt;</strong>, открывающей оверлей меню (браузер STK-меню карты). Если карта не задала меню, вместо кнопки показывается &laquo;Меню не задано картой&raquo;. Состояние меню обновляется при каждом открытии представления. Интерактивные проактивные команды всегда получают TERMINAL RESPONSE: оверлей ждёт вашего выбора, и если вы не ответили и не нажали <strong>Timeout</strong>, сервер сам отвечает результатом timeout через <code class="font-mono text-sm">--menu-timeout</code> секунд (по умолчанию 60, <code class="font-mono text-sm">0</code> отключает).</p>
 
 	<h3 id="subscribed-events" class="text-lg font-medium mb-2">6.2 Подписанные события (SET UP EVENT LIST)</h3>
@@ -426,7 +426,10 @@
 	<h3 id="proactive-log" class="text-lg font-medium mb-2">6.3 Журнал проактивных команд</h3>
 	<p class="text-sm mb-2">Хронологический список извлечённых проактивных команд. Каждая строка показывает время, код типа, имя и декодированный квалификатор (для команд, у которых он есть). Для команд с данными ответа показывается строка <code class="font-mono text-sm">Ответ:</code> с байтами TERMINAL RESPONSE (без служебных TLV); ответы PROVIDE LOCAL INFORMATION декодируются через словарь данных PLI.</p>
 
-	<h3 id="pli-dict" class="text-lg font-medium mb-2">6.4 Словарь данных PROVIDE LOCAL INFORMATION</h3>
+	<h3 id="status-polling" class="text-lg font-medium mb-2">6.4 Опрос STATUS</h3>
+	<p class="text-sm mb-3">Кнопка <strong>Отправить STATUS</strong> отправляет STATUS (F2) вручную. Переключатель <strong>Опрос</strong> включает фоновый опрос: после настраиваемого интервала бездействия (аргумент сервера <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;с, по умолчанию 30&nbsp;с, <code class="font-mono text-sm">0</code> отключает опрос) сервер отправляет STATUS и обрабатывает любую ожидающую проактивную команду. При извлечении карты опрос останавливается, а состояние карты сбрасывается.</p>
+
+	<h3 id="pli-dict" class="text-lg font-medium mb-2">6.5 &laquo;Конфигурация TR&raquo; &mdash; данные ответа PROVIDE LOCAL INFORMATION</h3>
 	<p class="text-sm mb-2">Редактируемые hex-значения для всех 22 квалификаторов PLI (TS 102 223 &sect;8.6 + TS 131 111). У десяти квалификаторов есть встроенные формы декодирования/кодирования:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
@@ -435,9 +438,6 @@
 		<li><strong>0A</strong> Battery &middot; <strong>0E</strong> Multiple Access Technologies</li>
 	</ul>
 	<p class="text-sm mb-3">Значения хранятся на сервере до перезапуска. Когда карта выдаёт PLI, сервер вставляет значения словаря в TERMINAL RESPONSE.</p>
-
-	<h3 id="status-polling" class="text-lg font-medium mb-2">6.5 Опрос STATUS</h3>
-	<p class="text-sm mb-3">Кнопка <strong>Отправить STATUS</strong> отправляет STATUS (F2) вручную. Переключатель <strong>Опрос</strong> включает фоновый опрос: после настраиваемого интервала бездействия (аргумент сервера <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;с, по умолчанию 30&nbsp;с, <code class="font-mono text-sm">0</code> отключает опрос) сервер отправляет STATUS и обрабатывает любую ожидающую проактивную команду. При извлечении карты опрос останавливается, а состояние карты сбрасывается.</p>
 
 </section>
 

@@ -542,7 +542,7 @@ The list view has two tabs — **Profiles** and **Card snapshots**. A snapshot i
 
 ## Phone simulator
 
-The **Phone simulator** tab provides real-time CAT session interaction:
+The **Phone simulator** tab provides real-time CAT session interaction. It has two pills: **Phone** (STK menu, STATUS and polling, subscribed events, proactive command log) and **TR Config** (response data injected into TERMINAL RESPONSEs for proactive commands).
 
 **Subscribed Events** — the card's SET UP EVENT LIST is displayed with per-event **Send** buttons. Clicking opens a form specific to the event type:
 
@@ -557,7 +557,7 @@ The **Phone simulator** tab provides real-time CAT session interaction:
 
 **Proactive Command Log** — chronological list of proactive commands encountered (seconds elapsed, type code, name, byte count). Covers SET UP MENU, SET UP EVENT LIST, POLL INTERVAL, DISPLAY TEXT, SELECT ITEM, and PROVIDE LOCAL INFORMATION.
 
-**PLI Data Dictionary** — editable per-qualifier hex values for all 22 PROVIDE LOCAL INFORMATION qualifiers (TS 102 223 + TS 131 111). 10 qualifiers have inline decode/encode forms (toggle):
+**TR Config: PLI data dictionary** — editable per-qualifier hex values for all 22 PROVIDE LOCAL INFORMATION qualifiers (TS 102 223 + TS 131 111). 10 qualifiers have inline decode/encode forms (toggle):
 
 | Code | Decoded fields |
 |------|--------------|

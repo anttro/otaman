@@ -26,3 +26,10 @@ test('profiler and phone simulator are top-level tab contents', () => {
     assert.ok(html.includes('id="tab-profiler" class="tab-content hidden"'));
     assert.ok(html.includes('id="tab-phone" class="tab-content hidden"'));
 });
+
+test('phone simulator has Phone / TR Config pills', () => {
+    assert.match(html, /data-phone-sub="phone" onclick="phoneSwitchSubtab\('phone'\)"/);
+    assert.match(html, /data-phone-sub="tr" onclick="phoneSwitchSubtab\('tr'\)"/);
+    assert.ok(html.includes('id="phone-sub-phone"'));
+    assert.ok(html.includes('id="phone-sub-tr"'));
+});

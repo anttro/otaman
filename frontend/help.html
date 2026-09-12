@@ -408,9 +408,9 @@
 
 <section class="mb-10">
 	<h2 id="proactive-uicc" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Phone simulator</h2>
-	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session: the STK menu, subscribed events, the proactive command log, the PROVIDE LOCAL INFORMATION data dictionary, and STATUS polling.</p>
+	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session. The view has two pills: <strong>Phone</strong> (STK menu, STATUS and polling, subscribed events, proactive command log) and <strong>TR Config</strong> (response data injected into TERMINAL RESPONSEs for proactive commands).</p>
 
-	<h3 id="stk-menu" class="text-lg font-medium mb-2">STK menu</h3>
+	<h3 id="stk-menu" class="text-lg font-medium mb-2">6.1 STK menu</h3>
 	<p class="text-sm mb-3">When the card has issued a SET UP MENU command, a &ldquo;STK menu&rdquo; block appears at the top of this view with an emerald <strong>STK: &lt;title&gt;</strong> button that opens the menu overlay (same as the card&rsquo;s STK menu browser). If the card has not set up a menu, the block shows &ldquo;No menu set by the card&rdquo; instead. The menu state is refreshed each time the view is opened. User-interactive proactive commands always get a TERMINAL RESPONSE: the overlay pauses for your choice, and if you neither answer nor press <strong>Timeout</strong>, the server answers with a timeout result after the <code class="font-mono text-sm">--menu-timeout</code> seconds (default 60, <code class="font-mono text-sm">0</code> disables).</p>
 
 	<h3 id="subscribed-events" class="text-lg font-medium mb-2">6.2 Subscribed events (SET UP EVENT LIST)</h3>
@@ -426,7 +426,10 @@
 	<h3 id="proactive-log" class="text-lg font-medium mb-2">6.3 Proactive command log</h3>
 	<p class="text-sm mb-2">Chronological list of fetched proactive commands. Each row shows the elapsed time, type code, name, and a decoded qualifier (for commands that have one). Commands with response data show a <code class="font-mono text-sm">Response:</code> line with the TERMINAL RESPONSE bytes (boilerplate TLVs stripped); PROVIDE LOCAL INFORMATION responses are decoded using the PLI data dictionary decoders.</p>
 
-	<h3 id="pli-dict" class="text-lg font-medium mb-2">6.4 PROVIDE LOCAL INFORMATION data dictionary</h3>
+	<h3 id="status-polling" class="text-lg font-medium mb-2">6.4 STATUS polling</h3>
+	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s, <code class="font-mono text-sm">0</code> disables polling) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
+
+	<h3 id="pli-dict" class="text-lg font-medium mb-2">6.5 TR Config &mdash; PROVIDE LOCAL INFORMATION response data</h3>
 	<p class="text-sm mb-2">Editable hex values for all 22 PLI qualifiers (TS 102 223 &sect;8.6 + TS 131 111). Ten qualifiers have inline decode/encode forms:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
@@ -435,9 +438,6 @@
 		<li><strong>0A</strong> Battery &middot; <strong>0E</strong> Multiple Access Technologies</li>
 	</ul>
 	<p class="text-sm mb-3">Values persist server-side until restart. When the card issues PLI, the server injects the dictionary values into the TERMINAL RESPONSE.</p>
-
-	<h3 id="status-polling" class="text-lg font-medium mb-2">6.5 STATUS polling</h3>
-	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s, <code class="font-mono text-sm">0</code> disables polling) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
 
 </section>
 

@@ -897,37 +897,47 @@
 		</div>
 
 	<div id="tab-phone" class="tab-content hidden">
-			<div class="flex gap-6">
+		<div class="flex flex-wrap justify-center gap-2 mb-3">
+			<button class="phone-subtab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-phone-sub="phone" onclick="phoneSwitchSubtab('phone')" data-l10n="Phone">Phone</button>
+			<button class="phone-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-phone-sub="tr" onclick="phoneSwitchSubtab('tr')" data-l10n="TR Config">TR Config</button>
+		</div>
+		<div id="phone-sub-phone">
+			<div class="flex flex-wrap gap-6 mb-4">
 				<div>
 					<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="STK menu">STK menu</div>
-				<div class="flex items-center gap-2 mb-3">
-					<button id="stk-menu-btn" onclick="stkMenuOpen()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" style="display:none">STK: <span id="stk-menu-title"></span></button>
-					<span id="stk-menu-none" class="text-xs text-gray-500 dark:text-slate-400" style="display:none" data-l10n="No menu set by the card">No menu set by the card</span>
+					<div class="flex items-center gap-2">
+						<button id="stk-menu-btn" onclick="stkMenuOpen()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" style="display:none">STK: <span id="stk-menu-title"></span></button>
+						<span id="stk-menu-none" class="text-xs text-gray-500 dark:text-slate-400" style="display:none" data-l10n="No menu set by the card">No menu set by the card</span>
+					</div>
 				</div>
-				<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="STATUS and Polling">STATUS and Polling</div>
-					<div class="flex items-center gap-2 mb-3">
+				<div>
+					<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="STATUS and Polling">STATUS and Polling</div>
+					<div class="flex items-center gap-2">
 						<button id="pli-status-btn" onclick="pysimStatusPoll()" class="px-2.5 py-1 text-sm rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Send STATUS">Send STATUS</button>
 						<span class="text-xs text-gray-500 dark:text-slate-400">|</span>
 						<span class="text-xs text-gray-500 dark:text-slate-400" data-l10n="Polling">Polling</span>
 						<button id="pli-pause-btn" onclick="pysimPollToggle()" class="px-2.5 py-1 text-sm rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600">OFF</button>
 						<span id="pli-poll-stat" class="text-xs text-gray-400"></span>
 					</div>
-					<div class="mt-2 mb-2 text-sm text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
-					<div id="pysim-event-list" class="text-sm font-mono text-gray-600 dark:text-slate-400"></div>
-					<div class="mt-4 mb-2 text-sm text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
-					<div id="pysim-proactive-log" class="text-sm font-mono text-gray-600 dark:text-slate-400"></div>
 				</div>
-				<div>
-					<div class="flex justify-between items-center mb-2">
-						<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="PROVIDE LOCAL INFORMATION response data">PROVIDE LOCAL INFORMATION response data</span>
-						<button id="pli-save-btn" onclick="pysimPliSave()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
-					</div>
-					<div id="pysim-pli-dict" class="text-sm font-mono text-gray-600 dark:text-slate-400 max-h-[60vh] overflow-auto">
-						<span class="text-gray-400" data-l10n="Loading...">Loading...</span>
-					</div>
+				<div class="flex-1 min-w-0">
+					<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="Events that the card monitors (SET UP EVENT LIST):">Events that the card monitors (SET UP EVENT LIST):</div>
+					<div id="pysim-event-list" class="text-sm font-mono text-gray-600 dark:text-slate-400"></div>
 				</div>
 			</div>
+			<div class="mb-2 text-sm text-gray-500 dark:text-slate-400" data-l10n="Fetched proactive commands:">Fetched proactive commands:</div>
+			<div id="pysim-proactive-log" class="text-sm font-mono text-gray-600 dark:text-slate-400"></div>
 		</div>
+		<div id="phone-sub-tr" class="hidden">
+			<div class="flex justify-between items-center mb-2">
+				<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="PROVIDE LOCAL INFORMATION response data">PROVIDE LOCAL INFORMATION response data</span>
+				<button id="pli-save-btn" onclick="pysimPliSave()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
+			</div>
+			<div id="pysim-pli-dict" class="text-sm font-mono text-gray-600 dark:text-slate-400 max-h-[60vh] overflow-auto">
+				<span class="text-gray-400" data-l10n="Loading...">Loading...</span>
+			</div>
+		</div>
+	</div>
 
 	<div id="event-send-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
 		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 max-h-[85vh] overflow-auto">
@@ -1030,7 +1040,7 @@ function switchTab(name) {
 	else if (name === 'scp80') setHelpAnchor(scp80HelpAnchor);
 	else if (name === 'pysim') setHelpAnchor(pysimHelpAnchor);
 	else if (name === 'profiler') { profilerSetView('list'); setHelpAnchor('profiler'); }
-	else if (name === 'phone') { stkCheckMenu(); pysimEventsRender(); pysimProactiveLogRender(); pysimPliRender(); pysimPollStatusInit(); setHelpAnchor('proactive-uicc'); }
+	else if (name === 'phone') phoneSwitchSubtab('phone');
 }
 
 let scp80HelpAnchor = 'secured-packet';
@@ -1068,6 +1078,30 @@ function cApduSwitchSubtab(name) {
 		if (el) el.classList.toggle('hidden', s !== name);
 	});
 	setHelpAnchor({sim:'sim-rfm', usim:'usim-rfm', ber:'ber-tlv', ram:'ram-gp', parse:'c-apdu-parser', httpota:'http-ota', response:'response-parser'}[name] || 'c-apdu');
+}
+
+function phoneSwitchSubtab(name) {
+	document.querySelectorAll('.phone-subtab').forEach(btn => {
+		const active = btn.dataset.phoneSub === name;
+		btn.classList.toggle('bg-blue-600', active);
+		btn.classList.toggle('text-white', active);
+		btn.classList.toggle('bg-gray-200', !active);
+		btn.classList.toggle('dark:bg-slate-700', !active);
+		btn.classList.toggle('text-gray-700', !active);
+		btn.classList.toggle('dark:text-slate-300', !active);
+	});
+	['phone', 'tr'].forEach(s => {
+		document.getElementById('phone-sub-' + s).classList.toggle('hidden', s !== name);
+	});
+	if (name === 'tr') {
+		pysimPliRender();
+	} else {
+		stkCheckMenu();
+		pysimEventsRender();
+		pysimProactiveLogRender();
+		pysimPollStatusInit();
+	}
+	setHelpAnchor({ phone: 'stk-menu', tr: 'pli-dict' }[name] || 'stk-menu');
 }
 
 // ===== HTTP OTA constructor =====
@@ -8802,6 +8836,8 @@ const LANG_RU = {
 	'Verify vs pySim': 'Проверить в pySim',
 	'Send to Card': 'Отправить на карту',
 	'Phone simulator': 'Симулятор телефона',
+	'Phone': 'Телефон',
+	'TR Config': 'Конфигурация TR',
 	'Events that the card monitors (SET UP EVENT LIST):': 'События, отслеживаемые картой (SET UP EVENT LIST):',
 	'No events configured.': 'Нет настроенных событий.',
 	'Fetched proactive commands:': 'Извлечённые проактивные команды:',
@@ -8988,9 +9024,11 @@ function refreshDynamicI18n() {
 	if (isViewVisible('profiler-scan-modal')) profilerScanRefreshOptions();
 	if (isViewVisible('scp80-sub-cards')) cardsRender();
 	if (isViewVisible('tab-phone')) {
-		pysimEventsRender();
-		pysimProactiveLogRender();
-		pysimPliRender();
+		if (isViewVisible('phone-sub-phone')) {
+			pysimEventsRender();
+			pysimProactiveLogRender();
+		}
+		if (isViewVisible('phone-sub-tr')) pysimPliRender();
 	}
 }
 
