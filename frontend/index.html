@@ -830,6 +830,7 @@
 					<div class="flex flex-wrap gap-2 mb-3">
 						<button onclick="snapshotNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New snapshot">New snapshot</button>
 						<button onclick="document.getElementById('snapshot-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import snapshot">Import snapshot</button>
+						<button onclick="snapshotCompareOpen()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Compare snapshots">Compare snapshots</button>
 						<input type="file" id="snapshot-import-file" accept=".json,application/json" class="hidden" onchange="snapshotImportFile(this)">
 					</div>
 					<div id="snapshot-list-body"></div>
@@ -971,6 +972,21 @@
 			<div id="snapshot-pick-list" class="space-y-1 mb-4"></div>
 			<div class="flex gap-2 justify-end">
 				<button onclick="document.getElementById('snapshot-pick-modal').classList.add('hidden')" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
+			</div>
+		</div>
+	</div>
+
+	<div id="snapshot-compare-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 max-h-[85vh] overflow-auto">
+			<h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="Compare snapshots">Compare snapshots</h3>
+			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Master snapshot">Master snapshot</label>
+			<select id="snapshot-compare-master" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 mb-3"></select>
+			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Snapshot to check">Snapshot to check</label>
+			<select id="snapshot-compare-check" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 mb-3"></select>
+			<div id="snapshot-compare-mask" class="space-y-1 mb-3"></div>
+			<div class="flex gap-2 justify-end">
+				<button onclick="document.getElementById('snapshot-compare-modal').classList.add('hidden')" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
+				<button onclick="snapshotCompareRun()" class="px-4 py-1.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Compare">Compare</button>
 			</div>
 		</div>
 	</div>
@@ -7897,7 +7913,7 @@ async function profilerCheck(i) {
 	await profilerRunProfile(p, null, p.name);
 }
 
-async function profilerRunProfile(p, source, title) {
+async function profilerRunProfile(p, source, title, extraResults) {
 	profilerSetView('results');
 	document.getElementById('profiler-results-title').textContent = title;
 	const prog = document.getElementById('profiler-progress');
@@ -7909,6 +7925,7 @@ async function profilerRunProfile(p, source, title) {
 		prog.textContent = t('Checking') + ' ' + (ri + 1) + '/' + p.rules.length + ' — ' + r.path;
 		results.push(await profilerRunRule(r, source));
 	}
+	if (extraResults && extraResults.length) results.push(...extraResults);
 	prog.textContent = '';
 	profilerResults = results;
 	profilerRenderResultsView();
@@ -7935,6 +7952,93 @@ async function profilerCheckSnapshot(i, si) {
 	const p = profiles[i];
 	const s = snapshots[si];
 	await profilerRunProfile(p, profilerSnapshotSource(s), p.name + ' — ' + s.name);
+}
+
+function profilerMaskFidForFile(f, maskFids) {
+	if (!maskFids) return null;
+	const seg = (f.path || '').toUpperCase().split('/').pop();
+	if (maskFids.has(seg)) return seg;
+	for (const fid in PROFILER_MASK_PREFIX4_FIDS) {
+		if (maskFids.has(fid) && f.name && PROFILER_MASK_PREFIX4_FIDS[fid] === f.name) return fid;
+	}
+	return null;
+}
+
+function profilerRulesFromSnapshot(master, maskFids) {
+	const rules = [];
+	for (const f of (master.files || [])) {
+		const rule = {
+			type: 'file',
+			path: f.path,
+			name: f.name,
+			fileType: f.fileType,
+			fileSize: f.fileSize,
+			recordLen: f.recordLen,
+			numRecords: f.numRecords,
+			fciMode: 'exact',
+			fciHex: f.fciHex,
+			content: null,
+		};
+		if (f.content) {
+			if (f.content.kind === 'record') {
+				rule.content = { mode: 'exact', kind: 'record', records: f.content.records };
+			} else if (typeof f.content.data === 'string') {
+				rule.content = profilerMaskFidForFile(f, maskFids)
+					? { mode: 'mask', kind: 'transparent', expected: profilerMaskPrefix4(f.content.data) }
+					: { mode: 'exact', kind: 'transparent', expected: f.content.data };
+			}
+		}
+		rules.push(rule);
+	}
+	return rules;
+}
+
+function snapshotCompareOpen() {
+	if (!snapshots.length) {
+		alert(t('No snapshots defined.'));
+		return;
+	}
+	let opts = '';
+	for (let i = 0; i < snapshots.length; i++) {
+		opts += '<option value="' + i + '">' + esc(snapshots[i].name) + '</option>';
+	}
+	const master = document.getElementById('snapshot-compare-master');
+	const check = document.getElementById('snapshot-compare-check');
+	master.innerHTML = opts;
+	check.innerHTML = opts;
+	master.value = '0';
+	check.value = String(snapshots.length > 1 ? 1 : 0);
+	let mhtml = '';
+	for (const fid in PROFILER_MASK_PREFIX4_FIDS) {
+		mhtml += '<label class="flex items-center gap-2 text-sm">' +
+			'<input type="checkbox" data-mask-fid="' + fid + '" checked>' +
+			'<span>' + esc(t('Match first 4 bytes for')) + ' ' + esc(PROFILER_MASK_PREFIX4_FIDS[fid]) + '</span></label>';
+	}
+	document.getElementById('snapshot-compare-mask').innerHTML = mhtml;
+	document.getElementById('snapshot-compare-modal').classList.remove('hidden');
+}
+
+function profilerExtraFileResults(master, check) {
+	const masterPaths = new Set((master.files || []).map(f => (f.path || '').toUpperCase()));
+	return (check.files || []).filter(f => !masterPaths.has((f.path || '').toUpperCase())).map(f => ({
+		path: f.path,
+		name: f.name,
+		status: 'fail',
+		checks: [{ label: 'extra file', expected: 'absent', actual: 'present', ok: false }],
+	}));
+}
+
+async function snapshotCompareRun() {
+	const master = snapshots[+document.getElementById('snapshot-compare-master').value];
+	const check = snapshots[+document.getElementById('snapshot-compare-check').value];
+	if (!master || !check) return;
+	const maskFids = new Set();
+	document.querySelectorAll('#snapshot-compare-mask input[data-mask-fid]').forEach(cb => {
+		if (cb.checked) maskFids.add(cb.getAttribute('data-mask-fid'));
+	});
+	document.getElementById('snapshot-compare-modal').classList.add('hidden');
+	const pseudo = { name: master.name + ' → ' + check.name, rules: profilerRulesFromSnapshot(master, maskFids) };
+	await profilerRunProfile(pseudo, profilerSnapshotSource(check), pseudo.name, profilerExtraFileResults(master, check));
 }
 
 function profilerToggleMismatchOnly(checked) {
@@ -8458,7 +8562,9 @@ function profilerRenderReport(results) {
 		if (r.error) html += '<div class="text-xs text-yellow-600 mt-1">' + esc(r.error) + '</div>';
 		for (const c of r.checks) {
 			if (c.ok) continue;
-			if (profilerRawDataCheck(c)) {
+			if (c.label === 'extra file') {
+				html += '<div class="text-xs text-red-600 mt-1">' + esc(t('extra file')) + '</div>';
+			} else if (profilerRawDataCheck(c)) {
 				html += '<div class="mt-1">';
 				html += '<div class="text-xs text-red-600 font-mono pl-2">' + esc(c.label) + '</div>';
 				html += '<div class="flex items-center gap-2 mt-0.5 pl-2">' +
@@ -8687,6 +8793,11 @@ const LANG_RU = {
 	'Import profile': 'Импорт профиля',
 	'Profiles': 'Профили',
 	'Card snapshots': 'Снимки карт',
+	'Compare snapshots': 'Сравнить снимки',
+	'Master snapshot': 'Эталонный снимок',
+	'Snapshot to check': 'Снимок для проверки',
+	'Compare': 'Сравнить',
+	'extra file': 'лишний файл',
 	'Check card snapshot': 'Проверить снимок карты',
 	'Select card snapshot': 'Выберите снимок карты',
 	'Content not captured in snapshot': 'Содержимое не захвачено в снимок',

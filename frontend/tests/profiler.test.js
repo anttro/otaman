@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -1035,4 +1035,80 @@ test('profilerVisibleResults hides passing files when mismatch-only is on', () =
 	assert.strictEqual(profilerVisibleResults(results, false).length, 4);
 	assert.deepStrictEqual(profilerVisibleResults(results, true).map(r => r.status), ['fail', 'error']);
 	assert.strictEqual(profilerVisibleResults([{ status: 'pass' }], true).length, 0);
+});
+
+// --- snapshot comparison ---
+
+function masterSnap(files) {
+	return { files: files };
+}
+
+test('profilerRulesFromSnapshot builds exact-FCI rules from the master snapshot', () => {
+	const master = masterSnap([
+		snapFile('MF/7F20/6F07', { name: 'EF.IMSI', fileSize: 9, content: { kind: 'transparent', data: '082905911234567890' } }),
+		snapFile('MF/6F3A', { fileType: 'linear_fixed', fileSize: null, recordLen: 2, numRecords: 1, content: { kind: 'record', records: [{ num: 1, data: 'AABB' }] } }),
+		snapFile('MF/6F3B', { content: null }),
+	]);
+	const rules = profilerRulesFromSnapshot(master, null);
+	assert.strictEqual(rules.length, 3);
+	assert.strictEqual(rules[0].fciMode, 'exact');
+	assert.strictEqual(rules[0].fciHex, '621082024021');
+	assert.deepStrictEqual(rules[0].content, { mode: 'exact', kind: 'transparent', expected: '082905911234567890' });
+	assert.deepStrictEqual(rules[1].content, { mode: 'exact', kind: 'record', records: [{ num: 1, data: 'AABB' }] });
+	assert.strictEqual(rules[2].content, null);
+});
+
+test('profilerRulesFromSnapshot masks only the checked FIDs', () => {
+	const master = masterSnap([
+		snapFile('MF/7F20/6F07', { name: 'EF.IMSI', content: { kind: 'transparent', data: '082905911234567890' } }),
+		snapFile('MF/2FE2', { name: 'EF.ICCID', content: { kind: 'transparent', data: '98680012345678901234' } }),
+		snapFile('MF/6F3A', { content: { kind: 'transparent', data: 'AABBCCDD' } }),
+	]);
+	const rules = profilerRulesFromSnapshot(master, new Set(['6F07']));
+	assert.deepStrictEqual(rules[0].content, { mode: 'mask', kind: 'transparent', expected: '08290591??????????' });
+	assert.deepStrictEqual(rules[1].content, { mode: 'exact', kind: 'transparent', expected: '98680012345678901234' });
+	assert.deepStrictEqual(rules[2].content, { mode: 'exact', kind: 'transparent', expected: 'AABBCCDD' });
+});
+
+test('profilerRulesFromSnapshot falls back to the symbolic name for masking', () => {
+	const master = masterSnap([snapFile('MF/CUSTOM1', { name: 'EF.ICCID', content: { kind: 'transparent', data: '98680012345678901234' } })]);
+	const rules = profilerRulesFromSnapshot(master, new Set(['2FE2']));
+	assert.strictEqual(rules[0].content.mode, 'mask');
+});
+
+test('snapshot comparison passes on an identical snapshot', async () => {
+	const files = [snapFile('MF/7F20/6F07', { name: 'EF.IMSI', fileSize: 9, content: { kind: 'transparent', data: '082905911234567890' } })];
+	const rules = profilerRulesFromSnapshot(masterSnap(files), new Set(['6F07']));
+	const source = profilerSnapshotSource(masterSnap(files.map(f => ({ ...f }))));
+	for (const r of rules) {
+		assert.strictEqual((await profilerRunRule(r, source)).status, 'pass');
+	}
+});
+
+test('snapshot comparison fails on a contents difference', async () => {
+	const master = masterSnap([snapFile('MF/6F3A')]);
+	const check = masterSnap([snapFile('MF/6F3A', { content: { kind: 'transparent', data: 'CCDD' } })]);
+	const rules = profilerRulesFromSnapshot(master, null);
+	const res = await profilerRunRule(rules[0], profilerSnapshotSource(check));
+	assert.strictEqual(res.status, 'fail');
+	assert.ok(res.checks.some(c => c.label === 'content' && c.ok === false));
+});
+
+test('snapshot comparison mask ignores only the first 4 bytes', async () => {
+	const master = masterSnap([snapFile('MF/7F20/6F07', { name: 'EF.IMSI', fileSize: 8, content: { kind: 'transparent', data: '0829059112345678' } })]);
+	const rules = profilerRulesFromSnapshot(master, new Set(['6F07']));
+	const same = masterSnap([snapFile('MF/7F20/6F07', { name: 'EF.IMSI', fileSize: 8, content: { kind: 'transparent', data: '0829059199999999' } })]);
+	const other = masterSnap([snapFile('MF/7F20/6F07', { name: 'EF.IMSI', fileSize: 8, content: { kind: 'transparent', data: '0829059912345678' } })]);
+	assert.strictEqual((await profilerRunRule(rules[0], profilerSnapshotSource(same))).status, 'pass');
+	assert.strictEqual((await profilerRunRule(rules[0], profilerSnapshotSource(other))).status, 'fail');
+});
+
+test('profilerExtraFileResults reports files missing from the master', () => {
+	const master = masterSnap([snapFile('MF/6F3A')]);
+	const check = masterSnap([snapFile('MF/6f3a'), snapFile('MF/6F3B')]);
+	const extras = profilerExtraFileResults(master, check);
+	assert.strictEqual(extras.length, 1);
+	assert.strictEqual(extras[0].path, 'MF/6F3B');
+	assert.strictEqual(extras[0].status, 'fail');
+	assert.deepStrictEqual(extras[0].checks, [{ label: 'extra file', expected: 'absent', actual: 'present', ok: false }]);
 });
