@@ -772,6 +772,11 @@
 		<div id="pysim-sub-files">
 			<div class="flex gap-2">
 				<div class="w-1/3 border border-gray-300 dark:border-slate-600 rounded p-2 text-xs font-mono overflow-y-auto bg-gray-50 dark:bg-slate-800" style="max-height:420px">
+					<div class="flex items-center gap-1 mb-1 text-gray-500 dark:text-slate-400">
+						<span data-l10n="Sort:">Sort:</span>
+						<span class="pysim-fs-sort-pill px-2 py-0.5 rounded cursor-pointer bg-blue-600 text-white" data-fs-sort="fid" onclick="pysimFsSetSort('fid')">FID</span>
+						<span class="pysim-fs-sort-pill px-2 py-0.5 rounded cursor-pointer bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300" data-fs-sort="name" onclick="pysimFsSetSort('name')" data-l10n="Name">Name</span>
+					</div>
 					<div id="pysim-fs-tree"></div>
 				</div>
 				<div class="flex-1">
@@ -5849,6 +5854,44 @@ function pysimCustomInject(node) {
 	}
 }
 
+let pysimFsSort = localStorage.getItem('otaman_fs_sort') === 'name' ? 'name' : 'fid';
+
+function pysimFsSortChildren(children, mode) {
+	return (children || []).slice().sort((a, b) => {
+		if (!!a.isDir !== !!b.isDir) return a.isDir ? -1 : 1;
+		const af = (a.fid || '').toUpperCase();
+		const bf = (b.fid || '').toUpperCase();
+		const an = (a.name || '').toUpperCase();
+		const bn = (b.name || '').toUpperCase();
+		let r;
+		if (mode === 'name') {
+			const ak = an || af;
+			const bk = bn || bf;
+			r = ak < bk ? -1 : ak > bk ? 1 : 0;
+			if (r === 0) r = af < bf ? -1 : af > bf ? 1 : 0;
+		} else {
+			r = af < bf ? -1 : af > bf ? 1 : 0;
+			if (r === 0) r = an < bn ? -1 : an > bn ? 1 : 0;
+		}
+		return r;
+	});
+}
+
+function pysimFsSetSort(mode) {
+	pysimFsSort = mode === 'name' ? 'name' : 'fid';
+	localStorage.setItem('otaman_fs_sort', pysimFsSort);
+	document.querySelectorAll('.pysim-fs-sort-pill').forEach(p => {
+		const active = p.dataset.fsSort === pysimFsSort;
+		p.classList.toggle('bg-blue-600', active);
+		p.classList.toggle('text-white', active);
+		p.classList.toggle('bg-gray-200', !active);
+		p.classList.toggle('dark:bg-slate-700', !active);
+		p.classList.toggle('text-gray-700', !active);
+		p.classList.toggle('dark:text-slate-300', !active);
+	});
+	pysimFsRenderTree();
+}
+
 async function pysimFsRefresh() {
 	const detailEl = document.getElementById('pysim-fs-detail');
 	detailEl.classList.add('hidden');
@@ -5946,7 +5989,7 @@ function pysimFsRenderNode(node, depth) {
 	}
 	html += '</div>';
 	if (isDir && node.children && node.expanded) {
-		for (const child of node.children) {
+		for (const child of pysimFsSortChildren(node.children, pysimFsSort)) {
 			html += pysimFsRenderNode(child, depth + 1);
 		}
 	}
@@ -9050,6 +9093,8 @@ const LANG_RU = {
 	'Verify vs pySim': 'Проверить в pySim',
 	'Send to Card': 'Отправить на карту',
 	'Phone simulator': 'Симулятор телефона',
+	'Sort:': 'Сортировка:',
+	'Name': 'Имя',
 	'No server connection': 'Нет соединения с сервером',
 	'Server connected, no card equipped': 'Сервер подключён, карта не подключена',
 	'Card equipped': 'Карта подключена',
@@ -9269,6 +9314,7 @@ updateHelpLink();
 
 cardsLoad();
 pysimStartAvailabilityProbe();
+pysimFsSetSort(pysimFsSort);
 
 if (localStorage.getItem('theme') === 'dark' ||
     (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {

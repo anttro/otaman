@@ -486,6 +486,7 @@ Connects to the bundled [`pysim-otaman-server`](pysim_otaman_server/) for live c
 
 Browse the UICC filesystem in a tree view. Files are shown with names, FIDs, and AIDs (for ADFs). Click to read contents.
 
+- Entries are grouped with DFs above EFs and sorted by **FID** or symbolic **Name** (pills above the tree, remembered in `localStorage`)
 - **Read** — reads the selected file (auto-detects transparent vs record files)
 - **Edit** — switch to edit mode, modify hex data, click **Save** to write back
 - **Raw / Decoded** — toggle between hex dump and pysim-decoded JSON view

@@ -48,3 +48,9 @@ test('header state indicator and profiler custom-files tab', () => {
     assert.ok(html.includes('data-list-tab="custom"'));
     assert.ok(!html.includes('data-pysim-sub="custom"'));
 });
+
+test('file manager has FID / Name sort pills', () => {
+    assert.match(html, /data-fs-sort="fid" onclick="pysimFsSetSort\('fid'\)"/);
+    assert.match(html, /data-fs-sort="name" onclick="pysimFsSetSort\('name'\)"/);
+    assert.ok(html.includes('pysim-fs-sort-pill'));
+});

@@ -317,7 +317,7 @@
 	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations: enter the server URL (default <code class="font-mono text-sm">http://127.0.0.1:8080</code>) and press <strong>Connect</strong>. The status area shows the reader/card state, and <strong>Equip card</strong> (re)initializes the card after insertion. Sub-tabs: <strong>File manager</strong>, <strong>pySim command line</strong>, and <strong>Raw APDU</strong>. The <strong>Profiler</strong> and <strong>Phone simulator</strong> are separate top-level tabs.</p>
 
 	<h3 id="file-manager" class="text-lg font-medium mb-2">4.1 File manager</h3>
-	<p class="text-sm mb-2">The file system tree is displayed on the left; selecting a file opens its detail pane on the right.</p>
+	<p class="text-sm mb-2">The file system tree is displayed on the left; selecting a file opens its detail pane on the right. Entries are grouped with DFs above EFs and sorted by <strong>FID</strong> or symbolic <strong>Name</strong> (pills above the tree; the choice is remembered in <code class="font-mono text-sm">localStorage</code>).</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Read</strong> — reads the selected file (auto-detects transparent vs record files)</li>
 		<li><strong>Edit</strong> — modify hex data, <strong>Save</strong> to write back (or <strong>Cancel</strong>)</li>
