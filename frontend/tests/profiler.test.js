@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -1111,4 +1111,22 @@ test('profilerExtraFileResults reports files missing from the master', () => {
 	assert.strictEqual(extras[0].path, 'MF/6F3B');
 	assert.strictEqual(extras[0].status, 'fail');
 	assert.deepStrictEqual(extras[0].checks, [{ label: 'extra file', expected: 'absent', actual: 'present', ok: false }]);
+});
+
+test('profilerScanNameKeydown starts the scan on Enter only', () => {
+	const btn = { disabled: false };
+	global.document = { getElementById: () => btn };
+	let started = 0;
+	global.profilerScanStart = () => { started++; };
+	let prevented = 0;
+	profilerScanNameKeydown({ key: 'Enter', preventDefault: () => prevented++ });
+	profilerScanNameKeydown({ key: 'a', preventDefault: () => prevented++ });
+	assert.strictEqual(started, 1);
+	assert.strictEqual(prevented, 1);
+	btn.disabled = true;
+	profilerScanNameKeydown({ key: 'Enter', preventDefault: () => prevented++ });
+	assert.strictEqual(started, 1);
+	assert.strictEqual(prevented, 1);
+	delete global.document;
+	delete global.profilerScanStart;
 });

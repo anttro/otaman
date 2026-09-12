@@ -956,7 +956,7 @@
 		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 max-h-[85vh] overflow-auto">
 			<h3 id="profiler-scan-title" class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="Profile from card">Profile from card</h3>
 			<label id="profiler-scan-name-label" class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile name">Profile name</label>
-			<input id="profiler-scan-name" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800 mb-3" placeholder="Profile name">
+			<input id="profiler-scan-name" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800 mb-3" placeholder="Profile name" onkeydown="profilerScanNameKeydown(event)">
 			<div id="profiler-scan-options">
 				<div class="flex items-center gap-2 mb-1">
 					<span class="text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Ignore contents of files:">Ignore contents of files:</span>
@@ -7376,6 +7376,7 @@ function profilerFromCard() {
 	document.getElementById('profiler-scan-btn').disabled = false;
 	document.getElementById('profiler-scan-btn').textContent = t('Scan');
 	document.getElementById('profiler-scan-modal').classList.remove('hidden');
+	document.getElementById('profiler-scan-name').focus();
 }
 
 function profilerScanCancel() {
@@ -7394,6 +7395,14 @@ function snapshotNew() {
 	document.getElementById('profiler-scan-btn').disabled = false;
 	document.getElementById('profiler-scan-btn').textContent = t('Scan');
 	document.getElementById('profiler-scan-modal').classList.remove('hidden');
+	nameEl.focus();
+}
+
+function profilerScanNameKeydown(e) {
+	if (e.key !== 'Enter') return;
+	if (document.getElementById('profiler-scan-btn').disabled) return;
+	e.preventDefault();
+	profilerScanStart();
 }
 
 async function profilerScanStart() {

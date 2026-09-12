@@ -33,3 +33,7 @@ test('phone simulator has Phone / TR Config pills', () => {
     assert.ok(html.includes('id="phone-sub-phone"'));
     assert.ok(html.includes('id="phone-sub-tr"'));
 });
+
+test('scan name input starts scanning on Enter', () => {
+    assert.match(html, /id="profiler-scan-name"[^>]*onkeydown="profilerScanNameKeydown\(event\)"/);
+});
