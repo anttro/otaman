@@ -35,8 +35,8 @@
 	<div class="flex flex-wrap gap-1 mb-4 border-b border-gray-300 dark:border-slate-600">
 		<button class="tab-btn active px-4 py-1.5 text-sm rounded-t bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-tab="c-apdu">Remote APDU</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="scp80">SCP80</button>
-		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="pysim" data-l10n="Card reader">Card reader</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="profiler" data-l10n="Profiler">Profiler</button>
+		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="pysim" data-l10n="Card reader">Card reader</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="phone" data-l10n="Phone simulator">Phone simulator</button>
 	</div>
 
@@ -738,6 +738,85 @@
 	</div>
 
 
+	<div id="tab-profiler" class="tab-content hidden">
+			<div id="profiler-list">
+				<div class="flex flex-wrap justify-center gap-2 mb-3">
+					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-list-tab="profiles" onclick="profilerListSwitch('profiles')" data-l10n="Profiles">Profiles</button>
+					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-list-tab="snapshots" onclick="profilerListSwitch('snapshots')" data-l10n="Card snapshots">Card snapshots</button>
+					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-list-tab="custom" onclick="profilerListSwitch('custom')" data-l10n="Custom files">Custom files</button>
+				</div>
+				<div id="profiler-list-profiles">
+					<div class="flex flex-wrap gap-2 mb-3">
+						<button onclick="profilerNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New profile">New profile</button>
+						<button data-needs="card" onclick="profilerFromCard()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Profile from card">Profile from card</button>
+						<button onclick="document.getElementById('profiler-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import profile">Import profile</button>
+						<input type="file" id="profiler-import-file" accept=".json,application/json" class="hidden" onchange="profilerImportFile(this)">
+					</div>
+					<div id="profiler-list-body"></div>
+				</div>
+				<div id="profiler-list-snapshots" class="hidden">
+					<div class="flex flex-wrap gap-2 mb-3">
+						<button data-needs="card" onclick="snapshotNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="New snapshot">New snapshot</button>
+						<button onclick="document.getElementById('snapshot-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import snapshot">Import snapshot</button>
+						<button onclick="snapshotCompareOpen()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Compare snapshots">Compare snapshots</button>
+						<input type="file" id="snapshot-import-file" accept=".json,application/json" class="hidden" onchange="snapshotImportFile(this)">
+					</div>
+					<div id="snapshot-list-body"></div>
+				</div>
+
+			<div id="profiler-list-custom" class="hidden">
+				<div class="mb-2 text-xs font-mono text-gray-600 dark:text-slate-400" data-l10n="Add known file paths and aliases to the file tree.">Add known file paths and aliases to the file tree.</div>
+				<div class="flex gap-2 items-center mb-2">
+					<input id="pysim-cf-path" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00/6F46" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
+					<input id="pysim-cf-name" class="font-mono w-48 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="EF.SPN" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
+					<button onclick="pysimCustomAdd()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
+				</div>
+				<div id="pysim-cf-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+			<input type="file" id="pysim-cf-file" accept=".json,application/json" class="hidden" onchange="pysimCustomImportFile(this)">
+				<div class="flex flex-wrap gap-2 mt-2">
+					<button onclick="pysimCustomExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
+					<button onclick="pysimCustomExportFile()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export to file">Export to file</button>
+					<button onclick="document.getElementById('pysim-cf-file').click()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import from file">Import from file</button>
+					<button onclick="pysimCustomImportField()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Paste & import">Paste &amp; import</button>
+					<button onclick="pysimCustomImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
+				</div>
+				<textarea id="pysim-cf-io" class="hidden mt-2 w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800" rows="6"></textarea>
+			</div>
+			</div>
+			<div id="profiler-editor" class="hidden">
+				<div class="flex flex-wrap gap-2 items-center mb-3">
+					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
+					<input id="profiler-name" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Profile name">
+					<button onclick="profilerAddRule()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Add rule">Add rule</button>
+					<button onclick="profilerSaveProfile()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
+				</div>
+				<div id="profiler-rules"></div>
+			</div>
+			<div id="profiler-results" class="hidden">
+				<div class="flex flex-wrap gap-2 items-center mb-3">
+					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
+					<span id="profiler-results-title" class="text-sm font-semibold"></span>
+					<label class="ml-auto flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400 cursor-pointer">
+						<input id="profiler-mismatch-only" type="checkbox" onchange="profilerToggleMismatchOnly(this.checked)">
+						<span data-l10n="Only mismatches">Only mismatches</span>
+					</label>
+				</div>
+				<div id="profiler-progress" class="mb-2 text-base font-mono text-gray-600 dark:text-slate-400"></div>
+				<div id="profiler-summary" class="mb-2 text-sm"></div>
+				<div id="profiler-report"></div>
+			</div>
+			<div id="profiler-snapshot" class="hidden">
+				<div class="flex flex-wrap gap-2 items-center mb-3">
+					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
+					<input id="snapshot-name" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Snapshot name">
+					<span id="snapshot-iccid" class="text-xs font-mono text-gray-500 dark:text-slate-400"></span>
+					<button onclick="snapshotSaveName()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
+				</div>
+				<div id="snapshot-summary" class="mb-3"></div>
+				<div id="snapshot-files"></div>
+			</div>
+		</div>
+
 		<div id="tab-pysim" class="tab-content hidden">
 		<div id="pysim-connect-row" class="mb-3">
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="Server URL">Server URL</label>
@@ -827,85 +906,6 @@
 
 
 </div>
-
-	<div id="tab-profiler" class="tab-content hidden">
-			<div id="profiler-list">
-				<div class="flex flex-wrap justify-center gap-2 mb-3">
-					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-list-tab="profiles" onclick="profilerListSwitch('profiles')" data-l10n="Profiles">Profiles</button>
-					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-list-tab="snapshots" onclick="profilerListSwitch('snapshots')" data-l10n="Card snapshots">Card snapshots</button>
-					<button class="profiler-list-tab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-list-tab="custom" onclick="profilerListSwitch('custom')" data-l10n="Custom files">Custom files</button>
-				</div>
-				<div id="profiler-list-profiles">
-					<div class="flex flex-wrap gap-2 mb-3">
-						<button onclick="profilerNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New profile">New profile</button>
-						<button data-needs="card" onclick="profilerFromCard()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Profile from card">Profile from card</button>
-						<button onclick="document.getElementById('profiler-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import profile">Import profile</button>
-						<input type="file" id="profiler-import-file" accept=".json,application/json" class="hidden" onchange="profilerImportFile(this)">
-					</div>
-					<div id="profiler-list-body"></div>
-				</div>
-				<div id="profiler-list-snapshots" class="hidden">
-					<div class="flex flex-wrap gap-2 mb-3">
-						<button data-needs="card" onclick="snapshotNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="New snapshot">New snapshot</button>
-						<button onclick="document.getElementById('snapshot-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import snapshot">Import snapshot</button>
-						<button onclick="snapshotCompareOpen()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Compare snapshots">Compare snapshots</button>
-						<input type="file" id="snapshot-import-file" accept=".json,application/json" class="hidden" onchange="snapshotImportFile(this)">
-					</div>
-					<div id="snapshot-list-body"></div>
-				</div>
-
-			<div id="profiler-list-custom" class="hidden">
-				<div class="mb-2 text-xs font-mono text-gray-600 dark:text-slate-400" data-l10n="Add known file paths and aliases to the file tree.">Add known file paths and aliases to the file tree.</div>
-				<div class="flex gap-2 items-center mb-2">
-					<input id="pysim-cf-path" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00/6F46" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
-					<input id="pysim-cf-name" class="font-mono w-48 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="EF.SPN" onkeydown="if(event.key==='Enter')pysimCustomAdd()">
-					<button onclick="pysimCustomAdd()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
-				</div>
-				<div id="pysim-cf-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
-			<input type="file" id="pysim-cf-file" accept=".json,application/json" class="hidden" onchange="pysimCustomImportFile(this)">
-				<div class="flex flex-wrap gap-2 mt-2">
-					<button onclick="pysimCustomExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
-					<button onclick="pysimCustomExportFile()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export to file">Export to file</button>
-					<button onclick="document.getElementById('pysim-cf-file').click()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import from file">Import from file</button>
-					<button onclick="pysimCustomImportField()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Paste & import">Paste &amp; import</button>
-					<button onclick="pysimCustomImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
-				</div>
-				<textarea id="pysim-cf-io" class="hidden mt-2 w-full font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 bg-gray-100 dark:bg-slate-800" rows="6"></textarea>
-			</div>
-			</div>
-			<div id="profiler-editor" class="hidden">
-				<div class="flex flex-wrap gap-2 items-center mb-3">
-					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
-					<input id="profiler-name" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Profile name">
-					<button onclick="profilerAddRule()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Add rule">Add rule</button>
-					<button onclick="profilerSaveProfile()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
-				</div>
-				<div id="profiler-rules"></div>
-			</div>
-			<div id="profiler-results" class="hidden">
-				<div class="flex flex-wrap gap-2 items-center mb-3">
-					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
-					<span id="profiler-results-title" class="text-sm font-semibold"></span>
-					<label class="ml-auto flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400 cursor-pointer">
-						<input id="profiler-mismatch-only" type="checkbox" onchange="profilerToggleMismatchOnly(this.checked)">
-						<span data-l10n="Only mismatches">Only mismatches</span>
-					</label>
-				</div>
-				<div id="profiler-progress" class="mb-2 text-base font-mono text-gray-600 dark:text-slate-400"></div>
-				<div id="profiler-summary" class="mb-2 text-sm"></div>
-				<div id="profiler-report"></div>
-			</div>
-			<div id="profiler-snapshot" class="hidden">
-				<div class="flex flex-wrap gap-2 items-center mb-3">
-					<button onclick="profilerBackToList()" class="px-2.5 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Back to list">Back to list</button>
-					<input id="snapshot-name" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Snapshot name">
-					<span id="snapshot-iccid" class="text-xs font-mono text-gray-500 dark:text-slate-400"></span>
-					<button onclick="snapshotSaveName()" class="px-2.5 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Save">Save</button>
-				</div>
-				<div id="snapshot-summary" class="mb-3"></div>
-				<div id="snapshot-files"></div>
-			</div>
-		</div>
 
 	<div id="tab-phone" class="tab-content hidden">
 		<div class="flex flex-wrap justify-center gap-2 mb-3">

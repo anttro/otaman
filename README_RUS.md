@@ -31,7 +31,7 @@ npm run build
 
 ## Интерфейс
 
-Пять вкладок: **Remote APDU**, **SCP80**, **Card reader**, **Profiler** и **Phone simulator**. Вкладки Remote APDU и SCP80 используют пиллы-подвкладки; во вкладке Card reader три подвкладки: **File manager**, **pySim command line** и **Raw APDU**; во вкладке Profiler — **Profiles**, **Card snapshots** и **Custom files**.
+Пять вкладок: **Remote APDU**, **SCP80**, **Profiler**, **Card reader** и **Phone simulator**. Вкладки Remote APDU и SCP80 используют пиллы-подвкладки; во вкладке Card reader три подвкладки: **File manager**, **pySim command line** и **Raw APDU**; во вкладке Profiler — **Profiles**, **Card snapshots** и **Custom files**.
 
 ---
 

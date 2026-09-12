@@ -13,7 +13,7 @@ test('HTML <div> tags are balanced', () => {
 
 test('top-level tabs match the rearranged views', () => {
     const tabs = [...html.matchAll(/class="tab-btn[^"]*" data-tab="([^"]+)"/g)].map(m => m[1]);
-    assert.deepStrictEqual(tabs, ['c-apdu', 'scp80', 'pysim', 'profiler', 'phone']);
+    assert.deepStrictEqual(tabs, ['c-apdu', 'scp80', 'profiler', 'pysim', 'phone']);
     assert.match(html, /data-tab="c-apdu">Remote APDU</);
 });
 

@@ -31,7 +31,7 @@ npm run build
 
 ## Interface
 
-Five top-level tabs: **Remote APDU**, **SCP80**, **Card reader**, **Profiler**, and **Phone simulator**. **Remote APDU** and **SCP80** use pill sub-tabs; the Card reader tab has three sub-tabs: **File manager**, **pySim command line**, and **Raw APDU**; the Profiler tab lists **Profiles**, **Card snapshots**, and **Custom files**.
+Five top-level tabs: **Remote APDU**, **SCP80**, **Profiler**, **Card reader**, and **Phone simulator**. **Remote APDU** and **SCP80** use pill sub-tabs; the Card reader tab has three sub-tabs: **File manager**, **pySim command line**, and **Raw APDU**; the Profiler tab lists **Profiles**, **Card snapshots**, and **Custom files**.
 
 ---
 
