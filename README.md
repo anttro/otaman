@@ -504,7 +504,7 @@ Type a command name in the **pySim command line** input. Usage hints appear as a
 
 Verifies that a card matches a named **profile** — an ordered set of rules describing the expected file system and, optionally, file contents. Profiles are stored in `localStorage`.
 
-- **New profile** creates an empty ruleset; **Profile from card** scans the equipped card and generates one rule per existing file; **Import profile** loads a ruleset from JSON (the name is stored inside the file).
+- **New profile** creates an empty ruleset; **Profile from card** scans the equipped card and generates one rule per existing file; **Profile from snapshot** generates the same ruleset from a saved snapshot (same ignore/mask/FCP-FCI options, no card reader, name prefilled from the snapshot); **Import profile** loads a ruleset from JSON (the name is stored inside the file).
 - Each profile row has **Check card ▶** (run against the equipped card), **Check card snapshot** (run offline against a saved snapshot), **Edit**, **Export**, and **Delete**.
 
 A filesystem rule is defined by:

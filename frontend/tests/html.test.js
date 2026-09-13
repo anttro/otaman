@@ -81,3 +81,10 @@ test('file manager shows FCI info and keeps the selection in state, not the DOM'
     assert.ok(html.includes('pysimFsSelected = name;'));
     assert.ok(!html.includes('pysimFsSelect()'));
 });
+
+test('profile list has a Profile from snapshot button', () => {
+    assert.match(html, /data-l10n="Profile from snapshot">Profile from snapshot</);
+    assert.ok(html.includes('onclick="profilerFromSnapshot()"'));
+    assert.ok(html.includes('function profilerScanFromSnapshot(si)'));
+    assert.ok(html.includes('function profilerBuildFileRuleFromSnapshot('));
+});

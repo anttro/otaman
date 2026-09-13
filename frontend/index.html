@@ -749,6 +749,7 @@
 					<div class="flex flex-wrap gap-2 mb-3">
 						<button onclick="profilerNew()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New profile">New profile</button>
 						<button data-needs="card" onclick="profilerFromCard()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Profile from card">Profile from card</button>
+						<button onclick="profilerFromSnapshot()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Profile from snapshot">Profile from snapshot</button>
 						<button onclick="document.getElementById('profiler-import-file').click()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Import profile">Import profile</button>
 						<input type="file" id="profiler-import-file" accept=".json,application/json" class="hidden" onchange="profilerImportFile(this)">
 					</div>
@@ -7649,7 +7650,7 @@ function profilerScanSetTarget(target) {
 	_scanTarget = target;
 	const title = document.getElementById('profiler-scan-title');
 	const label = document.getElementById('profiler-scan-name-label');
-	const titleKey = target === 'snapshot' ? 'New snapshot' : 'Profile from card';
+	const titleKey = target === 'snapshot' ? 'New snapshot' : (target === 'profile-snapshot' ? 'Profile from snapshot' : 'Profile from card');
 	const labelKey = target === 'snapshot' ? 'Snapshot name' : 'Profile name';
 	title.setAttribute('data-l10n', titleKey);
 	title.textContent = t(titleKey);
@@ -7669,10 +7670,15 @@ function profilerScanRefreshOptions() {
 }
 
 function profilerFromCard() {
-	profilerScanSetTarget('profile');
-	document.getElementById('profiler-scan-name').value = '';
-	document.getElementById('profiler-scan-name').readOnly = false;
-	document.getElementById('profiler-scan-name').classList.remove('opacity-50');
+	profilerScanOpenForm('profile', '');
+}
+
+function profilerScanOpenForm(target, presetName) {
+	profilerScanSetTarget(target);
+	const nameEl = document.getElementById('profiler-scan-name');
+	nameEl.value = presetName || '';
+	nameEl.readOnly = false;
+	nameEl.classList.remove('opacity-50');
 	const ignore = document.getElementById('profiler-scan-ignore');
 	let html = '';
 	for (const f of PROFILER_IGNORE_FILES) {
@@ -7697,7 +7703,7 @@ function profilerFromCard() {
 	document.getElementById('profiler-scan-btn').disabled = false;
 	document.getElementById('profiler-scan-btn').textContent = t('Scan');
 	document.getElementById('profiler-scan-modal').classList.remove('hidden');
-	document.getElementById('profiler-scan-name').focus();
+	nameEl.focus();
 }
 
 function profilerScanCancel() {
@@ -7763,7 +7769,14 @@ async function profilerScanStart() {
 		const onProgress = (done, total, path) => {
 			progEl.textContent = done + ' / ' + total + ' ' + t('files') + (path ? ' — ' + path : '');
 		};
-		if (_scanTarget === 'snapshot') {
+		if (_scanTarget === 'profile-snapshot' && _scanSnapshot) {
+			const rules = await profilerScanSnapshot(_scanSnapshot, ignoreFids, ignoreNames, fciMode, maskFids, onProgress);
+			const profile = { id: profilerNewId(), name: name, created: new Date().toISOString(), rules: rules };
+			profiles.push(profile);
+			profilerSave();
+			profilerScanCancel();
+			profilerEdit(profiles.length - 1);
+		} else if (_scanTarget === 'snapshot') {
 			const timing = profilerTimingAccumulator();
 			const scanStart = performance.now();
 			const files = await profilerScanCard(new Set(), new Set(), 'exact', onProgress, new Set(), 'snapshot', timing);
@@ -7787,6 +7800,7 @@ async function profilerScanStart() {
 		errEl.textContent = e.message;
 		errEl.classList.remove('hidden');
 	} finally {
+		_scanSnapshot = null;
 		profilerScanSetTarget(_scanTarget);
 		cancelBtn.disabled = false;
 		nameEl.readOnly = false;
@@ -7861,6 +7875,55 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, ma
 			? await profilerBuildSnapshotFile(entry.path, entry.child, timing)
 			: await profilerBuildFileRule(entry.path, entry.child, ignoreFids, ignoreNames, fciMode, maskFids);
 		if (rule) rules.push(rule);
+	}
+	return rules;
+}
+
+let _scanSnapshot = null;
+
+function profilerBuildFileRuleFromSnapshot(f, ignoreFids, ignoreNames, fciMode, maskFids) {
+	const isRecord = profilerContentKindForFileType(f.fileType) === 'record';
+	const rule = {
+		type: 'file',
+		path: f.path,
+		name: f.name || null,
+		fileType: f.fileType || null,
+		fileSize: isRecord ? null : ((f.fileSize === null || f.fileSize === undefined) ? null : f.fileSize),
+		recordLen: (f.recordLen === null || f.recordLen === undefined) ? null : f.recordLen,
+		numRecords: (f.numRecords === null || f.numRecords === undefined) ? null : f.numRecords,
+		fciMode: fciMode || 'type_size',
+		fciHex: f.fciHex || null,
+		content: null,
+	};
+	const seg = (f.path || '').toUpperCase().split('/').pop();
+	const fid = /^[0-9A-F]{4}$/.test(seg) ? seg : '';
+	const name = (f.name || '').toUpperCase();
+	if (fid && ignoreFids && ignoreFids.has(fid)) return rule;
+	if (name && ignoreNames && ignoreNames.has(name)) return rule;
+	if (!f.content) return rule;
+	if (f.content.kind === 'record') {
+		rule.content = {
+			mode: 'exact', kind: 'record',
+			records: (f.content.records || []).map(r => ({ num: r.num, data: r.data })),
+		};
+	} else if (typeof f.content.data === 'string') {
+		const useMask = maskFids ? maskFids.has(fid) : !!PROFILER_MASK_PREFIX4_FIDS[fid];
+		rule.content = useMask
+			? { mode: 'mask', kind: 'transparent', expected: profilerMaskPrefix4(f.content.data) }
+			: { mode: 'exact', kind: 'transparent', expected: f.content.data };
+	}
+	return rule;
+}
+
+async function profilerScanSnapshot(snapshot, ignoreFids, ignoreNames, fciMode, maskFids, onProgress) {
+	const files = (snapshot && snapshot.files) ? snapshot.files : [];
+	const total = files.length;
+	if (onProgress) onProgress(0, total, '');
+	const rules = [];
+	for (let i = 0; i < files.length; i++) {
+		if (onProgress) onProgress(i + 1, total, files[i].path);
+		rules.push(profilerBuildFileRuleFromSnapshot(files[i], ignoreFids, ignoreNames, fciMode, maskFids));
+		if (i % 20 === 19) await new Promise(r => setTimeout(r, 0));
 	}
 	return rules;
 }
@@ -8464,20 +8527,39 @@ async function profilerRunProfile(p, source, header, extraResults, labels) {
 	profilerRenderResultsView();
 }
 
+function profilerSnapshotPickListHtml(actionHtml) {
+	let html = '';
+	for (let si = 0; si < snapshots.length; si++) {
+		const s = snapshots[si];
+		html += '<button onclick="' + actionHtml(si) + '" class="w-full text-left px-3 py-2 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700">' +
+			'<span class="font-semibold text-gray-800 dark:text-slate-200">' + esc(s.name) + '</span>' +
+			'<span class="block text-gray-500 dark:text-slate-400">' + esc(s.iccid || '') + ' · ' + esc(new Date(s.created).toLocaleString()) + ' · ' + (s.files ? s.files.length : 0) + ' ' + t('files') + '</span></button>';
+	}
+	return html;
+}
+
 function profilerCheckSnapshotPick(i) {
 	if (!snapshots.length) {
 		alert(t('No snapshots defined.'));
 		return;
 	}
-	let html = '';
-	for (let si = 0; si < snapshots.length; si++) {
-		const s = snapshots[si];
-		html += '<button onclick="profilerCheckSnapshot(' + i + ',' + si + ')" class="w-full text-left px-3 py-2 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700">' +
-			'<span class="font-semibold text-gray-800 dark:text-slate-200">' + esc(s.name) + '</span>' +
-			'<span class="block text-gray-500 dark:text-slate-400">' + esc(s.iccid || '') + ' · ' + esc(new Date(s.created).toLocaleString()) + ' · ' + (s.files ? s.files.length : 0) + ' ' + t('files') + '</span></button>';
-	}
-	document.getElementById('snapshot-pick-list').innerHTML = html;
+	document.getElementById('snapshot-pick-list').innerHTML = profilerSnapshotPickListHtml(si => 'profilerCheckSnapshot(' + i + ',' + si + ')');
 	document.getElementById('snapshot-pick-modal').classList.remove('hidden');
+}
+
+function profilerFromSnapshot() {
+	if (!snapshots.length) {
+		alert(t('No snapshots defined.'));
+		return;
+	}
+	document.getElementById('snapshot-pick-list').innerHTML = profilerSnapshotPickListHtml(si => 'profilerScanFromSnapshot(' + si + ')');
+	document.getElementById('snapshot-pick-modal').classList.remove('hidden');
+}
+
+function profilerScanFromSnapshot(si) {
+	document.getElementById('snapshot-pick-modal').classList.add('hidden');
+	_scanSnapshot = snapshots[si];
+	profilerScanOpenForm('profile-snapshot', snapshots[si].name || '');
 }
 
 async function profilerCheckSnapshot(i, si) {
@@ -9284,6 +9366,7 @@ const LANG_RU = {
 	'Step': 'Шаг',
 	'Install OK': 'Установка OK',
 	'Install FAILED at step:': 'Установка не удалась на шаге:',
+	'Profile from snapshot': 'Профиль из снимка',
 	'Profile verification results for:': 'Результаты проверки профиля:',
 	'Snapshot comparison results:': 'Результаты сравнения снимков:',
 	'RAM operations perform atomic GlobalPlatform commands over SCP80. Card keys are taken from the saved preset.': 'RAM-операции выполняют атомарные команды GlobalPlatform через SCP80. Ключи карты берутся из сохранённого пресета.',

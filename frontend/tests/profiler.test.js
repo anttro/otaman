@@ -21,7 +21,7 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown', 'profilerTimingStats', 'profilerTimingAccumulator', 'profilerFormatMs', 'profilerRenderSnapshotSummary', 'profilerSnapshotCountLabel', 'pysimFsInfoHtml', 'profilerLabelText', 'profilerResultsHeaderText', 'profilerRenderResultsView'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown', 'profilerTimingStats', 'profilerTimingAccumulator', 'profilerFormatMs', 'profilerRenderSnapshotSummary', 'profilerSnapshotCountLabel', 'pysimFsInfoHtml', 'profilerLabelText', 'profilerResultsHeaderText', 'profilerRenderResultsView', 'profilerBuildFileRuleFromSnapshot', 'profilerSnapshotPickListHtml', 'profilerScanSetTarget'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
@@ -31,6 +31,7 @@ code += extractFunc(html, 'profilerBuildSnapshotFile', true) + '\n';
 code += extractFunc(html, 'profilerCardIccid', true) + '\n';
 code += extractFunc(html, 'profilerCheck', true) + '\n';
 code += extractFunc(html, 'profilerCheckSnapshot', true) + '\n';
+code += extractFunc(html, 'profilerScanSnapshot', true) + '\n';
 code += "var _scanTarget = 'profile';\nvar profilerResults = null;\nvar profilerResultsHeader = null;\nvar profilerMismatchOnly = false;\n";
 code += html.match(/const PROFILER_MASK_PREFIX4_FIDS = \{[\s\S]*?\n\};/)[0] + '\n';
 eval(code);
@@ -1400,5 +1401,82 @@ test('profilerRenderResultsView writes the built header into the title', () => {
 	assert.strictEqual(els['profiler-results-title'].textContent, 'Snapshot comparison results: A \u2192 B');
 	profilerResults = null;
 	profilerResultsHeader = null;
+	delete global.t;
+});
+
+test('profilerBuildFileRuleFromSnapshot builds a rule with exact contents', () => {
+	const f = { path: 'MF/7F10/6F3A', name: 'EF.ADN', fileType: 'transparent', fileSize: 4, recordLen: null, numRecords: null, fciHex: '620B', content: { kind: 'transparent', data: 'AABBCCDD' } };
+	const rule = profilerBuildFileRuleFromSnapshot(f, new Set(), new Set(), 'type_size', new Set());
+	assert.strictEqual(rule.path, 'MF/7F10/6F3A');
+	assert.strictEqual(rule.name, 'EF.ADN');
+	assert.strictEqual(rule.fileType, 'transparent');
+	assert.strictEqual(rule.fileSize, 4);
+	assert.strictEqual(rule.fciMode, 'type_size');
+	assert.strictEqual(rule.fciHex, '620B');
+	assert.deepStrictEqual(rule.content, { mode: 'exact', kind: 'transparent', expected: 'AABBCCDD' });
+});
+
+test('profilerBuildFileRuleFromSnapshot masks the first 4 bytes on request', () => {
+	const f = { path: 'MF/6F07', name: 'EF.IMSI', fileType: 'transparent', fileSize: 9, content: { kind: 'transparent', data: '0891101234567890' } };
+	assert.deepStrictEqual(profilerBuildFileRuleFromSnapshot(f, new Set(), new Set(), 'type', new Set(['6F07'])).content,
+		{ mode: 'mask', kind: 'transparent', expected: '08911012????????' });
+	assert.strictEqual(profilerBuildFileRuleFromSnapshot(f, new Set(), new Set(), 'type', new Set()).content.mode, 'exact');
+});
+
+test('profilerBuildFileRuleFromSnapshot honors the ignore list by FID and name', () => {
+	const f = { path: 'MF/7F20/6F52', name: 'EF.KcGPRS', fileType: 'transparent', fileSize: 9, content: { kind: 'transparent', data: 'AABB' } };
+	assert.strictEqual(profilerBuildFileRuleFromSnapshot(f, new Set(['6F52']), new Set(), 'type_size', new Set()).content, null);
+	assert.strictEqual(profilerBuildFileRuleFromSnapshot(f, new Set(), new Set(['EF.KCGPRS']), 'type_size', new Set()).content, null);
+});
+
+test('profilerBuildFileRuleFromSnapshot keeps uncaptured and record contents', () => {
+	const noContent = { path: 'MF/6F07', name: 'EF.IMSI', fileType: 'transparent', fileSize: 9, content: null };
+	assert.strictEqual(profilerBuildFileRuleFromSnapshot(noContent, new Set(), new Set(), 'type_size', new Set()).content, null);
+	const records = { path: 'MF/7F10/6F3A', name: 'EF.ADN', fileType: 'linear_fixed', fileSize: 60, recordLen: 30, numRecords: 2, content: { kind: 'record', records: [{ num: 1, data: 'AA' }, { num: 2, data: 'BB' }] } };
+	const rule = profilerBuildFileRuleFromSnapshot(records, new Set(), new Set(), 'exact', new Set());
+	assert.strictEqual(rule.fileSize, null);
+	assert.strictEqual(rule.recordLen, 30);
+	assert.strictEqual(rule.numRecords, 2);
+	assert.deepStrictEqual(rule.content, { mode: 'exact', kind: 'record', records: [{ num: 1, data: 'AA' }, { num: 2, data: 'BB' }] });
+});
+
+test('profilerScanSnapshot walks snapshot files with progress', async () => {
+	const snapshot = { files: [
+		{ path: 'MF/6F07', name: 'EF.IMSI', fileType: 'transparent', content: null },
+		{ path: 'MF/2FE2', name: 'EF.ICCID', fileType: 'transparent', content: { kind: 'transparent', data: '9807' } },
+	] };
+	const progress = [];
+	const rules = await profilerScanSnapshot(snapshot, new Set(), new Set(), 'type_size', new Set(), (d, tt, p) => progress.push([d, tt, p]));
+	assert.strictEqual(rules.length, 2);
+	assert.deepStrictEqual(rules.map(r => r.path), ['MF/6F07', 'MF/2FE2']);
+	assert.deepStrictEqual(progress, [[0, 2, ''], [1, 2, 'MF/6F07'], [2, 2, 'MF/2FE2']]);
+});
+
+test('profilerSnapshotPickListHtml wires the chosen action per snapshot', () => {
+	global.t = s => s;
+	global.snapshots = [
+		{ name: 'SnapA', iccid: '8901', created: '2026-01-01T00:00:00Z', files: [{}, {}] },
+		{ name: 'SnapB', iccid: '', created: '2026-01-02T00:00:00Z', files: [] },
+	];
+	const html = profilerSnapshotPickListHtml(si => 'profilerScanFromSnapshot(' + si + ')');
+	assert.ok(html.includes('onclick="profilerScanFromSnapshot(0)"'), html);
+	assert.ok(html.includes('onclick="profilerScanFromSnapshot(1)"'), html);
+	assert.ok(html.includes('SnapA'), html);
+	assert.ok(html.includes('2 files'), html);
+	delete global.snapshots;
+	delete global.t;
+});
+
+test('profilerScanSetTarget labels the snapshot-sourced profile form', () => {
+	global.t = s => s;
+	const els = {};
+	for (const id of ['profiler-scan-title', 'profiler-scan-name-label', 'profiler-scan-options']) {
+		els[id] = { textContent: '', attrs: {}, classList: { set: new Set(), toggle(c, on) { if (on) this.set.add(c); else this.set.delete(c); }, contains(c) { return this.set.has(c); } }, setAttribute(k, v) { this.attrs[k] = v; } };
+	}
+	global.document = { getElementById: id => els[id] || null };
+	profilerScanSetTarget('profile-snapshot');
+	assert.strictEqual(els['profiler-scan-title'].textContent, 'Profile from snapshot');
+	assert.strictEqual(els['profiler-scan-name-label'].textContent, 'Profile name');
+	assert.ok(!els['profiler-scan-options'].classList.contains('hidden'));
 	delete global.t;
 });
