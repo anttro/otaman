@@ -7820,10 +7820,12 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, ma
 	const files = [];
 	const seen = new Set();
 
-	// dir: { name, fid, parentSel (to select this dir), pathPrefix (rule-path segs for its children) }
+	// dir: { name, fid, parentSel (legacy), parentPath (full path of this dir),
+	//        pathPrefix (rule-path segs for its children) }
 	async function walkDir(dir) {
 		let body = { name: dir.name, fid: dir.fid };
-		if (dir.parentPath && dir.parentPath.length) body.parent_path = dir.parentPath;
+		const parentPath = (dir.parentPath || []).slice(0, -1);
+		if (parentPath.length) body.parent_path = parentPath;
 		if (dir.parentSel) body.parent_sel = dir.parentSel;
 		let data;
 		try {
@@ -7835,12 +7837,13 @@ async function profilerScanCard(ignoreFids, ignoreNames, fciMode, onProgress, ma
 			const parentSel = (dir.name === 'MF') ? 'MF'
 				: (dir.name && dir.name.startsWith('ADF.')) ? dir.name
 				: (dir.fid ? dir.fid : dir.name);
+			const childSeg = c.aid ? c.aid.toUpperCase() : (c.fid ? c.fid : c.name);
 			if (c.isDir) {
 				// ADF roots use the AID, not the generic ADF fid
 				const childPrefix = c.aid ? [c.aid.toUpperCase()]
 					: dir.pathPrefix.concat(c.fid ? c.fid.toUpperCase() : c.name);
-				const childParentPath = (dir.parentPath || []).concat(c.aid ? c.aid.toUpperCase() : (c.fid ? c.fid : c.name));
-				await walkDir({ name: c.name, fid: c.fid, parentSel: parentSel, parentPath: childParentPath, pathPrefix: childPrefix });
+				const childDirPath = dir.parentPath.concat(childSeg);
+				await walkDir({ name: c.name, fid: c.fid, parentSel: parentSel, parentPath: childDirPath, pathPrefix: childPrefix });
 			} else {
 				const childPath = dir.pathPrefix.concat(c.fid ? c.fid.toUpperCase() : c.name).join('/');
 				if (seen.has(childPath)) continue;

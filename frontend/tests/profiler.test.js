@@ -947,6 +947,32 @@ test('profilerScanCard snapshot mode builds snapshot entries with ICCID', async 
 	delete global.pysimCustomFiles;
 });
 
+test('profilerScanCard walks nested dirs with their parent path, not their own segment', async () => {
+	global.pysimCustomFiles = [];
+	const treeCalls = [];
+	global.pysimFetch = async (path, body) => {
+		if (path === '/api/tree') {
+			treeCalls.push(body);
+			if (body.name === 'MF') return { exists: true, name: 'MF', children: [
+				{ name: 'EF.DIR', fid: '2f00', isDir: false },
+				{ name: 'DF.GSM', fid: '7f20', isDir: true },
+			] };
+			if (body.name === 'DF.GSM') return { exists: true, name: 'DF.GSM', children: [
+				{ name: 'EF.ADN', fid: '6f3a', isDir: false },
+			] };
+			throw new Error('unexpected tree ' + body.name);
+		}
+		if (path === '/api/select') return { name: 'X', fid: '0000', file_type: 'transparent', file_size: 1, record_len: null, num_of_rec: null, exists: true };
+		if (path === '/api/read') return { success: true, data: 'AA' };
+		throw new Error('unexpected ' + path);
+	};
+	const files = await profilerScanCard(new Set(), new Set(), 'type', undefined, new Set(), 'snapshot');
+	// MF root has no parent; DF.GSM must be looked up under MF, not under itself
+	assert.deepStrictEqual(treeCalls.map(b => b.parent_path), [undefined, ['MF']]);
+	assert.deepStrictEqual(files.map(f => f.path).sort(), ['MF/2F00', 'MF/7F20/6F3A']);
+	delete global.pysimCustomFiles;
+});
+
 test('profilerListSwitch toggles the profiles/snapshots tabs', () => {
 	const mkBtn = tab => ({
 		dataset: { listTab: tab },
