@@ -7404,6 +7404,7 @@ let profilerEditId = null;
 let profilerDraft = null;
 let profilerResults = null;
 let profilerResultsLabels = null;
+let profilerResultsHeader = null;
 let profilerMismatchOnly = false;
 let snapshots = [];
 let snapshotViewId = null;
@@ -8440,13 +8441,13 @@ async function profilerCardIccid() {
 async function profilerCheck(i) {
 	const p = profiles[i];
 	const iccid = await profilerCardIccid();
-	await profilerRunProfile(p, null, iccid ? p.name + ' — ' + iccid : p.name, null,
+	await profilerRunProfile(p, null, { kind: 'profile', from: p.name, to: iccid }, null,
 		{ expected: p.name, actual: iccid, prefix: true });
 }
 
-async function profilerRunProfile(p, source, title, extraResults, labels) {
+async function profilerRunProfile(p, source, header, extraResults, labels) {
 	profilerSetView('results');
-	document.getElementById('profiler-results-title').textContent = title;
+	profilerResultsHeader = header || null;
 	const prog = document.getElementById('profiler-progress');
 	document.getElementById('profiler-summary').innerHTML = '';
 	document.getElementById('profiler-report').innerHTML = '';
@@ -8483,7 +8484,7 @@ async function profilerCheckSnapshot(i, si) {
 	document.getElementById('snapshot-pick-modal').classList.add('hidden');
 	const p = profiles[i];
 	const s = snapshots[si];
-	await profilerRunProfile(p, profilerSnapshotSource(s), p.name + ' — ' + s.name, null,
+	await profilerRunProfile(p, profilerSnapshotSource(s), { kind: 'profile', from: p.name, to: s.name }, null,
 		{ expected: p.name, actual: s.name, prefix: true });
 }
 
@@ -8571,7 +8572,7 @@ async function snapshotCompareRun() {
 	});
 	document.getElementById('snapshot-compare-modal').classList.add('hidden');
 	const pseudo = { name: master.name + ' → ' + check.name, rules: profilerRulesFromSnapshot(master, maskFids) };
-	await profilerRunProfile(pseudo, profilerSnapshotSource(check), pseudo.name, profilerExtraFileResults(master, check),
+	await profilerRunProfile(pseudo, profilerSnapshotSource(check), { kind: 'snapshot', from: master.name, to: check.name }, profilerExtraFileResults(master, check),
 		{ expected: master.name, actual: check.name });
 }
 
@@ -8584,8 +8585,15 @@ function profilerVisibleResults(results, mismatchOnly) {
 	return mismatchOnly ? results.filter(r => r.status !== 'pass') : results;
 }
 
+function profilerResultsHeaderText(header) {
+	if (!header || !header.from) return '';
+	const base = header.kind === 'snapshot' ? t('Snapshot comparison results:') : t('Profile verification results for:');
+	return base + ' ' + header.from + (header.to ? ' \u2192 ' + header.to : '');
+}
+
 function profilerRenderResultsView() {
 	if (!profilerResults) return;
+	document.getElementById('profiler-results-title').textContent = profilerResultsHeaderText(profilerResultsHeader);
 	let passed = 0, failed = 0, errors = 0;
 	for (const res of profilerResults) {
 		if (res.status === 'pass') passed++;
@@ -9276,6 +9284,8 @@ const LANG_RU = {
 	'Step': 'Шаг',
 	'Install OK': 'Установка OK',
 	'Install FAILED at step:': 'Установка не удалась на шаге:',
+	'Profile verification results for:': 'Результаты проверки профиля:',
+	'Snapshot comparison results:': 'Результаты сравнения снимков:',
 	'RAM operations perform atomic GlobalPlatform commands over SCP80. Card keys are taken from the saved preset.': 'RAM-операции выполняют атомарные команды GlobalPlatform через SCP80. Ключи карты берутся из сохранённого пресета.',
 	'No cards defined.': 'Карты не заданы.',
 	'Card presets': 'Выбор карты',
