@@ -11,6 +11,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from io import StringIO
 from pySim.transport import ApduTracer, ProactiveHandler
 from pySim.cards import UiccCardBase
+from pysim_otaman_server import httpota
 from smartcard.CardMonitoring import CardMonitor, CardObserver
 
 import gsm0338  # registers 'gsm03.38' codec
@@ -753,6 +754,8 @@ PROACTIVE_TYPE_NAMES = {
     0x24: 'SELECT ITEM', 0x25: 'SET UP MENU',
     0x26: 'PROVIDE LOCAL INFORMATION',
     0x15: 'LAUNCH BROWSER', 0x70: 'ACTIVATE',
+    0x40: 'OPEN CHANNEL', 0x41: 'CLOSE CHANNEL',
+    0x42: 'RECEIVE DATA', 0x43: 'SEND DATA', 0x44: 'GET CHANNEL STATUS',
 }
 
 PLI_QUALIFIER_NAMES = {
@@ -781,6 +784,9 @@ PLI_QUALIFIER_NAMES = {
 }
 
 _PLI_DATA = {q: '' for q in PLI_QUALIFIER_NAMES}
+
+_BIP = httpota.BipTerminal()
+_SCP81_LISTENER = None
 
 _POLL_ENABLED = False
 _POLL_INTERVAL = 30
@@ -989,6 +995,8 @@ def _decode_cmd(cmd_type, raw, qualifier):
         if items:
             return [{'label': 'Items', 'value': ', '.join('%s. %s' % (it['id'], it['text']) for it in items)}]
         return []
+    if cmd_type in (0x40, 0x42, 0x43):
+        return _decode_bip_cmd(cmd_type, raw)
     if cmd_type == 0x26 and qualifier is not None:
         name = PLI_QUALIFIER_NAMES.get(qualifier, 'Unknown')
         return [{'label': 'Qualifier', 'value': '%s (0x%02X)' % (name, qualifier)}]
@@ -1056,6 +1064,143 @@ def _decode_tr(type_hex, qual_hex, tr_hex):
                          'value': ', '.join(ACCESSTECH_NAMES.get(t, 'Unknown') for t in techs)}]
             return [{'label': 'Data', 'value': h}]
     return [{'label': 'Data', 'value': h}]
+
+
+def _bip_channel_id(dev_dst):
+    return (dev_dst & 0x07) if 0x21 <= dev_dst <= 0x27 else None
+
+
+def _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, result=0x00, info=None, extra=b''):
+    """TERMINAL RESPONSE payload for a BIP command.
+
+    Tags follow the captured real-terminal traces (comprehension TLVs 01/02/03)
+    and the result precedes the optional Channel status / data TLVs.
+    """
+    tr = bytes([0x01, 0x03, cmd_num & 0xFF, cmd_type & 0xFF, (cmd_qual if cmd_qual is not None else 0) & 0xFF,
+                0x02, 0x02, 0x82, 0x81])
+    if info is None:
+        tr += bytes([0x03, 0x01, result & 0xFF])
+    else:
+        tr += bytes([0x03, 0x02, result & 0xFF, info & 0xFF])
+    return tr + extra
+
+
+def _decode_bip_cmd(cmd_type, raw):
+    tlvs = httpota.proactive_tlvs(raw)
+    out = []
+    if cmd_type == 0x40:
+        bearer = tlvs.get(httpota.TAG_BEARER, b'')
+        if bearer:
+            out.append({'label': 'Bearer', 'value': '0x%02X' % bearer[0]})
+        bs = tlvs.get(httpota.TAG_BUFFER_SIZE, b'')
+        if len(bs) >= 2:
+            out.append({'label': 'Buffer size', 'value': str(int.from_bytes(bs[:2], 'big'))})
+        naa = tlvs.get(httpota.TAG_NAA, b'')
+        if naa:
+            out.append({'label': 'APN', 'value': naa[1:].decode('ascii', 'replace')})
+        addr = httpota.parse_other_address(tlvs.get(httpota.TAG_OTHER_ADDRESS, b''))
+        if addr:
+            out.append({'label': 'Destination', 'value': addr})
+        proto, port = httpota.parse_transport_level(tlvs.get(httpota.TAG_TRANSPORT_LEVEL, b''))
+        if port is not None:
+            out.append({'label': 'Transport', 'value': '%s port %d' % ({0x02: 'TCP client'}.get(proto, 'proto 0x%02X' % (proto or 0)), port)})
+    elif cmd_type == 0x42:
+        req = tlvs.get(httpota.TAG_CHANNEL_DATA_LENGTH, b'')
+        if req:
+            out.append({'label': 'Requested bytes', 'value': str(req[0])})
+    elif cmd_type == 0x43:
+        data = tlvs.get(httpota.TAG_CHANNEL_DATA, b'')
+        out.append({'label': 'Data bytes', 'value': str(len(data))})
+        if data:
+            out.append({'label': 'Data', 'value': data.hex()[:120]})
+    return out
+
+
+def _handle_bip_command(scc, cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst):
+    """Handle a BIP proactive command. Returns TR payload bytes, or None for the generic path."""
+    tlvs = httpota.proactive_tlvs(raw)
+    channel = _bip_channel_id(dev_dst)
+    if cmd_type == 0x40:
+        bs = tlvs.get(httpota.TAG_BUFFER_SIZE, b'\x02\x00')
+        buffer_size = int.from_bytes(bs[:2], 'big') if len(bs) >= 2 else 0x0200
+        bearer = tlvs.get(httpota.TAG_BEARER, b'\x03')
+        extra = bytes([httpota.TAG_BEARER, len(bearer)]) + bearer
+        extra += bytes([httpota.TAG_BUFFER_SIZE, 0x02]) + buffer_size.to_bytes(2, 'big')
+        if not _BIP.enabled:
+            _BIP.log('open-unavailable', reason='BIP not enabled')
+            return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00, extra)
+        addr = httpota.parse_other_address(tlvs.get(httpota.TAG_OTHER_ADDRESS, b''))
+        proto, port = httpota.parse_transport_level(tlvs.get(httpota.TAG_TRANSPORT_LEVEL, b''))
+        if not addr or port is None:
+            _BIP.log('open-unavailable', reason='missing destination/transport', address=addr, port=port)
+            return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00, extra)
+        cid, err = _BIP.open(addr, port, buffer_size)
+        if cid is None:
+            return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00, extra)
+        status = bytes([httpota.TAG_CHANNEL_STATUS, 0x02, 0x80 | (cid & 0x07), 0x00])
+        return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x00, None, status + extra)
+    if cmd_type == 0x43:
+        data = tlvs.get(httpota.TAG_CHANNEL_DATA, b'')
+        if channel is None or not _BIP.send(channel, data):
+            return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00)
+        length = _BIP.send_capacity(channel)
+        return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x00, None,
+                       bytes([httpota.TAG_CHANNEL_DATA_LENGTH, 0x01, length & 0xFF]))
+    if cmd_type == 0x42:
+        req = tlvs.get(httpota.TAG_CHANNEL_DATA_LENGTH, b'\x00')
+        n = req[0] if req else 0
+        if channel is None:
+            return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00)
+        data = _BIP.receive(channel, n)
+        if data is None:
+            return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00)
+        remaining = _BIP.available(channel)
+        extra = bytes([httpota.TAG_CHANNEL_DATA, len(data)]) + data if data else b''
+        extra += bytes([httpota.TAG_CHANNEL_DATA_LENGTH, 0x01, 0xFF if remaining > 0xFF else remaining])
+        return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x00, None, extra)
+    if cmd_type == 0x41:
+        if channel is None or not _BIP.close(channel):
+            return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00)
+        return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x00)
+    if cmd_type == 0x44:
+        extra = b''
+        for cid in sorted(_BIP.channels):
+            extra += bytes([httpota.TAG_CHANNEL_STATUS, 0x02, 0x80 | (cid & 0x07), 0x00])
+        return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x00, None, extra)
+    return None
+
+
+def _scp81_listener_status():
+    if not _SCP81_LISTENER:
+        return None
+    return {'mode': 'dump', 'host': _SCP81_LISTENER.host, 'port': _SCP81_LISTENER.port}
+
+
+def _scp81_bip_control(body):
+    global _SCP81_LISTENER
+    body = body or {}
+    action = body.get('action', 'start')
+    if action == 'stop':
+        if _SCP81_LISTENER:
+            _SCP81_LISTENER.stop()
+            _SCP81_LISTENER = None
+        _BIP.disable()
+        return {'ok': True, 'bip': _BIP.status(), 'listener': None}
+    host = body.get('host') or '127.0.0.1'
+    port = int(body.get('port') or 8443)
+    mode = body.get('mode', 'dump')
+    if _SCP81_LISTENER:
+        _SCP81_LISTENER.stop()
+        _SCP81_LISTENER = None
+    _BIP.disable()
+    if mode != 'dump':
+        return {'ok': False, 'error': 'unsupported mode: %s' % mode}
+    _SCP81_LISTENER = httpota.TcpDumpServer(
+        host, port,
+        on_rx=lambda peer, data: _BIP.log('dump-rx', peer=peer, bytes=len(data), hex=data.hex().upper()[:2000]),
+        on_log=lambda kind, **fields: _BIP.log(kind, **fields))
+    _BIP.enable(host, _SCP81_LISTENER.port)
+    return {'ok': True, 'bip': _BIP.status(), 'listener': _scp81_listener_status()}
 
 
 def _build_tr(scc, cmd_num, cmd_type, dev_src, dev_dst, cmd_qual):
@@ -1555,7 +1700,11 @@ def _handle_proactive_chain(scc, sw91, on_fetch=None):
         if on_fetch:
             action = on_fetch(raw, cmd_num, cmd_type, dev_src, dev_dst)
         if action != 'pause':
-            tr_tlv = _build_tr(scc, cmd_num, cmd_type, dev_src, dev_dst, cmd_qual)
+            tr_tlv = None
+            if raw and cmd_type in (0x40, 0x41, 0x42, 0x43, 0x44):
+                tr_tlv = _handle_bip_command(scc, cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst)
+            if tr_tlv is None:
+                tr_tlv = _build_tr(scc, cmd_num, cmd_type, dev_src, dev_dst, cmd_qual)
             tr_rv = scc._tp.send_apdu('%s140000%02x%s' % (scc.cat_cla, len(tr_tlv), tr_tlv.hex()))
             sys.stderr.write('TR: cmd=%02x type=%02x -> %s %s\n' % (cmd_num, cmd_type, tr_rv[1], ('(%d bytes)' % len(tr_tlv))))
             _record_tr(entry, tr_tlv, tr_rv[1])
@@ -1911,6 +2060,24 @@ class PysimHandler(BaseHTTPRequestHandler):
             resp = {'active': self.server.menu_active,
                     'pending': self.server.stk_pending is not None,
                     'pending_type': self.server.stk_pending['type'] if self.server.stk_pending else None}
+            self._send_json(resp)
+            self._log_resp(resp)
+        elif self.path == '/api/scp81/status':
+            self._log_req()
+            resp = {'bip': _BIP.status(), 'listener': _scp81_listener_status()}
+            self._send_json(resp)
+            self._log_resp(resp)
+        elif self.path == '/api/scp81/log' or self.path.startswith('/api/scp81/log?'):
+            self._log_req()
+            after = 0
+            if '?' in self.path:
+                for kv in self.path.split('?', 1)[1].split('&'):
+                    if kv.startswith('after='):
+                        try:
+                            after = int(kv[6:])
+                        except ValueError:
+                            after = 0
+            resp = {'seq': _BIP.seq, 'entries': _BIP.entries_after(after)[-200:]}
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path.startswith('/api/'):
@@ -2692,6 +2859,22 @@ class PysimHandler(BaseHTTPRequestHandler):
                 err = {'success': False, 'error': str(e)}
                 self._send_json(err, 500)
                 self._log_resp(err)
+        elif self.path == '/api/scp81/bip':
+            body = self._read_body()
+            self._log_req(body)
+            try:
+                resp = _scp81_bip_control(body)
+            except Exception as e:
+                resp = {'ok': False, 'error': str(e)}
+            self._send_json(resp)
+            self._log_resp(resp)
+        elif self.path == '/api/scp81/log-clear':
+            body = self._read_body()
+            self._log_req(body)
+            _BIP.clear_log()
+            resp = {'ok': True, 'seq': _BIP.seq}
+            self._send_json(resp)
+            self._log_resp(resp)
         else:
             self._send_json({'error': _err('not_found', lang)}, 404)
             self._log_resp({'error': _err('not_found', lang)})
