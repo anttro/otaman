@@ -21,13 +21,16 @@ function extractFunc(src, name, asyncFn) {
 	return (asyncFn ? 'async ' : '') + src.slice(m.index, i + 1);
 }
 
-const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown', 'profilerTimingStats', 'profilerTimingAccumulator', 'profilerFormatMs', 'profilerRenderSnapshotSummary', 'profilerSnapshotCountLabel', 'pysimFsInfoHtml'];
+const FNS = ['profilerNormHex', 'profilerNormHexStrict', 'profilerMatch', 'profilerMatchMin', 'profilerMaskPrefix4', 'profilerFileFields', 'profilerContentKindForFileType', 'profilerEmptyRecordContent', 'profilerValidateProfile', 'profilerCustomNameForPath', 'profilerUpdateRulePath', 'profilerResultAspects', 'profilerAspectSummary', 'profilerNumRanges', 'esc', 'escHtml', 'profilerRawDataCheck', 'profilerRenderReport', 'parseBerLen', 'parseTlvList', 'fcpInt', 'fcpParseTlvs', 'fcpFileDescriptor', 'fcpLifeCycle', 'fcpSfi', 'fcpDo', 'fcpDecode', 'fcpDiffHtml', 'profilerFciPreviewItems', 'profilerUpdateFciPreview', 'profilerUpdateRule', 'profilerFciInput', 'profilerScanToggleAll', 'profilerScanIgnoreAllState', 'swapNibbles', 'decIccid', 'profilerSnapshotIccid', 'profilerValidateSnapshot', 'profilerListSwitch', 'profilerScanRefreshOptions', 'profilerLiveSource', 'profilerSnapshotSource', 'profilerVisibleResults', 'profilerMaskFidForFile', 'profilerRulesFromSnapshot', 'profilerExtraFileResults', 'profilerScanNameKeydown', 'profilerTimingStats', 'profilerTimingAccumulator', 'profilerFormatMs', 'profilerRenderSnapshotSummary', 'profilerSnapshotCountLabel', 'pysimFsInfoHtml', 'profilerLabelText'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 code += extractFunc(html, 'profilerBuildFileRule', true) + '\n';
 code += extractFunc(html, 'profilerRunRule', true) + '\n';
 code += extractFunc(html, 'profilerScanCard', true) + '\n';
 code += extractFunc(html, 'profilerBuildSnapshotFile', true) + '\n';
+code += extractFunc(html, 'profilerCardIccid', true) + '\n';
+code += extractFunc(html, 'profilerCheck', true) + '\n';
+code += extractFunc(html, 'profilerCheckSnapshot', true) + '\n';
 code += "var _scanTarget = 'profile';\n";
 code += html.match(/const PROFILER_MASK_PREFIX4_FIDS = \{[\s\S]*?\n\};/)[0] + '\n';
 eval(code);
@@ -1302,4 +1305,74 @@ test('fcpDiffHtml headers use custom labels', () => {
 	assert.ok(diff.includes('>Master<'), diff);
 	assert.ok(diff.includes('>Candidate<'), diff);
 	delete global.t;
+});
+
+test('profilerLabelText builds default, verbatim and prefixed labels', () => {
+	global.t = s => 't:' + s;
+	assert.strictEqual(profilerLabelText(null, 'expected'), 't:expected');
+	assert.strictEqual(profilerLabelText({ expected: 'A', actual: 'B' }, 'expected'), 'A');
+	assert.strictEqual(profilerLabelText({ expected: 'A', actual: 'B' }, 'actual'), 'B');
+	assert.strictEqual(profilerLabelText({ expected: 'A', actual: 'B', prefix: true }, 'actual'), 't:actual (B)');
+	assert.strictEqual(profilerLabelText({ expected: '', prefix: true }, 'expected'), 't:expected');
+	delete global.t;
+});
+
+test('profilerRenderReport prefixes names in expected/actual labels', () => {
+	global.t = s => s;
+	global.pysimCustomFiles = [];
+	const html = profilerRenderReport([{
+		path: 'MF/6F3A', status: 'fail',
+		checks: [{ label: 'fileSize', expected: 4, actual: 9, ok: false }],
+	}], { expected: 'My profile', actual: 'Snap X', prefix: true });
+	assert.ok(html.includes('expected (My profile)'), html);
+	assert.ok(html.includes('actual (Snap X)'), html);
+	delete global.t;
+	delete global.pysimCustomFiles;
+});
+
+test('fcpDiffHtml uses prefixed labels in headers and decode notes', () => {
+	global.t = s => s;
+	const diff = fcpDiffHtml(FCP_TRANSPARENT, '62128002000A8202412183026F078A0105880110', { expected: 'Prof', actual: 'Snap', prefix: true });
+	assert.ok(diff.includes('expected (Prof)'), diff);
+	assert.ok(diff.includes('actual (Snap)'), diff);
+	const bad = fcpDiffHtml('not hex', FCP_TRANSPARENT, { expected: 'Prof', actual: 'Snap', prefix: true });
+	assert.ok(bad.includes('expected (Prof)'), bad);
+	delete global.t;
+});
+
+test('profilerCardIccid reads and decodes MF/2FE2, null otherwise', async () => {
+	let body = null;
+	global.pysimFetch = async (path, b) => { body = [path, b]; return { success: true, data: '98103254769810325476' }; };
+	assert.strictEqual(await profilerCardIccid(), '89012345678901234567');
+	assert.deepStrictEqual(body, ['/api/read', { path: 'MF/2FE2', mode: 'raw' }]);
+	global.pysimFetch = async () => ({ success: false });
+	assert.strictEqual(await profilerCardIccid(), null);
+	global.pysimFetch = async () => { throw new Error('offline'); };
+	assert.strictEqual(await profilerCardIccid(), null);
+	delete global.pysimFetch;
+});
+
+test('profilerCheck titles with the card ICCID and passes prefixed labels', async () => {
+	global.t = s => s;
+	global.profiles = [{ name: 'MyProfile', rules: [] }];
+	global.pysimFetch = async () => ({ success: true, data: '98103254769810325476' });
+	let captured = null;
+	global.profilerRunProfile = async (...args) => { captured = args; };
+	await profilerCheck(0);
+	assert.strictEqual(captured[2], 'MyProfile — 89012345678901234567');
+	assert.deepStrictEqual(captured[4], { expected: 'MyProfile', actual: '89012345678901234567', prefix: true });
+	delete global.profiles; delete global.pysimFetch; delete global.profilerRunProfile; delete global.t;
+});
+
+test('profilerCheckSnapshot passes the snapshot name as the actual label', async () => {
+	global.t = s => s;
+	global.profiles = [{ name: 'Prof', rules: [] }];
+	global.snapshots = [{ name: 'SnapX', files: [] }];
+	global.document = { getElementById: () => ({ classList: { add() {} } }) };
+	let captured = null;
+	global.profilerRunProfile = async (...args) => { captured = args; };
+	await profilerCheckSnapshot(0, 0);
+	assert.strictEqual(captured[2], 'Prof — SnapX');
+	assert.deepStrictEqual(captured[4], { expected: 'Prof', actual: 'SnapX', prefix: true });
+	delete global.profiles; delete global.snapshots; delete global.profilerRunProfile; delete global.t;
 });

@@ -514,7 +514,7 @@ A filesystem rule is defined by:
 - **File attributes** — file type, size, record length and record count, taken from the FCP template (any may be left unset).
 - **Check contents** (optional) — **Exact** hex equality, or **Mask** where `?` is a per-nibble wildcard (a mask with no `?` is a prefix match, e.g. `0891` for the IMSI MCC/MNC). Record files store a per-record list.
 
-The check report marks each verified aspect (e.g. *filetype ✓, size ✗, contents ✓*), lists mismatches as read-only monospace expected/actual fields aligned in one column, and shows a decoded per-parameter FCI comparison for FCI mismatches. Corrupt FCI data shows whatever decoded before the faulty part plus an explicit decode-failure note; record mismatches list the *matching records*. **Only mismatches** in the results header hides all passing files and keeps failures and errors only.
+The check report marks each verified aspect (e.g. *filetype ✓, size ✗, contents ✓*), lists mismatches as read-only monospace expected/actual fields aligned in one column, and shows a decoded per-parameter FCI comparison for FCI mismatches. Corrupt FCI data shows whatever decoded before the faulty part plus an explicit decode-failure note; record mismatches list the *matching records*. In the report the mismatch fields and FCI comparison columns are labelled `expected (profile name)` and `actual (card ICCID)` for a live check, or `actual (snapshot name)` for a snapshot check; the results title shows `profile — ICCID` / `profile — snapshot`. **Only mismatches** in the results header hides all passing files and keeps failures and errors only.
 
 #### “Profile from card” scan options
 

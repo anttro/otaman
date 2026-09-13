@@ -8429,9 +8429,19 @@ function profilerSaveProfile() {
 	profilerSetView('list');
 }
 
+async function profilerCardIccid() {
+	try {
+		const rd = await pysimFetch('/api/read', { path: 'MF/2FE2', mode: 'raw' });
+		if (rd && rd.success && rd.data) return decIccid(rd.data) || null;
+	} catch (e) { /* EF.ICCID not readable */ }
+	return null;
+}
+
 async function profilerCheck(i) {
 	const p = profiles[i];
-	await profilerRunProfile(p, null, p.name);
+	const iccid = await profilerCardIccid();
+	await profilerRunProfile(p, null, iccid ? p.name + ' — ' + iccid : p.name, null,
+		{ expected: p.name, actual: iccid, prefix: true });
 }
 
 async function profilerRunProfile(p, source, title, extraResults, labels) {
@@ -8473,7 +8483,8 @@ async function profilerCheckSnapshot(i, si) {
 	document.getElementById('snapshot-pick-modal').classList.add('hidden');
 	const p = profiles[i];
 	const s = snapshots[si];
-	await profilerRunProfile(p, profilerSnapshotSource(s), p.name + ' — ' + s.name);
+	await profilerRunProfile(p, profilerSnapshotSource(s), p.name + ' — ' + s.name, null,
+		{ expected: p.name, actual: s.name, prefix: true });
 }
 
 function profilerMaskFidForFile(f, maskFids) {
@@ -9007,9 +9018,14 @@ function fcpDecode(hex) {
 	return { ok: !error && items.length > 0, template, items, error };
 }
 
+function profilerLabelText(labels, which) {
+	if (!labels || !labels[which]) return t(which);
+	return labels.prefix ? t(which) + ' (' + labels[which] + ')' : labels[which];
+}
+
 function fcpDiffHtml(expectedHex, actualHex, labels) {
-	const expLabel = (labels && labels.expected) ? labels.expected : t('expected');
-	const actLabel = (labels && labels.actual) ? labels.actual : t('actual');
+	const expLabel = profilerLabelText(labels, 'expected');
+	const actLabel = profilerLabelText(labels, 'actual');
 	const e = fcpDecode(expectedHex);
 	const a = fcpDecode(actualHex);
 	const eBad = !!e.error, aBad = !!a.error;
@@ -9040,8 +9056,8 @@ function fcpDiffHtml(expectedHex, actualHex, labels) {
 		}
 		html += '</tbody></table>';
 	}
-	if (eBad) html += '<div class="text-xs text-red-600 mt-0.5 pl-2">' + esc(t('expected')) + ': ' + esc(e.error) + '</div>';
-	if (aBad) html += '<div class="text-xs text-red-600 mt-0.5 pl-2">' + esc(t('actual')) + ': ' + esc(a.error) + '</div>';
+	if (eBad) html += '<div class="text-xs text-red-600 mt-0.5 pl-2">' + esc(expLabel) + ': ' + esc(e.error) + '</div>';
+	if (aBad) html += '<div class="text-xs text-red-600 mt-0.5 pl-2">' + esc(actLabel) + ': ' + esc(a.error) + '</div>';
 	return html;
 }
 
@@ -9070,9 +9086,9 @@ function profilerFciInput(i, value) {
 }
 
 function profilerRenderReport(results, labels) {
-	const expLabel = (labels && labels.expected) ? labels.expected : t('expected');
-	const actLabel = (labels && labels.actual) ? labels.actual : t('actual');
-	const labelCls = 'text-xs text-gray-500 dark:text-slate-400 text-right shrink-0 ' + (labels ? 'w-40 break-all' : 'w-24');
+	const expLabel = profilerLabelText(labels, 'expected');
+	const actLabel = profilerLabelText(labels, 'actual');
+	const labelCls = 'text-xs text-gray-500 dark:text-slate-400 text-right shrink-0 ' + (labels ? ((labels.prefix ? 'w-48' : 'w-40') + ' break-all') : 'w-24');
 	let html = '';
 	for (const r of results) {
 		const color = r.status === 'pass' ? 'text-emerald-600' : (r.status === 'fail' ? 'text-red-600' : 'text-yellow-600');
