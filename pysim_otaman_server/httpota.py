@@ -92,6 +92,9 @@ class BipChannel:
         self.bytes_out = 0
         self.opened_at = time.time()
         self.peer_closed = False
+        self.closed_reported = False
+        self.notified_len = 0
+        self.last_notify = 0.0
 
     def pump(self, timeout=0.05):
         """Move whatever the network has into the local buffer. Returns bytes moved."""
@@ -157,6 +160,9 @@ class BipTerminal:
         self.entries = []
         self.seq = 0
         self.lock = threading.Lock()
+        self.pending_events = []
+        self.on_data = None
+        self._monitor = None
 
     def log(self, kind, **fields):
         with self.lock:
@@ -168,25 +174,94 @@ class BipTerminal:
                 del self.entries[:len(self.entries) - MAX_LOG]
             return entry
 
+    def _monitor_loop(self):
+        """Watch channels for incoming bytes and ask the card to fetch them.
+
+        The card only learns about server data through the Data available
+        event (TS 102 223 7.5.10), so the socket must be pumped even while
+        the card is idle."""
+        while True:
+            time.sleep(0.25)
+            with self.lock:
+                channels = list(self.channels.values())
+            for ch in channels:
+                try:
+                    ch.pump()
+                except OSError:
+                    ch.peer_closed = True
+                if ch.peer_closed and not ch.closed_reported and not ch.rx:
+                    # Report a dropped link (TS 102 223 7.5.11) only once the
+                    # buffered server data has been fetched: signalling the
+                    # drop while bytes are still waiting makes the card abort
+                    # the fetch and end the session prematurely.
+                    ch.closed_reported = True
+                    self.log('peer-close', channel=ch.id)
+                    self._queue_link_status(ch.id)
+                if (self.on_data and ch.rx and not ch.peer_closed
+                        and (len(ch.rx) > ch.notified_len
+                             or time.time() - ch.last_notify > 2.0)):
+                    # Re-notify while data stays unfetched: the live card
+                    # sometimes needs the Data available event again to drain
+                    # a partially received TLS record.
+                    if self.on_data(ch):
+                        ch.notified_len = len(ch.rx)
+                        ch.last_notify = time.time()
+
+    def _start_monitor(self):
+        if self._monitor is None or not self._monitor.is_alive():
+            self._monitor = threading.Thread(target=self._monitor_loop,
+                                             name='bip-monitor', daemon=True)
+            self._monitor.start()
+
     def enable(self, host, port):
         self.target = (host, int(port))
         self.enabled = True
         self.log('enabled', target='%s:%d' % self.target)
+        self._start_monitor()
 
     def disable(self):
         self.enabled = False
         self.log('disabled')
-        self.close_all()
+        self.close_all(link_lost=True)
         self.target = None
 
-    def close_all(self):
+    def close_all(self, link_lost=False):
         for ch in list(self.channels.values()):
-            self._close_channel(ch)
+            self._close_channel(ch, link_lost=link_lost)
 
-    def _close_channel(self, ch):
+    def _close_channel(self, ch, link_lost=False):
         ch.close()
         if self.channels.get(ch.id) is ch:
             del self.channels[ch.id]
+        if link_lost:
+            self._queue_link_status(ch.id)
+
+    def _queue_link_status(self, channel_id, status=None, info=0x05):
+        """Record a BIP link change that did not result from a proactive
+        command (TS 102 223 7.5.11). The default is link not established +
+        info 05 = link dropped; a successful background-mode OPEN CHANNEL
+        reports link established instead. The server turns these into
+        ENVELOPE (Channel status)."""
+        with self.lock:
+            if any(e['channel'] == channel_id for e in self.pending_events):
+                return
+            self.pending_events.append({
+                'channel': channel_id,
+                'status': channel_id & 0x07 if status is None else status,
+                'info': info})
+
+    def take_pending_events(self):
+        with self.lock:
+            events, self.pending_events = self.pending_events, []
+            return events
+
+    def _check_peer(self, ch):
+        """Notify once per channel when the peer closed the connection, after
+        any buffered data has been fetched (see _monitor_loop)."""
+        if ch.peer_closed and not ch.closed_reported and not ch.rx:
+            ch.closed_reported = True
+            self.log('peer-close', channel=ch.id)
+            self._queue_link_status(ch.id)
 
     def _alloc_id(self):
         for _ in range(7):
@@ -225,7 +300,7 @@ class BipTerminal:
             ch.send(data)
         except OSError as e:
             self.log('send-fail', channel=channel_id, error=str(e))
-            self._close_channel(ch)
+            self._close_channel(ch, link_lost=True)
             return False
         self.log('send', channel=channel_id, bytes=len(data), hex=data.hex().upper()[:2000])
         return True
@@ -238,15 +313,28 @@ class BipTerminal:
         if data:
             self.log('receive', channel=channel_id, bytes=len(data), remaining=len(ch.rx),
                      hex=data.hex().upper()[:2000])
+            # The TR announced the remainder via the channel-data-length TLV,
+            # but the live card still waits for a fresh Data available event
+            # before fetching it - re-arm the notification for what is left.
+            ch.notified_len = 0
+        self._check_peer(ch)
         return data
 
     def available(self, channel_id):
         ch = self.channels.get(channel_id)
-        return ch.available() if ch else 0
+        if not ch:
+            return 0
+        n = ch.available()
+        self._check_peer(ch)
+        return n
 
     def send_capacity(self, channel_id):
         ch = self.channels.get(channel_id)
-        return ch.send_capacity() if ch else 0
+        if not ch:
+            return 0
+        n = ch.send_capacity()
+        self._check_peer(ch)
+        return n
 
     def clear_log(self):
         with self.lock:

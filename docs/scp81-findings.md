@@ -1,0 +1,200 @@
+# SCP81 / HTTP OTA live-card findings
+
+Living debug log for the HTTP OTA (RAM over HTTP) work against the live UICC.
+Purpose: record **every attempted configuration and its outcome**, so the same
+variations are not repeated. Add rows as tests are run; keep the confirmed
+rules section current.
+
+Setup: `pysim_otaman_server` with a PC/SC reader, the PWA SCP81 tab (or
+`POST /api/scp81/bip`), the card triggered by its SMS-PP push / the Location
+status event. Server log at `GET /api/scp81/log`, script state at
+`GET /api/scp81/script`, proactive history at `GET /api/proactive-log`.
+
+## RESOLVED 2026-09-16: the card never received the response - BIP TLV bug
+
+**Root cause:** our RECEIVE DATA TERMINAL RESPONSE encoded the channel-data
+TLV length as a raw byte (`36 ED ...` for a 237-byte chunk). BER requires the
+long form for lengths >127: **`36 81 ED ...`** (the reference terminal traces
+use exactly that, e.g. `push_3311_success_req2.pcapng`). The card's BIP layer
+silently mis-parsed the malformed TLV, so the TLS record bytes never reached
+its TLS stack: no alert, no script processing, and the SD kept resuming its
+dialog ("no complete script received") forever. Every delivery <=127 bytes
+(handshake records, 204 responses) always worked - which is why the handshake
+succeeded and only the large script responses "vanished".
+
+**Fix:** `_handle_bip_command` (cmd 0x42) BER-encodes the channel data length
+(`36 81 <len>` above 127); regression test
+`test_receive_data_tlv_long_form_length`.
+
+**Result with the live card** (one push, `explore` script, 5/5 commands):
+
+```
+#1 80CAFF2100        SW 9000  FF210B 81010D 8202C5D6 83020962   (13 applets,
+                              free NV 50646 B, free volatile 2402 B)
+#2 80F28002024F0000  SW 9000  ISD A000000003000000 + D276000005AAFFCAFE00
+#3 80CA008500        SW 9000  stored HTTP OTA parameters
+#4 80F24002024F0000  SW CAFE  127-byte ELF registry page (more available)
+#5 80F21002024F0000  SW CAFE  127-byte applications page (more available)
+```
+
+Every command returned `X-Admin-Script-Status: ok` on the card's own POST to
+the incremented `X-Admin-Next-URI`, on the same keep-alive connection, and the
+session ended with 204 + mutual close_notify - exactly the reference flow.
+`SW CAFE` marks a truncated 127-byte page: the remaining entries need a
+continuation GET STATUS (P2=02 with the last AID as search criterion).
+
+## Live card facts (verified via the reader, 2026-09-16)
+
+- `80CAFF2100` (GET DATA extended card resources) **works**:
+  `FF21 0B 81 01 0D 82 02 C5 D6 83 02 09 62` -> 13 applets installed,
+  free NV memory `0xC5D6` = 50646 B, free volatile `0x0962` = 2402 B.
+- `80CA008500` (GET DATA HTTP administration parameters) **works** and returns
+  the SD's stored OTA configuration: `8A 09 "localhost"`, `8B 14 <agent id>`,
+  `8C 01 "/"` (stored URI), `85 14 <PSK identity>`, `86 07 00 01 25 03 00 10 00`
+  (retry counter 1, timer **10 minutes**), `02 40 01` (KVN/KID), APN-ish
+  `C7 04 03 47 50 42`, destination `BE 05 21 5B D5 05 02` = 91.213.5.2.
+- `80F28002/80F24002/80F21002 ...4F0000` return `6985` through the reader when
+  the ISD is not the current DF; the reference platform sends
+  `80F28002024F0000` over HTTP, where the SD executes inside the ISD.
+- `SELECT` of the ISD (`00A4040008A000000003000000`) returns `6112`;
+  a subsequent GET RESPONSE (`00C0000012`) returns `6D00`.
+- BIP device identities: OPEN CHANNEL uses destination `0x82`; SEND/RECEIVE
+  DATA carry channel `0x21..0x27` (e.g. `82 02 81 22` = channel 2).
+- Subscribed events (`99 03`): `03` location status, `09` data available,
+  `0A` channel status.
+- A Location status event re-triggers the OTA session only while the last
+  session is incomplete; after a clean session end the card waits for a push.
+- The SD stores a 10-minute retry timer (`25 03 00 10 00`).
+
+## Confirmed rules (with evidence)
+
+1. **The card needs a clean TLS close, with the close_notify actually
+   fetched.** Keep-alive (no close) -> fatal `unexpected_message` after it
+   fetched the response. `close_notify` sent *after* the buffer drained is
+   never fetched (the card ends the dialog on its own first). Correct order:
+   send it while the response still waits, then wait for the drain, then
+   close.
+2. **The card's abort alert is `fatal unexpected_message`** - decrypted with
+   the listener's `keylog` option (see `tools/scp81_decrypt.py`).
+3. **A dropped link must be signalled (TS 102 223 7.5.11), and only after the
+   buffered data was fetched.** Signalling the drop while bytes are still in
+   the BIP buffer makes the card abort the fetch mid-record and end the
+   session. Omitting the signal entirely hangs the SD: after a listener
+   restart dropped the channel silently, the card ignored pushes and location
+   events for minutes; a manual `ENVELOPE (Channel status, B8 02 02 05)`
+   immediately made it start a fresh session.
+4. **The Next-URI shape matters.** A path-only or absolute Next-URI (`/`,
+   `/1`, `http://127.0.0.1:8443/api/scp81`) draws the fatal
+   `unexpected_message`; the reference-style relative path **with a query**
+   (`/adminserver?PHPSESSID=...&apdu_id=101`) does not.
+5. **The reference administration server** (`samples/HTTP_OTA/
+   httpota_adminserver_php_v2`) uses: command script
+   `AE 80 22 <len> <apdu> 00 00`; response `200` with
+   `X-Admin-Protocol`, `X-Admin-Next-URI: /adminserver?PHPSESSID=<id>&apdu_id=<n>`,
+   `Content-Type: ...;version=1.0`, **chunked** body (100-byte chunks);
+   the card returns the R-APDU as the body of its next POST with
+   `X-Admin-Script-Status: ok`; the server ends with `204`.
+   Its log proves the card followed the Next-URI three times within 1-2 s per
+   step (`Got next request ... Script status is 'ok' - storing R-APDU data`).
+6. **`chunked=false` (Content-Length) has never produced an R-APDU.** All
+   sessions that ended silently (clean close, no alert, no POST) used
+   `Content-Length`. Hypothesis: the card only treats a chunked body as a
+   command script; with Content-Length it sees an empty script, executes
+   nothing and ends the session gracefully.
+
+## The one fully successful session trace (ground truth)
+
+`traces/HTTPOTA_session_3311_success1.pcap` (2019, **plain HTTP on port 80**,
+one TCP connection for the whole session, card `3311` - *not* our UICC):
+
+```
+POST /server/adminagent?cmd=1            <- card (trigger URI, with query!)
+200 OK + Date/Server + X-Admin-Protocol
+     + X-Admin-Next-URI: /Download?req=1 + Content-Length: 11
+     + Content-Type: .../card-content-mgt;version=1.0
+     body: ae 80 22 05 80 ca 00 85 00 00 00     (script: GET DATA 0085)
+POST /Download?req=1                     <- card, SAME connection
+  X-Admin-Script-Status: ok
+  Content-Type: .../card-content-mgt-response;version=1.0
+  Transfer-Encoding: chunked
+  body: "8
+" af 80 23 02 6a 88 00 00 "0
+
+"   (R-APDU SW 6A88)
+200 OK + X-Admin-Next-URI: /Download?req=2 + Content-Length: 14
+     body: ae 80 22 08 80 f2 80 02 02 4f 00 00 00 00    (GET STATUS P1=80)
+POST /Download?req=2  ->  X-Admin-Script-Status: ok, chunked
+     body: "1F
+" af 80 23 19 <25-byte R-APDU ... 90 00> 00 00 "0
+
+"
+200 OK + /Download?req=3 + 11-byte script
+POST /Download?req=3  ->  status ok, R-APDU 23 02 6d 00 (SW 6D00)
+204 No Content                          <- session ends
+```
+
+Confirmed from it: the card echoes the `X-Admin-Next-URI` (path *and* query)
+verbatim; its response POST goes on the **same TCP connection**; its response
+is the `AF 80 23 <len> <R-APDU> 00 00` indefinite Response Scripting template
+(in a chunked body, with `X-Admin-Script-Status`); the server's script
+`AE 80 22 <len> <APDU> 00 00` matches ours byte for byte; the server uses
+`Content-Length` (not chunked), no `Connection` header (implicit keep-alive),
+and ends with 204.
+
+## Attempt matrix
+
+| # | transport | framing | Next-URI | close | link events | outcome |
+|---|-----------|---------|----------|-------|-------------|---------|
+| 1 | dump mode only | - | - | - | off | OPEN CHANNEL + ClientHello captured (Phase A) |
+| 2 | TLS, 204 only | - | - | yes | off | session completes cleanly, no alert (Phase B, live) |
+| 3 | TLS + script | chunked 100 | `/N` | early (raced fetch) | on | fetch truncated (237/399); card re-opened and repeated its POST with `X-Admin-Resume: true` -> breakdown-resume works |
+| 4 | TLS + script | chunked 100 / single | `/1`, `/`, absolute | keep-alive | off | full fetch, then fatal `unexpected_message` (Next-URI shape) |
+| 5 | TLS + script | single | none (`""`) | keep-alive | off | no alert, no POST, session left open (spec: no Next-URI -> no response) |
+| 6 | TLS + script | chunked 100 | reference | close_notify after drain | off | full fetch, alert (notify never fetched) |
+| 7 | TLS + script | chunked 100 | reference | close_notify before drain | off | full fetch, alert (head split into its own record) |
+| 8 | TLS + script | **single record** | reference | drain + close_notify | off | **no alert**, card CLOSE CHANNELs, no R-APDU (`chunked=false` -> suspected empty script) |
+| 9 | TLS + script | single record | reference | keep-alive (no close) | off | fatal `unexpected_message` (close required) |
+| 10 | TLS + script | chunked 100 | reference | drain + close_notify | off | full fetch, then alert; later the SD hung until a manual link-dropped event |
+| 11 | TLS + script | single record | reference | keep-alive | off | fatal `unexpected_message` after the full fetch (no close) |
+| 12 | TLS + script | single record | reference | drain + close_notify | off | **no alert**, card CLOSE CHANNELs, no R-APDU (`Content-Length`) |
+| 13 | TLS + script | chunked100 + single | reference | drain + close_notify | off | no alert, no R-APDU |
+| 14 | TLS + script | single record | reference | keep-alive | off | alert again |
+| 15 | TLS + script | chunked 100 | reference | keep-alive | on | alert (small records, ruled out record size) |
+| 16 | TLS + script | single record | reference | keep-alive, no `Connection` header | on | alert |
+| 17 | TLS + script (RFM! `00D6` write-probe) | chunked, single | reference | drain + close_notify | on | no alert, no R-APDU; EF.SPN unchanged - **RFM result is void**: the ISD only accepts RAM commands |
+
+All script attempts used the `explore` list, except #8-#17 which used only
+`80CAFF2100` (or the RFM probe). #3-#17 ran with the card's PSK identity
+`89390…903` (push trigger) or `89701…` (event trigger).
+
+**Status after #17 (superseded by the 2026-09-16 resolution above):** the
+failures were caused by the BIP TLV length bug, not by the HTTP/TLS details;
+resume mode was a symptom (the working session even started as a resume). The
+key working recipe (also now the server default): one keep-alive connection,
+Apache-style headers, `Transfer-Encoding: chunked` body with the script in
+one TLS record, no Connection header, `X-Admin-Next-URI` with a query whose
+command id increments.
+
+**Also confirmed:** a TLS half-close (close_notify then keep reading for the
+card's POST which RFC 5246 leaves open in practice) cannot be done with
+CPython's `ssl`: `SSLSocket.unwrap()` with a short timeout raises and poisons
+the session (tested), so the `half_close` option is a documented no-op.
+
+## Next tests / work
+
+1. **Continuation pages:** follow `SW CAFE` (127-byte listing pages) with
+   GET STATUS P1=40/10 P2=02 using the last returned AID as the search
+   criterion, and append the pages to the result set (memory + full ELF and
+   application registries).
+2. **UI:** show the decoded memory/applications results (and page merging) in
+   the SCP81 tab; expose the framing options there.
+3. Load/store operations (RAM INSTALL/LOAD) over SCP81 using the same recipe.
+
+## Tooling
+
+- `tools/scp81_decrypt.py <log.json> <keys.log>` - decrypts the dialog from
+  `GET /api/scp81/log` plus the listener's `keylog` file (SSLKEYLOGFILE
+  format; PSK-AES128-CBC-SHA256, TLS 1.2 PRF + OpenSSL CLI). Shows each
+  record's plaintext and any alert level/description.
+- Start the listener with `"keylog": "/tmp/.../scp81.keys"` to collect the
+  secrets (contains key material - use a temp path, never commit).

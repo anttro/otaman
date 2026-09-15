@@ -12,6 +12,7 @@ from io import StringIO
 from pySim.transport import ApduTracer, ProactiveHandler
 from pySim.cards import UiccCardBase
 from pysim_otaman_server import httpota
+from pysim_otaman_server import scp81
 from smartcard.CardMonitoring import CardMonitor, CardObserver
 
 import gsm0338  # registers 'gsm03.38' codec
@@ -20,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.2'
+VERSION = '2.1.5'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -709,14 +710,18 @@ class _DefaultProactiveHandler(ProactiveHandler):
     def receive_fetch_raw(self, pcmd, parsed):
         cmd_num, cmd_type, dev_src, dev_dst, cmd_qual = 1, 0, 0x83, 0x81, None
         entry = None
+        # pySim parses the FETCH response into a command-specific object
+        # ('parsed'); the 'pcmd' collection stays empty and is only useful as
+        # a fallback. Use the parsed object for both the log and the response.
+        cmd_obj = parsed if getattr(parsed, 'children', None) else pcmd
         try:
-            raw = bytes.fromhex(parsed) if parsed else None
+            raw = cmd_obj.to_tlv()
             if raw:
                 cmd_num, cmd_type, dev_src, dev_dst, cmd_qual = _parse_proactive_header(raw)
             entry = _log_proactive(cmd_type, raw, cmd_qual, cmd_num)
         except Exception:
             pass
-        ti_list = self.prepare_response(pcmd, 'performed_successfully')
+        ti_list = self.prepare_response(cmd_obj, 'performed_successfully')
         if cmd_type == 0x26 and cmd_qual is not None:
             pli_hex = _PLI_DATA.get(cmd_qual, '')
             if pli_hex:
@@ -740,6 +745,9 @@ class _RawBerTlv(BER_TLV_IE):
     def to_bytes(self, context={}):
         return self._raw
 
+    def to_tlv(self):
+        return self._raw
+
 
 _STK_DECODE = GsmOrUcs2Adapter(GreedyBytes)
 
@@ -752,7 +760,7 @@ PROACTIVE_TYPE_NAMES = {
     0x13: 'SEND SHORT MESSAGE', 0x20: 'PLAY TONE',
     0x21: 'DISPLAY TEXT', 0x22: 'GET INKEY', 0x23: 'GET INPUT',
     0x24: 'SELECT ITEM', 0x25: 'SET UP MENU',
-    0x26: 'PROVIDE LOCAL INFORMATION',
+    0x26: 'PROVIDE LOCAL INFORMATION', 0x27: 'TIMER MANAGEMENT',
     0x15: 'LAUNCH BROWSER', 0x70: 'ACTIVATE',
     0x40: 'OPEN CHANNEL', 0x41: 'CLOSE CHANNEL',
     0x42: 'RECEIVE DATA', 0x43: 'SEND DATA', 0x44: 'GET CHANNEL STATUS',
@@ -787,6 +795,7 @@ _PLI_DATA = {q: '' for q in PLI_QUALIFIER_NAMES}
 
 _BIP = httpota.BipTerminal()
 _SCP81_LISTENER = None
+_SCP81_PSK = {}
 
 _POLL_ENABLED = False
 _POLL_INTERVAL = 30
@@ -959,6 +968,41 @@ def _dec_imei(hex8):
     return s[:15]
 
 
+def _cmd_tlv(tlvs, tag):
+    """Fetch a command TLV, tolerating both the plain tag and its
+    comprehension-required variant (e.g. 0x24 and 0xA4, TS 101 220 7.1.1)."""
+    return tlvs.get(tag) or tlvs.get(tag | 0x80) or b''
+
+
+def _tlv_map(data):
+    """Top-level COMPREHENSION-TLV map {tag: value} of a payload without a
+    D0 wrapper (e.g. the command-specific TLVs of a TERMINAL RESPONSE)."""
+    out = {}
+    off = 0
+    while off + 1 < len(data):
+        tag, tlen = data[off], data[off + 1]
+        out.setdefault(tag, data[off + 2: off + 2 + tlen])
+        off += 2 + tlen
+    return out
+
+
+def _bcd_swap(b):
+    """Semi-octet BCD digit pair (TS 123 040 TP-SCT): low nibble first."""
+    return (b & 0x0F) * 10 + ((b >> 4) & 0x0F)
+
+
+def _hms_bcd(seconds):
+    """Encode seconds as hour/minute/second semi-octet BCD (TS 123 040)."""
+    h, rem = divmod(int(seconds), 3600)
+    m, s = divmod(rem, 60)
+    return bytes([((h % 10) << 4) | (h // 10),
+                  ((m % 10) << 4) | (m // 10),
+                  ((s % 10) << 4) | (s // 10)])
+
+
+_TIMER_ACTIONS = {0x00: 'Start', 0x01: 'Deactivate', 0x02: 'Get current value'}
+
+
 def _decode_cmd(cmd_type, raw, qualifier):
     """Decode a fetched proactive command into [{label, value}] pairs."""
     if not raw:
@@ -1000,6 +1044,23 @@ def _decode_cmd(cmd_type, raw, qualifier):
     if cmd_type == 0x26 and qualifier is not None:
         name = PLI_QUALIFIER_NAMES.get(qualifier, 'Unknown')
         return [{'label': 'Qualifier', 'value': '%s (0x%02X)' % (name, qualifier)}]
+    if cmd_type == 0x27:
+        out = []
+        if qualifier is not None:
+            action = _TIMER_ACTIONS.get(qualifier & 0x03)
+            out.append({'label': 'Action',
+                        'value': action or 'Reserved (0x%02X)' % qualifier})
+        tlvs = httpota.proactive_tlvs(raw)
+        timer = _cmd_tlv(tlvs, 0x24)
+        if timer:
+            tv = timer[0]
+            out.append({'label': 'Timer',
+                        'value': str(tv) if 1 <= tv <= 8 else 'Invalid (0x%02X)' % tv})
+        value = _cmd_tlv(tlvs, 0x25)
+        if len(value) >= 3:
+            out.append({'label': 'Value', 'value': '%02d:%02d:%02d' % (
+                _bcd_swap(value[0]), _bcd_swap(value[1]), _bcd_swap(value[2]))})
+        return out
     return [{'label': 'Data', 'value': raw.hex()}]
 
 
@@ -1015,6 +1076,17 @@ def _decode_tr(type_hex, qual_hex, tr_hex):
         return [{'label': 'Data', 'value': h}]
     if cmd_type == 0x03 and len(h) >= 8 and h[0:2] == '84':
         return [{'label': 'Interval', 'value': '%d s' % int(h[6:8], 16)}]
+    if cmd_type == 0x27:
+        tlvs = _tlv_map(bytes.fromhex(h))
+        out = []
+        tid = _cmd_tlv(tlvs, 0x24)
+        if tid:
+            out.append({'label': 'Timer', 'value': str(tid[0])})
+        val = _cmd_tlv(tlvs, 0x25)
+        if len(val) >= 3:
+            out.append({'label': 'Remaining', 'value': '%02d:%02d:%02d' % (
+                _bcd_swap(val[0]), _bcd_swap(val[1]), _bcd_swap(val[2]))})
+        return out or [{'label': 'Data', 'value': h}]
     if cmd_type == 0x26 and qual_hex:
         try:
             qual = int(qual_hex, 16)
@@ -1088,28 +1160,31 @@ def _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, result=0x00, info=Non
 def _decode_bip_cmd(cmd_type, raw):
     tlvs = httpota.proactive_tlvs(raw)
     out = []
+    dev = _cmd_tlv(tlvs, 0x02)
+    if len(dev) >= 2 and 0x21 <= dev[1] <= 0x27:
+        out.append({'label': 'Channel', 'value': str(dev[1] & 0x07)})
     if cmd_type == 0x40:
-        bearer = tlvs.get(httpota.TAG_BEARER, b'')
+        bearer = _cmd_tlv(tlvs, httpota.TAG_BEARER)
         if bearer:
             out.append({'label': 'Bearer', 'value': '0x%02X' % bearer[0]})
-        bs = tlvs.get(httpota.TAG_BUFFER_SIZE, b'')
+        bs = _cmd_tlv(tlvs, httpota.TAG_BUFFER_SIZE)
         if len(bs) >= 2:
             out.append({'label': 'Buffer size', 'value': str(int.from_bytes(bs[:2], 'big'))})
-        naa = tlvs.get(httpota.TAG_NAA, b'')
+        naa = _cmd_tlv(tlvs, httpota.TAG_NAA)
         if naa:
             out.append({'label': 'APN', 'value': naa[1:].decode('ascii', 'replace')})
-        addr = httpota.parse_other_address(tlvs.get(httpota.TAG_OTHER_ADDRESS, b''))
+        addr = httpota.parse_other_address(_cmd_tlv(tlvs, httpota.TAG_OTHER_ADDRESS))
         if addr:
             out.append({'label': 'Destination', 'value': addr})
-        proto, port = httpota.parse_transport_level(tlvs.get(httpota.TAG_TRANSPORT_LEVEL, b''))
+        proto, port = httpota.parse_transport_level(_cmd_tlv(tlvs, httpota.TAG_TRANSPORT_LEVEL))
         if port is not None:
             out.append({'label': 'Transport', 'value': '%s port %d' % ({0x02: 'TCP client'}.get(proto, 'proto 0x%02X' % (proto or 0)), port)})
     elif cmd_type == 0x42:
-        req = tlvs.get(httpota.TAG_CHANNEL_DATA_LENGTH, b'')
+        req = _cmd_tlv(tlvs, httpota.TAG_CHANNEL_DATA_LENGTH)
         if req:
             out.append({'label': 'Requested bytes', 'value': str(req[0])})
     elif cmd_type == 0x43:
-        data = tlvs.get(httpota.TAG_CHANNEL_DATA, b'')
+        data = _cmd_tlv(tlvs, httpota.TAG_CHANNEL_DATA)
         out.append({'label': 'Data bytes', 'value': str(len(data))})
         if data:
             out.append({'label': 'Data', 'value': data.hex()[:120]})
@@ -1121,33 +1196,41 @@ def _handle_bip_command(scc, cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst)
     tlvs = httpota.proactive_tlvs(raw)
     channel = _bip_channel_id(dev_dst)
     if cmd_type == 0x40:
-        bs = tlvs.get(httpota.TAG_BUFFER_SIZE, b'\x02\x00')
+        bs = _cmd_tlv(tlvs, httpota.TAG_BUFFER_SIZE) or b'\x02\x00'
         buffer_size = int.from_bytes(bs[:2], 'big') if len(bs) >= 2 else 0x0200
-        bearer = tlvs.get(httpota.TAG_BEARER, b'\x03')
+        bearer = _cmd_tlv(tlvs, httpota.TAG_BEARER) or b'\x03'
         extra = bytes([httpota.TAG_BEARER, len(bearer)]) + bearer
         extra += bytes([httpota.TAG_BUFFER_SIZE, 0x02]) + buffer_size.to_bytes(2, 'big')
         if not _BIP.enabled:
             _BIP.log('open-unavailable', reason='BIP not enabled')
             return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00, extra)
-        addr = httpota.parse_other_address(tlvs.get(httpota.TAG_OTHER_ADDRESS, b''))
-        proto, port = httpota.parse_transport_level(tlvs.get(httpota.TAG_TRANSPORT_LEVEL, b''))
+        addr = httpota.parse_other_address(_cmd_tlv(tlvs, httpota.TAG_OTHER_ADDRESS))
+        proto, port = httpota.parse_transport_level(_cmd_tlv(tlvs, httpota.TAG_TRANSPORT_LEVEL))
         if not addr or port is None:
-            _BIP.log('open-unavailable', reason='missing destination/transport', address=addr, port=port)
-            return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00, extra)
-        cid, err = _BIP.open(addr, port, buffer_size)
+            # Emulation is deliberately permissive: the APN, destination and
+            # transport are informational, the channel always goes to the
+            # configured local target (the live card emits truncated/empty
+            # destination TLVs - see the AGENTS.md HTTP OTA notes).
+            _BIP.log('open-relaxed', address=addr, port=port,
+                     note='destination/transport not fully specified')
+        cid, err = _BIP.open(addr or '-', port or 0, buffer_size)
         if cid is None:
             return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00, extra)
+        if cmd_qual and (cmd_qual & 0x04):
+            # Background mode: the terminal shall inform the UICC that the
+            # link was established (TS 102 223 7.5.11).
+            _BIP._queue_link_status(cid, status=0x80 | (cid & 0x07), info=0x00)
         status = bytes([httpota.TAG_CHANNEL_STATUS, 0x02, 0x80 | (cid & 0x07), 0x00])
         return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x00, None, status + extra)
     if cmd_type == 0x43:
-        data = tlvs.get(httpota.TAG_CHANNEL_DATA, b'')
+        data = _cmd_tlv(tlvs, httpota.TAG_CHANNEL_DATA)
         if channel is None or not _BIP.send(channel, data):
             return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00)
         length = _BIP.send_capacity(channel)
         return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x00, None,
                        bytes([httpota.TAG_CHANNEL_DATA_LENGTH, 0x01, length & 0xFF]))
     if cmd_type == 0x42:
-        req = tlvs.get(httpota.TAG_CHANNEL_DATA_LENGTH, b'\x00')
+        req = _cmd_tlv(tlvs, httpota.TAG_CHANNEL_DATA_LENGTH) or b'\x00'
         n = req[0] if req else 0
         if channel is None:
             return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00)
@@ -1155,7 +1238,17 @@ def _handle_bip_command(scc, cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst)
         if data is None:
             return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00)
         remaining = _BIP.available(channel)
-        extra = bytes([httpota.TAG_CHANNEL_DATA, len(data)]) + data if data else b''
+        # The channel data TLV length is BER-encoded: a single byte only up
+        # to 127, then the 0x81 long form (the reference terminal traces use
+        # `36 81 ed` for a 237-byte chunk). With a raw length byte >0x7F the
+        # card reads a malformed TLV and the record bytes never reach its
+        # TLS layer (it fetches, accepts, and never processes the response).
+        extra = b''
+        if data:
+            if len(data) <= 0x7F:
+                extra = bytes([httpota.TAG_CHANNEL_DATA, len(data)]) + data
+            else:
+                extra = bytes([httpota.TAG_CHANNEL_DATA, 0x81, len(data)]) + data
         extra += bytes([httpota.TAG_CHANNEL_DATA_LENGTH, 0x01, 0xFF if remaining > 0xFF else remaining])
         return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x00, None, extra)
     if cmd_type == 0x41:
@@ -1173,11 +1266,258 @@ def _handle_bip_command(scc, cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst)
 def _scp81_listener_status():
     if not _SCP81_LISTENER:
         return None
+    if isinstance(_SCP81_LISTENER, scp81.PskTlsServer):
+        return {'mode': 'tls', 'host': _SCP81_LISTENER.host, 'port': _SCP81_LISTENER.port,
+                'psk_identity': _SCP81_LISTENER.identity,
+                'identity_seen': _SCP81_LISTENER.identity_seen,
+                'chunked': _SCP81_LISTENER.chunked,
+                'chunk_size': _SCP81_LISTENER.chunk_size,
+                'keep_alive': _SCP81_LISTENER.keep_alive,
+                'compact_headers': _SCP81_LISTENER.compact_headers,
+                'tls_version': _SCP81_LISTENER.tls_version,
+                'cipher': _SCP81_LISTENER.cipher}
     return {'mode': 'dump', 'host': _SCP81_LISTENER.host, 'port': _SCP81_LISTENER.port}
 
 
+def _scp81_wait_drained(peer):
+    """Wait until the BIP channel for this TLS connection has delivered its
+    buffered bytes to the card (matched by the terminal's ephemeral port), so
+    a connection close does not truncate the response fetch."""
+    if not peer or len(peer) < 2:
+        return
+    port = peer[1]
+    deadline = time.time() + 5.0
+    seen_data = False
+    while time.time() < deadline:
+        ch = None
+        for c in list(_BIP.channels.values()):
+            try:
+                if c.sock.getsockname()[1] == port:
+                    ch = c
+                    break
+            except OSError:
+                continue
+        if ch is None:
+            return
+        if ch.rx:
+            # Channel pump has picked up the response; wait for the card.
+            seen_data = True
+        elif seen_data:
+            return
+        time.sleep(0.05)
+
+
+def _bip_data_available(ch):
+    """Monitor-thread callback: tell the card there is server data to fetch.
+
+    TS 102 223 7.5.10 - ENVELOPE (Event Download - Data available) carries the
+    Channel status and the number of bytes waiting; the card then issues
+    RECEIVE DATA. Returns True when the event was sent (the caller then marks
+    the bytes as notified)."""
+    server = _server_ref
+    if not server or not _CARD_CONNECTED or ch.peer_closed:
+        return False
+    ev_list = getattr(server, 'event_list', None) or []
+    if 0x09 not in ev_list or not ch.rx:
+        return False
+    with _CARD_LOCK:
+        server = _server_ref
+        if not server or not _CARD_CONNECTED or not getattr(server, 'scc', None):
+            return False
+        if _PROACTIVE_BUSY or getattr(server, 'stk_pending', None):
+            return False
+        length = min(len(ch.rx), 0xFF)
+        tlv = bytes([0xB8, 0x02, 0x80 | (ch.id & 0x07), 0x00,
+                     0xB7, 0x01, length])
+        try:
+            _send_event_download(server.scc, 0x09, tlv)
+        except Exception as e:
+            _BIP.log('data-available-skip', channel=ch.id, reason=str(e))
+            return False
+        _BIP.log('data-available', channel=ch.id, length=length)
+        return True
+
+
+# ---- SCP81 command scripting (GP RAM over HTTP, TS 102 226 5.2) -----------
+# The administration server answers the card's POST with one C-APDU per
+# request (Command Scripting template 'AE 80 22 <len> <apdu> 00 00',
+# indefinite length as recommended for RAM over HTTPS) and reads the R-APDU
+# from the next POST's Response Scripting template ('AB'/'AF', with '80'
+# executed-count and '23' R-APDU TLVs whose last two bytes are SW1 SW2).
+
+_SCP81_SCRIPTS = {
+    # The command sequence of the reference administration server
+    # (samples/HTTP_OTA/httpota_adminserver_php_v2, get_next_apdu), extended
+    # with the registries: GET DATA FF21 (extended card resources / free
+    # memory), GET STATUS P1=80 (Issuer Security Domain), GET DATA 0085,
+    # GET STATUS P1=40 (executable load files / ELF), GET STATUS P1=10
+    # (applications/applets); P2=02 with data '4F00' selects the TLV format,
+    # Le=00 so no GET RESPONSE is needed.
+    'explore': ['80CAFF2100', '80F28002024F0000', '80CA008500',
+                '80F24002024F0000', '80F21002024F0000'],
+    'none': [],
+}
+_SCP81_SCRIPT = list(_SCP81_SCRIPTS['explore'])
+_SCP81_SCRIPT_SENT = 0
+_SCP81_SCRIPT_RESULTS = []
+_SCP81_SCRIPT_TEMPLATE = 'indefinite'
+_SCP81_SCRIPT_CR_TAG = False
+# None = short per-command Next-URI ('/N'); '' = omit the header (spec: the
+# card executes the script, sends no response string and closes the session).
+_SCP81_NEXT_URI = None
+# Optional X-Admin-Targeted-Application header (spec syntax //aid/<RID>/<PIX>).
+# When it names an application that does not exist on the card, the SD answers
+# with X-Admin-Script-Status: unknown-application instead of executing.
+_SCP81_TARGETED_APP = None
+# Emit Apache-style responses (Date/Server/X-Powered-By, Content-Length before
+# Content-Type) exactly like the reference admin servers.
+_SCP81_APACHE_HEADERS = False
+# The listener's chunked flag (mirrored here for the response headers: a
+# chunked response must not carry Content-Length - invalid HTTP, and the
+# reference sends Transfer-Encoding before Content-Type).
+_SCP81_CHUNKED = False
+# Send automatic Channel status (link dropped) events to the card. Suppress
+# while testing flows where the terminal closes the connection on purpose:
+# the card must drain the buffered response and resume on a new connection.
+_SCP81_LINK_EVENTS = True
+
+
+def _scp81_command_body(apdu_hex, definite=False, cr_tag=False):
+    """Command Scripting template with one C-APDU TLV: the indefinite-length
+    variant ('AE 80 22 <len> <apdu> 00 00', recommended for RAM over HTTPS) or
+    the definite-length one ('AA <len> 22 <len> <apdu>'). The C-APDU TLV tag
+    is '22' per TS 101 220 (CR flag 0); some cards expect the CR-set 'A2'
+    instead, so it is configurable."""
+    apdu = bytes.fromhex(re.sub(r'\s', '', apdu_hex))
+    cmd_tlv = bytes([0xA2 if cr_tag else 0x22, len(apdu)]) + apdu
+    if definite:
+        return bytes([0xAA, len(cmd_tlv)]) + cmd_tlv
+    return bytes([0xAE, 0x80]) + cmd_tlv + b'\x00\x00'
+
+
+def _scp81_parse_response(body):
+    """Parse a Response Scripting template (TS 102 226 5.2.2, definite 'AB'
+    or indefinite 'AF'); returns (executed_count, [(rapdu, sw_hex), ...])."""
+    if not body:
+        return 0, []
+    if body[0] == 0xAF and len(body) >= 2 and body[1] == 0x80:
+        content = body[2:-2] if body.endswith(b'\x00\x00') else body[2:]
+    elif body[0] == 0xAB:
+        ln, off = httpota.ber_len_read(body, 1)
+        content = body[off:off + ln]
+    else:
+        content = body
+    count, out = 0, []
+    off = 0
+    while off + 1 < len(content):
+        tag, tlen = content[off], content[off + 1]
+        val = content[off + 2:off + 2 + tlen]
+        off += 2 + tlen
+        if tag == 0x80:
+            count = int.from_bytes(val, 'big') if val else 0
+        elif tag == 0x23 and len(val) >= 2:
+            out.append((val[:-2], val[-2:].hex().upper()))
+    return count, out
+
+
+def _scp81_decode_memory(rapdu):
+    """GET DATA FF21 value: 81 applet count, 82 free NV (3 B), 83 free volatile."""
+    if len(rapdu) < 5 or rapdu[0] != 0xFF or rapdu[1] != 0x21:
+        return None
+    content = rapdu[3:3 + rapdu[2]]
+    out = {}
+    off = 0
+    while off + 1 < len(content):
+        tag, tlen = content[off], content[off + 1]
+        val = content[off + 2:off + 2 + tlen]
+        off += 2 + tlen
+        if tag == 0x81:
+            out['applets'] = int.from_bytes(val, 'big')
+        elif tag == 0x82:
+            out['free_nv'] = int.from_bytes(val, 'big')
+        elif tag == 0x83:
+            out['free_volatile'] = int.from_bytes(val, 'big')
+    return out or None
+
+
+def _scp81_script_responder(method, target, headers, body):
+    """Remote Administration Server side of the administration session: send
+    the next scripted C-APDU or close the session (TS 102 226 / GP 4.4.2)."""
+    global _SCP81_SCRIPT_SENT, _SCP81_SCRIPT_RESULTS
+    status = headers.get('x-admin-script-status')
+    if status is not None:
+        index = _SCP81_SCRIPT_SENT
+        if status != 'ok':
+            _BIP.log('script-status', index=index, status=status)
+        else:
+            count, rapdus = _scp81_parse_response(body)
+            for rapdu, sw in rapdus:
+                _BIP.log('script-rapdu', index=index, sw=sw, bytes=len(rapdu),
+                         hex=rapdu.hex().upper()[:2000])
+                _SCP81_SCRIPT_RESULTS.append({'index': index, 'sw': sw,
+                                              'rapdu': rapdu.hex().upper()})
+            if rapdus and _SCP81_SCRIPT and index >= 1:
+                apdu = _SCP81_SCRIPT[index - 1].upper()
+                if apdu.startswith('80CAFF21'):
+                    decoded = _scp81_decode_memory(rapdus[-1][0])
+                    if decoded:
+                        _BIP.log('script-memory', **decoded)
+    else:
+        # First (or resumed) POST of a session: run the script from the start.
+        _SCP81_SCRIPT_SENT = 0
+        _SCP81_SCRIPT_RESULTS = []
+    if _SCP81_SCRIPT_SENT < len(_SCP81_SCRIPT):
+        apdu = _SCP81_SCRIPT[_SCP81_SCRIPT_SENT]
+        _SCP81_SCRIPT_SENT += 1
+        _BIP.log('script-send', index=_SCP81_SCRIPT_SENT, apdu=apdu)
+        headers = _scp81_response_headers()
+        if _SCP81_TARGETED_APP:
+            headers['X-Admin-Targeted-Application'] = _SCP81_TARGETED_APP
+        # The working reference session (samples/HTTPOTA_session_3311_success1)
+        # answers with a relative URI plus a QUERY (/Download?req=N): a
+        # query-less Next-URI makes the card abort the TLS session. A '%d'
+        # in the configured/default URI is replaced with the command number.
+        template = _SCP81_NEXT_URI if _SCP81_NEXT_URI is not None else '/api/scp81?req=%d'
+        next_uri = template % _SCP81_SCRIPT_SENT if '%d' in template else template
+        if next_uri:
+            headers['X-Admin-Next-URI'] = next_uri
+        body_out = _scp81_command_body(
+            apdu, definite=(_SCP81_SCRIPT_TEMPLATE == 'definite'),
+            cr_tag=_SCP81_SCRIPT_CR_TAG)
+        if _SCP81_APACHE_HEADERS:
+            if _SCP81_CHUNKED:
+                headers['Transfer-Encoding'] = 'chunked'
+            else:
+                headers['Content-Length'] = str(len(body_out))
+        headers['Content-Type'] = scp81.GP_CT_COMMAND
+        return 200, headers, body_out
+    _BIP.log('script-done', sent=_SCP81_SCRIPT_SENT,
+             results=len(_SCP81_SCRIPT_RESULTS))
+    headers = _scp81_response_headers()
+    if _SCP81_APACHE_HEADERS:
+        headers['Content-Type'] = 'text/html; charset=UTF-8'
+    return 204, headers, b''
+
+
+def _scp81_response_headers():
+    """Base response headers, in the reference servers' order (Apache adds
+    Date/Server/X-Powered-By before the admin headers)."""
+    headers = {}
+    if _SCP81_APACHE_HEADERS:
+        import email.utils
+        headers['Date'] = email.utils.formatdate(usegmt=True)
+        headers['Server'] = 'Apache'
+        headers['X-Powered-By'] = 'PHP/7.0.33'
+    headers['X-Admin-Protocol'] = scp81.GP_PROTOCOL
+    return headers
+
+
 def _scp81_bip_control(body):
-    global _SCP81_LISTENER
+    global _SCP81_LISTENER, _SCP81_PSK
+    global _SCP81_SCRIPT, _SCP81_SCRIPT_SENT, _SCP81_SCRIPT_RESULTS
+    global _SCP81_SCRIPT_TEMPLATE, _SCP81_SCRIPT_CR_TAG, _SCP81_NEXT_URI
+    global _SCP81_LINK_EVENTS, _SCP81_TARGETED_APP, _SCP81_APACHE_HEADERS
+    global _SCP81_CHUNKED
     body = body or {}
     action = body.get('action', 'start')
     if action == 'stop':
@@ -1187,14 +1527,81 @@ def _scp81_bip_control(body):
         _BIP.disable()
         return {'ok': True, 'bip': _BIP.status(), 'listener': None}
     host = body.get('host') or '127.0.0.1'
-    port = int(body.get('port') or 8443)
+    port = body.get('port')
+    port = int(port) if port not in (None, '') else 8443
     mode = body.get('mode', 'dump')
     if _SCP81_LISTENER:
         _SCP81_LISTENER.stop()
         _SCP81_LISTENER = None
     _BIP.disable()
+    if mode == 'tls':
+        psk_hex = body.get('psk_hex') or _SCP81_PSK.get('psk_hex')
+        if not psk_hex:
+            return {'ok': False, 'error': 'psk_hex is required for tls mode'}
+        try:
+            psk = bytes.fromhex(re.sub(r'\s', '', psk_hex))
+        except ValueError:
+            return {'ok': False, 'error': 'psk_hex is not valid hex'}
+        if not psk:
+            return {'ok': False, 'error': 'psk_hex is empty'}
+        identity = body.get('psk_identity')
+        if identity is not None:
+            identity = identity.strip() or None    # empty clears the pin
+        else:
+            identity = _SCP81_PSK.get('psk_identity')
+        _SCP81_PSK = {'psk_hex': psk_hex, 'psk_identity': identity}
+        script = body.get('script', 'explore')
+        if isinstance(script, list):
+            _SCP81_SCRIPT = [re.sub(r'\s', '', s) for s in script if s]
+        elif script in _SCP81_SCRIPTS:
+            _SCP81_SCRIPT = list(_SCP81_SCRIPTS[script])
+        else:
+            return {'ok': False, 'error': 'unknown script preset: %s' % script}
+        _SCP81_SCRIPT_SENT = 0
+        _SCP81_SCRIPT_RESULTS = []
+        template = body.get('script_template', 'indefinite')
+        if template not in ('indefinite', 'definite'):
+            return {'ok': False, 'error': 'script_template must be indefinite or definite'}
+        _SCP81_SCRIPT_TEMPLATE = template
+        _SCP81_SCRIPT_CR_TAG = bool(body.get('cr_tag', False))
+        if 'next_uri' in body:
+            _SCP81_NEXT_URI = body.get('next_uri') or ''
+        _SCP81_LINK_EVENTS = bool(body.get('link_events', True))
+        _SCP81_TARGETED_APP = (body.get('targeted_app') or None)
+        # Defaults reproduce the working reference session (decrypted from
+        # samples/HTTP_OTA: RAM/HTTPOTA_test5.pcap): one keep-alive connection,
+        # Apache-style response headers, a chunked body whose script sits in
+        # one TLS record, no Connection header, and an X-Admin-Next-URI with a
+        # query whose command id increments. Overrides remain available.
+        _SCP81_APACHE_HEADERS = bool(body.get('apache_headers', True))
+        _SCP81_CHUNKED = bool(body.get('chunked', True))
+        cs = body.get('chunk_size')
+        chunk_size = int(cs) if cs not in (None, '') else 0
+        _SCP81_LISTENER = scp81.PskTlsServer(
+            host, port, psk, identity=identity,
+            responder=_scp81_script_responder,
+            chunked=bool(body.get('chunked', True)),
+            chunk_size=chunk_size,
+            keep_alive=bool(body.get('keep_alive', True)),
+            compact_headers=bool(body.get('compact_headers', False)),
+            tls_version=str(body.get('tls_version') or '1.2'),
+            cipher=(body.get('cipher') or None),
+            on_before_close=_scp81_wait_drained,
+            keylog=(body.get('keylog') or None),
+            conn_header=(body.get('conn_header') or 'none'),
+            answer_delay=(body.get('answer_delay') or 0),
+            on_log=lambda kind, **fields: _BIP.log(kind, **fields))
+        _BIP.on_data = _bip_data_available
+        _BIP.enable(host, _SCP81_LISTENER.port)
+        return {'ok': True, 'bip': _BIP.status(), 'listener': _scp81_listener_status(),
+                'script': _SCP81_SCRIPT, 'script_template': _SCP81_SCRIPT_TEMPLATE,
+                'cr_tag': _SCP81_SCRIPT_CR_TAG, 'link_events': _SCP81_LINK_EVENTS,
+                'targeted_app': _SCP81_TARGETED_APP,
+                'apache_headers': _SCP81_APACHE_HEADERS,
+                'chunked': _SCP81_CHUNKED}
     if mode != 'dump':
         return {'ok': False, 'error': 'unsupported mode: %s' % mode}
+    _BIP.on_data = _bip_data_available
     _SCP81_LISTENER = httpota.TcpDumpServer(
         host, port,
         on_rx=lambda peer, data: _BIP.log('dump-rx', peer=peer, bytes=len(data), hex=data.hex().upper()[:2000]),
@@ -1232,9 +1639,9 @@ _RESULT_NAMES_BASIC = {
     0x21: 'Backward move in the proactive SIM session requested by the user',
     0x22: 'No response from user',
     0x23: 'Help information required by the user',
-    0x24: 'USSD or SS transaction terminated by the user',
-    0x25: 'Proactive SIM session terminated by the user',
-    0x26: 'Backward move in the proactive SIM session requested by the user',
+    0x24: 'Action in contradiction with the current timer state',
+    0x25: 'Interaction with call control by NAA, temporary problem',
+    0x26: 'Launch browser generic error',
 }
 
 _RESULT_NAMES_GENERAL = {
@@ -1309,6 +1716,7 @@ def _handle_card_disconnect():
     global _CARD_CONNECTED
     _poll_disable()
     _cancel_menu_timeout()
+    _timer_cancel()
     _CARD_CONNECTED = False
     if _server_ref:
         _server_ref.card = None
@@ -1329,6 +1737,7 @@ def _apply_equipped_card(server):
     server.stk_pending = None
     server.menu_active = False
     _cancel_menu_timeout()
+    _timer_cancel()
     server.event_list = None
     _reset_proactive_log()
     server.card = server.app.card
@@ -1502,6 +1911,39 @@ def _send_event_download(scc, event_type, event_data=None):
     return data, sw
 
 
+_FLUSHING_CHANNEL_EVENTS = False
+# True while a FETCH/TERMINAL RESPONSE chain is running: terminal-initiated
+# ENVELOPEs must never interleave with it.
+_PROACTIVE_BUSY = False
+
+
+def _bip_flush_channel_events(scc):
+    """Inform the UICC about BIP link changes detected outside its proactive
+    commands (TS 102 223 7.5.11), if the card subscribed to Channel status.
+    Called when the proactive session is idle, never between FETCH and TR."""
+    global _FLUSHING_CHANNEL_EVENTS
+    if _FLUSHING_CHANNEL_EVENTS:
+        return
+    if not _SCP81_LINK_EVENTS:
+        _BIP.take_pending_events()
+        return
+    ev_list = getattr(_server_ref, 'event_list', None) or []
+    if 0x0A not in ev_list:
+        return
+    events = _BIP.take_pending_events()
+    if not events:
+        return
+    _FLUSHING_CHANNEL_EVENTS = True
+    try:
+        for ev in events:
+            _send_event_download(scc, 0x0A, bytes([
+                httpota.TAG_CHANNEL_STATUS | 0x80, 0x02, ev['status'], ev['info']]))
+    except Exception as e:
+        sys.stderr.write('Channel status event error: %s\n' % e)
+    finally:
+        _FLUSHING_CHANNEL_EVENTS = False
+
+
 def _skip_ber_len(raw, off):
     if off >= len(raw):
         return off
@@ -1510,6 +1952,121 @@ def _skip_ber_len(raw, off):
     if raw[off] == 0x81:
         return off + 2
     return off + 3
+
+
+# ---- TIMER MANAGEMENT (TS 102 223 6.6.21, 6.8.13/14, 7.4) -----------------
+# The terminal keeps up to 8 timers per card session. On expiry it must send
+# ENVELOPE (TIMER EXPIRATION, tag D7) so the card can act (a common OTA retry
+# mechanism); a reset or card removal deactivates all timers.
+
+_TIMERS = {}
+_TIMER_LOCK = threading.Lock()
+
+
+def _timer_cancel(timer_id=None):
+    """Cancel one timer, or all of them (reset / card removal)."""
+    with _TIMER_LOCK:
+        ids = list(_TIMERS) if timer_id is None else [timer_id]
+        for tid in ids:
+            entry = _TIMERS.pop(tid, None)
+            if entry:
+                entry['timer'].cancel()
+
+
+def _timer_remaining(timer_id):
+    with _TIMER_LOCK:
+        entry = _TIMERS.get(timer_id)
+        if not entry:
+            return None
+        return max(0, int(round(entry['deadline'] - time.time())))
+
+
+def _timer_start(timer_id, seconds):
+    """Start (or restart) a timer; returns False for an invalid identifier."""
+    if not 1 <= timer_id <= 8:
+        return False
+    _timer_cancel(timer_id)
+    timer = threading.Timer(seconds, _timer_fire, args=(timer_id, seconds))
+    timer.daemon = True
+    timer.start()
+    with _TIMER_LOCK:
+        _TIMERS[timer_id] = {'timer': timer, 'deadline': time.time() + seconds}
+    return True
+
+
+def _timer_fire(timer_id, elapsed):
+    """Timer callback: the timer is consumed on expiry (7.4.1); a timer that
+    was cancelled or restarted in the meantime must not report."""
+    with _TIMER_LOCK:
+        entry = _TIMERS.pop(timer_id, None)
+    if entry is None:
+        return
+    _timer_expired(timer_id, elapsed)
+
+
+def _timer_expired(timer_id, elapsed):
+    """Pass an expired timer to the UICC with ENVELOPE (TIMER EXPIRATION)."""
+    server = _server_ref
+    if not _CARD_CONNECTED or not server:
+        return
+    # Never inject the ENVELOPE while a fetched command awaits its TERMINAL
+    # RESPONSE (a paused STK menu); wait outside the card lock, then retry.
+    for _ in range(10):
+        if not getattr(server, 'stk_pending', None):
+            break
+        time.sleep(2)
+    with _CARD_LOCK:
+        if server is not _server_ref or not getattr(server, 'scc', None):
+            return
+        if getattr(server, 'stk_pending', None):
+            _timer_start(timer_id, 5)
+            return
+        scc = server.scc
+        inner = bytes([0x82, 0x02, 0x82, 0x81, 0xA4, 0x01, timer_id & 0xFF,
+                       0xA5, 0x03]) + _hms_bcd(elapsed)
+        tlv = bytes([0xD7, len(inner)]) + inner
+        apdu = '%sc20000%02x%s' % (scc.cat_cla, len(tlv), tlv.hex())
+        for _ in range(3):
+            try:
+                data, sw = scc._tp.send_apdu(apdu)
+            except Exception as e:
+                sys.stderr.write('TIMER-EXPIRATION send error: %s\n' % e)
+                _handle_card_disconnect()
+                return
+            sys.stderr.write('ENVELOPE(Timer Expiration): timer=%d elapsed=%ds -> %s\n'
+                             % (timer_id, elapsed, sw))
+            if sw == '9300':
+                # UICC busy: the terminal shall retry until accepted (7.4.1).
+                time.sleep(1)
+                continue
+            if sw.startswith('91'):
+                _handle_proactive_chain(scc, sw)
+            break
+
+
+def _handle_timer_command(cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst):
+    """Terminal side of TIMER MANAGEMENT. Returns the TERMINAL RESPONSE payload."""
+    tlvs = httpota.proactive_tlvs(raw)
+    tid = _cmd_tlv(tlvs, 0x24)
+    timer_id = tid[0] if tid else 1
+    action = (cmd_qual or 0) & 0x03
+    base = bytes([0x81, 0x03, cmd_num, cmd_type, (cmd_qual or 0) & 0xFF,
+                  0x82, 0x02, dev_dst, dev_src])
+    if action == 0x00:
+        value = _cmd_tlv(tlvs, 0x25)
+        if len(value) >= 3 and 1 <= timer_id <= 8:
+            secs = (_bcd_swap(value[0]) * 3600 + _bcd_swap(value[1]) * 60
+                    + _bcd_swap(value[2]))
+            if secs > 0:
+                _timer_start(timer_id, secs)
+        return base + bytes([0x03, 0x01, 0x00])
+    remaining = _timer_remaining(timer_id)
+    if remaining is None:
+        return base + bytes([0x03, 0x01, 0x24])
+    if action == 0x01:
+        _timer_cancel(timer_id)
+    return (base + bytes([0xA4, 0x01, timer_id & 0xFF, 0xA5, 0x03])
+            + _hms_bcd(remaining) + bytes([0x03, 0x01, 0x00]))
 
 
 def _decode_stk_text(raw):
@@ -1543,9 +2100,12 @@ def _parse_proactive_header(raw):
         while off < len(raw) - 1:
             tag, tlen = raw[off], raw[off + 1]
             val = raw[off + 2: off + 2 + tlen]; off += 2 + tlen
-            if tag == 0x81 and tlen >= 3:
+            # Cards use both the plain (01/02) and comprehension-required
+            # (81/82) tag variants - TS 101 220 7.1.1 leaves the CR flag to
+            # the application, and the reference cards switch between them.
+            if tag in (0x01, 0x81) and tlen >= 3:
                 cmd_num, cmd_type, cmd_qual = val[0], val[1], val[2]
-            elif tag == 0x82 and tlen >= 2:
+            elif tag in (0x02, 0x82) and tlen >= 2:
                 dev_src, dev_dst = val[0], val[1]
     return cmd_num, cmd_type, dev_src, dev_dst, cmd_qual
 
@@ -1682,8 +2242,20 @@ def _parse_setup_menu_items(raw):
 
 
 def _handle_proactive_chain(scc, sw91, on_fetch=None):
+    """Run a FETCH/TERMINAL RESPONSE chain; marks the card as busy so that
+    terminal-initiated ENVELOPEs (Data available, Channel status, timers) wait."""
+    global _PROACTIVE_BUSY
+    _PROACTIVE_BUSY = True
+    try:
+        return _run_proactive_chain(scc, sw91, on_fetch)
+    finally:
+        _PROACTIVE_BUSY = False
+
+
+def _run_proactive_chain(scc, sw91, on_fetch=None):
     sys.stderr.write('91XX chain: sw=%s\n' % sw91)
     sw = sw91
+    paused = False
     while sw.startswith('91'):
         fetch_len = int(sw[2:], 16) if len(sw) == 4 else 0x100
         rv = scc._tp.send_apdu('%s120000%02x' % (scc.cat_cla, fetch_len))
@@ -1699,10 +2271,13 @@ def _handle_proactive_chain(scc, sw91, on_fetch=None):
             entry = None
         if on_fetch:
             action = on_fetch(raw, cmd_num, cmd_type, dev_src, dev_dst)
-        if action != 'pause':
+        paused = action == 'pause'
+        if not paused:
             tr_tlv = None
             if raw and cmd_type in (0x40, 0x41, 0x42, 0x43, 0x44):
                 tr_tlv = _handle_bip_command(scc, cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst)
+            if cmd_type == 0x27:
+                tr_tlv = _handle_timer_command(cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst)
             if tr_tlv is None:
                 tr_tlv = _build_tr(scc, cmd_num, cmd_type, dev_src, dev_dst, cmd_qual)
             tr_rv = scc._tp.send_apdu('%s140000%02x%s' % (scc.cat_cla, len(tr_tlv), tr_tlv.hex()))
@@ -1716,7 +2291,12 @@ def _handle_proactive_chain(scc, sw91, on_fetch=None):
                 if st_sw.startswith('91'):
                     sw = st_sw
             if action == 'exit':
+                _bip_flush_channel_events(scc)
                 return sw
+    if not paused:
+        # Never inject an ENVELOPE while a fetched command awaits its
+        # TERMINAL RESPONSE (the menu browser answers it later).
+        _bip_flush_channel_events(scc)
 
 
 def _send_terminal_profile(scc, tp_hex):
@@ -2078,6 +2658,13 @@ class PysimHandler(BaseHTTPRequestHandler):
                         except ValueError:
                             after = 0
             resp = {'seq': _BIP.seq, 'entries': _BIP.entries_after(after)[-200:]}
+            self._send_json(resp)
+            self._log_resp(resp)
+        elif self.path == '/api/scp81/script':
+            self._log_req()
+            resp = {'script': _SCP81_SCRIPT, 'sent': _SCP81_SCRIPT_SENT,
+                    'template': _SCP81_SCRIPT_TEMPLATE, 'cr_tag': _SCP81_SCRIPT_CR_TAG,
+                    'results': _SCP81_SCRIPT_RESULTS}
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path.startswith('/api/'):
@@ -2861,7 +3448,8 @@ class PysimHandler(BaseHTTPRequestHandler):
                 self._log_resp(err)
         elif self.path == '/api/scp81/bip':
             body = self._read_body()
-            self._log_req(body)
+            # Never log the pre-shared key.
+            self._log_req(dict(body, psk_hex='<redacted>') if isinstance(body, dict) and body.get('psk_hex') else body)
             try:
                 resp = _scp81_bip_control(body)
             except Exception as e:

@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.2</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.5</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -35,6 +35,7 @@
 	<div class="flex flex-wrap gap-1 mb-4 border-b border-gray-300 dark:border-slate-600">
 		<button class="tab-btn active px-4 py-1.5 text-sm rounded-t bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-tab="c-apdu">Remote APDU</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="scp80">SCP80</button>
+		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="scp81" data-l10n="SCP81">SCP81</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="profiler" data-l10n="Profiler">Profiler</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="pysim" data-l10n="Card reader">Card reader</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="phone" data-l10n="Phone simulator">Phone simulator</button>
@@ -954,6 +955,60 @@
 		</div>
 	</div>
 
+	<div id="tab-scp81" class="tab-content hidden">
+		<div class="flex items-center gap-2 mb-2">
+			<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="HTTP OTA listener">HTTP OTA listener</span>
+			<span id="scp81-state" class="text-xs text-gray-400"></span>
+		</div>
+		<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
+			<div class="flex flex-wrap items-end gap-3">
+				<div>
+					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Mode">Mode</label>
+					<select id="scp81-mode" onchange="scp81ModeChanged()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+						<option value="dump" data-l10n="Capture (dump)">Capture (dump)</option>
+						<option value="tls" data-l10n="PSK TLS server">PSK TLS server</option>
+					</select>
+				</div>
+				<div>
+					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Host">Host</label>
+					<input id="scp81-host" value="127.0.0.1" class="w-36 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+				</div>
+				<div>
+					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Port">Port</label>
+					<input id="scp81-port" value="8443" class="w-24 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+				</div>
+				<div>
+					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Script">Script</label>
+					<select id="scp81-script" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+						<option value="explore" data-l10n="Memory + ELF info">Memory + ELF info</option>
+						<option value="none" data-l10n="None">None</option>
+					</select>
+				</div>
+				<div id="scp81-psk-row" class="flex items-end gap-3">
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="PSK Identity (text)">PSK Identity (text)</label>
+						<input id="scp81-psk-id" placeholder="89012345678901234567" class="w-56 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="PSK key (hex)">PSK key (hex)</label>
+						<input id="scp81-psk-hex" type="password" placeholder="00112233445566778899aabbccddeeff" class="w-72 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+					</div>
+				</div>
+				<button id="scp81-start-btn" data-needs="server" onclick="scp81Start()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Start">Start</button>
+				<button id="scp81-stop-btn" data-needs="server" onclick="scp81Stop()" class="px-3 py-1.5 text-sm rounded bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Stop">Stop</button>
+			</div>
+			<div id="scp81-msg" class="text-xs mt-2 hidden"></div>
+			<div class="mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="The key is only sent to the local server and is never stored or logged.">The key is only sent to the local server and is never stored or logged.</div>
+		</div>
+		<div class="border border-gray-200 dark:border-slate-700 rounded p-3">
+			<div class="flex justify-between items-center mb-2">
+				<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="HTTP OTA log">HTTP OTA log</span>
+				<button data-needs="server" onclick="scp81LogClear()" class="px-2.5 py-1 text-xs rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Clear">Clear</button>
+			</div>
+			<div id="scp81-log" class="text-sm font-mono text-gray-600 dark:text-slate-400 max-h-[55vh] overflow-auto"></div>
+		</div>
+	</div>
+
 	<div id="event-send-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
 		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 max-h-[85vh] overflow-auto">
 			<h3 id="event-send-title" class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200"></h3>
@@ -1042,6 +1097,7 @@
 <script>
 // ===== Tab switching =====
 function switchTab(name) {
+	if (_scp81Timer && name !== 'scp81') { clearInterval(_scp81Timer); _scp81Timer = null; }
 	document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
 	document.getElementById('tab-' + name).classList.remove('hidden');
 	document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1056,6 +1112,7 @@ function switchTab(name) {
 	else if (name === 'pysim') setHelpAnchor(pysimHelpAnchor);
 	else if (name === 'profiler') { profilerSetView('list'); setHelpAnchor('profiler'); }
 	else if (name === 'phone') phoneSwitchSubtab('phone');
+	else if (name === 'scp81') scp81Enter();
 }
 
 let scp80HelpAnchor = 'secured-packet';
@@ -6437,7 +6494,25 @@ const EVENT_FORMS = {
 	},
 	0x08: { title: 'Browser termination', note: 'not_yet' },
 	0x09: null,
-	0x0A: { title: 'Channel status', note: 'not_yet' },
+	0x0A: { title: 'Channel status',
+		fields: [
+			{ id: 'channel', label: 'Channel', type: 'select',
+			  opts: [{v:0,l:'0 \u2014 no channel available'},
+			         {v:1,l:'Channel 1'},{v:2,l:'Channel 2'},{v:3,l:'Channel 3'},
+			         {v:4,l:'Channel 4'},{v:5,l:'Channel 5'},{v:6,l:'Channel 6'},{v:7,l:'Channel 7'}] },
+			{ id: 'state', label: 'Link state', type: 'select',
+			  opts: [{v:0x00,l:'Link not established / TCP closed'},
+			         {v:0x40,l:'TCP in LISTEN state (UICC server mode)'},
+			         {v:0x80,l:'Link established / TCP established'}] },
+			{ id: 'info', label: 'Channel info', type: 'select',
+			  opts: [{v:0x00,l:'No further info can be given'},
+			         {v:0x05,l:'Link dropped (network failure or user cancellation)'}] },
+		],
+		build(v) {
+			const st = (parseInt(v.state) || 0) | (parseInt(v.channel) || 0);
+			return 'B802' + st.toString(16).padStart(2,'0') + (parseInt(v.info) || 0).toString(16).padStart(2,'0');
+		}
+	},
 	0x0B: { title: 'Access Technology Change',
 		fields: [
 			{ id: 'tech', label: 'Access Technology', type: 'select',
@@ -6822,8 +6897,10 @@ const CMD_NAMES = {
     '13': 'SEND SHORT MESSAGE', '20': 'PLAY TONE',
     '21': 'DISPLAY TEXT', '22': 'GET INKEY', '23': 'GET INPUT',
     '24': 'SELECT ITEM', '25': 'SET UP MENU',
-    '26': 'PROVIDE LOCAL INFORMATION',
+    '26': 'PROVIDE LOCAL INFORMATION', '27': 'TIMER MANAGEMENT',
     '15': 'LAUNCH BROWSER', '70': 'ACTIVATE',
+    '40': 'OPEN CHANNEL', '41': 'CLOSE CHANNEL',
+    '42': 'RECEIVE DATA', '43': 'SEND DATA', '44': 'GET CHANNEL STATUS',
 };
 
 const CMD_QUALIFIER_SHORT = {
@@ -6842,7 +6919,25 @@ const CMD_QUALIFIER_SHORT = {
            0x0D:'BCInfo', 0x0E:'MultiAT', 0x0F:'MultiLoc', 0x10:'MultiNMR',
            0x11:'CSG', 0x12:'HNB-IP', 0x13:'HNB-Macro', 0x14:'WLAN', 0x15:'Slices',
            0x16:'CAG', 0x17:'RejSlice'},
+    '27': {0x00:'Start', 0x01:'Deactivate', 0x02:'Get'},
 };
+
+function cmdQualifierShort(typeHex, q) {
+    // OPEN CHANNEL qualifier is a bit field (TS 102 223 8.6):
+    // b1 immediate link establishment, b2 automatic reconnection,
+    // b3 background mode (b1 ignored), b4 DNS server address(es) requested.
+    if (typeHex === '40') {
+        const p = [];
+        if (q & 0x04) p.push('Background');
+        else if (q & 0x01) p.push('Immediate');
+        else p.push('OnDemand');
+        if (q & 0x02) p.push('AutoReconn');
+        if (q & 0x08) p.push('DNS');
+        return p.join('+');
+    }
+    const qs = CMD_QUALIFIER_SHORT[typeHex];
+    return qs ? (qs[q] || '') : '';
+}
 
 let _pysimLogExpanded = new Set();
 
@@ -6882,14 +6977,12 @@ async function pysimProactiveLogRender() {
         }
         let html = '';
         log.forEach((e, i) => {
-            const name = CMD_NAMES[e.type_hex] || ('Cmd 0x' + e.type_hex.toUpperCase());
+            const name = CMD_NAMES[e.type_hex]
+                || (e.type_name && e.type_name !== 'UNKNOWN' ? e.type_name : 'Cmd 0x' + e.type_hex.toUpperCase());
             let qual = '';
             if (e.qualifier) {
-                const qs = CMD_QUALIFIER_SHORT[e.type_hex];
-                if (qs) {
-                    const qv = qs[parseInt(e.qualifier,16)];
-                    if (qv) qual = ' [' + qv + ']';
-                }
+                const qv = cmdQualifierShort(e.type_hex, parseInt(e.qualifier, 16));
+                if (qv) qual = ' [' + qv + ']';
             }
             const expanded = _pysimLogExpanded.has(e.id);
             html += '<div data-log-id="' + e.id + '" class="border-b border-gray-100 dark:border-slate-700/50">'
@@ -6924,6 +7017,148 @@ async function pysimProactiveLogRender() {
     } catch (err) {
         el.innerHTML = '<span class="text-red-500">Error: ' + esc(err.message) + '</span>';
     }
+}
+
+// ===== SCP81: HTTP OTA listener (dump capture / PSK TLS server) =====
+let _scp81Timer = null;
+
+function scp81ModeChanged() {
+	const mode = document.getElementById('scp81-mode').value;
+	document.getElementById('scp81-psk-row').style.display = (mode === 'tls') ? '' : 'none';
+}
+
+function scp81Msg(text, cls) {
+	const el = document.getElementById('scp81-msg');
+	el.textContent = text;
+	el.className = 'text-xs mt-2 ' + (cls || 'text-gray-500 dark:text-slate-400');
+}
+
+function scp81LogLine(e) {
+	const parts = [String(e.seq), e.kind];
+	if (e.index) parts.push('#' + e.index);
+	if (e.apdu) parts.push(e.apdu);
+	if (e.sw) parts.push('SW ' + e.sw);
+	if (e.applets !== undefined) parts.push('applets=' + e.applets);
+	if (e.free_nv !== undefined) parts.push('free NV=' + e.free_nv);
+	if (e.free_volatile !== undefined) parts.push('free vol=' + e.free_volatile);
+	if (e.channel) parts.push('ch' + e.channel);
+	if (e.requested) parts.push(e.requested);
+	if (e.target) parts.push('-> ' + e.target);
+	if (e.bytes) parts.push(e.bytes + 'B');
+	if (e.identity) parts.push('id=' + e.identity);
+	if (e.agent) parts.push('from=' + e.agent);
+	if (e.method) parts.push(e.method);
+	if (e.uri) parts.push(e.uri);
+	if (e.status) parts.push('HTTP ' + e.status);
+	if (e.cipher) parts.push(e.cipher);
+	if (e.reason) parts.push('(' + e.reason + ')');
+	if (e.error) parts.push(e.error);
+	if (e.hex) parts.push(e.hex.slice(0, 96));
+	return parts.join(' ');
+}
+
+async function scp81StatusRefresh() {
+	const el = document.getElementById('scp81-state');
+	try {
+		const st = await pysimFetch('/api/scp81/status');
+		const l = st.listener;
+		const bip = st.bip || {};
+		if (!l) {
+			el.textContent = t('not running');
+			return st;
+		}
+		let s = l.mode + ' ' + l.host + ':' + l.port;
+		if (l.mode === 'tls') {
+			s += ' | PSK ' + t('configured');
+			if (l.identity_seen) s += ' | id: ' + l.identity_seen;
+			else if (l.psk_identity) s += ' | id: ' + l.psk_identity;
+		}
+		const ch = (bip.channels || []).map(c => 'ch' + c.id + ' in:' + c.bytes_in + ' out:' + c.bytes_out).join(', ');
+		if (ch) s += ' | ' + ch;
+		el.textContent = s;
+		return st;
+	} catch (err) {
+		el.textContent = String(err.message || err);
+		return null;
+	}
+}
+
+async function scp81LogRefresh() {
+	const el = document.getElementById('scp81-log');
+	try {
+		const log = await pysimFetch('/api/scp81/log');
+		const entries = (log.entries || []).slice(-200);
+		if (!entries.length) {
+			el.innerHTML = '<span class="text-gray-400">' + t('No entries yet.') + '</span>';
+			return;
+		}
+		el.innerHTML = entries.map(e =>
+			'<div class="py-0.5 border-b border-gray-100 dark:border-slate-700/50 break-all">' + esc(scp81LogLine(e)) + '</div>'
+		).join('');
+	} catch (err) {
+		el.innerHTML = '<span class="text-red-500">Error: ' + esc(String(err.message || err)) + '</span>';
+	}
+}
+
+async function scp81Start() {
+	const mode = document.getElementById('scp81-mode').value;
+	const body = {
+		action: 'start', mode: mode,
+		host: document.getElementById('scp81-host').value.trim() || '127.0.0.1',
+		port: parseInt(document.getElementById('scp81-port').value.trim() || '8443', 10),
+	};
+	if (mode === 'tls') {
+		const key = document.getElementById('scp81-psk-hex').value.replace(/\s+/g, '');
+		if (!key) {
+			scp81Msg(t('PSK key (hex)') + ': ' + t('required'), 'text-red-500');
+			return;
+		}
+		body.psk_hex = key;
+		// Always send the identity: empty means "accept any identity".
+		body.psk_identity = document.getElementById('scp81-psk-id').value.trim();
+		body.script = document.getElementById('scp81-script').value;
+	}
+	try {
+		const resp = await pysimFetch('/api/scp81/bip', body);
+		if (resp.ok) scp81Msg(t('Listening.'), 'text-emerald-600 dark:text-emerald-400');
+		else scp81Msg(resp.error || t('Error'), 'text-red-500');
+		scp81StatusRefresh();
+		scp81LogRefresh();
+	} catch (err) {
+		scp81Msg(String(err.message || err), 'text-red-500');
+	}
+}
+
+async function scp81Stop() {
+	try {
+		await pysimFetch('/api/scp81/bip', { action: 'stop' });
+		scp81Msg(t('Stopped.'), 'text-gray-500 dark:text-slate-400');
+		scp81StatusRefresh();
+		scp81LogRefresh();
+	} catch (err) {
+		scp81Msg(String(err.message || err), 'text-red-500');
+	}
+}
+
+async function scp81LogClear() {
+	try {
+		await pysimFetch('/api/scp81/log-clear', {});
+		scp81LogRefresh();
+	} catch (err) {
+		scp81Msg(String(err.message || err), 'text-red-500');
+	}
+}
+
+function scp81Enter() {
+	scp81ModeChanged();
+	scp81StatusRefresh();
+	scp81LogRefresh();
+	if (_scp81Timer) clearInterval(_scp81Timer);
+	_scp81Timer = setInterval(() => {
+		if (document.getElementById('tab-scp81').classList.contains('hidden')) return;
+		scp81StatusRefresh();
+		scp81LogRefresh();
+	}, 2000);
 }
 
 // ===== PLI data dictionary =====
@@ -9426,6 +9661,23 @@ const LANG_RU = {
 	'Verify vs pySim': 'Проверить в pySim',
 	'Send to Card': 'Отправить на карту',
 	'Phone simulator': 'Симулятор телефона',
+	'HTTP OTA listener': 'HTTP OTA слушатель',
+	'Mode': 'Режим',
+	'Capture (dump)': 'Захват (dump)',
+	'PSK TLS server': 'PSK TLS сервер',
+	'Script': 'Сценарий',
+	'Memory + ELF info': 'Память + ELF',
+	'Host': 'Хост',
+	'Port': 'Порт',
+	'PSK key (hex)': 'PSK ключ (hex)',
+	'HTTP OTA log': 'Журнал HTTP OTA',
+	'The key is only sent to the local server and is never stored or logged.': 'Ключ передаётся только локальному серверу, не сохраняется и не записывается в журнал.',
+	'Listening.': 'Слушает.',
+	'Stopped.': 'Остановлено.',
+	'not running': 'не запущен',
+	'configured': 'настроен',
+	'required': 'обязательно',
+	'No entries yet.': 'Записей пока нет.',
 	'Sort:': 'Сортировка:',
 	'Name': 'Имя',
 	'Probe all files': 'Проверить все файлы',
@@ -9477,6 +9729,14 @@ const LANG_RU = {
 	'Status': 'Статус',
 	'Card reader removed': 'Картридер извлечён',
 	'Card reader inserted': 'Картридер вставлен',
+	'Channel': 'Канал',
+	'Link state': 'Состояние линии',
+	'Channel info': 'Информация канала',
+	'Link not established / TCP closed': 'Линия не установлена / TCP закрыт',
+	'TCP in LISTEN state (UICC server mode)': 'TCP в состоянии LISTEN (режим сервера UICC)',
+	'Link established / TCP established': 'Линия установлена / TCP установлен',
+	'No further info can be given': 'Дополнительная информация отсутствует',
+	'Link dropped (network failure or user cancellation)': 'Линия разорвана (сбой сети или отмена пользователем)',
 	'PROVIDE LOCAL INFORMATION response data': 'Данные для PROVIDE LOCAL INFORMATION',
 	'Send STATUS': 'Отправить STATUS',
 	'help': 'справка',

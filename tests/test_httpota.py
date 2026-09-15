@@ -10,8 +10,10 @@ import socket
 import sys
 import threading
 import time
+import types
 import unittest
 from pathlib import Path
+from unittest import mock
 
 PROJECTS = Path(__file__).resolve().parents[2]
 PY_SIM = PROJECTS / 'pysim'
@@ -156,6 +158,52 @@ class BipTerminalTest(unittest.TestCase):
         self.assertIsNone(cid)
         self.assertIn('disabled', err)
 
+    def test_peer_close_queues_channel_status_event(self):
+        # TS 102 223 7.5.11: a link lost outside a proactive command must be
+        # reported to the UICC (channel id, link not established, info 05).
+        srv = socket.socket()
+        srv.bind(('127.0.0.1', 0))
+        srv.listen(1)
+        try:
+            bip = httpota.BipTerminal()
+            bip.enable('127.0.0.1', srv.getsockname()[1])
+            cid, err = bip.open('10.9.9.9', 1234, 512)
+            self.assertIsNone(err)
+            conn, _ = srv.accept()
+            conn.close()
+            events = []
+            for _ in range(40):
+                bip.receive(cid, 16)
+                events = bip.take_pending_events()
+                if events:
+                    break
+                time.sleep(0.05)
+            self.assertEqual(events, [{'channel': cid, 'status': cid, 'info': 0x05}])
+        finally:
+            srv.close()
+
+    def test_channel_status_queued_once_per_channel(self):
+        bip = httpota.BipTerminal()
+        bip._queue_link_status(3)
+        bip._queue_link_status(3)
+        self.assertEqual(bip.take_pending_events(),
+                         [{'channel': 3, 'status': 3, 'info': 0x05}])
+        self.assertEqual(bip.take_pending_events(), [])
+
+    def test_proactive_close_does_not_queue_status(self):
+        # A CLOSE CHANNEL proactive command is not an autonomous link change.
+        peer = PeerServer()
+        peer.start()
+        try:
+            bip = httpota.BipTerminal()
+            bip.enable('127.0.0.1', peer.port)
+            cid, err = bip.open('10.9.9.9', 1234, 512)
+            self.assertIsNone(err)
+            self.assertTrue(bip.close(cid))
+            self.assertEqual(bip.take_pending_events(), [])
+        finally:
+            peer.stop()
+
     def test_dump_server_logs_received_bytes(self):
         received = []
         dump = httpota.TcpDumpServer('127.0.0.1', 0, on_rx=lambda peer, data: received.append(data))
@@ -229,6 +277,152 @@ class BipCommandFlowTest(unittest.TestCase):
         tlvs = parse_tr(tr)
         self.assertEqual(tlvs[0x03].hex(), '3a00')
 
+    def test_open_channel_cr_set_tlvs(self):
+        # Live card 2026-09-15: the fallback OPEN CHANNEL uses the CR-set tag
+        # variants (B5/B9/C7/BC/BE) - the handler must find them too.
+        raw = bytes.fromhex('d0248103014003820281828500b50103b902058e'
+                            'c70403475042bc03020582be05215bd50502')
+        tr = server._handle_bip_command(None, 1, 0x40, 0x03, raw, 0x81, 0x82)
+        tlvs = parse_tr(tr)
+        self.assertEqual(tlvs[0x03], b'\x00')
+        self.assertIn(0x38, tlvs)   # Channel status
+        self.assertIn(0x39, tlvs)   # Buffer size echo
+
+    def test_open_channel_plain_tlvs(self):
+        # Same command with the plain tag variants (reference phone traces).
+        raw = bytes.fromhex('d02401030140030202818205003501033902058e'
+                            '4704034750423c030205823e05215bd50502')
+        tr = server._handle_bip_command(None, 1, 0x40, 0x03, raw, 0x81, 0x82)
+        tlvs = parse_tr(tr)
+        self.assertEqual(tlvs[0x03], b'\x00')
+        self.assertIn(0x38, tlvs)
+
+    def test_open_channel_truncated_destination_accepted(self):
+        # Live card 2026-09-15: '3e 05' with no value (empty buffer quirk,
+        # same family as the reference openchannel_not_understood_no_apn
+        # trace). The emulation is permissive and opens the configured target.
+        raw = bytes.fromhex('d01c810301400c82028182850035010339020200'
+                            '4701003c030227be3e05')
+        tr = server._handle_bip_command(None, 1, 0x40, 0x0C, raw, 0x81, 0x82)
+        tlvs = parse_tr(tr)
+        self.assertEqual(tlvs[0x03], b'\x00')
+        self.assertIn(0x38, tlvs)
+        kinds = [(e['kind'], e.get('note')) for e in self.bip.entries_after(0)]
+        self.assertIn(('open-relaxed', 'destination/transport not fully specified'), kinds)
+
+    def test_open_channel_without_transport_accepted(self):
+        # No transport level at all (bearer-level channel): still accepted.
+        raw = bytes.fromhex('d00d81030140018202818239020200')
+        tr = server._handle_bip_command(None, 1, 0x40, 0x01, raw, 0x81, 0x82)
+        tlvs = parse_tr(tr)
+        self.assertEqual(tlvs[0x03], b'\x00')
+        self.assertIn(0x38, tlvs)
+        kinds = [e['kind'] for e in self.bip.entries_after(0)]
+        self.assertIn('open-relaxed', kinds)
+
+    def test_background_open_queues_link_established(self):
+        # Qualifier 0x04 (background mode): the terminal must report the
+        # established link via ENVELOPE (Channel status) - 7.5.11.
+        raw = bytes.fromhex('d01c810301400c82028182850035010339020200'
+                            '4701003c030227be3e05')
+        server._handle_bip_command(None, 1, 0x40, 0x0C, raw, 0x81, 0x82)
+        events = self.bip.take_pending_events()
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]['info'], 0x00)
+        self.assertTrue(events[0]['status'] & 0x80)
+
+    def test_flush_channel_events_when_subscribed(self):
+        sent = []
+
+        class Tp:
+            def send_apdu(self, apdu):
+                sent.append(apdu)
+                return '', '9000'
+
+        scc = types.SimpleNamespace(cat_cla='80', _tp=Tp())
+        self.bip._queue_link_status(2)
+        ref = types.SimpleNamespace(event_list=[0x09, 0x0A])
+        with mock.patch.object(server, '_server_ref', ref):
+            server._bip_flush_channel_events(scc)
+        # D6: event list (ch status), device ids, Channel status B8 02 02 05
+        # (channel 2, link not established, info 05 = link dropped)
+        self.assertEqual(sent, ['80c200000dd60b99010a82028281b8020205'])
+        self.assertEqual(self.bip.take_pending_events(), [])
+
+    def test_flush_skipped_without_subscription(self):
+        sent = []
+
+        class Tp:
+            def send_apdu(self, apdu):
+                sent.append(apdu)
+                return '', '9000'
+
+        scc = types.SimpleNamespace(cat_cla='80', _tp=Tp())
+        self.bip._queue_link_status(1)
+        ref = types.SimpleNamespace(event_list=[0x09])
+        with mock.patch.object(server, '_server_ref', ref):
+            server._bip_flush_channel_events(scc)
+        self.assertEqual(sent, [])
+        # Not subscribed: the event stays queued for a later card session.
+        self.assertEqual(self.bip.take_pending_events(),
+                         [{'channel': 1, 'status': 1, 'info': 0x05}])
+
 
 if __name__ == '__main__':
     unittest.main()
+
+    def test_peer_close_reported_after_buffer_drained(self):
+        # A dropped link must not be signalled while server data still waits
+        # to be fetched: the card would abort the fetch mid-record. Drain
+        # first, then report.
+        srv = socket.socket()
+        srv.bind(('127.0.0.1', 0))
+        srv.listen(1)
+        try:
+            bip = httpota.BipTerminal()
+            bip.enable('127.0.0.1', srv.getsockname()[1])
+            cid, err = bip.open('10.9.9.9', 1234, 512)
+            self.assertIsNone(err)
+            conn, _ = srv.accept()
+            conn.sendall(b'response-bytes')
+            conn.close()
+            ch = bip.channels[cid]
+            for _ in range(40):
+                ch.pump()
+                if ch.rx and ch.peer_closed:
+                    break
+                time.sleep(0.05)
+            self.assertTrue(ch.rx)
+            self.assertTrue(ch.peer_closed)
+            # Partial fetch: the link-dropped event must still be withheld.
+            bip.receive(cid, 5)
+            self.assertEqual(bip.take_pending_events(), [])
+            # Remaining bytes fetched: the event is reported now.
+            bip.receive(cid, 64)
+            self.assertEqual(bip.take_pending_events(),
+                             [{'channel': cid, 'status': cid, 'info': 0x05}])
+            bip.close(cid)
+        finally:
+            srv.close()
+
+    def test_receive_data_tlv_long_form_length(self):
+        # A >127-byte channel data TLV must use the BER long form (0x81 len),
+        # as the reference terminal traces do (`36 81 ed` for 237 bytes).
+        import types
+        server = __import__('pysim_otaman_server.server', fromlist=['x'])
+        big = bytes(range(256)) * 1  # 256 bytes; take a slice below
+        ch = types.SimpleNamespace(rx=bytearray(b'\xAA' * 237))
+        class FakeBip:
+            def __init__(self): self.channels = {1: ch}
+            def receive(self, cid, n): 
+                data = bytes(ch.rx[:min(n, len(ch.rx))]); del ch.rx[:len(data)]; return data
+            def available(self, cid): return len(ch.rx)
+            def log(self, *a, **k): pass
+        old = server._BIP
+        server._BIP = FakeBip()
+        try:
+            raw = bytes.fromhex('d00c8103014200820281213701ed')
+            tr = server._handle_bip_command(None, 1, 0x42, 0, raw, None, 0x21)
+            self.assertIn(b'\x36\x81\xed' + b'\xAA' * 237, tr)
+        finally:
+            server._BIP = old

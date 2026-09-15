@@ -46,6 +46,10 @@ connect and warns if versions are incompatible.
 | `/api/pli-qualifiers` | GET | List of qualifier codes with descriptions |
 | `/api/pli-dict` | GET | Current dictionary (hex values per qualifier) |
 | `/api/pli-dict` | POST | Update dictionary entries |
+| `/api/scp81/bip` | POST | Start/stop the HTTP OTA listener (dump capture or PSK TLS server) |
+| `/api/scp81/status` | GET | BIP terminal + listener state (channels, PSK identity seen) |
+| `/api/scp81/log` | GET | HTTP OTA event log (`?after=<seq>`) |
+| `/api/scp81/log-clear` | POST | Clear the HTTP OTA event log |
 
 ## Endpoint details
 
@@ -378,6 +382,13 @@ optional hex for events that carry data. Returns the SW and any response data:
 {"sw": "9000", "data": "..."}
 ```
 
+Channel status (event `0x0A`, TS 102 223 §8.56) carries the Channel status TLV
+`B8 02 <status> <info>`, where the status byte is the channel id (1–7) OR-ed
+with the state bits (0x00 link not established / 0x40 TCP LISTEN / 0x80 link
+established) and the info byte is `00` (no further info) or `05` (link
+dropped). The server also sends this event automatically when a BIP link drops
+outside a proactive command and the card subscribed to `0x0A`.
+
 ### `GET /api/proactive-log`
 
 Returns the last 50 proactive commands fetched during CAT sessions, newest
@@ -444,3 +455,87 @@ Returns the current PLI data dictionary as a qualifier-code map.
 Updates dictionary entries. Body is a map of qualifier code to hex value; keys
 must be known qualifiers and values valid hex, otherwise they are ignored.
 Returns the updated dictionary.
+
+### `POST /api/scp81/bip`
+
+Starts or stops the local target the card's BIP channel is redirected to.
+
+Dump mode (default) captures whatever the card sends (e.g. its TLS
+ClientHello) without answering:
+
+```json
+{"action": "start", "mode": "dump", "host": "127.0.0.1", "port": 8443}
+```
+
+TLS mode runs the Phase B PSK TLS server (GPC v2.2 Amendment B): the PSK key
+and optional identity are applied to the TLS handshake, and the GP HTTP
+administration dialog (`X-Admin-*` headers, 200 with a command string or 204
+No Content) is served. `psk_hex` is required (the previous key is reused when
+omitted); `psk_identity` restricts the accepted identity. The key is never
+stored or logged.
+
+```json
+{"action": "start", "mode": "tls", "host": "127.0.0.1", "port": 8443,
+ "psk_hex": "00112233445566778899aabbccddeeff",
+ "psk_identity": "89012345678901234567"}
+```
+
+Stop either mode with `{"action": "stop"}` (also disables the BIP terminal).
+
+### `GET /api/scp81/status`
+
+```json
+{"bip": {"enabled": true, "target": "127.0.0.1:8443", "channels": [], "seq": 12},
+ "listener": {"mode": "tls", "host": "127.0.0.1", "port": 8443,
+              "psk_identity": null, "identity_seen": "89012345678901234567"}}
+```
+
+### `GET /api/scp81/log`
+
+Returns the BIP/TLS event log (open/close, SEND/RECEIVE DATA hex, TLS
+handshake and HTTP request/response records). `?after=<seq>` returns only
+newer entries; `seq` echoes the latest sequence number.
+
+### `GET /api/scp81/script`
+
+Returns the active command script and the R-APDUs collected so far:
+
+```json
+{"script": ["80CAFF2100", "80F28002024F0000"], "sent": 1,
+ "results": [{"index": 1, "sw": "9000", "rapdu": "FF210C810102..."}]}
+```
+
+The script is selected when starting the TLS listener with the `script`
+parameter: `explore` (default — the reference administration server's command
+sequence: GET DATA FF21 extended resources / free memory, GET STATUS P1=80
+Issuer Security Domain, GET DATA 0085 HTTP administration parameters, GET
+STATUS P1=40 executable load files and P1=10 applications), `none` (answer
+every POST with 204), or an explicit list of APDU hex strings. Each APDU is
+delivered in an `AE 80 22 <len> <apdu> 00 00` Command Scripting template
+(TS 102 226 §5.2.1) with `X-Admin-Next-URI`; the card returns its R-APDUs in
+the next POST's Response Scripting template, which is parsed and logged
+(`script-rapdu`, `script-memory`).
+
+TLS mode also accepts `chunked` (**default `true`** — the reference server's
+chunked framing; the card rejects a chunked response that also carries a
+Content-Length) and `chunk_size` (default `0` — the whole response in one TLS
+record, as in the decrypted reference session; a positive value writes the
+head and each body piece as its own record). Both are echoed by
+`GET /api/scp81/status`.
+
+`keep_alive` (default `true`, matching the reference session: the card sends
+all its POSTs on one connection until the 204) ends the TLS connection after
+each response
+(after the card drained the BIP buffer, with `close_notify`, so the card
+processes the script and opens a new connection for its next POST);
+`compact_headers` (default `false`) drops the space after each header colon,
+`apache_headers` (default `true`) adds Date/Server/X-Powered-By like the
+reference servers and puts Transfer-Encoding before Content-Type,
+`conn_header` (default `'none'` = omit the header, like the reference)
+declares the connection fate, `tls_version` pins `1.1`/`1.0` for cards that
+only speak the older record layer, `cipher` pins one suite, `next_uri`
+overrides the per-command `X-Admin-Next-URI` (`%d` = command id; empty string
+omits the header), `link_events` (default `true`) controls the automatic
+Channel status events, `answer_delay` waits before answering a request. `keylog` writes the TLS traffic secrets to
+the given file (SSLKEYLOGFILE format) for debugging captures — it contains key
+material, use a temporary path.

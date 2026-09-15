@@ -31,7 +31,7 @@ npm run build
 
 ## Интерфейс
 
-Пять вкладок: **Remote APDU**, **SCP80**, **Profiler**, **Card reader** и **Phone simulator**. Вкладки Remote APDU и SCP80 используют пиллы-подвкладки; во вкладке Card reader три подвкладки: **File manager**, **pySim command line** и **Raw APDU**; во вкладке Profiler — **Profiles**, **Card snapshots** и **Custom files**.
+Шесть вкладок: **Remote APDU**, **SCP80**, **SCP81**, **Profiler**, **Card reader** и **Phone simulator**. Вкладки Remote APDU и SCP80 используют пиллы-подвкладки; во вкладке Card reader три подвкладки: **File manager**, **pySim command line** и **Raw APDU**; во вкладке Profiler — **Profiles**, **Card snapshots** и **Custom files**.
 
 ---
 
@@ -529,9 +529,13 @@ Delivery PoR (SPI2 `01`) проще — карта возвращает PoR на
 - **События без данных** (User Activity, Idle Screen и др.) — однократное уведомление
 - **Location Status** — выпадающий список: Normal / Limited / No service
 - **Access Technology Change** — 13 типов RAT
+- **Channel Status** — выбор канала, состояние линии (не установлена / TCP
+  LISTEN / установлена) и информация (нет данных / линия разорвана), TS 102 223 8.56
 - **Network Rejection** — полная адаптивная форма: тип регистрации (LU / GPRS / EPS / 5GS), поля локации (MCC, MNC, LAC, RAC, TAC), доступные технологии, 53-позиционный выпадающий список причин отказа (EMM, GMM, 5GMM, LU)
 
-**Proactive Command Log** — хронологический список проактивных команд. Каждая строка показывает время, код типа, имя и декодированный квалификатор.
+**Proactive Command Log** — хронологический список проактивных команд. Каждая строка показывает время, код типа, имя и декодированный квалификатор. Поддерживаются SET UP MENU, SET UP EVENT LIST, POLL INTERVAL, DISPLAY TEXT, SELECT ITEM, PROVIDE LOCAL INFORMATION, TIMER MANAGEMENT и BIP-команды (OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA, GET CHANNEL STATUS); BIP-команды декодируются с обычными и comprehension-required TLV-тегами.
+
+**Управление таймерами** — сервер выполняет роль терминала для TIMER MANAGEMENT (TS 102 223 §6.6.21/§7.4): запущенные картой таймеры отслеживаются в рамках сессии, TERMINAL RESPONSE на deactivate/get содержит остаток, а по истечении карта получает ENVELOPE (TIMER EXPIRATION). Живая карта использует это для повторения OTA-сессии после неудачного OPEN CHANNEL.
 
 **Конфигурация TR: словарь PLI** — редактируемые hex-значения для всех 22 квалификаторов PROVIDE LOCAL INFORMATION (TS 102 223 + TS 131 111). 10 квалификаторов имеют встроенные формы декодирования/кодирования:
 
@@ -549,6 +553,16 @@ Delivery PoR (SPI2 `01`) проще — карта возвращает PoR на
 | 0E | Multiple Access Technologies (список через запятую) |
 
 Значения сохраняются на сервере до перезапуска. Apply → hex обновляется; Save → POST на сервер.
+
+## SCP81
+
+Вкладка **SCP81** управляет HTTP OTA (GP RAM over HTTP, GPC v2.2 Amendment B). BIP-канал карты всегда перенаправляется на локальный слушатель сервера:
+
+- **Capture (dump)** — принимает TCP-канал карты и записывает всё, что она отправляет (например, TLS ClientHello), не отвечая. Удобно для изучения запросов карты.
+- **PSK TLS server** — отвечает на рукопожатие PSK-наборами TLS 1.2 из спецификации и ведёт HTTP-диалог административной сессии GP (заголовки `X-Admin-*`, `200` со строкой команд или `204 No Content`). Укажите **PSK Identity**, которую использует карта, и **PSK ключ (hex)**; ключ передаётся только локальному серверу, не сохраняется и не записывается в журнал.
+- **Script** — сценарий команд, отдаваемых в сессии: **Память + ELF** (по умолчанию) отправляет `GET DATA FF21` (доступная энергонезависимая/энергозависимая память, число апплетов) и `GET STATUS P1=20/10` (реестр Executable Load File и модулей) как RAM/GP-команды в Command Scripting template по TS 102 226, по одной C-APDU на запрос; **None** закрывает каждую сессию ответом `204`. Свой список APDU можно задать через API.
+
+Строка состояния показывает слушатель, согласованную identity и активные каналы (байты in/out); журнал фиксирует OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA и каждый шаг TLS/HTTP. Те же функции доступны через `POST /api/scp81/bip` (см. `docs/api.md`).
 
 ## PWA
 

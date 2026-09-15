@@ -31,7 +31,7 @@ npm run build
 
 ## Interface
 
-Five top-level tabs: **Remote APDU**, **SCP80**, **Profiler**, **Card reader**, and **Phone simulator**. **Remote APDU** and **SCP80** use pill sub-tabs; the Card reader tab has three sub-tabs: **File manager**, **pySim command line**, and **Raw APDU**; the Profiler tab lists **Profiles**, **Card snapshots**, and **Custom files**.
+Six top-level tabs: **Remote APDU**, **SCP80**, **SCP81**, **Profiler**, **Card reader**, and **Phone simulator**. **Remote APDU** and **SCP80** use pill sub-tabs; the Card reader tab has three sub-tabs: **File manager**, **pySim command line**, and **Raw APDU**; the Profiler tab lists **Profiles**, **Card snapshots**, and **Custom files**.
 
 ---
 
@@ -556,12 +556,16 @@ The **Phone simulator** tab provides real-time CAT session interaction. It has t
 - **Location Status** — dropdown for Normal / Limited / No service
 - **Access Technology Change** — dropdown for all 13 RAT types
 - **Card Reader Status, Language, UICC Access** — appropriate inputs
+- **Channel Status** — channel selector, link state (not established / TCP
+  LISTEN / established) and info (no further info / link dropped), per TS 102 223 8.56
 - **Network Rejection** — full adaptive form with registration type dropdown
   (LU / GPRS / EPS / 5GS), location fields (MCC, MNC, LAC, RAC, TAC), access
   technology selection, and 53-cause unified rejection cause code dropdown
   covering EMM, GMM, 5GMM, and LU causes
 
-**Proactive Command Log** — chronological list of proactive commands encountered (seconds elapsed, type code, name, byte count). Covers SET UP MENU, SET UP EVENT LIST, POLL INTERVAL, DISPLAY TEXT, SELECT ITEM, and PROVIDE LOCAL INFORMATION.
+**Proactive Command Log** — chronological list of proactive commands encountered (seconds elapsed, type code, name, byte count). Covers SET UP MENU, SET UP EVENT LIST, POLL INTERVAL, DISPLAY TEXT, SELECT ITEM, PROVIDE LOCAL INFORMATION, TIMER MANAGEMENT, and the BIP commands (OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA, GET CHANNEL STATUS); BIP commands are decoded with both plain and comprehension-required TLV tags.
+
+**Timer management** — the server acts as the terminal for TIMER MANAGEMENT (TS 102 223 §6.6.21/§7.4): started timers are tracked per card session, deactivate/get TERMINAL RESPONSEs carry the remaining value, and on expiry the card receives ENVELOPE (TIMER EXPIRATION). The live card uses this to retry the OTA session after a failed OPEN CHANNEL.
 
 **TR Config: PLI data dictionary** — editable per-qualifier hex values for all 22 PROVIDE LOCAL INFORMATION qualifiers (TS 102 223 + TS 131 111). 10 qualifiers have inline decode/encode forms (toggle):
 
@@ -579,6 +583,16 @@ The **Phone simulator** tab provides real-time CAT session interaction. It has t
 | 0E | Multiple Access Technologies (comma-list) |
 
 Values persist on the server until restart. Apply → hex updates; Save → POSTs to server. The server will use these values to populate TERMINAL RESPONSE data for future PLI proactive commands.
+
+## SCP81
+
+The **SCP81** tab drives HTTP OTA (GP RAM over HTTP, GPC v2.2 Amendment B). The card's BIP channel is always redirected to a local listener on the server:
+
+- **Capture (dump)** — accepts the card's TCP channel and logs whatever it sends (e.g. the TLS ClientHello) without answering. Use it to inspect what the card asks for.
+- **PSK TLS server** — answers the handshake with the TLS 1.2 PSK cipher suites of the spec and speaks the GP HTTP administration dialog (`X-Admin-*` headers, `200` with a command string or `204 No Content`). Enter the **PSK Identity** the card uses and the **PSK key (hex)**; the key is only sent to the local server, never stored or logged.
+- **Script** — the command script served over the session: **Memory + ELF info** (default) sends `GET DATA FF21` (available non-volatile/volatile memory, applet count) and `GET STATUS P1=20/10` (Executable Load Files and modules registry) as RAM/GP commands in TS 102 226 Command Scripting templates, one C-APDU per request; **None** closes every session with `204`. Custom APDU lists are accepted by the API.
+
+The state line shows the listener, the negotiated identity and live channels (bytes in/out); the log records OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA and every TLS/HTTP/script step, including each R-APDU (`script-rapdu`, `script-memory`). The same controls are available through `POST /api/scp81/bip` and `GET /api/scp81/script` (see `docs/api.md`).
 
 ## PWA
 
@@ -637,7 +651,7 @@ pysim-otaman-server --http-port 8080
 | `--apdu-trace` | Log APDU-level traces to stderr |
 | `--log-requests` | Log request/response payloads to stderr |
 | `--sms-oa` / `--sms-sm-sc` | SMS-DELIVER originating address / SM-SC for PoR-in-submit |
-| `--terminal-profile` | TERMINAL PROFILE payload hex (default 10-byte GSM profile) |
+| `--terminal-profile` | TERMINAL PROFILE payload hex (default: 33-byte real-handset profile that advertises BIP events/commands; the live card ignores HTTP OTA without it) |
 | `--poll-interval` | Idle interval before automatic STATUS polling (default 30s; `0` disables polling) |
 | `--full-pysim-init` | Use pysim's stock init/equip (redundant card resets). The default init/equip is reset-free — only explicit equip/reset reconnect the card |
 | `--no-auto-equip` | Do not initialize a card automatically right after it is inserted (default: auto-equip on) |

@@ -42,8 +42,10 @@ def main():
                         help='TP-Originating-Address (SMSC number) for the SMS-DELIVER TPDU (default: 12345)')
     parser.add_argument('--sms-sm-sc', default='12345678912', metavar='DIGITS',
                         help='SM-SC address for SMS-SUBMIT routing in PoR-in-submit mode (default: 12345678912)')
-    parser.add_argument('--terminal-profile', default='7FFFFFFFFF0000CF02', metavar='HEX',
-                        help='TERMINAL PROFILE payload (default: 10-byte profile with SMS-PP download and event list)')
+    parser.add_argument('--terminal-profile',
+                        default='FFFFFFFF7F9F00DFFF03021FE2000000C3FB000704117800710100000038428003',
+                        metavar='HEX',
+                        help='TERMINAL PROFILE payload (default: the 33-byte profile of a real BIP-capable handset - the live card only starts HTTP OTA when BIP events/commands are advertised)')
     parser.add_argument('--poll-interval', type=int, default=30, metavar='SECS',
                         help='Idle interval before automatic STATUS polling (1-255 seconds, default: 30). Disable with --poll-interval 0')
     parser.add_argument('--no-card-init', action='store_true', default=False,

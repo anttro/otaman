@@ -7,6 +7,7 @@ No live/sample card keys and no ICCIDs appear here.
 """
 
 import sys
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -268,6 +269,80 @@ class TestProactiveDecode(unittest.TestCase):
         r = _decode_cmd(0x26, b'\xd0', 0x00)
         self.assertTrue(r[0]['value'].startswith('Location Information (MCC, MNC, LAC/TAC, Cell ID)'))
 
+    def test_decode_cmd_timer_management_start(self):
+        # TS 102 223 6.6.21/8.37/8.38: start timer 3 for 14:07:32
+        raw = bytes.fromhex('d011810301270082028182a40103a503417023')
+        self.assertEqual(_decode_cmd(0x27, raw, 0x00), [
+            {'label': 'Action', 'value': 'Start'},
+            {'label': 'Timer', 'value': '3'},
+            {'label': 'Value', 'value': '14:07:32'},
+        ])
+
+    def test_decode_cmd_timer_management_plain_tags(self):
+        # Cards may use the plain (non comprehension-required) tag variant.
+        raw = bytes.fromhex('d00c010301270102028182240103')
+        self.assertEqual(_decode_cmd(0x27, raw, 0x01), [
+            {'label': 'Action', 'value': 'Deactivate'},
+            {'label': 'Timer', 'value': '3'},
+        ])
+
+    def test_decode_cmd_open_channel_cr_tags(self):
+        # Same OPEN CHANNEL as the reference traces, but with CR-set TLVs.
+        raw = bytes.fromhex(
+            'd02b8103014001820281828500b50103b9020200c70b076d656761666f6e2e7275'
+            'bc03021f90be05217f000001')
+        r = _decode_cmd(0x40, raw, 0x01)
+        self.assertIn({'label': 'Bearer', 'value': '0x03'}, r)
+        self.assertIn({'label': 'Buffer size', 'value': '512'}, r)
+        self.assertIn({'label': 'APN', 'value': 'megafon.ru'}, r)
+        self.assertIn({'label': 'Destination', 'value': '127.0.0.1'}, r)
+        self.assertIn({'label': 'Transport', 'value': 'TCP client port 8080'}, r)
+
+    def test_decode_cmd_bip_channel_from_device_ids(self):
+        # Real trace: SEND DATA carries the channel in the device identities
+        # (source UICC 0x81, destination Channel 1 0x21).
+        raw = bytes.fromhex('d00e8103014301820281213701013603aabbcc')
+        r = _decode_cmd(0x43, raw, 0x01)
+        self.assertEqual(r[0], {'label': 'Channel', 'value': '1'})
+        self.assertEqual(r[1], {'label': 'Data bytes', 'value': '3'})
+
+    def test_parse_proactive_header_plain_tags(self):
+        import pysim_otaman_server.server as srv
+        raw = bytes.fromhex('d00c010301270102028182240103')
+        self.assertEqual(srv._parse_proactive_header(raw), (1, 0x27, 0x81, 0x82, 0x01))
+
+    def test_default_handler_logs_timer_management(self):
+        # pySim's auto-handler path: the parsed command object (not the empty
+        # collection) is re-encoded for the log and used for the response.
+        import pysim_otaman_server.server as srv
+        from pySim.cat import ProactiveCommand
+        from pySim.utils import h2b
+        srv._PROACTIVE_LOG.clear()
+        handler = srv._DefaultProactiveHandler()
+        pcmd = ProactiveCommand()
+        parsed = pcmd.from_tlv(h2b('d011810301270082028182a40103a503417023'))
+        ti = handler.receive_fetch_raw(pcmd, parsed)
+        tr = b''.join(x.to_tlv() for x in ti).hex()
+        self.assertTrue(tr.startswith('810301270082028281830100'), tr)
+        entry = srv._PROACTIVE_LOG[-1]
+        self.assertEqual(entry['type_hex'], '27')
+        self.assertEqual(entry['type_name'], 'TIMER MANAGEMENT')
+        self.assertEqual(entry['tr_result'], '00')
+
+    def test_default_handler_pli_includes_dict_data(self):
+        import pysim_otaman_server.server as srv
+        from pySim.cat import ProactiveCommand
+        from pySim.utils import h2b
+        srv._PROACTIVE_LOG.clear()
+        srv._PLI_DATA[0x00] = '93055210011000'
+        handler = srv._DefaultProactiveHandler()
+        pcmd = ProactiveCommand()
+        parsed = pcmd.from_tlv(h2b('d00d810301260082028182'))
+        ti = handler.receive_fetch_raw(pcmd, parsed)
+        tr = b''.join(x.to_tlv() for x in ti).hex()
+        self.assertIn('93055210011000', tr)
+        self.assertEqual(srv._PROACTIVE_LOG[-1]['tr_hex'], '93055210011000')
+
     def test_decode_cmd_empty_raw(self):
         self.assertEqual(_decode_cmd(0x26, b'', None), [])
         self.assertEqual(_decode_cmd(0x03, None, None), [])
@@ -358,6 +433,122 @@ class TestProactiveDecode(unittest.TestCase):
         entry = {'type_hex': '26', 'qualifier': '00'}
         _record_tr(entry, bytes.fromhex('810303260082028181'))
         self.assertNotIn('tr_result', entry)
+
+
+class TestEventDownload(unittest.TestCase):
+    """ENVELOPE (EVENT DOWNLOAD) assembly, TS 102 223 7.5.11."""
+
+    def _send(self, event_type, event_data):
+        import pysim_otaman_server.server as srv
+        calls = []
+
+        class Tp:
+            def send_apdu(self, apdu):
+                calls.append(apdu)
+                return '', '9000'
+
+        class Scc:
+            cat_cla = '80'
+            _tp = Tp()
+
+        data, sw = srv._send_event_download(Scc(), event_type, event_data)
+        return calls[0], sw
+
+    def test_channel_status_event(self):
+        # Event list + device identities + Channel status (8.56): channel 2,
+        # link established, info 05 = link dropped.
+        apdu, sw = self._send(0x0A, bytes.fromhex('b8028205'))
+        self.assertEqual(sw, '9000')
+        self.assertEqual(apdu, '80c200000dd60b99010a82028281b8028205')
+
+    def test_event_without_data(self):
+        apdu, sw = self._send(0x05, None)
+        self.assertEqual(sw, '9000')
+        self.assertEqual(apdu, '80c2000009d60799010582028281')
+
+
+class TestTimerManagement(unittest.TestCase):
+    """Terminal side of TIMER MANAGEMENT (TS 102 223 6.6.21, 6.8.13/14, 7.4).
+
+    The start vector is the live card's: timer 1, 60 s."""
+
+    START = bytes.fromhex('d011810301270082028182a40101a503001000')
+
+    def tearDown(self):
+        import pysim_otaman_server.server as srv
+        srv._timer_cancel()
+
+    def test_hms_bcd_roundtrip(self):
+        import pysim_otaman_server.server as srv
+        self.assertEqual(srv._hms_bcd(60).hex(), '001000')
+        self.assertEqual(srv._hms_bcd(3723).hex(), '102030')
+        self.assertEqual([srv._bcd_swap(b) for b in srv._hms_bcd(3723)], [1, 2, 3])
+
+    def test_start_returns_result_only_and_arms_timer(self):
+        import pysim_otaman_server.server as srv
+        tr = srv._handle_timer_command(1, 0x27, 0x00, self.START, 0x81, 0x82)
+        self.assertEqual(tr.hex(), '810301270082028281030100')
+        remaining = srv._timer_remaining(1)
+        self.assertTrue(55 <= remaining <= 60, remaining)
+
+    def test_get_returns_remaining_value(self):
+        import pysim_otaman_server.server as srv
+        srv._handle_timer_command(1, 0x27, 0x00, self.START, 0x81, 0x82)
+        tr = srv._handle_timer_command(1, 0x27, 0x02, self.START, 0x81, 0x82)
+        self.assertEqual(tr.hex(), '810301270282028281a40101a503001000030100')
+
+    def test_deactivate_stops_and_reports_value(self):
+        import pysim_otaman_server.server as srv
+        srv._handle_timer_command(1, 0x27, 0x00, self.START, 0x81, 0x82)
+        tr = srv._handle_timer_command(1, 0x27, 0x01, self.START, 0x81, 0x82)
+        self.assertTrue(tr.hex().startswith('8103012701'), tr.hex())
+        self.assertIn('a40101a503001000', tr.hex())
+        self.assertIsNone(srv._timer_remaining(1))
+
+    def test_get_on_stopped_timer_is_contradiction(self):
+        import pysim_otaman_server.server as srv
+        tr = srv._handle_timer_command(1, 0x27, 0x02, self.START, 0x81, 0x82)
+        self.assertEqual(tr.hex(), '810301270282028281030124')
+
+    def test_timer_expiration_envelope(self):
+        import pysim_otaman_server.server as srv
+        calls = []
+
+        class Tp:
+            def send_apdu(self, apdu):
+                calls.append(apdu)
+                return '', '9000'
+
+        ref = types.SimpleNamespace(
+            scc=types.SimpleNamespace(cat_cla='80', _tp=Tp()), stk_pending=None)
+        with mock.patch.object(srv, '_server_ref', ref):
+            with mock.patch.object(srv, '_CARD_CONNECTED', True):
+                srv._timer_expired(1, 60)
+        # D7 0C: device identities (terminal -> UICC), Timer id A4, value A5
+        self.assertEqual(calls, ['80c200000ed70c82028281a40101a503001000'])
+
+    def test_cancelled_timer_does_not_report(self):
+        import pysim_otaman_server.server as srv
+        calls = []
+
+        class Tp:
+            def send_apdu(self, apdu):
+                calls.append(apdu)
+                return '', '9000'
+
+        ref = types.SimpleNamespace(
+            scc=types.SimpleNamespace(cat_cla='80', _tp=Tp()), stk_pending=None)
+        with mock.patch.object(srv, '_server_ref', ref):
+            with mock.patch.object(srv, '_CARD_CONNECTED', True):
+                srv._timer_fire(1, 60)  # never started/cancelled
+        self.assertEqual(calls, [])
+
+    def test_decode_tr_timer(self):
+        tr = bytes.fromhex('810301270082028281a40101a503001000030100')
+        data = _tr_data_only(tr).hex()
+        r = _decode_tr('27', '00', data)
+        self.assertEqual(r, [{'label': 'Timer', 'value': '1'},
+                             {'label': 'Remaining', 'value': '00:01:00'}])
 
 
 class TestExpandedRemoteResponse(unittest.TestCase):
