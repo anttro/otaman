@@ -836,3 +836,53 @@ class TestSmsReassembly(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CapApduSequenceTest(unittest.TestCase):
+    """RAM APDU sequence shared by the SCP80 and SCP81 install paths."""
+
+    def _mini_cap(self):
+        import io, zipfile
+        # Header: tag(1) size(2) magic(4) minor(1) major(1) flags(1)
+        #         pkg minor(1) pkg major(1) aid_len(1) aid(N)
+        header = (b'\x01\x00\x11' + b'\xde\xca\xff\xed' + b'\x00\x01\x00' +
+                  b'\x00\x01' + b'\x06' + b'\xa0\x00\x00\x01\x00\x01')
+        # Applet: tag(1) size(2) count(1) aid_len(1) module_aid(N) offset(2)
+        applet = (b'\x03\x00\x0a\x01\x05' + b'\xa0\x00\x00\x01\x00' + b'\x00\x08')
+        buf = io.BytesIO()
+        zf = zipfile.ZipFile(buf, 'w')
+        zf.writestr('pkg/Header.cap', header)
+        zf.writestr('pkg/Applet.cap', applet)
+        zf.close()
+        return buf.getvalue().hex().upper()
+
+    def test_cap_parse(self):
+        from pysim_otaman_server.server import _cap_parse
+        loadfile_aid, module_aid, data = _cap_parse(self._mini_cap())
+        self.assertEqual(loadfile_aid, 'A00000010001')
+        self.assertEqual(module_aid, 'A000000100')
+        # Header then Applet, per the CAP component order.
+        self.assertTrue(data.startswith('010011DECAFFED'))
+        self.assertIn('03000A01', data)
+
+    def test_sequence_install_load_install(self):
+        from pysim_otaman_server.server import _cap_apdu_sequence
+        seq = _cap_apdu_sequence('A00000010001', 'A000000100', 'AABBCCDD')
+        # INSTALL [for load]: lv(pkg aid) + lv(ISD) + 000000
+        self.assertEqual(seq[0],
+            '80E6020013' + '06A00000010001' + '08A000000003000000' + '000000' + '00')
+        # One LOAD block (small payload, last -> P1=0x80, P2=0)
+        self.assertEqual(seq[1][:8], '80E88000')
+        self.assertTrue(seq[1].endswith('00'))
+        # INSTALL [for install]: C9 00 install params appended to the lv chain
+        self.assertTrue(seq[2].startswith('80E60C00'))
+        self.assertIn('06A00000010001' + '05A000000100' + '05A000000100' + '0100', seq[2])
+
+    def test_load_blocks_split_and_counter(self):
+        from pysim_otaman_server.server import _cap_apdu_sequence
+        data = 'AB' * 700          # 700 bytes -> C4 TLV 703 -> 3 x 240-byte blocks
+        seq = _cap_apdu_sequence('A00000010001', 'A000000100', data)
+        self.assertEqual(len(seq), 5)          # INSTALL + 3 LOAD + INSTALL
+        self.assertEqual(seq[1][:8], '80E80000')
+        self.assertEqual(seq[2][:8], '80E80001')
+        self.assertEqual(seq[3][:8], '80E88002')   # last block: P1=0x80

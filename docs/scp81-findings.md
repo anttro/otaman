@@ -202,8 +202,11 @@ Full session: 7/7 commands, all `X-Admin-Script-Status: ok`.
 1. **UI:** group the per-page R-APDUs under their logical command in the
    SCP81 tab (page merging/decoding for ELF and application listings);
    expose the framing options in the tab.
-2. **Load/store over SCP81:** RAM INSTALL/LOAD via command scripts using the
-   same recipe (one C-APDU per POST, pagination for long responses).
+2. **Load/store over SCP81:** implemented - `POST /api/scp81/ram-install`
+   takes a `.cap`, expands it with the shared `_cap_apdu_sequence` helper
+   (INSTALL [for load] -> 240-byte LOAD blocks -> INSTALL [for install]) and
+   queues it as the command script, one C-APDU per POST. Live install test
+   pending (needs a push with a suitable applet).
 
 ## Tooling
 

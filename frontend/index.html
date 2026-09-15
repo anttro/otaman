@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.7</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.8</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -996,6 +996,17 @@
 				</div>
 				<button id="scp81-start-btn" data-needs="server" onclick="scp81Start()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Start">Start</button>
 				<button id="scp81-stop-btn" data-needs="server" onclick="scp81Stop()" class="px-3 py-1.5 text-sm rounded bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Stop">Stop</button>
+			</div>
+			<div class="flex items-end gap-3 mt-2">
+				<div>
+					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="RAM install (CAP file)">RAM install (CAP file)</label>
+					<input type="file" id="scp81-cap-file" accept=".cap,.zip" class="text-xs text-gray-600 dark:text-slate-300">
+				</div>
+				<div>
+					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="SD AID (empty = ISD)">SD AID (empty = ISD)</label>
+					<input id="scp81-cap-sd" placeholder="A000000003000000" maxlength="32" class="w-56 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+				</div>
+				<button data-needs="server" onclick="scp81QueueCapInstall()" class="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Queue CAP install">Queue CAP install</button>
 			</div>
 			<div id="scp81-msg" class="text-xs mt-2 hidden"></div>
 			<div class="mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="The key is only sent to the local server and is never stored or logged.">The key is only sent to the local server and is never stored or logged.</div>
@@ -7251,6 +7262,32 @@ async function scp81Start() {
 	}
 }
 
+async function scp81QueueCapInstall() {
+	const fileInput = document.getElementById('scp81-cap-file');
+	const file = fileInput.files[0];
+	if (!file) { scp81Msg(t('Select a .cap file'), 'text-red-500'); return; }
+	if (file.size > 48 * 1024) { scp81Msg(t('CAP file exceeds 48 kB limit'), 'text-red-500'); return; }
+	scp81Msg(t('Reading CAP file...'), 'text-gray-500');
+	try {
+		const capHex = await ramReadFileHex(file);
+		const resp = await pysimFetch('/api/scp81/ram-install', {
+			cap_hex: capHex,
+			sd_aid: (document.getElementById('scp81-cap-sd').value || '').replace(/[^0-9a-fA-F]/g, ''),
+		});
+		if (resp.ok) {
+			scp81Msg(t('Queued') + ': ' + resp.apdus + ' ' + t('APDUs') + ' (' +
+				t('INSTALL / LOAD / INSTALL') + ') - ' + t('send a push to run it'),
+				'text-emerald-600 dark:text-emerald-400');
+		} else {
+			scp81Msg(resp.error || t('Error'), 'text-red-500');
+		}
+		scp81ResultsRefresh();
+		scp81LogRefresh();
+	} catch (err) {
+		scp81Msg(String(err.message || err), 'text-red-500');
+	}
+}
+
 async function scp81Stop() {
 	try {
 		await pysimFetch('/api/scp81/bip', { action: 'stop' });
@@ -9723,6 +9760,13 @@ const LANG_RU = {
 	'cascade': 'каскадно',
 	'Select a card preset with keys first (RAM subtab → Card preset)': 'Сначала выберите пресет карты с ключами (RAM → Пресет карты)',
 	'Select a .cap file': 'Выберите файл .cap',
+	'RAM install (CAP file)': 'RAM-установка (файл CAP)',
+	'Queue CAP install': 'Поставить установку CAP в очередь',
+	'Queued': 'В очереди',
+	'APDUs': 'APDU',
+	'INSTALL / LOAD / INSTALL': 'INSTALL / LOAD / INSTALL',
+	'send a push to run it': 'отправьте push для запуска',
+	'Script results (R-APDUs)': 'Результаты скрипта (R-APDU)',
 	'CAP file exceeds 48 kB limit': 'Файл CAP превышает лимит 48 кБ',
 	'Reading CAP file...': 'Чтение файла CAP...',
 	'Sending to server for install...': 'Отправка на сервер для установки...',

@@ -496,6 +496,24 @@ Returns the BIP/TLS event log (open/close, SEND/RECEIVE DATA hex, TLS
 handshake and HTTP request/response records). `?after=<seq>` returns only
 newer entries; `seq` echoes the latest sequence number.
 
+### `POST /api/scp81/ram-install`
+
+Queue a RAM (GP) install as the SCP81 command script. The `.cap` is parsed
+server-side (same parser as `/api/ram-install`) and expanded to the APDU
+sequence INSTALL [for load] -> LOAD blocks (240-byte payloads) -> INSTALL
+[for install]; the list runs on the card's next POST, one C-APDU per request.
+
+```json
+{"cap_hex": "504B0304...", "sd_aid": "A000000003000000", "privileges": "00",
+ "install_params": "", "stk_params": "", "make_selectable": true, "force": false}
+```
+
+`sd_aid` empty = the ISD. Refused while a script is mid-run unless `force` is
+true. Responds with `{"ok": true, "queued": true, "apdus": N, "load_file_aid":
+..., "module_aid": ...}`; the results appear in `/api/scp81/script` and the
+R-APDU log. `GET /api/scp81/script` reports the script `kind`
+(`explore`/`none`/`custom`/`ram-install`).
+
 ### `GET /api/scp81/script`
 
 Returns the active command script and the R-APDUs collected so far:

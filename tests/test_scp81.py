@@ -755,3 +755,38 @@ class TargetedAppTest(unittest.TestCase):
         self.assertEqual(rapdus[0][1], '6A88')
         # A status-only POST (no body, e.g. unknown-application) parses empty.
         self.assertEqual(server._scp81_parse_response(b''), (0, []))
+
+
+class QueueScriptTest(unittest.TestCase):
+    def test_queue_replaces_and_resets(self):
+        server._SCP81_SCRIPT = ['80CAFF2100']
+        server._SCP81_SCRIPT_SENT = 1
+        server._SCP81_SCRIPT_RESULTS = [{'index': 1, 'sw': '9000', 'apdu': '80CAFF2100', 'rapdu': ''}]
+        try:
+            r = server._scp81_queue_script(['80E6020013' + '00' * 20, '80E88000' + '00' * 4],
+                                           kind='ram-install')
+            self.assertTrue(r['queued'])
+            self.assertEqual(server._SCP81_SCRIPT_KIND, 'ram-install')
+            self.assertEqual(server._SCP81_SCRIPT_SENT, 0)
+            self.assertEqual(server._SCP81_SCRIPT_RESULTS, [])
+            self.assertEqual(len(server._SCP81_SCRIPT), 2)
+        finally:
+            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
+            server._SCP81_SCRIPT_SENT = 0
+            server._SCP81_SCRIPT_RESULTS = []
+            server._SCP81_SCRIPT_KIND = 'explore'
+
+    def test_queue_refuses_while_running(self):
+        server._SCP81_SCRIPT = ['80CAFF2100', '80F28002024F0000']
+        server._SCP81_SCRIPT_SENT = 1
+        try:
+            r = server._scp81_queue_script(['80E60200'], kind='ram-install')
+            self.assertFalse(r['queued'])
+            self.assertEqual(r['sent'], 1)
+            r = server._scp81_queue_script(['80E60200'], kind='ram-install', force=True)
+            self.assertTrue(r['queued'])
+            self.assertEqual(server._SCP81_SCRIPT, ['80E60200'])
+        finally:
+            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
+            server._SCP81_SCRIPT_SENT = 0
+            server._SCP81_SCRIPT_KIND = 'explore'

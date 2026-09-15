@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.7'
+VERSION = '2.1.8'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -401,6 +401,34 @@ def _encode_scts(dt=None):
         _bcd_pair(dt.second),
         tz,
     ])
+
+
+def _cap_apdu_sequence(loadfile_aid, module_aid, loadfile_data, sd_aid='',
+                       privileges='00', install_params='', stk_params='',
+                       make_selectable=True, block_size=240, instance_aid=None):
+    """RAM (GP) APDU sequence for a parsed .cap: INSTALL [for load], LOAD
+    blocks (240-byte payloads, block counter in P2, last block P1=0x80),
+    INSTALL [for install]. Shared by the SCP80 delivery path and the SCP81
+    command-script path; keep byte-compatible with /api/ram-install."""
+    sd = sd_aid or 'A000000003000000'
+    ifl_data = _lv(loadfile_aid) + _lv(sd) + '00' + '00' + '00'
+    apdus = ['80E60200%02X%s00' % (len(ifl_data) // 2, ifl_data)]
+    loadfile_tlv = 'C4' + _ber_len(len(loadfile_data) // 2) + loadfile_data
+    total_bytes = len(loadfile_tlv) // 2
+    blocks = [loadfile_tlv[i * 2:(i + block_size) * 2]
+              for i in range(0, (total_bytes + block_size - 1) // block_size)]
+    for i, block in enumerate(blocks):
+        p1 = 0x80 if i == len(blocks) - 1 else 0x00
+        apdus.append('80E8%02X%02X%02X%s00' % (p1, i % 256, len(block) // 2, block))
+    instance = instance_aid or module_aid
+    params = install_params if install_params else 'C900'
+    if stk_params:
+        params += stk_params
+    p1_install = 0x0C if make_selectable else 0x04
+    ifi_data = (_lv(loadfile_aid) + _lv(module_aid) + _lv(instance) +
+                _lv(privileges or '00') + _lv(params) + '00')
+    apdus.append('80E6%02X00%02X%s00' % (p1_install, len(ifi_data) // 2, ifi_data))
+    return apdus
 
 
 def _lv(hex_str):
@@ -1366,6 +1394,26 @@ _SCP81_SCRIPT_RESULTS = []
 _SCP81_SCRIPT_INSERTED = []
 _SCP81_PAGES = 0
 SCP81_MAX_PAGES = 24
+# What the queued script is ('explore', 'none', 'custom' or 'ram-install').
+_SCP81_SCRIPT_KIND = 'explore'
+
+
+def _scp81_queue_script(apdus, kind='custom', force=False):
+    """Replace the SCP81 command script with a new APDU list. Refuses while
+    a script is mid-run unless forced; the list runs on the card's next POST."""
+    global _SCP81_SCRIPT, _SCP81_SCRIPT_SENT, _SCP81_SCRIPT_RESULTS
+    global _SCP81_SCRIPT_INSERTED, _SCP81_PAGES, _SCP81_SCRIPT_KIND
+    if not force and 0 < _SCP81_SCRIPT_SENT < len(_SCP81_SCRIPT):
+        return {'queued': False, 'reason': 'script in progress',
+                'sent': _SCP81_SCRIPT_SENT, 'of': len(_SCP81_SCRIPT)}
+    _SCP81_SCRIPT = [a.upper().replace(' ', '') for a in apdus]
+    _SCP81_SCRIPT_KIND = kind
+    _SCP81_SCRIPT_SENT = 0
+    _SCP81_SCRIPT_RESULTS = []
+    _SCP81_SCRIPT_INSERTED = []
+    _SCP81_PAGES = 0
+    _BIP.log('script-queued', script_kind=kind, apdus=len(_SCP81_SCRIPT))
+    return {'queued': True, 'apdus': len(_SCP81_SCRIPT)}
 _SCP81_SCRIPT_TEMPLATE = 'indefinite'
 _SCP81_SCRIPT_CR_TAG = False
 # None = short per-command Next-URI ('/N'); '' = omit the header (spec: the
@@ -1583,6 +1631,7 @@ def _scp81_response_headers():
 def _scp81_bip_control(body):
     global _SCP81_LISTENER, _SCP81_PSK
     global _SCP81_SCRIPT, _SCP81_SCRIPT_SENT, _SCP81_SCRIPT_RESULTS
+    global _SCP81_SCRIPT_INSERTED, _SCP81_PAGES, _SCP81_SCRIPT_KIND
     global _SCP81_SCRIPT_TEMPLATE, _SCP81_SCRIPT_CR_TAG, _SCP81_NEXT_URI
     global _SCP81_LINK_EVENTS, _SCP81_TARGETED_APP, _SCP81_APACHE_HEADERS
     global _SCP81_CHUNKED
@@ -1621,12 +1670,16 @@ def _scp81_bip_control(body):
         script = body.get('script', 'explore')
         if isinstance(script, list):
             _SCP81_SCRIPT = [re.sub(r'\s', '', s) for s in script if s]
+            _SCP81_SCRIPT_KIND = 'custom'
         elif script in _SCP81_SCRIPTS:
             _SCP81_SCRIPT = list(_SCP81_SCRIPTS[script])
+            _SCP81_SCRIPT_KIND = script
         else:
             return {'ok': False, 'error': 'unknown script preset: %s' % script}
         _SCP81_SCRIPT_SENT = 0
         _SCP81_SCRIPT_RESULTS = []
+        _SCP81_SCRIPT_INSERTED = []
+        _SCP81_PAGES = 0
         template = body.get('script_template', 'indefinite')
         if template not in ('indefinite', 'definite'):
             return {'ok': False, 'error': 'script_template must be indefinite or definite'}
@@ -2731,6 +2784,7 @@ class PysimHandler(BaseHTTPRequestHandler):
         elif self.path == '/api/scp81/script':
             self._log_req()
             resp = {'script': _SCP81_SCRIPT, 'sent': _SCP81_SCRIPT_SENT,
+                    'kind': _SCP81_SCRIPT_KIND,
                     'template': _SCP81_SCRIPT_TEMPLATE, 'cr_tag': _SCP81_SCRIPT_CR_TAG,
                     'results': _SCP81_SCRIPT_RESULTS}
             self._send_json(resp)
@@ -3456,52 +3510,28 @@ class PysimHandler(BaseHTTPRequestHandler):
                         if submit_handler and hasattr(scc, '_tp'):
                             scc._tp.proactive_handler = old_proactive
 
-                # Step 1: INSTALL [for load]
-                sys.stderr.write('RAM-INSTALL: Step 1 — INSTALL [for load] loadfile_aid=%s\n' % loadfile_aid)
-                ifl_data = _lv(loadfile_aid) + _lv(sd_aid) + '00' + '00' + '00'
-                ifl_apdu = '80E60200%02X%s00' % (len(ifl_data) // 2, ifl_data)
-                if not _send_gp_apdu(ifl_apdu, 'INSTALL [for load]'):
-                    resp = {'success': False, 'steps': steps, 'failed_step': len(steps),
-                            'error': 'INSTALL [for load] failed', 'load_file_aid': loadfile_aid, 'module_aid': module_aid}
-                    self._send_json(resp)
-                    self._log_resp(resp)
-                    return
-
-                # Step 2: LOAD blocks
-                loadfile_tlv = 'C4' + _ber_len(len(loadfile_data) // 2) + loadfile_data
-                block_size = 240
-                total_bytes = len(loadfile_tlv) // 2
-                blocks = [loadfile_tlv[i * 2:(i + block_size) * 2] for i in range(0, (total_bytes + block_size - 1) // block_size)]
-                sys.stderr.write('RAM-INSTALL: Step 2 — LOAD %d bytes in %d blocks\n' % (total_bytes, len(blocks)))
-                for block_idx, block in enumerate(blocks):
-                    is_last = (block_idx == len(blocks) - 1)
-                    p1 = 0x80 if is_last else 0x00
-                    p2 = block_idx % 256
-                    load_apdu = '80E8%02X%02X%02X%s00' % (p1, p2, len(block) // 2, block)
-                    if not _send_gp_apdu(load_apdu, 'LOAD (%d/%d)' % (block_idx + 1, len(blocks))):
+                # INSTALL [for load] -> LOAD blocks -> INSTALL [for install]
+                seq = _cap_apdu_sequence(
+                    loadfile_aid, module_aid, loadfile_data, sd_aid=sd_aid,
+                    privileges=privileges_hex,
+                    install_params=install_params_hex, stk_params=stk_params_hex,
+                    make_selectable=make_selectable)
+                sys.stderr.write('RAM-INSTALL: %d APDUs (INSTALL / %d x LOAD / INSTALL) loadfile_aid=%s\n' % (
+                    len(seq), len(seq) - 2, loadfile_aid))
+                for apdu_idx, gp_apdu in enumerate(seq):
+                    if apdu_idx == 0:
+                        step_name = 'INSTALL [for load]'
+                    elif apdu_idx == len(seq) - 1:
+                        step_name = 'INSTALL [for install]'
+                    else:
+                        step_name = 'LOAD (%d/%d)' % (apdu_idx, len(seq) - 2)
+                    if not _send_gp_apdu(gp_apdu, step_name):
                         resp = {'success': False, 'steps': steps, 'failed_step': len(steps),
-                                'error': 'LOAD block %d failed' % (block_idx + 1),
+                                'error': '%s failed' % step_name,
                                 'load_file_aid': loadfile_aid, 'module_aid': module_aid}
                         self._send_json(resp)
                         self._log_resp(resp)
                         return
-
-                # Step 3: INSTALL [for install]
-                sys.stderr.write('RAM-INSTALL: Step 3 — INSTALL [for install]\n')
-                instance_aid = module_aid
-                privileges = privileges_hex
-                inst_params = install_params_hex if install_params_hex else 'C900'
-                if stk_params_hex:
-                    inst_params += stk_params_hex
-                p1_install = 0x0C if make_selectable else 0x04
-                ifi_data = _lv(loadfile_aid) + _lv(module_aid) + _lv(instance_aid) + _lv(privileges) + _lv(inst_params) + '00'
-                ifi_apdu = '80E6%02X00%02X%s00' % (p1_install, len(ifi_data) // 2, ifi_data)
-                if not _send_gp_apdu(ifi_apdu, 'INSTALL [for install]'):
-                    resp = {'success': False, 'steps': steps, 'failed_step': len(steps),
-                            'error': 'INSTALL [for install] failed', 'load_file_aid': loadfile_aid, 'module_aid': module_aid}
-                    self._send_json(resp)
-                    self._log_resp(resp)
-                    return
 
                 resp = {'success': True, 'steps': steps, 'load_file_aid': loadfile_aid,
                         'module_aid': module_aid, 'final_cntr': cntr}
@@ -3522,6 +3552,36 @@ class PysimHandler(BaseHTTPRequestHandler):
                 resp = _scp81_bip_control(body)
             except Exception as e:
                 resp = {'ok': False, 'error': str(e)}
+            self._send_json(resp)
+            self._log_resp(resp)
+        elif self.path == '/api/scp81/ram-install':
+            body = self._read_body()
+            self._log_req(body)
+            cap_hex = (body.get('cap_hex') or '').replace(' ', '')
+            if not cap_hex:
+                resp = {'ok': False, 'error': 'No cap_hex provided'}
+            elif _SCP81_LISTENER is None:
+                resp = {'ok': False, 'error': 'SCP81 listener is not running'}
+            else:
+                try:
+                    loadfile_aid, module_aid, loadfile_data = _cap_parse(cap_hex)
+                    seq = _cap_apdu_sequence(
+                        loadfile_aid, module_aid, loadfile_data,
+                        sd_aid=(body.get('sd_aid') or '').replace(' ', ''),
+                        privileges=(body.get('privileges') or '').replace(' ', '') or '00',
+                        install_params=(body.get('install_params') or '').replace(' ', ''),
+                        stk_params=(body.get('stk_params') or '').replace(' ', ''),
+                        make_selectable=bool(body.get('make_selectable', True)))
+                    queued = _scp81_queue_script(seq, kind='ram-install',
+                                                 force=bool(body.get('force', False)))
+                    resp = dict(queued, ok=bool(queued.get('queued')),
+                                load_file_aid=loadfile_aid,
+                                module_aid=module_aid, apdus=len(seq))
+                    if queued.get('queued'):
+                        resp['note'] = ('queued as the SCP81 command script; '
+                                        'runs on the card next POST (push/trigger)')
+                except Exception as e:
+                    resp = {'ok': False, 'error': 'cap parse failed: %s' % e}
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path == '/api/scp81/log-clear':
