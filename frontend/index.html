@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.5</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.6</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -7036,8 +7036,10 @@ function scp81Msg(text, cls) {
 function scp81LogLine(e) {
 	const parts = [String(e.seq), e.kind];
 	if (e.index) parts.push('#' + e.index);
+	if (e.page) parts.push('page ' + e.page);
 	if (e.apdu) parts.push(e.apdu);
 	if (e.sw) parts.push('SW ' + e.sw);
+	if (e.kind === 'script-status' && e.status) parts.push('status=' + e.status);
 	if (e.applets !== undefined) parts.push('applets=' + e.applets);
 	if (e.free_nv !== undefined) parts.push('free NV=' + e.free_nv);
 	if (e.free_volatile !== undefined) parts.push('free vol=' + e.free_volatile);
@@ -7049,7 +7051,7 @@ function scp81LogLine(e) {
 	if (e.agent) parts.push('from=' + e.agent);
 	if (e.method) parts.push(e.method);
 	if (e.uri) parts.push(e.uri);
-	if (e.status) parts.push('HTTP ' + e.status);
+	if (e.status && e.kind !== 'script-status') parts.push('HTTP ' + e.status);
 	if (e.cipher) parts.push(e.cipher);
 	if (e.reason) parts.push('(' + e.reason + ')');
 	if (e.error) parts.push(e.error);

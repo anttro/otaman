@@ -180,15 +180,30 @@ card's POST which RFC 5246 leaves open in practice) cannot be done with
 CPython's `ssl`: `SSLSocket.unwrap()` with a short timeout raises and poisons
 the session (tested), so the `half_close` option is a documented no-op.
 
+## RESOLVED 2026-09-16b: SW CAFE continuation pages
+
+**Implemented:** the script responder auto-follows a truncated listing page
+(`SW CAFE`, 127 bytes) by inserting a continuation GET STATUS
+(`80F2 <P1> 02 <Lc> 4F <len> <last-complete-AID> 00`, next-occurrence mode)
+as the next command. The last AID comes from the last complete `E3` entry in
+the page (truncated tails and the live `FC`-prefixed junk are skipped).
+Logged as `script-page`; a repeated page logs `script-page-stalled` and
+stops; max 24 pages; inserted continuations are dropped at session start.
+
+**Live-verified (2026-09-16):** ELF registry: page 1 `SW CAFE` ->
+continuation with `D276000005AA060200000000B00000` -> page 2 `SW 9000`
+(complete, 2 entries). Applications: page 1 `SW CAFE` -> continuation with
+`D276000005AAFFCAFE0010` -> page 2 `SW 9000` (complete, incl.
+`D276000005AAFFCAFE0001/0010`, `A0000001515350`, `A000000151535041`).
+Full session: 7/7 commands, all `X-Admin-Script-Status: ok`.
+
 ## Next tests / work
 
-1. **Continuation pages:** follow `SW CAFE` (127-byte listing pages) with
-   GET STATUS P1=40/10 P2=02 using the last returned AID as the search
-   criterion, and append the pages to the result set (memory + full ELF and
-   application registries).
-2. **UI:** show the decoded memory/applications results (and page merging) in
-   the SCP81 tab; expose the framing options there.
-3. Load/store operations (RAM INSTALL/LOAD) over SCP81 using the same recipe.
+1. **UI:** group the per-page R-APDUs under their logical command in the
+   SCP81 tab (page merging/decoding for ELF and application listings);
+   expose the framing options in the tab.
+2. **Load/store over SCP81:** RAM INSTALL/LOAD via command scripts using the
+   same recipe (one C-APDU per POST, pagination for long responses).
 
 ## Tooling
 

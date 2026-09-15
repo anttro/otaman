@@ -667,6 +667,82 @@ class TargetedAppTest(unittest.TestCase):
             server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
             server._SCP81_SCRIPT_SENT = 0
 
+    def test_last_aid_parses_complete_entries_only(self):
+        page = bytes.fromhex(
+            'FC'                                                    # live prefix
+            'E3114F08A0000000030000009F70010FC50100'                # entry 1
+            'E3104F07A00000015153509F700107C50104'                 # entry 2
+            'E3204F08D27600')                                       # truncated
+        self.assertEqual(server._scp81_last_aid(page),
+                         bytes.fromhex('A0000001515350'))
+
+    def test_continuation_builds_next_occurrence_apdu(self):
+        page = bytes.fromhex('E3114F08A0000000030000009F70010FC50100')
+        self.assertEqual(server._scp81_continuation('80F24002024F0000', page),
+                         '80F240020A4F08A00000000300000000')
+        self.assertIsNone(server._scp81_continuation('80CAFF2100', page))
+
+    def test_cafe_page_auto_continuation(self):
+        server._SCP81_SCRIPT = ['80F24002024F0000']
+        server._SCP81_SCRIPT_SENT = 1
+        server._SCP81_SCRIPT_RESULTS = []
+        server._SCP81_SCRIPT_INSERTED = []
+        server._SCP81_PAGES = 0
+        try:
+            page = (bytes.fromhex('E3114F08A0000000030000009F70010FC50100')
+                    + bytes.fromhex('E3104F07A00000015153509F700107C50104')
+                    + bytes.fromhex('E3204F08D27600'))
+            tlv = bytes([0x23, len(page) + 2]) + page + b'\xCA\xFE'
+            body = b'\xAF\x80' + tlv + b'\x00\x00'
+            status, headers, out = server._scp81_script_responder(
+                'POST', '/api/scp81?req=1', {'x-admin-script-status': 'ok'}, body)
+            # The continuation was appended and sent as the next command.
+            self.assertEqual(server._SCP81_SCRIPT[1],
+                             '80F24002094F07A000000151535000')
+            self.assertEqual(status, 200)
+            self.assertIn(bytes.fromhex('80F24002094F07A000000151535000'), out)
+        finally:
+            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
+            server._SCP81_SCRIPT_SENT = 0
+            server._SCP81_SCRIPT_RESULTS = []
+            server._SCP81_SCRIPT_INSERTED = []
+            server._SCP81_PAGES = 0
+
+    def test_repeated_page_stalls(self):
+        server._SCP81_SCRIPT = ['80F24002024F0000']
+        server._SCP81_SCRIPT_SENT = 1
+        server._SCP81_SCRIPT_RESULTS = []
+        server._SCP81_SCRIPT_INSERTED = ['80F240020A4F08A00000000300000000']
+        server._SCP81_PAGES = 1
+        try:
+            page = bytes.fromhex('E3114F08A0000000030000009F70010FC50100')
+            tlv = bytes([0x23, len(page) + 2]) + page + b'\xCA\xFE'
+            body = b'\xAF\x80' + tlv + b'\x00\x00'
+            server._scp81_script_responder(
+                'POST', '/api/scp81?req=2', {'x-admin-script-status': 'ok'}, body)
+            # Same page again: no new continuation inserted.
+            self.assertEqual(_count := len(server._SCP81_SCRIPT_INSERTED), 1)
+            self.assertEqual(server._SCP81_PAGES, 1)
+        finally:
+            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
+            server._SCP81_SCRIPT_SENT = 0
+            server._SCP81_SCRIPT_RESULTS = []
+            server._SCP81_SCRIPT_INSERTED = []
+            server._SCP81_PAGES = 0
+
+    def test_new_session_drops_inserted_pages(self):
+        server._SCP81_SCRIPT = ['80F24002024F0000', '80F24002094F07A000000151535000']
+        server._SCP81_SCRIPT_INSERTED = ['80F24002094F07A000000151535000']
+        server._SCP81_SCRIPT_SENT = 2
+        try:
+            server._scp81_script_responder('POST', '/api/scp81', {}, b'')
+            self.assertEqual(server._SCP81_SCRIPT, ['80F24002024F0000'])
+            self.assertEqual(server._SCP81_SCRIPT_SENT, 1)
+        finally:
+            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
+            server._SCP81_SCRIPT_SENT = 0
+            server._SCP81_SCRIPT_INSERTED = []
+
     def test_exact_wire_bodies_from_reference_log(self):
         # De-chunked bodies captured in adminserver.log (2019-09-05).
         count, rapdus = server._scp81_parse_response(bytes.fromhex(

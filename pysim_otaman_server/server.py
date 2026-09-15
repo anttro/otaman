@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.5'
+VERSION = '2.1.6'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1360,6 +1360,12 @@ _SCP81_SCRIPTS = {
 _SCP81_SCRIPT = list(_SCP81_SCRIPTS['explore'])
 _SCP81_SCRIPT_SENT = 0
 _SCP81_SCRIPT_RESULTS = []
+# Continuation pages: long GET STATUS listings answer SW CAFE with 127-byte
+# pages; the responder auto-inserts a GET STATUS (P2=02, last AID as search
+# criterion) after each page until the listing ends.
+_SCP81_SCRIPT_INSERTED = []
+_SCP81_PAGES = 0
+SCP81_MAX_PAGES = 24
 _SCP81_SCRIPT_TEMPLATE = 'indefinite'
 _SCP81_SCRIPT_CR_TAG = False
 # None = short per-command Next-URI ('/N'); '' = omit the header (spec: the
@@ -1440,10 +1446,54 @@ def _scp81_decode_memory(rapdu):
     return out or None
 
 
+def _scp81_last_aid(rapdu):
+    """Last complete AID (the '4F' TLV of a GET STATUS entry) in a page.
+
+    The page is a stream of 'E3' entries; a 127-byte page may end mid-entry,
+    so only complete entries count. Unknown leading bytes (seen in live
+    pages) are skipped."""
+    last = None
+    i = 0
+    while i + 2 <= len(rapdu):
+        if rapdu[i] != 0xE3:
+            i += 1
+            continue
+        ln = rapdu[i + 1]
+        off = i + 2
+        if ln == 0x81 and i + 3 <= len(rapdu):
+            ln = rapdu[i + 2]
+            off = i + 3
+        if off + ln > len(rapdu):
+            break
+        content = rapdu[off:off + ln]
+        if len(content) >= 2 and content[0] == 0x4F:
+            alen = content[1]
+            if 2 + alen <= len(content):
+                last = content[2:2 + alen]
+        i = off + ln
+    return last
+
+
+def _scp81_continuation(apdu, rapdu):
+    """Continuation APDU for a truncated GET STATUS page, or None.
+
+    GET STATUS P2=02 with the last returned AID as search criterion asks the
+    card for the next occurrence (GP GET STATUS, next-occurrence mode)."""
+    u = apdu.upper()
+    if not u.startswith('80F2'):
+        return None
+    aid = _scp81_last_aid(rapdu)
+    if not aid:
+        return None
+    lc = 2 + len(aid)
+    return '80F2%s02%02X4F%02X%s00' % (u[4:6], lc, len(aid), aid.hex().upper())
+
+
 def _scp81_script_responder(method, target, headers, body):
     """Remote Administration Server side of the administration session: send
     the next scripted C-APDU or close the session (TS 102 226 / GP 4.4.2)."""
-    global _SCP81_SCRIPT_SENT, _SCP81_SCRIPT_RESULTS
+    global _SCP81_SCRIPT_SENT, _SCP81_SCRIPT_RESULTS, _SCP81_PAGES
+    global _SCP81_SCRIPT_INSERTED
     status = headers.get('x-admin-script-status')
     if status is not None:
         index = _SCP81_SCRIPT_SENT
@@ -1462,10 +1512,27 @@ def _scp81_script_responder(method, target, headers, body):
                     decoded = _scp81_decode_memory(rapdus[-1][0])
                     if decoded:
                         _BIP.log('script-memory', **decoded)
+                if rapdus[-1][1].upper() == 'CAFE' and _SCP81_PAGES < SCP81_MAX_PAGES:
+                    cont = _scp81_continuation(apdu, rapdus[-1][0])
+                    if cont and cont in _SCP81_SCRIPT_INSERTED:
+                        # The card returned the same page again: stop paging.
+                        _BIP.log('script-page-stalled', index=index, apdu=cont)
+                    elif cont:
+                        _SCP81_PAGES += 1
+                        _SCP81_SCRIPT.insert(_SCP81_SCRIPT_SENT, cont)
+                        _SCP81_SCRIPT_INSERTED.append(cont)
+                        _BIP.log('script-page', index=index, page=_SCP81_PAGES,
+                                 apdu=cont)
     else:
         # First (or resumed) POST of a session: run the script from the start.
+        # Drop continuation pages inserted by a previous session.
+        if _SCP81_SCRIPT_INSERTED:
+            _SCP81_SCRIPT[:] = [a for a in _SCP81_SCRIPT
+                                if a not in _SCP81_SCRIPT_INSERTED]
+            _SCP81_SCRIPT_INSERTED = []
         _SCP81_SCRIPT_SENT = 0
         _SCP81_SCRIPT_RESULTS = []
+        _SCP81_PAGES = 0
     if _SCP81_SCRIPT_SENT < len(_SCP81_SCRIPT):
         apdu = _SCP81_SCRIPT[_SCP81_SCRIPT_SENT]
         _SCP81_SCRIPT_SENT += 1
