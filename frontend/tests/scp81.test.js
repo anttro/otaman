@@ -57,3 +57,50 @@ test('scp81LogLine renders script entries', () => {
 		scp81LogLine({ seq: 13, kind: 'script-memory', applets: 4, free_nv: 61600, free_volatile: 2048 }),
 		'13 script-memory applets=4 free NV=61600 free vol=2048');
 });
+
+eval(extractFunc(html, 'scp81DecodeGetStatus'));
+eval(extractFunc(html, 'scp81GroupResults'));
+eval(extractFunc(html, 'scp81ResultLines'));
+
+test('scp81DecodeGetStatus decodes complete entries', () => {
+	const entries = scp81DecodeGetStatus('E32A4F08A0000000030000009F70010FC50380DE00C40BD276000005AAFFCAFE0010CC08A000000003000000');
+	assert.strictEqual(entries.length, 1);
+	assert.strictEqual(entries[0].aid, 'A000000003000000');
+	assert.strictEqual(entries[0].lifecycle, '0F');
+	assert.strictEqual(entries[0].privileges, '80DE00');
+});
+
+test('scp81DecodeGetStatus reads module AIDs and skips truncated tails', () => {
+	const entries = scp81DecodeGetStatus('E31B4F07A00000015153509F700101CE0201008408A000000151535041' + 'E3204F08D27600');
+	assert.strictEqual(entries.length, 1);
+	assert.strictEqual(entries[0].aid, 'A0000001515350');
+	assert.strictEqual(entries[0].modules[0], 'A000000151535041');
+});
+
+test('scp81GroupResults merges pages under one command', () => {
+	const groups = scp81GroupResults({ results: [
+		{ index: 4, apdu: '80F24002024F0000', sw: 'CAFE', rapdu: 'E3114F08A0000000030000009F70010FC50100' },
+		{ index: 5, apdu: '80F24002114F0F', sw: '9000', rapdu: 'E3114F08A0000000030000009F70010FC50100' },
+		{ index: 1, apdu: '80CAFF2100', sw: '9000', rapdu: 'FF210B81010D8202C5D683020962' },
+	] });
+	assert.strictEqual(groups.length, 2);
+	assert.strictEqual(groups[0].results.length, 2);
+	assert.strictEqual(groups[1].key, '80CAFF');
+});
+
+test('scp81ResultLines decodes the memory page', () => {
+	const lines = scp81ResultLines({ apdu: '80CAFF2100', results: [
+		{ rapdu: 'FF210B81010D8202C5D683020962', sw: '9000' } ] });
+	assert.strictEqual(lines[0], 'applets=13  free NV=50646 B  free vol=2402 B');
+});
+
+test('scp81ResultLines decodes GET STATUS entries', () => {
+	global.decodePrivileges = () => 'Security Domain';
+	try {
+		const lines = scp81ResultLines({ apdu: '80F24002024F0000', results: [
+			{ rapdu: 'E3114F08A0000000030000009F70010FC50100', sw: '9000' } ] });
+		assert.strictEqual(lines[0], 'A000000003000000  life=0F  [Security Domain]');
+	} finally {
+		delete global.decodePrivileges;
+	}
+});

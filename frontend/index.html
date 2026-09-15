@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.6</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.7</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -999,6 +999,12 @@
 			</div>
 			<div id="scp81-msg" class="text-xs mt-2 hidden"></div>
 			<div class="mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="The key is only sent to the local server and is never stored or logged.">The key is only sent to the local server and is never stored or logged.</div>
+		</div>
+		<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
+			<div class="flex justify-between items-center mb-2">
+				<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="Script results (R-APDUs)">Script results (R-APDUs)</span>
+			</div>
+			<div id="scp81-results" class="text-sm font-mono text-gray-600 dark:text-slate-400 max-h-[35vh] overflow-auto"></div>
 		</div>
 		<div class="border border-gray-200 dark:border-slate-700 rounded p-3">
 			<div class="flex justify-between items-center mb-2">
@@ -7059,6 +7065,119 @@ function scp81LogLine(e) {
 	return parts.join(' ');
 }
 
+function scp81DecodeGetStatus(hex) {
+	// GET STATUS TLV listing: a stream of E3 entries { 4F aid, 9F70 lifecycle,
+	// C5 privileges, 84 module AID, CC associated SD AID }; only complete
+	// entries are decoded (pages can end mid-entry).
+	const bytes = [];
+	const clean = (hex || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+	for (let i = 0; i + 1 < clean.length; i += 2) bytes.push(parseInt(clean.substr(i, 2), 16));
+	const out = [];
+	let i = 0;
+	while (i + 2 <= bytes.length) {
+		if (bytes[i] !== 0xE3) { i += 1; continue; }
+		let ln = bytes[i + 1], off = i + 2;
+		if (ln === 0x81 && i + 3 <= bytes.length) { ln = bytes[i + 2]; off = i + 3; }
+		if (off + ln > bytes.length) break;
+		const content = bytes.slice(off, off + ln);
+		const entry = { aid: null, lifecycle: null, privileges: null, modules: [] };
+		const toHex = v => v.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+		let k = 0;
+		while (k + 2 <= content.length) {
+			let tag = content[k], hdr = 2, tlen = content[k + 1];
+			if (tag === 0x9F && k + 3 <= content.length) {
+				tag = 0x9F70;
+				tlen = content[k + 2];
+				hdr = 3;
+			}
+			if (k + hdr + tlen > content.length) break;
+			const val = content.slice(k + hdr, k + hdr + tlen);
+			if (tag === 0x4F) entry.aid = toHex(val);
+			else if (tag === 0x9F70) entry.lifecycle = val.length ? val[val.length - 1].toString(16).padStart(2, '0').toUpperCase() : null;
+			else if (tag === 0xC5) entry.privileges = toHex(val);
+			else if (tag === 0x84) entry.modules.push(toHex(val));
+			k += hdr + tlen;
+		}
+		if (entry.aid) out.push(entry);
+		i = off + ln;
+	}
+	return out;
+}
+
+function scp81GroupResults(script) {
+	// Group R-APDU results by their originating command (first three bytes):
+	// auto-continued SW CAFE pages end up under the same command.
+	const groups = [];
+	const byKey = {};
+	(script.results || []).forEach(r => {
+		const apdu = (r.apdu || '').toUpperCase();
+		const key = apdu.slice(0, 6) || 'unknown';
+		if (!byKey[key]) { byKey[key] = { key: key, apdu: apdu, results: [] }; groups.push(byKey[key]); }
+		byKey[key].results.push(r);
+	});
+	return groups;
+}
+
+function scp81ResultLines(group) {
+	const first = group.apdu || '';
+	const lines = [];
+	if (first.startsWith('80CAFF21')) {
+		group.results.forEach(r => {
+			const hex = r.rapdu || '';
+			if (hex.startsWith('FF21')) {
+				const b = [];
+				for (let i = 0; i + 1 < hex.length; i += 2) b.push(parseInt(hex.substr(i, 2), 16));
+				const vals = {};
+				let k = 3;   // skip FF 21 <len>
+				while (k + 2 <= b.length) {
+					const tag = b[k], ln = b[k + 1], val = b.slice(k + 2, k + 2 + ln);
+					if (val.length < ln) break;
+					vals[tag] = val.reduce((acc, x) => acc * 256 + x, 0);
+					k += 2 + ln;
+				}
+				lines.push('applets=' + (vals[0x81] || 0) + '  free NV=' + (vals[0x82] || 0) + ' B  free vol=' + (vals[0x83] || 0) + ' B');
+			} else {
+				lines.push(hex.slice(0, 64) + (r.sw && r.sw !== '9000' ? '  SW ' + r.sw : ''));
+			}
+		});
+	} else if (first.startsWith('80F2')) {
+		const entries = [];
+		group.results.forEach(r => entries.push.apply(entries, scp81DecodeGetStatus(r.rapdu || '')));
+		entries.forEach(e => {
+			const priv = (typeof decodePrivileges === 'function' && e.privileges) ? decodePrivileges(e.privileges) : (e.privileges || '');
+			lines.push(e.aid + (e.lifecycle ? '  life=' + e.lifecycle : '') + (priv ? '  [' + priv + ']' : '') +
+				(e.modules.length ? '  module=' + e.modules.join(',') : ''));
+		});
+		const bad = group.results.filter(r => r.sw && r.sw !== '9000' && r.sw !== 'CAFE');
+		bad.forEach(r => lines.push('SW ' + r.sw));
+	} else {
+		group.results.forEach(r => lines.push((r.rapdu || '').slice(0, 64) + (r.sw ? '  SW ' + r.sw : '')));
+	}
+	return lines;
+}
+
+async function scp81ResultsRefresh() {
+	const el = document.getElementById('scp81-results');
+	if (!el) return;
+	try {
+		const script = await pysimFetch('/api/scp81/script');
+		const groups = scp81GroupResults(script);
+		if (!groups.length) {
+			el.innerHTML = '<span class="text-gray-400">' + t('No entries yet.') + '</span>';
+			return;
+		}
+		el.innerHTML = groups.map(g => {
+			const lines = scp81ResultLines(g);
+			const head = g.apdu + (g.results.length > 1 ? '  (' + g.results.length + ' pages)' : '');
+			return '<div class="py-1 border-b border-gray-100 dark:border-slate-700/50">' +
+				'<div class="text-gray-500 dark:text-slate-500">' + esc(head) + '</div>' +
+				lines.map(l => '<div class="break-all">' + esc(l) + '</div>').join('') + '</div>';
+		}).join('');
+	} catch (err) {
+		el.innerHTML = '<span class="text-red-500">Error: ' + esc(String(err.message || err)) + '</span>';
+	}
+}
+
 async function scp81StatusRefresh() {
 	const el = document.getElementById('scp81-state');
 	try {
@@ -7126,6 +7245,7 @@ async function scp81Start() {
 		else scp81Msg(resp.error || t('Error'), 'text-red-500');
 		scp81StatusRefresh();
 		scp81LogRefresh();
+		scp81ResultsRefresh();
 	} catch (err) {
 		scp81Msg(String(err.message || err), 'text-red-500');
 	}
@@ -7137,6 +7257,7 @@ async function scp81Stop() {
 		scp81Msg(t('Stopped.'), 'text-gray-500 dark:text-slate-400');
 		scp81StatusRefresh();
 		scp81LogRefresh();
+		scp81ResultsRefresh();
 	} catch (err) {
 		scp81Msg(String(err.message || err), 'text-red-500');
 	}
@@ -7146,6 +7267,7 @@ async function scp81LogClear() {
 	try {
 		await pysimFetch('/api/scp81/log-clear', {});
 		scp81LogRefresh();
+		scp81ResultsRefresh();
 	} catch (err) {
 		scp81Msg(String(err.message || err), 'text-red-500');
 	}
@@ -7160,6 +7282,7 @@ function scp81Enter() {
 		if (document.getElementById('tab-scp81').classList.contains('hidden')) return;
 		scp81StatusRefresh();
 		scp81LogRefresh();
+		scp81ResultsRefresh();
 	}, 2000);
 }
 

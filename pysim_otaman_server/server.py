@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.6'
+VERSION = '2.1.7'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1501,13 +1501,14 @@ def _scp81_script_responder(method, target, headers, body):
             _BIP.log('script-status', index=index, status=status)
         else:
             count, rapdus = _scp81_parse_response(body)
+            apdu = _SCP81_SCRIPT[index - 1].upper() if (_SCP81_SCRIPT and index >= 1) else ''
             for rapdu, sw in rapdus:
                 _BIP.log('script-rapdu', index=index, sw=sw, bytes=len(rapdu),
                          hex=rapdu.hex().upper()[:2000])
                 _SCP81_SCRIPT_RESULTS.append({'index': index, 'sw': sw,
+                                              'apdu': apdu,
                                               'rapdu': rapdu.hex().upper()})
             if rapdus and _SCP81_SCRIPT and index >= 1:
-                apdu = _SCP81_SCRIPT[index - 1].upper()
                 if apdu.startswith('80CAFF21'):
                     decoded = _scp81_decode_memory(rapdus[-1][0])
                     if decoded:
