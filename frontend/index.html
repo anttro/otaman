@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.12</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.13</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -1006,6 +1006,15 @@
 					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="SD AID (empty = ISD)">SD AID (empty = ISD)</label>
 					<input id="scp81-cap-sd" placeholder="A000000003000000" maxlength="32" class="w-56 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
 				</div>
+				<div>
+					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Install parameters (hex, optional)">Install parameters (hex, optional)</label>
+					<input id="scp81-cap-params" placeholder="C900" class="w-40 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+				</div>
+				<div>
+					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="STK parameters (hex, optional)">STK parameters (hex, optional)</label>
+					<input id="scp81-cap-stk" placeholder="CA TLV" class="w-40 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+				</div>
+				<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400"><input type="checkbox" id="scp81-cap-makesel" checked> <span data-l10n="Make selectable">Make selectable</span></label>
 				<button data-needs="server" onclick="scp81QueueCapInstall()" class="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Queue CAP install">Queue CAP install</button>
 			</div>
 			<div id="scp81-msg" class="text-xs mt-2 hidden"></div>
@@ -7402,6 +7411,9 @@ async function scp81QueueCapInstall() {
 		const resp = await pysimFetch('/api/scp81/ram-install', {
 			cap_hex: capHex,
 			sd_aid: (document.getElementById('scp81-cap-sd').value || '').replace(/[^0-9a-fA-F]/g, ''),
+			install_params: (document.getElementById('scp81-cap-params').value || '').replace(/[^0-9a-fA-F]/g, ''),
+			stk_params: (document.getElementById('scp81-cap-stk').value || '').replace(/[^0-9a-fA-F]/g, ''),
+			make_selectable: document.getElementById('scp81-cap-makesel').checked,
 		});
 		if (resp.ok) {
 			scp81Msg(t('Queued') + ': ' + resp.apdus + ' ' + t('APDUs') + ' (' +
@@ -9890,6 +9902,9 @@ const LANG_RU = {
 	'Select a card preset with keys first (RAM subtab → Card preset)': 'Сначала выберите пресет карты с ключами (RAM → Пресет карты)',
 	'Select a .cap file': 'Выберите файл .cap',
 	'RAM install (CAP file)': 'RAM-установка (файл CAP)',
+	'Install parameters (hex, optional)': 'Параметры установки (hex, опционально)',
+	'STK parameters (hex, optional)': 'STK-параметры (hex, опционально)',
+	'Make selectable': 'Сделать выбираемым',
 	'Queue CAP install': 'Поставить установку CAP в очередь',
 	'Queued': 'В очереди',
 	'APDUs': 'APDU',
