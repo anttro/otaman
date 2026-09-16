@@ -28,7 +28,7 @@ function extractFunc(src, name) {
 
 const FNS = ['hexToBytes', 'bytesToHex', 'des3Keys', 'des3EncryptBlock', 'des3CbcEncrypt',
 	'xorBytes', 'zeroPad', 'cbcMac', 'aesCbcEncrypt', 'aesShiftLeft1', 'aesCmacSubkeys',
-	'aesCmac', 'genSp'];
+	'aesCmac', 'genSp', 'spNextCntr'];
 let code = '';
 for (const f of FNS) code += extractFunc(html, f) + '\n';
 
@@ -216,4 +216,16 @@ test('AES rejects 8-byte key', () => {
 		'sp-kid-key': KID_AES,
 	});
 	assert.strictEqual(err, 'Error: AES KIc key must be 16, 24, or 32 bytes');
+});
+
+test('spNextCntr increments with carry', () => {
+	assert.strictEqual(spNextCntr('0000000001'), '0000000002');
+	assert.strictEqual(spNextCntr('00000000FF'), '0000000100');
+	assert.strictEqual(spNextCntr('000000FFFF'), '0000010000');
+	assert.strictEqual(spNextCntr('0000ABCDEF'), '0000ABCDF0');
+});
+
+test('spNextCntr tolerates lower case and separators', () => {
+	assert.strictEqual(spNextCntr('00000000 0a'), '000000000B');
+	assert.strictEqual(spNextCntr(''), '0000000001');
 });

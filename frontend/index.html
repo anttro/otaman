@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.8</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.9</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -512,7 +512,7 @@
 				<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300">Counter (5 bytes)</label>
 				<div class="flex gap-1 items-center">
 					<button type="button" onclick="spCntrAdjust(-1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">−</button>
-					<input id="sp-cntr" oninput="spInvalidate()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
+					<input id="sp-cntr" oninput="spInvalidate()" onchange="spCntrSyncPreset()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 flex-1 dark:bg-slate-800" placeholder="0000000001" maxlength="10" value="0000000001">
 					<button type="button" onclick="spCntrAdjust(1)" class="px-2.5 py-2 border border-gray-300 dark:border-slate-600 text-sm rounded hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600">+</button>
 				</div>
 			</div>
@@ -4761,6 +4761,25 @@ async function pysimApdu() {
 	pysimRefresh();
 }
 
+function spNextCntr(value) {
+	// The OTA counter must strictly increase for every secured packet sent
+	// (replay protection): increment the 5-byte counter, carries included.
+	const v = (parseInt((value || '').replace(/[^0-9a-fA-F]/g, ''), 16) || 0) >>> 0;
+	return ((v + 1) >>> 0).toString(16).toUpperCase().padStart(10, '0').slice(-10);
+}
+
+function spCntrSyncPreset() {
+	// Persist the counter into the selected card preset: the OTA counter is
+	// part of the card's state and must survive reloads.
+	const sel = document.getElementById('sp-card-sel');
+	const idx = sel ? parseInt(sel.value, 10) : NaN;
+	if (isNaN(idx) || !cards[idx]) return false;
+	cards[idx].cntr = document.getElementById('sp-cntr').value;
+	cardsSave();
+	cardsRender();
+	return true;
+}
+
 function spParams() {
 	return {
 		spi1: document.getElementById('sp-spi1').value,
@@ -4835,22 +4854,16 @@ async function pysimSendOta() {
 				porStatusEl.textContent = 'PoR: ' + por.response_status;
 				porStatusEl.classList.remove('hidden', okPor ? 'text-red-600' : 'text-green-600');
 				porStatusEl.classList.add(okPor ? 'text-green-600' : 'text-red-600');
-				if (okPor) {
-					// packet was accepted and executed - advance the counter so the
-					// same secured packet can never be sent twice (v1.9.6)
-					const cntrEl = document.getElementById('sp-cntr');
-					cntrEl.value = ((parseInt(cntrEl.value, 16) || 0) + 1)
-						.toString(16).toUpperCase().padStart(10, '0').slice(-10);
-					document.getElementById('sp-result').value = '';
-					// keep the selected card preset in sync with the new counter (v1.9.8)
-					const selIdx = parseInt(document.getElementById('sp-card-sel').value, 10);
-					if (!isNaN(selIdx) && cards[selIdx]) {
-						cards[selIdx].cntr = cntrEl.value;
-						cardsSave();
-						cardsRender();
-					}
-				}
 			}
+			// The counter advances after every successful send, PoR or not: the
+			// card rejects a repeated counter (replay protection) and the same
+			// secured packet must never be sent twice (v1.9.6, revised 2.1.9).
+			const cntrEl = document.getElementById('sp-cntr');
+			cntrEl.value = spNextCntr(cntrEl.value);
+			msg += ' | CNTR -> ' + cntrEl.value;
+			document.getElementById('sp-result').value = '';
+			// keep the selected card preset in sync with the new counter (v1.9.8)
+			spCntrSyncPreset();
 			sendResultEl.textContent = msg;
 			if (por && por.raw) {
 				const rawLine = document.createElement('div');
