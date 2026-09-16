@@ -229,6 +229,22 @@ could never install there either.
 (`range(0, len(tlv), 240 * 2)`), with a reassembly test that pins the joined
 blocks to the C4 TLV byte for byte.
 
+## RESOLVED 2026-09-16e: RAM install over SCP81 - complete and verified
+
+**Live-verified end-to-end**: .cap parse -> INSTALL [for load] (SW 9000) ->
+LOAD x6 (all SW 9000, after the block-slicing fix) -> INSTALL [for install]
+with the full parameter set -> SW 9000. The applet's INSTALL [for install]
+needed the real install parameters (`C900` + the STK parameters
+`EA 0C 80 0A ...`), which the compact SCP81 form could not express - the
+Remote APDU -> RAM -> INSTALL [for install] builder has all the fields and
+its "Queue in SCP81" button feeds the commands straight into the HTTP OTA
+script (the "To expanded" button shows them in the TS 102 226 command
+scripting (AA/AE80) form). The card's answer for the parameter-less attempt
+was SW 6A80 (incorrect parameters in data field).
+
+Working INSTALL [for install] example (compact):
+`80E60C002E07AA1902BC22580108AA1902BC2258010108AA1902BC22580101010010C900EA0C800A00000F010000000000000000`
+
 ## Next tests / work
 
 1. **UI:** group the per-page R-APDUs under their logical command in the
