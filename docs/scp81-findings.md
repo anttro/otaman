@@ -286,6 +286,21 @@ same class of bug as the channel data TLV and the command script template
 earlier the same day). Regression tests cover a 250-byte page with
 `23 81 FC` and the short-form case.
 
+## VERIFIED 2026-09-16h: the installed applet in all registries
+
+After the response-TLV BER fix, `explore` ran 18 commands / 10 auto
+continuation pages (all real statuses: `63 10` -> next, `9000` = complete)
+and the installed applet shows up everywhere:
+
+```
+80F240 (applications+SDs): AA1902BC22580101  life=07 (SELECTABLE)  priv=00  elf=AA1902BC225801
+80F220 (ELF registry):     AA1902BC225801    life=01 (loaded)
+80F210 (ELF+modules):      AA1902BC225801    life=01  module=AA1902BC22580101
+```
+
+Full RAM-over-HTTP install cycle: .cap -> INSTALL [for load] -> LOAD x6 ->
+INSTALL [for install] -> registries.
+
 ## Next tests / work
 
 1. **UI:** group the per-page R-APDUs under their logical command in the
