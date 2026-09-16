@@ -8754,9 +8754,11 @@ async function pysimPliSave() {
 
 // ===== custom files =====
 // A custom file has a canonical full path rooted at MF or an ADF
-// ("MF/A153/4954", "ADF.USIM/6F07"); the parent DF must be defined as a
-// custom file before a file under it can be added. Entries are stored as
-// {path, name, kind} with kind derived from the alias prefix (EF./DF.).
+// ("MF/A153/4954", "ADF.USIM/6F07"). The parent may be the root, a custom DF
+// or any DF known from the file-manager tree (MF/7F20, ...) at any depth; a
+// parent not seen yet is accepted and flagged until the tree resolves it.
+// Entries are stored as {path, name, kind} with kind derived from the alias
+// prefix (EF./DF.).
 let pysimCustomFiles = [];
 let _pysimCustomDropped = 0;
 const CUSTOM_ROOTS = ['MF', 'ADF.USIM', 'ADF.ISIM'];
