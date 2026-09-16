@@ -306,11 +306,12 @@ INSTALL [for install] -> registries.
 1. **UI:** group the per-page R-APDUs under their logical command in the
    SCP81 tab (page merging/decoding for ELF and application listings);
    expose the framing options in the tab.
-2. **Load/store over SCP81:** implemented - `POST /api/scp81/ram-install`
+2. **Load/store over SCP81:** implemented - `POST /api/scp81/gen-install`
    takes a `.cap`, expands it with the shared `_cap_apdu_sequence` helper
    (INSTALL [for load] -> 240-byte LOAD blocks -> INSTALL [for install]) and
-   queues it as the command script, one C-APDU per POST. Live install test
-   pending (needs a push with a suitable applet).
+   returns the APDU list, which the PWA stores as an "Install from .cap"
+   script (the `.cap` itself is never stored). Live install verified
+   2026-09-16.
 
 ## Tooling
 

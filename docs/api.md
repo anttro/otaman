@@ -47,9 +47,13 @@ connect and warns if versions are incompatible.
 | `/api/pli-dict` | GET | Current dictionary (hex values per qualifier) |
 | `/api/pli-dict` | POST | Update dictionary entries |
 | `/api/scp81/bip` | POST | Start/stop the HTTP OTA listener (dump capture or PSK TLS server) |
-| `/api/scp81/status` | GET | BIP terminal + listener state (channels, PSK identity seen) |
+| `/api/scp81/status` | GET | BIP terminal + listener state (channels, PSK identities, handshake identity) |
 | `/api/scp81/log` | GET | HTTP OTA event log (`?after=<seq>`) |
 | `/api/scp81/log-clear` | POST | Clear the HTTP OTA event log |
+| `/api/scp81/queue` | POST | Replace the SCP81 command script (optionally force-restart) |
+| `/api/scp81/script` | GET | Active command script + execution state and R-APDUs |
+| `/api/scp81/psk-map` | POST | Replace the PSK table of a running TLS listener |
+| `/api/scp81/gen-install` | POST | Generate the RAM APDU list for a `.cap` (no queueing) |
 
 ## Endpoint details
 
@@ -176,6 +180,7 @@ Install a Java Card `.cap` file on the card via GlobalPlatform commands (INSTALL
 | `stk_params` | no | Hex CA TLV (TS 102 226 §8.2.1.3.2.1) for SIM toolkit app-specific params |
 | `nv_quota` / `volatile_quota` | no | Integer memory quotas (bytes) for `gen_install_parameters()` |
 | `make_selectable` | no | If true (default), final INSTALL uses P1=`0C` (install + make selectable) |
+| `load_block_size` | no | Bytes of load-file payload per LOAD APDU, 1–240. When empty/omitted the server auto-fits: the largest size whose SCP80 secured packet still encodes into one SMS (140 octets; e.g. 107 for the 3DES `spi1=16/spi2=01` configuration). An explicit value larger than the fitting size is clamped; over SCP80 the default 240 does **not** fit and used to fail with pySim's "Cannot encode command in a single SMS". |
 
 **Response (success):**
 ```json
@@ -186,8 +191,16 @@ Install a Java Card `.cap` file on the card via GlobalPlatform commands (INSTALL
  "final_cntr": "0000000004",
  "load_file_aid": "A000000003000000",
  "module_aid": "A000000003000000",
- "application_aid": "A000000003000000"}
+ "application_aid": "A000000003000000",
+ "load_block_size": 107,
+ "load_block_size_requested": null,
+ "load_block_size_clamped": false}
 ```
+
+`load_block_size` is the effective size used for the LOAD blocks,
+`load_block_size_requested` echoes an explicit `load_block_size` (null =
+auto-fit) and `load_block_size_clamped` is true when the requested size was
+reduced to fit one SMS.
 
 **Response (failure):**
 ```json
@@ -467,18 +480,28 @@ ClientHello) without answering:
 {"action": "start", "mode": "dump", "host": "127.0.0.1", "port": 8443}
 ```
 
-TLS mode runs the Phase B PSK TLS server (GPC v2.2 Amendment B): the PSK key
-and optional identity are applied to the TLS handshake, and the GP HTTP
-administration dialog (`X-Admin-*` headers, 200 with a command string or 204
-No Content) is served. `psk_hex` is required (the previous key is reused when
-omitted); `psk_identity` restricts the accepted identity. The key is never
-stored or logged.
+TLS mode runs the Phase B PSK TLS server (GPC v2.2 Amendment B): the PSK
+table is applied to the TLS handshake, and the GP HTTP administration dialog
+(`X-Admin-*` headers, 200 with a command string or 204 No Content) is served.
+`psk_map` is the lookup table for the identity the card presents in the TLS
+handshake — the PWA sends it from the card presets (`{identity, psk_hex}`
+objects or an `{identity: psk_hex}` map); a handshake whose identity is not
+listed fails with the log entry `tls-psk-unknown`. The legacy single-key form
+`psk_hex` (with optional `psk_identity`, empty = accept any identity) is still
+accepted; when both are omitted the table of the previous start is reused.
+Keys are never stored or logged.
 
 ```json
 {"action": "start", "mode": "tls", "host": "127.0.0.1", "port": 8443,
- "psk_hex": "00112233445566778899aabbccddeeff",
- "psk_identity": "89012345678901234567"}
+ "psk_map": [{"identity": "89012345678901234567",
+              "psk_hex": "00112233445566778899aabbccddeeff"}],
+ "script": ["80CAFF2100", "80F28002024F0000"], "script_kind": "Explore"}
 ```
+
+`script` is the APDU list served to the card (an explicit list, or `none`);
+the server is agnostic to what the APDUs do. `script_kind` is an optional
+label for the logs/results. Omitting `script` keeps the configured script and
+its run progress.
 
 Stop either mode with `{"action": "stop"}` (also disables the BIP terminal).
 
@@ -487,8 +510,28 @@ Stop either mode with `{"action": "stop"}` (also disables the BIP terminal).
 ```json
 {"bip": {"enabled": true, "target": "127.0.0.1:8443", "channels": [], "seq": 12},
  "listener": {"mode": "tls", "host": "127.0.0.1", "port": 8443,
-              "psk_identity": null, "identity_seen": "89012345678901234567"}}
+              "psk_identities": ["89012345678901234567"], "psk_wildcard": false,
+              "identity_seen": "89012345678901234567", "identity_matched": true}}
 ```
+
+`psk_identities` lists the identities the listener accepts (keys are never
+exposed); `psk_wildcard` marks the legacy single-key mode. `identity_seen` /
+`identity_matched` reflect the last handshake: an unknown identity is logged
+as `tls-psk-unknown` and the handshake fails.
+
+### `POST /api/scp81/psk-map`
+
+Replaces the PSK table of the running TLS listener (the PWA pushes card-preset
+edits without a listener restart):
+
+```json
+{"psk_map": [{"identity": "89012345678901234567",
+              "psk_hex": "00112233445566778899aabbccddeeff"}]}
+```
+
+Returns `{"ok": true, "identities": [...], "listener": {...}}`; entries
+without an identity or a valid key are skipped, and an empty table is
+rejected.
 
 ### `GET /api/scp81/log`
 
@@ -498,50 +541,68 @@ newer entries; `seq` echoes the latest sequence number.
 
 ### `POST /api/scp81/queue`
 
-Queue explicit commands as the SCP81 script (used by the Remote APDU tab's
-RAM chain "Queue in SCP81"). Body `{"apdus": ["80E60C002E...", ...]}` (or a
-single `apdu`), optional `kind` and `force`. Entries that already are
-Command Scripting templates (`AA...`/`AE80...`, the expanded format) are
-sent verbatim instead of being wrapped again. Refused while a script is
-mid-run unless forced.
+Replace the SCP81 command script (used by the Remote APDU tab's RAM chain
+"Queue in SCP81" and the PWA's "Restart script"). Body
+`{"apdus": ["80E60C002E...", ...]}` (or a single `apdu`), optional `kind` and
+`force`. Entries that already are Command Scripting templates
+(`AA...`/`AE80...`, the expanded format) are sent verbatim instead of being
+wrapped again. Refused while a script is mid-run unless forced; queuing resets
+the execution progress.
 
-### `POST /api/scp81/ram-install`
+### `POST /api/scp81/gen-install`
 
-Queue a RAM (GP) install as the SCP81 command script. The `.cap` is parsed
-server-side (same parser as `/api/ram-install`) and expanded to the APDU
-sequence INSTALL [for load] -> LOAD blocks (240-byte payloads) -> INSTALL
-[for install]; the list runs on the card's next POST, one C-APDU per request.
+Generate the RAM (GP) APDU sequence for a `.cap` without touching the listener
+or the running script; the PWA's "Install from .cap" script template stores
+the returned list. The `.cap` is parsed server-side (same parser as
+`/api/ram-install`) and expanded to INSTALL [for load] -> LOAD blocks
+(240-byte payloads) -> INSTALL [for install]; the file itself is never stored.
 
 ```json
 {"cap_hex": "504B0304...", "sd_aid": "A000000003000000", "privileges": "00",
- "install_params": "", "stk_params": "", "make_selectable": true, "force": false}
+ "install_params": "", "stk_params": "", "make_selectable": true}
 ```
 
-`sd_aid` empty = the ISD. Refused while a script is mid-run unless `force` is
-true. Responds with `{"ok": true, "queued": true, "apdus": N, "load_file_aid":
-..., "module_aid": ...}`; the results appear in `/api/scp81/script` and the
-R-APDU log. `GET /api/scp81/script` reports the script `kind`
-(`explore`/`none`/`custom`/`ram-install`).
+`sd_aid` empty = the ISD. Responds with `{"ok": true, "apdus": [...],
+"load_file_aid": ..., "module_aid": ...}`.
 
 ### `GET /api/scp81/script`
 
-Returns the active command script and the R-APDUs collected so far:
+Returns the configured command script and the execution state:
 
 ```json
-{"script": ["80CAFF2100", "80F28002024F0000"], "sent": 1,
- "results": [{"index": 1, "sw": "9000", "rapdu": "FF210C810102..."}]}
+{"script": ["80CAFF2100", "80F28002024F0000"], "next": 2, "total": 2,
+ "done": [0, 1], "kind": "Explore",
+ "pending": {"index": 17, "pos": null, "page": true, "apdu": "80F28003024F0000"},
+ "pages": 11, "pages_queued": 0, "complete": false,
+ "results": [{"index": 1, "pos": 0, "page": false, "sw": "9000",
+              "apdu": "80CAFF2100", "rapdu": "FF210C810102..."}]}
 ```
 
-The script is selected when starting the TLS listener with the `script`
-parameter: `explore` (default — the reference administration server's command
-sequence: GET DATA FF21 extended resources / free memory, GET STATUS P1=80
-Issuer Security Domain, GET DATA 0085 HTTP administration parameters, GET
-STATUS P1=40 executable load files and P1=10 applications), `none` (answer
-every POST with 204), or an explicit list of APDU hex strings. Each APDU is
+`next` is the index of the next script APDU to send; `done` lists the script
+indices the card reported. `pending` describes the C-APDU awaiting the card's
+`X-Admin-Script-Status` report as `{index, pos, page, apdu}` (`pos` = script
+index, `null` for an auto continuation page) or `null`; `pages` counts the
+continuation pages queued so far and `pages_queued` those not yet sent.
+`complete` is true when every configured APDU was reported and nothing is in
+flight — a script can therefore be complete while a listing page is still
+being fetched (`pending.page` = true), which is tracked separately from the
+script's own progress. `results` entries carry the send order (`index`), the
+script position (`pos`, `null` for continuation pages) and the `page` flag.
+
+Execution tracking and resume: an APDU counts as executed only when the card
+reports it in the next POST's Response Scripting template. A POST with
+`X-Admin-Resume` continues with the unexecuted tail (the pending APDU is
+resent if its report never arrived), a POST without it is a fresh dialog where
+the script runs from the start, and a completed script closes the session with
+204.
+
+Each APDU is
 delivered in an `AE 80 22 <len> <apdu> 00 00` Command Scripting template
 (TS 102 226 §5.2.1) with `X-Admin-Next-URI`; the card returns its R-APDUs in
 the next POST's Response Scripting template, which is parsed and logged
-(`script-rapdu`, `script-memory`).
+(`script-rapdu`, `script-memory`). Long GET STATUS listings that answer
+`63 10` / `CA FE` ("more data available") are auto-continued with the same
+command carrying P2.b1=1.
 
 TLS mode also accepts `chunked` (**default `true`** — the reference server's
 chunked framing; the card rejects a chunked response that also carries a

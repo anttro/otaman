@@ -25,6 +25,15 @@ import pysim_otaman_server.server as server
 PSK = bytes.fromhex('00112233445566778899aabbccddeeff')
 IDENT = '89012345678901234567'
 
+# The reference administration sequence (now a PWA-side 'Explore' template);
+# tests use it as a generic multi-APDU script.
+EXPLORE = ['80CAFF2100', '80F28002024F0000', '80CA008500',
+           '80F24002024F0000', '80F22002024F0000', '80F21002024F0000']
+
+
+def reset_script(script=None, kind='test'):
+    server._scp81_reset_script(EXPLORE if script is None else script, kind)
+
 
 class HttpParseTest(unittest.TestCase):
     def test_parse_request(self):
@@ -156,8 +165,8 @@ class PskTlsServerTest(unittest.TestCase):
         old_bip = server._BIP
         server._BIP = mock.Mock()
         server._BIP.log = lambda *a, **k: None
-        server._SCP81_SCRIPT = ['80CAFF2100']
-        server._SCP81_SCRIPT_SENT = 0
+        reset_script(['80CAFF2100'])
+        server._SCP81_SCRIPT_NEXT = 0
         server._SCP81_SCRIPT_RESULTS = []
         srv = scp81.PskTlsServer('127.0.0.1', 0, PSK,
                                  responder=server._scp81_script_responder,
@@ -182,8 +191,8 @@ class PskTlsServerTest(unittest.TestCase):
             tls.close()
         finally:
             server._BIP = old_bip
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
+            reset_script()
+            server._SCP81_SCRIPT_NEXT = 0
             server._SCP81_SCRIPT_RESULTS = []
             srv.stop()
 
@@ -243,6 +252,75 @@ class PskTlsServerTest(unittest.TestCase):
                 self._connect(srv, self._client_ctx(identity='unknown-id'))
         finally:
             srv.stop()
+
+    def test_psk_map_selects_key_by_identity(self):
+        psk2 = bytes.fromhex('ffeeddccbbaa99887766554433221100')
+        logs = []
+        srv = scp81.PskTlsServer('127.0.0.1', 0, psk_map={IDENT: PSK, 'id-2': psk2},
+                                 on_log=lambda k, **f: logs.append((k, f)))
+        try:
+            tls = self._connect(srv, self._client_ctx())
+            self.assertEqual(tls.version(), 'TLSv1.2')
+            tls.close()
+            deadline = time.time() + 3
+            while time.time() < deadline and srv.identity_seen is None:
+                time.sleep(0.05)
+            self.assertEqual(srv.identity_seen, IDENT)
+            self.assertIs(srv.identity_matched, True)
+            # a second identity in the table uses its own key
+            tls = self._connect(srv, self._client_ctx(identity='id-2', psk=psk2))
+            tls.close()
+            # an unlisted identity is rejected and logged
+            with self.assertRaises(ssl.SSLError):
+                self._connect(srv, self._client_ctx(identity='unknown-id'))
+            self.assertEqual(srv.identity_seen, 'unknown-id')
+            self.assertIs(srv.identity_matched, False)
+            self.assertIn('tls-psk-unknown', [k for k, _ in logs])
+            self.assertEqual(srv.psk_identities, [IDENT, 'id-2'])
+            hs = [f for k, f in logs if k == 'tls-handshake'][0]
+            self.assertTrue(hs['psk_match'])
+        finally:
+            srv.stop()
+
+    def test_psk_map_listed_identity_with_wrong_key_fails(self):
+        srv = scp81.PskTlsServer('127.0.0.1', 0, psk_map={IDENT: PSK})
+        try:
+            with self.assertRaises(ssl.SSLError):
+                self._connect(srv, self._client_ctx(psk=bytes(16)))
+            self.assertIs(srv.identity_matched, True)
+        finally:
+            srv.stop()
+
+    def test_set_psk_map_swaps_keys(self):
+        srv = scp81.PskTlsServer('127.0.0.1', 0, psk_map={IDENT: PSK})
+        try:
+            new_psk = bytes.fromhex('ffeeddccbbaa99887766554433221100')
+            self.assertEqual(srv.set_psk_map({'id-9': new_psk}), ['id-9'])
+            tls = self._connect(srv, self._client_ctx(identity='id-9', psk=new_psk))
+            tls.close()
+            with self.assertRaises(ssl.SSLError):
+                self._connect(srv)
+        finally:
+            srv.stop()
+
+    def test_wildcard_key_accepts_any_identity(self):
+        srv = scp81.PskTlsServer('127.0.0.1', 0, PSK)
+        try:
+            tls = self._connect(srv, self._client_ctx(identity='whoever'))
+            tls.close()
+            deadline = time.time() + 3
+            while time.time() < deadline and srv.identity_seen is None:
+                time.sleep(0.05)
+            self.assertEqual(srv.identity_seen, 'whoever')
+            self.assertIs(srv.identity_matched, True)
+            self.assertEqual(srv.psk_identities, [])
+        finally:
+            srv.stop()
+
+    def test_norm_identity(self):
+        self.assertIsNone(scp81._norm_identity(None))
+        self.assertEqual(scp81._norm_identity(b'abc'), 'abc')
+        self.assertEqual(scp81._norm_identity('abc'), 'abc')
 
     def test_server_hello_omits_encrypt_then_mac(self):
         # The live card offers encrypt_then_mac but aborts with
@@ -305,13 +383,11 @@ class ScriptResponderTest(unittest.TestCase):
     """RAM over HTTP command scripting (TS 102 226 5.2, GP 4.4.2)."""
 
     def setUp(self):
-        server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-        server._SCP81_SCRIPT_SENT = 0
+        reset_script()
         server._SCP81_SCRIPT_RESULTS = []
 
     def tearDown(self):
-        server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-        server._SCP81_SCRIPT_SENT = 0
+        reset_script()
         server._SCP81_SCRIPT_RESULTS = []
 
     def test_command_body_is_indefinite_scripting_template(self):
@@ -355,7 +431,7 @@ class ScriptResponderTest(unittest.TestCase):
 
     def test_responder_sends_script_then_204(self):
         # Use an explicit two-command script, independent of the presets.
-        server._SCP81_SCRIPT = ['80CAFF2100', '80F22002024F0000']
+        reset_script(['80CAFF2100', '80F22002024F0000'])
         logs = []
         old_bip = server._BIP
         server._BIP = mock.Mock()
@@ -402,16 +478,142 @@ class ScriptResponderTest(unittest.TestCase):
         finally:
             server._BIP = old_bip
 
+    def test_resumed_dialog_resends_unreported_apdu(self):
+        # The card never reported APDU 1 (the session died): a resumed dialog
+        # resends it instead of skipping to the next one.
+        reset_script(['80CAFF2100', '80F22002024F0000'])
+        try:
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/x', {}, b'')
+            self.assertEqual(body.hex(), 'ae80220580caff21000000')
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/x', {'x-admin-resume': 'true'}, b'')
+            self.assertEqual(status, 200)
+            self.assertEqual(body.hex(), 'ae80220580caff21000000')
+            self.assertEqual(server._SCP81_SCRIPT_PENDING['pos'], 0)
+            self.assertNotIn(0, server._SCP81_SCRIPT_DONE)
+        finally:
+            reset_script()
+
+    def test_resumed_dialog_sends_leftover_tail(self):
+        # APDU 1 was reported; the resumed dialog continues with APDU 2 only.
+        reset_script(['80CAFF2100', '80F22002024F0000'])
+        try:
+            server._scp81_script_responder('POST', '/x', {}, b'')
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/x', {'x-admin-script-status': 'ok'},
+                bytes.fromhex('af80' '800101' '2304' '93059000' '0000'))
+            self.assertIn(bytes.fromhex('80f22002024f0000'), body)
+            self.assertEqual(server._SCP81_SCRIPT_DONE, {0})
+            # The session dies before APDU 2 is reported; resume resends it.
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/x', {'x-admin-resume': 'true'}, b'')
+            self.assertIn(bytes.fromhex('80f22002024f0000'), body)
+            self.assertNotIn(bytes.fromhex('80caff2100'), body)
+        finally:
+            reset_script()
+
+    def test_fresh_dialog_restarts_completed_script(self):
+        reset_script(['80CAFF2100'])
+        try:
+            server._scp81_script_responder('POST', '/x', {}, b'')
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/x', {'x-admin-script-status': 'ok'},
+                bytes.fromhex('af80' '800101' '2304' '93059000' '0000'))
+            self.assertEqual(status, 204)
+            # A stale resumed dialog stays closed ...
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/x', {'x-admin-resume': 'true'}, b'')
+            self.assertEqual(status, 204)
+            # ... while a fresh dialog (new trigger) runs the script again.
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/x', {}, b'')
+            self.assertEqual(status, 200)
+            self.assertIn(bytes.fromhex('80caff2100'), body)
+        finally:
+            reset_script()
+
+    def test_script_status_error_consumes_the_apdu(self):
+        # A reported failure still counts as processed: the run moves on and a
+        # resumed dialog resends only the unreported tail.
+        reset_script(['80CAFF2100', '80F22002024F0000'])
+        try:
+            server._scp81_script_responder('POST', '/x', {}, b'')
+            server._scp81_script_responder(
+                'POST', '/x', {'x-admin-script-status': 'security-error'}, b'')
+            self.assertEqual(server._SCP81_SCRIPT_DONE, {0})
+            self.assertEqual(server._SCP81_SCRIPT_PENDING['pos'], 1)
+            server._scp81_script_responder(
+                'POST', '/x', {'x-admin-resume': 'true'}, b'')
+            self.assertEqual(server._SCP81_SCRIPT_PENDING['pos'], 1)
+        finally:
+            reset_script()
+
+
+class ScriptStateTest(unittest.TestCase):
+    """`GET /api/scp81/script` state: script progress vs listing pages."""
+
+    def test_state_progress_pages_and_completion(self):
+        reset_script(['80CAFF2100', '80F22002024F0000'])
+        page = bytes.fromhex('E3114F08A0000000030000009F70010FC50100')
+        cafe = b'\xAF\x80' + bytes([0x23, len(page) + 2]) + page + b'\xCA\xFE' + b'\x00\x00'
+        ok = bytes.fromhex('af80' '800101' '2304' '93059000' '0000')
+        try:
+            st = server._scp81_script_state()
+            self.assertEqual(st['total'], 2)
+            self.assertEqual(st['next'], 0)
+            self.assertEqual(st['done'], [])
+            self.assertIsNone(st['pending'])
+            self.assertEqual(st['pages'], 0)
+            self.assertFalse(st['complete'])
+            # first POST sends script APDU 1: pending is an object now
+            server._scp81_script_responder('POST', '/x', {}, b'')
+            st = server._scp81_script_state()
+            self.assertEqual(st['pending'], {'index': 1, 'pos': 0, 'page': False,
+                                             'apdu': '80CAFF2100'})
+            self.assertFalse(st['complete'])
+            # report it -> done[0], APDU 2 sent
+            server._scp81_script_responder(
+                'POST', '/x', {'x-admin-script-status': 'ok'}, ok)
+            st = server._scp81_script_state()
+            self.assertEqual(st['done'], [0])
+            self.assertEqual(st['pending']['pos'], 1)
+            self.assertFalse(st['pending']['page'])
+            self.assertFalse(st['complete'])
+            # APDU 2 truncates the listing: done[1], a page is sent
+            server._scp81_script_responder(
+                'POST', '/x', {'x-admin-script-status': 'ok'}, cafe)
+            st = server._scp81_script_state()
+            self.assertEqual(st['done'], [0, 1])
+            self.assertEqual(st['pages'], 1)
+            self.assertTrue(st['pending']['page'])
+            self.assertIsNone(st['pending']['pos'])
+            self.assertEqual(st['pending']['apdu'], '80F22003024F0000')
+            self.assertFalse(st['complete'])
+            # the page is reported: nothing left -> 204, state complete
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/x', {'x-admin-script-status': 'ok'}, ok)
+            self.assertEqual(status, 204)
+            st = server._scp81_script_state()
+            self.assertIsNone(st['pending'])
+            self.assertEqual(st['pages_queued'], 0)
+            self.assertTrue(st['complete'])
+        finally:
+            reset_script()
+
 
 class BipControlTest(unittest.TestCase):
     def tearDown(self):
         server._scp81_bip_control({'action': 'stop'})
-        server._SCP81_PSK = {}
+        server._SCP81_PSKS = {}
+        server._SCP81_PSK_LEGACY = None
 
     def test_tls_mode_requires_psk(self):
-        server._SCP81_PSK = {}
+        server._SCP81_PSKS = {}
+        server._SCP81_PSK_LEGACY = None
         resp = server._scp81_bip_control({'action': 'start', 'mode': 'tls'})
         self.assertFalse(resp['ok'])
+        self.assertIn('psk_map', resp['error'])
         self.assertIn('psk_hex', resp['error'])
 
     def test_tls_mode_starts_and_reports_status(self):
@@ -421,16 +623,87 @@ class BipControlTest(unittest.TestCase):
         self.assertTrue(resp['ok'], resp)
         listener = resp['listener']
         self.assertEqual(listener['mode'], 'tls')
-        self.assertEqual(listener['psk_identity'], 'id-1')
+        self.assertEqual(listener['psk_identities'], ['id-1'])
+        self.assertFalse(listener['psk_wildcard'])
         self.assertIsNone(listener['identity_seen'])
         self.assertTrue(resp['bip']['enabled'])
         # the key never leaves the server
         self.assertNotIn('psk_hex', listener)
 
+    def test_psk_map_start_and_update(self):
+        server._SCP81_PSKS = {}
+        server._SCP81_PSK_LEGACY = None
+        resp = server._scp81_bip_control({
+            'action': 'start', 'mode': 'tls', 'host': '127.0.0.1', 'port': 0,
+            'psk_map': [{'identity': 'id-1', 'psk_hex': '00112233'},
+                        {'identity': 'id-2', 'psk_hex': '44556677'},
+                        {'identity': '', 'psk_hex': '99'},        # skipped
+                        {'identity': 'id-3', 'psk_hex': ''}]})   # skipped
+        self.assertTrue(resp['ok'], resp)
+        self.assertEqual(resp['listener']['psk_identities'], ['id-1', 'id-2'])
+        # a preset edit pushes the new table without a listener restart
+        upd = server._scp81_update_psk_map(
+            {'psk_map': [{'identity': 'id-9', 'psk_hex': 'aabbccdd'}]})
+        self.assertTrue(upd['ok'], upd)
+        self.assertEqual(upd['identities'], ['id-9'])
+        self.assertEqual(upd['listener']['psk_identities'], ['id-9'])
+
+    def test_psk_map_requires_a_listener_for_update(self):
+        server._scp81_bip_control({'action': 'stop'})
+        resp = server._scp81_update_psk_map(
+            {'psk_map': [{'identity': 'id-1', 'psk_hex': '00112233'}]})
+        self.assertFalse(resp['ok'])
+        self.assertIn('not running', resp['error'])
+
+    def test_psk_map_empty_entries_rejected(self):
+        server._SCP81_PSKS = {}
+        server._SCP81_PSK_LEGACY = None
+        resp = server._scp81_bip_control({
+            'action': 'start', 'mode': 'tls', 'host': '127.0.0.1', 'port': 0,
+            'psk_map': [{'identity': '', 'psk_hex': '00112233'}]})
+        self.assertFalse(resp['ok'])
+        self.assertIn('no usable entries', resp['error'])
+
+    def test_psk_request_redaction(self):
+        body = {'action': 'start',
+                'psk_hex': '00112233445566778899aabbccddeeff',
+                'psk_map': [{'identity': 'id-1', 'psk_hex': '00112233'},
+                            {'identity': ''}]}
+        red = server._redact_psk_fields(body)
+        self.assertEqual(red['psk_hex'], '<redacted>')
+        self.assertEqual(red['psk_map'][0]['psk_hex'], '<redacted>')
+        self.assertEqual(red['psk_map'][0]['identity'], 'id-1')
+        self.assertEqual(red['psk_map'][1], {'identity': ''})
+        # the original body is untouched
+        self.assertEqual(body['psk_map'][0]['psk_hex'], '00112233')
+
     def test_unknown_mode_rejected(self):
         resp = server._scp81_bip_control({'action': 'start', 'mode': 'nope'})
         self.assertFalse(resp['ok'])
         self.assertIn('unsupported mode', resp['error'])
+
+    def test_start_accepts_explicit_script_list(self):
+        server._SCP81_PSKS = {}
+        server._SCP81_PSK_LEGACY = None
+        resp = server._scp81_bip_control({
+            'action': 'start', 'mode': 'tls', 'host': '127.0.0.1', 'port': 0,
+            'psk_map': [{'identity': 'id-1', 'psk_hex': '00112233'}],
+            'script': ['80CAFF2100'], 'script_kind': 'Explore'})
+        self.assertTrue(resp['ok'], resp)
+        self.assertEqual(resp['script'], ['80CAFF2100'])
+        self.assertEqual(resp['script_kind'], 'Explore')
+        self.assertEqual(server._SCP81_SCRIPT_BASE, ['80CAFF2100'])
+        self.assertEqual(server._SCP81_SCRIPT_NEXT, 0)
+
+    def test_start_rejects_named_script_presets(self):
+        # Scripts live in the PWA now: the server only takes an explicit list.
+        server._SCP81_PSKS = {}
+        server._SCP81_PSK_LEGACY = None
+        resp = server._scp81_bip_control({
+            'action': 'start', 'mode': 'tls', 'host': '127.0.0.1', 'port': 0,
+            'psk_hex': '00112233', 'script': 'explore'})
+        self.assertFalse(resp['ok'])
+        self.assertIn('unknown script preset', resp['error'])
 
 
 class DataAvailableTest(unittest.TestCase):
@@ -609,8 +882,8 @@ class ConnHeaderTest(unittest.TestCase):
 
 class TargetedAppTest(unittest.TestCase):
     def test_targeted_app_header(self):
-        server._SCP81_SCRIPT = ['80CAFF2100']
-        server._SCP81_SCRIPT_SENT = 0
+        reset_script(['80CAFF2100'])
+        server._SCP81_SCRIPT_NEXT = 0
         server._SCP81_TARGETED_APP = '//aid/A000000151000000'
         try:
             status, headers, body = server._scp81_script_responder(
@@ -620,12 +893,12 @@ class TargetedAppTest(unittest.TestCase):
                              '//aid/A000000151000000')
         finally:
             server._SCP81_TARGETED_APP = None
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
+            reset_script()
+            server._SCP81_SCRIPT_NEXT = 0
 
     def test_apache_headers(self):
-        server._SCP81_SCRIPT = ['80CAFF2100']
-        server._SCP81_SCRIPT_SENT = 0
+        reset_script(['80CAFF2100'])
+        server._SCP81_SCRIPT_NEXT = 0
         server._SCP81_APACHE_HEADERS = True
         server._SCP81_CHUNKED = False
         try:
@@ -640,14 +913,14 @@ class TargetedAppTest(unittest.TestCase):
         finally:
             server._SCP81_APACHE_HEADERS = False
             server._SCP81_CHUNKED = False
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
+            reset_script()
+            server._SCP81_SCRIPT_NEXT = 0
 
     def test_chunked_apache_has_no_content_length(self):
         # The reference (RAM/HTTPOTA_test5.pcap, decryptable) sends chunked
         # without Content-Length, Transfer-Encoding before Content-Type.
-        server._SCP81_SCRIPT = ['80CAFF2100']
-        server._SCP81_SCRIPT_SENT = 0
+        reset_script(['80CAFF2100'])
+        server._SCP81_SCRIPT_NEXT = 0
         server._SCP81_APACHE_HEADERS = True
         server._SCP81_CHUNKED = True
         try:
@@ -664,8 +937,8 @@ class TargetedAppTest(unittest.TestCase):
         finally:
             server._SCP81_APACHE_HEADERS = False
             server._SCP81_CHUNKED = False
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
+            reset_script()
+            server._SCP81_SCRIPT_NEXT = 0
 
     def test_continuation_sets_p2_next_bit(self):
         # P2.b1: 0 = first/all, 1 = next batch of the SAME search criteria
@@ -676,58 +949,50 @@ class TargetedAppTest(unittest.TestCase):
         self.assertIsNone(server._scp81_continuation('80CAFF2100'))
 
     def test_cafe_page_auto_continuation(self):
-        server._SCP81_SCRIPT = ['80F24002024F0000']
-        server._SCP81_SCRIPT_SENT = 1
-        server._SCP81_SCRIPT_RESULTS = []
-        server._SCP81_SCRIPT_INSERTED = []
-        server._SCP81_PAGES = 0
+        reset_script(['80F24002024F0000'])
+        server._SCP81_SCRIPT_NEXT = 1
+        server._SCP81_SCRIPT_PENDING = {'index': 1, 'pos': 0, 'page': False,
+                                        'apdu': '80F24002024F0000'}
         try:
             page = bytes.fromhex('E3114F08A0000000030000009F70010FC50100')
             tlv = bytes([0x23, len(page) + 2]) + page + b'\xCA\xFE'
             body = b'\xAF\x80' + tlv + b'\x00\x00'
             status, headers, out = server._scp81_script_responder(
                 'POST', '/api/scp81?req=1', {'x-admin-script-status': 'ok'}, body)
-            # The continuation was appended and sent as the next command.
-            self.assertEqual(server._SCP81_SCRIPT[1], '80F24003024F0000')
+            # The continuation was queued and sent as the next command.
+            self.assertEqual(server._SCP81_SCRIPT_BASE, ['80F24002024F0000'])
+            self.assertEqual(server._SCP81_SCRIPT_PENDING['apdu'],
+                             '80F24003024F0000')
             self.assertEqual(status, 200)
             self.assertIn(bytes.fromhex('80F24003024F0000'), out)
         finally:
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
-            server._SCP81_SCRIPT_RESULTS = []
-            server._SCP81_SCRIPT_INSERTED = []
-            server._SCP81_PAGES = 0
+            reset_script()
 
     def test_standard_more_data_sw_also_pages(self):
         # GP Table 11-38: SW '63 10' = more data available, continue with
         # GET STATUS [next occurrence] - same handling as the card's 'CA FE'.
-        server._SCP81_SCRIPT = ['80F2 4002 024F 0000'.replace(' ', '')]
-        server._SCP81_SCRIPT_SENT = 1
-        server._SCP81_SCRIPT_RESULTS = []
-        server._SCP81_SCRIPT_INSERTED = []
-        server._SCP81_PAGES = 0
+        reset_script(['80F2 4002 024F 0000'.replace(' ', '')])
+        server._SCP81_SCRIPT_NEXT = 1
+        server._SCP81_SCRIPT_PENDING = {'index': 1, 'pos': 0, 'page': False,
+                                        'apdu': '80F24002024F0000'}
         try:
             page = bytes.fromhex('E3114F08A0000000030000009F70010FC50100')
             tlv = bytes([0x23, len(page) + 2]) + page + b'\x63\x10'
             body = b'\xAF\x80' + tlv + b'\x00\x00'
             server._scp81_script_responder(
                 'POST', '/api/scp81?req=1', {'x-admin-script-status': 'ok'}, body)
-            self.assertEqual(server._SCP81_SCRIPT[1], '80F24003024F0000')
+            self.assertEqual(server._SCP81_SCRIPT_PENDING['apdu'],
+                             '80F24003024F0000')
         finally:
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
-            server._SCP81_SCRIPT_RESULTS = []
-            server._SCP81_SCRIPT_INSERTED = []
-            server._SCP81_PAGES = 0
+            reset_script()
 
     def test_repeated_pages_keep_paging(self):
         # The continuation is stateful (P2=03): the same APDU legitimately
         # repeats until the card answers 9000; the page counter caps it.
-        server._SCP81_SCRIPT = ['80F24002024F0000']
-        server._SCP81_SCRIPT_SENT = 1
-        server._SCP81_SCRIPT_RESULTS = []
-        server._SCP81_SCRIPT_INSERTED = []
-        server._SCP81_PAGES = 0
+        reset_script(['80F24002024F0000'])
+        server._SCP81_SCRIPT_NEXT = 1
+        server._SCP81_SCRIPT_PENDING = {'index': 1, 'pos': 0, 'page': False,
+                                        'apdu': '80F24002024F0000'}
         try:
             page = bytes.fromhex('E3114F08A0000000030000009F70010FC50100')
             tlv = bytes([0x23, len(page) + 2]) + page + b'\xCA\xFE'
@@ -737,24 +1002,31 @@ class TargetedAppTest(unittest.TestCase):
                     'POST', '/api/scp81?req=2', {'x-admin-script-status': 'ok'}, body)
             self.assertEqual(server._SCP81_PAGES, 3)
         finally:
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
-            server._SCP81_SCRIPT_RESULTS = []
-            server._SCP81_SCRIPT_INSERTED = []
-            server._SCP81_PAGES = 0
+            reset_script()
 
-    def test_new_session_drops_inserted_pages(self):
-        server._SCP81_SCRIPT = ['80F24002024F0000', '80F24003024F0000']
-        server._SCP81_SCRIPT_INSERTED = ['80F24003024F0000']
-        server._SCP81_SCRIPT_SENT = 2
+    def test_resumed_dialog_keeps_pages_fresh_dialog_resets(self):
+        # The continuation pages belong to one run: a resumed dialog keeps
+        # them, a fresh dialog starts the script over.
+        reset_script(['80F24002024F0000'])
+        server._SCP81_SCRIPT_NEXT = 1
+        server._SCP81_SCRIPT_PENDING = {'index': 1, 'pos': 0, 'page': False,
+                                        'apdu': '80F24002024F0000'}
+        server._SCP81_SCRIPT_PAGE_QUEUE = ['80F24003024F0000']
         try:
-            server._scp81_script_responder('POST', '/api/scp81', {}, b'')
-            self.assertEqual(server._SCP81_SCRIPT, ['80F24002024F0000'])
-            self.assertEqual(server._SCP81_SCRIPT_SENT, 1)
+            # Resumed dialog: the queued page is sent as the next command.
+            server._scp81_script_responder(
+                'POST', '/api/scp81', {'x-admin-resume': 'true'}, b'')
+            self.assertEqual(server._SCP81_SCRIPT_PENDING['apdu'],
+                             '80F24003024F0000')
+            self.assertEqual(server._SCP81_SCRIPT_PENDING['page'], True)
+            # Fresh dialog: the run restarts from the first APDU.
+            status, headers, out = server._scp81_script_responder(
+                'POST', '/api/scp81', {}, b'')
+            self.assertIn(bytes.fromhex('80F24002024F0000'), out)
+            self.assertEqual(server._SCP81_SCRIPT_PENDING['pos'], 0)
+            self.assertEqual(server._SCP81_SCRIPT_PAGE_QUEUE, [])
         finally:
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
-            server._SCP81_SCRIPT_INSERTED = []
+            reset_script()
 
     def test_exact_wire_bodies_from_reference_log(self):
         # De-chunked bodies captured in adminserver.log (2019-09-05).
@@ -772,37 +1044,46 @@ class TargetedAppTest(unittest.TestCase):
 
 class QueueScriptTest(unittest.TestCase):
     def test_queue_replaces_and_resets(self):
-        server._SCP81_SCRIPT = ['80CAFF2100']
-        server._SCP81_SCRIPT_SENT = 1
-        server._SCP81_SCRIPT_RESULTS = [{'index': 1, 'sw': '9000', 'apdu': '80CAFF2100', 'rapdu': ''}]
+        reset_script(['80CAFF2100'])
+        server._SCP81_SCRIPT_NEXT = 1
+        server._SCP81_SCRIPT_RESULTS = [{'index': 1, 'sw': '9000',
+                                         'apdu': '80CAFF2100', 'rapdu': ''}]
         try:
-            r = server._scp81_queue_script(['80E6020013' + '00' * 20, '80E88000' + '00' * 4],
+            r = server._scp81_queue_script(['80E6020013' + '00' * 20,
+                                            '80E88000' + '00' * 4],
                                            kind='ram-install')
             self.assertTrue(r['queued'])
             self.assertEqual(server._SCP81_SCRIPT_KIND, 'ram-install')
-            self.assertEqual(server._SCP81_SCRIPT_SENT, 0)
+            self.assertEqual(server._SCP81_SCRIPT_NEXT, 0)
             self.assertEqual(server._SCP81_SCRIPT_RESULTS, [])
-            self.assertEqual(len(server._SCP81_SCRIPT), 2)
+            self.assertEqual(len(server._SCP81_SCRIPT_BASE), 2)
         finally:
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
-            server._SCP81_SCRIPT_RESULTS = []
-            server._SCP81_SCRIPT_KIND = 'explore'
+            reset_script()
 
     def test_queue_refuses_while_running(self):
-        server._SCP81_SCRIPT = ['80CAFF2100', '80F28002024F0000']
-        server._SCP81_SCRIPT_SENT = 1
+        reset_script(['80CAFF2100', '80F28002024F0000'])
+        server._SCP81_SCRIPT_NEXT = 1
+        server._SCP81_SCRIPT_PENDING = {'index': 1, 'pos': 0, 'page': False,
+                                        'apdu': '80CAFF2100'}
         try:
             r = server._scp81_queue_script(['80E60200'], kind='ram-install')
             self.assertFalse(r['queued'])
-            self.assertEqual(r['sent'], 1)
+            self.assertEqual(r['next'], 1)
+            self.assertTrue(r['of'])
             r = server._scp81_queue_script(['80E60200'], kind='ram-install', force=True)
             self.assertTrue(r['queued'])
-            self.assertEqual(server._SCP81_SCRIPT, ['80E60200'])
+            self.assertEqual(server._SCP81_SCRIPT_BASE, ['80E60200'])
         finally:
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
-            server._SCP81_SCRIPT_KIND = 'explore'
+            reset_script()
+
+    def test_queue_allowed_before_first_send(self):
+        reset_script(['80CAFF2100'])
+        try:
+            r = server._scp81_queue_script(['80E60200'], kind='install')
+            self.assertTrue(r['queued'])
+            self.assertEqual(server._SCP81_SCRIPT_BASE, ['80E60200'])
+        finally:
+            reset_script()
 
 
 class ScriptBodyLengthTest(unittest.TestCase):
@@ -830,8 +1111,8 @@ class ScriptBodyLengthTest(unittest.TestCase):
 
 class VerbatimScriptTest(unittest.TestCase):
     def test_expanded_templates_sent_verbatim(self):
-        server._SCP81_SCRIPT = ['AA0B2208 80CAFF2100'.replace(' ', '')]
-        server._SCP81_SCRIPT_SENT = 0
+        reset_script(['AA0B2208 80CAFF2100'.replace(' ', '')])
+        server._SCP81_SCRIPT_NEXT = 0
         server._SCP81_SCRIPT_RESULTS = []
         server._SCP81_SCRIPT_INSERTED = []
         server._SCP81_PAGES = 0
@@ -842,19 +1123,19 @@ class VerbatimScriptTest(unittest.TestCase):
             # Sent as-is (no AE80/22 wrapper added)
             self.assertEqual(body.hex().upper(), 'AA0B220880CAFF2100')
         finally:
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
+            reset_script()
+            server._SCP81_SCRIPT_NEXT = 0
 
     def test_plain_apdu_still_wrapped(self):
-        server._SCP81_SCRIPT = ['80CAFF2100']
-        server._SCP81_SCRIPT_SENT = 0
+        reset_script(['80CAFF2100'])
+        server._SCP81_SCRIPT_NEXT = 0
         try:
             status, headers, body = server._scp81_script_responder(
                 'POST', '/api/scp81', {}, b'')
             self.assertEqual(body.hex().upper(), 'AE80220580CAFF21000000')
         finally:
-            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
-            server._SCP81_SCRIPT_SENT = 0
+            reset_script()
+            server._SCP81_SCRIPT_NEXT = 0
 
 
 class ResponseTlvLengthTest(unittest.TestCase):

@@ -13,8 +13,21 @@ test('HTML <div> tags are balanced', () => {
 
 test('top-level tabs match the rearranged views', () => {
     const tabs = [...html.matchAll(/class="tab-btn[^"]*" data-tab="([^"]+)"/g)].map(m => m[1]);
-    assert.deepStrictEqual(tabs, ['c-apdu', 'scp80', 'scp81', 'profiler', 'pysim', 'phone']);
+    assert.deepStrictEqual(tabs, ['c-apdu', 'scp80', 'scp81', 'cards', 'profiler', 'pysim', 'phone']);
     assert.match(html, /data-tab="c-apdu">Remote APDU</);
+});
+
+test('cards list shows the SCP81 PSK column with blue/red row buttons', () => {
+    assert.match(html, /data-l10n="SCP81">SCP81</);
+    const fn = /function cardsRender\(\)[\s\S]*?\n\}/.exec(html);
+    assert.ok(fn, 'cardsRender not found');
+    assert.match(fn[0], /cardsEdit\(' \+ i \+ '\)" class="[^"]*bg-blue-600 text-white/);
+    assert.match(fn[0], /cardsRemove\(' \+ i \+ '\)" class="[^"]*bg-red-600 text-white/);
+});
+
+test('profile rows have a Clone action', () => {
+    assert.match(html, /onclick="profilerClone\(' \+ i \+ '\)"/);
+    assert.match(html, /t\('Clone'\)/);
 });
 
 test('response parser is a Remote APDU pill', () => {

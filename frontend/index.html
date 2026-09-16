@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.18</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.0</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -36,6 +36,7 @@
 		<button class="tab-btn active px-4 py-1.5 text-sm rounded-t bg-blue-600 dark:bg-blue-500 text-white dark:text-white" data-tab="c-apdu">Remote APDU</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="scp80">SCP80</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="scp81" data-l10n="SCP81">SCP81</button>
+		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="cards" data-l10n="Cards">Cards</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="profiler" data-l10n="Profiler">Profiler</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="pysim" data-l10n="Card reader">Card reader</button>
 		<button class="tab-btn px-4 py-1.5 text-sm rounded-t bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-tab="phone" data-l10n="Phone simulator">Phone simulator</button>
@@ -391,7 +392,6 @@
 		<div id="tab-scp80" class="tab-content hidden">
 		<div class="flex flex-wrap justify-center gap-2 mb-3">
 			<button class="scp80-subtab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-scp80-sub="sp" onclick="scp80SwitchSubtab('sp')" data-l10n="Secured packet">Secured packet</button>
-			<button class="scp80-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-scp80-sub="cards" onclick="scp80SwitchSubtab('cards')" data-l10n="Cards">Cards</button>
 			<button class="scp80-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300" data-scp80-sub="ram" onclick="scp80SwitchSubtab('ram')" data-l10n="RAM">RAM</button>
 		</div>
 		<div id="scp80-sub-sp">
@@ -549,52 +549,6 @@
 		<div id="sp-verify-result" class="mt-2 text-xs font-mono hidden"></div>
 
 		</div>
-		<div id="scp80-sub-cards" class="hidden">
-		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="Card presets are stored locally in your browser. JSON export/import buttons are below the card list.">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
-		<div class="flex gap-2 mb-3">
-			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
-			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="ICCID (optional)">
-			<button onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
-		</div>
-		<div class="flex gap-2 mb-3 flex-wrap">
-			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
-			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
-			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
-			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
-			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="ISD TAR" maxlength="6">
-			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
-		</div>
-		<div class="flex gap-2 mb-3">
-			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
-			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
-		</div>
-		<div id="cards-list" class="overflow-x-auto">
-			<table class="w-full text-sm">
-				<thead><tr>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Name">Name</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="ICCID">ICCID</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KIc</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KID</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI1</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI2</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">TAR</th>
-					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Cntr">Cntr</th>
-					<th class="border-b border-gray-200 dark:border-slate-700"></th>
-				</tr></thead>
-				<tbody id="cards-tbody"></tbody>
-			</table>
-		</div>
-		<input type="file" id="cards-file" accept=".json,application/json" class="hidden" onchange="cardsImportFile(this)">
-		<div class="flex flex-wrap gap-2 mt-2">
-			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
-			<button onclick="cardsExportFile()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export to file">Export to file</button>
-			<button onclick="document.getElementById('cards-file').click()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import from file">Import from file</button>
-			<button onclick="cardsImportField()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Paste & import">Paste &amp; import</button>
-			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
-		</div>
-		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
-
-		</div>
 		<div id="scp80-sub-ram" class="hidden">
 			<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="RAM operations perform atomic GlobalPlatform commands over SCP80. Card keys are taken from the saved preset.">RAM operations perform atomic GlobalPlatform commands over SCP80. Card keys are taken from the saved preset.</p>
 
@@ -734,6 +688,9 @@
 				<label class="flex items-center gap-2 mt-2">
 					<input type="checkbox" id="ram-make-sel" checked> <span class="text-sm" data-l10n="Make selectable">Make selectable</span>
 				</label>
+				<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400 mt-2" data-l10n="LOAD block size (bytes, empty = auto-fit)">LOAD block size (bytes, empty = auto-fit)</label>
+				<input id="ram-load-size" type="number" min="1" max="240" class="w-32 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="auto">
+				<div class="text-xs text-gray-500 dark:text-slate-400 mt-1" data-l10n="Splits the load file into LOAD APDUs that fit one SCP80 SMS; auto-fit picks the largest size that encodes into 140 octets.">Splits the load file into LOAD APDUs that fit one SCP80 SMS; auto-fit picks the largest size that encodes into 140 octets.</div>
 			</div>
 
 			<div id="ram-progress" class="hidden mb-3">
@@ -967,83 +924,188 @@
 	</div>
 
 	<div id="tab-scp81" class="tab-content hidden">
-		<div class="flex items-center gap-2 mb-2">
-			<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="HTTP OTA listener">HTTP OTA listener</span>
-			<span id="scp81-state" class="text-xs text-gray-400"></span>
+		<div class="flex flex-wrap justify-center gap-2 mb-3">
+			<button class="scp81-subtab px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white" data-scp81-sub="listener" onclick="scp81SwitchSubtab('listener')" data-l10n="Listener">Listener</button>
+			<button class="scp81-subtab px-4 py-1.5 text-sm rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600" data-scp81-sub="scripts" onclick="scp81SwitchSubtab('scripts')" data-l10n="Scripts">Scripts</button>
 		</div>
-		<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
-			<div class="flex flex-wrap items-end gap-3">
-				<div>
-					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Mode">Mode</label>
-					<select id="scp81-mode" onchange="scp81ModeChanged()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-						<option value="dump" data-l10n="Capture (dump)">Capture (dump)</option>
-						<option value="tls" data-l10n="PSK TLS server">PSK TLS server</option>
-					</select>
-				</div>
-				<div>
-					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Host">Host</label>
-					<input id="scp81-host" value="127.0.0.1" class="w-36 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-				</div>
-				<div>
-					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Port">Port</label>
-					<input id="scp81-port" value="8443" class="w-24 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-				</div>
-				<div>
-					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Script">Script</label>
-					<select id="scp81-script" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-						<option value="explore" data-l10n="Memory + ELF info">Memory + ELF info</option>
-						<option value="none" data-l10n="None">None</option>
-					</select>
-				</div>
-				<div id="scp81-psk-row" class="flex items-end gap-3">
+		<div id="scp81-sub-listener">
+			<div class="flex items-center gap-2 mb-2">
+				<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="HTTP OTA listener">HTTP OTA listener</span>
+				<span id="scp81-state" class="text-xs text-gray-400"></span>
+			</div>
+			<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
+				<div class="flex flex-wrap items-end gap-3">
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="PSK Identity (text)">PSK Identity (text)</label>
-						<input id="scp81-psk-id" placeholder="89012345678901234567" class="w-56 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Mode">Mode</label>
+						<select id="scp81-mode" onchange="scp81ModeChanged()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+							<option value="tls" data-l10n="PSK TLS server" selected>PSK TLS server</option>
+							<option value="dump" data-l10n="Capture (dump)">Capture (dump)</option>
+						</select>
 					</div>
 					<div>
-						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="PSK key (hex)">PSK key (hex)</label>
-						<input id="scp81-psk-hex" type="password" placeholder="00112233445566778899aabbccddeeff" class="w-72 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Host">Host</label>
+						<input id="scp81-host" value="127.0.0.1" class="w-36 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Port">Port</label>
+						<input id="scp81-port" value="8443" class="w-24 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+					</div>
+					<div id="scp81-script-row">
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Script">Script</label>
+						<select id="scp81-script" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800"></select>
+					</div>
+					<button id="scp81-start-btn" data-needs="server" onclick="scp81Start()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Start">Start</button>
+					<button id="scp81-stop-btn" data-needs="server" onclick="scp81Stop()" class="px-3 py-1.5 text-sm rounded bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Stop">Stop</button>
+					<button id="scp81-restart-btn" data-needs="server" onclick="scp81RestartScript()" class="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Restart script">Restart script</button>
+				</div>
+				<div id="scp81-msg" class="text-xs mt-2 hidden"></div>
+				<div class="mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.">PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.</div>
+			</div>
+			<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
+				<div class="flex justify-between items-center mb-2">
+					<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="Script results (R-APDUs)">Script results (R-APDUs)</span>
+					<span id="scp81-results-state" class="text-xs text-gray-400"></span>
+				</div>
+				<div id="scp81-results" class="text-sm font-mono text-gray-600 dark:text-slate-400 max-h-[35vh] overflow-auto"></div>
+			</div>
+			<div class="border border-gray-200 dark:border-slate-700 rounded p-3">
+				<div class="flex justify-between items-center mb-2">
+					<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="HTTP OTA log">HTTP OTA log</span>
+					<button data-needs="server" onclick="scp81LogClear()" class="px-2.5 py-1 text-xs rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Clear">Clear</button>
+				</div>
+				<div id="scp81-log" class="text-sm font-mono text-gray-600 dark:text-slate-400 max-h-[55vh] overflow-auto"></div>
+			</div>
+		</div>
+		<div id="scp81-sub-scripts" class="hidden">
+			<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
+				<div class="flex flex-wrap items-end gap-3">
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="New script from">New script from</label>
+						<select id="scripts-template" onchange="scriptsTemplateChanged()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+							<option value="empty" data-l10n="Empty">Empty</option>
+							<option value="explore" data-l10n="Explore">Explore</option>
+							<option value="install" data-l10n="Install from .cap">Install from .cap</option>
+							<option value="delete" data-l10n="Delete">Delete</option>
+						</select>
+					</div>
+					<button id="scripts-new-btn" onclick="scriptsNew()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="New">New</button>
+					<span class="text-xs text-gray-500 dark:text-slate-400" data-l10n="Scripts are stored locally in your browser and sent to the server when a listener starts.">Scripts are stored locally in your browser and sent to the server when a listener starts.</span>
+				</div>
+				<div id="scripts-install-params" class="hidden mt-3 border-t border-gray-200 dark:border-slate-700 pt-3">
+					<div class="flex flex-wrap items-end gap-3">
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="CAP file">CAP file</label>
+							<input type="file" id="scripts-cap-file" accept=".cap,.zip" class="text-xs text-gray-600 dark:text-slate-300">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="SD AID (empty = ISD)">SD AID (empty = ISD)</label>
+							<input id="scripts-cap-sd" placeholder="A000000003000000" maxlength="32" class="w-56 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Install parameters (hex, optional)">Install parameters (hex, optional)</label>
+							<input id="scripts-cap-params" placeholder="C900" class="w-40 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="STK parameters (hex, optional)">STK parameters (hex, optional)</label>
+							<input id="scripts-cap-stk" placeholder="CA TLV" class="w-40 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+						</div>
+						<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400"><input type="checkbox" id="scripts-cap-makesel" checked> <span data-l10n="Make selectable">Make selectable</span></label>
+						<button data-needs="server" onclick="scriptsGenerateInstall()" class="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Generate">Generate</button>
+					</div>
+					<div class="text-xs text-gray-500 dark:text-slate-400 mt-2" data-l10n="The .cap is only used to generate the APDUs: the script stores the APDU list, not the file.">The .cap is only used to generate the APDUs: the script stores the APDU list, not the file.</div>
+				</div>
+				<div id="scripts-delete-params" class="hidden mt-3 border-t border-gray-200 dark:border-slate-700 pt-3">
+					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="AIDs to delete (one per line)">AIDs to delete (one per line)</label>
+					<textarea id="scripts-delete-aids" rows="3" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="A000000003000000"></textarea>
+					<div class="flex flex-wrap items-end gap-3 mt-2">
+						<div>
+							<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Delete parameters (P2)">Delete parameters (P2)</label>
+							<select id="scripts-delete-p2" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
+								<option value="00" data-l10n="Object only">Object only</option>
+								<option value="80" data-l10n="Object and related objects">Object and related objects</option>
+							</select>
+						</div>
+						<button onclick="scriptsGenerateDelete()" class="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Generate">Generate</button>
 					</div>
 				</div>
-				<button id="scp81-start-btn" data-needs="server" onclick="scp81Start()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Start">Start</button>
-				<button id="scp81-stop-btn" data-needs="server" onclick="scp81Stop()" class="px-3 py-1.5 text-sm rounded bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Stop">Stop</button>
+				<div id="scripts-msg" class="text-xs mt-2 hidden"></div>
 			</div>
-			<div class="flex items-end gap-3 mt-2">
-				<div>
-					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="RAM install (CAP file)">RAM install (CAP file)</label>
-					<input type="file" id="scp81-cap-file" accept=".cap,.zip" class="text-xs text-gray-600 dark:text-slate-300">
+			<div id="scripts-editor" class="hidden border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
+				<div class="flex gap-2 mb-2">
+					<input id="scripts-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Script name">
+					<button onclick="scriptsSave()" class="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Save">Save</button>
+					<button onclick="scriptsCancel()" class="px-4 py-1.5 bg-gray-500 text-white text-sm font-medium rounded hover:bg-gray-600 whitespace-nowrap" data-l10n="Cancel">Cancel</button>
 				</div>
-				<div>
-					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="SD AID (empty = ISD)">SD AID (empty = ISD)</label>
-					<input id="scp81-cap-sd" placeholder="A000000003000000" maxlength="32" class="w-56 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-				</div>
-				<div>
-					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Install parameters (hex, optional)">Install parameters (hex, optional)</label>
-					<input id="scp81-cap-params" placeholder="C900" class="w-40 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-				</div>
-				<div>
-					<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="STK parameters (hex, optional)">STK parameters (hex, optional)</label>
-					<input id="scp81-cap-stk" placeholder="CA TLV" class="w-40 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
-				</div>
-				<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400"><input type="checkbox" id="scp81-cap-makesel" checked> <span data-l10n="Make selectable">Make selectable</span></label>
-				<button data-needs="server" onclick="scp81QueueCapInstall()" class="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Queue CAP install">Queue CAP install</button>
+				<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="APDUs (one hex C-APDU per line)">APDUs (one hex C-APDU per line)</label>
+				<textarea id="scripts-apdus" rows="10" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="80CAFF2100"></textarea>
 			</div>
-			<div id="scp81-msg" class="text-xs mt-2 hidden"></div>
-			<div class="mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="The key is only sent to the local server and is never stored or logged.">The key is only sent to the local server and is never stored or logged.</div>
+			<div class="border border-gray-200 dark:border-slate-700 rounded p-3">
+				<table class="w-full text-sm">
+					<thead><tr>
+						<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Name">Name</th>
+						<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Kind">Kind</th>
+						<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="APDUs">APDUs</th>
+						<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Created">Created</th>
+						<th class="border-b border-gray-200 dark:border-slate-700"></th>
+					</tr></thead>
+					<tbody id="scripts-tbody"></tbody>
+				</table>
+			</div>
 		</div>
-		<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
-			<div class="flex justify-between items-center mb-2">
-				<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="Script results (R-APDUs)">Script results (R-APDUs)</span>
-			</div>
-			<div id="scp81-results" class="text-sm font-mono text-gray-600 dark:text-slate-400 max-h-[35vh] overflow-auto"></div>
+	</div>
+
+
+		<div id="tab-cards" class="tab-content hidden">
+		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="Card presets are stored locally in your browser. JSON export/import buttons are below the card list.">Card presets are stored locally in your browser. JSON export/import buttons are below the card list.</p>
+		<div class="flex gap-2 mb-3">
+			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
+			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="ICCID (optional)">
+			<button id="cards-add-btn" onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
+			<button id="cards-cancel-btn" onclick="cardsCancelEdit()" class="hidden px-4 py-2.5 bg-gray-500 text-white text-sm font-medium rounded hover:bg-gray-600 whitespace-nowrap" data-l10n="Cancel">Cancel</button>
 		</div>
-		<div class="border border-gray-200 dark:border-slate-700 rounded p-3">
-			<div class="flex justify-between items-center mb-2">
-				<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="HTTP OTA log">HTTP OTA log</span>
-				<button data-needs="server" onclick="scp81LogClear()" class="px-2.5 py-1 text-xs rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Clear">Clear</button>
-			</div>
-			<div id="scp81-log" class="text-sm font-mono text-gray-600 dark:text-slate-400 max-h-[55vh] overflow-auto"></div>
+		<div class="flex gap-2 mb-3 flex-wrap">
+			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
+			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
+			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
+			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
+			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="ISD TAR" maxlength="6">
+			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
 		</div>
+		<div class="flex gap-2 mb-3">
+			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
+			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
+		</div>
+		<div class="flex gap-2 mb-3">
+			<input id="cards-psk-id" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="PSK identity, SCP81 HTTP OTA (e.g. 89012345678901234567)">
+			<input id="cards-psk-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="PSK key (hex, 32 chars), SCP81 HTTP OTA">
+		</div>
+		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="SCP81 HTTP OTA: the listener picks the key by the PSK identity the card sends in the TLS handshake. Cards without a PSK are ignored by the listener.">SCP81 HTTP OTA: the listener picks the key by the PSK identity the card sends in the TLS handshake. Cards without a PSK are ignored by the listener.</p>
+		<div id="cards-list" class="overflow-x-auto">
+			<table class="w-full text-sm">
+				<thead><tr>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Name">Name</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="ICCID">ICCID</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KIc</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">KID</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI1</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">SPI2</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700">TAR</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="Cntr">Cntr</th>
+					<th class="text-left py-1 px-2 border-b border-gray-200 dark:border-slate-700" data-l10n="SCP81">SCP81</th>
+					<th class="border-b border-gray-200 dark:border-slate-700"></th>
+				</tr></thead>
+				<tbody id="cards-tbody"></tbody>
+			</table>
+		</div>
+		<input type="file" id="cards-file" accept=".json,application/json" class="hidden" onchange="cardsImportFile(this)">
+		<div class="flex flex-wrap gap-2 mt-2">
+			<button onclick="cardsExport()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export as JSON">Export as JSON</button>
+			<button onclick="cardsExportFile()" class="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" data-l10n="Export to file">Export to file</button>
+			<button onclick="document.getElementById('cards-file').click()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import from file">Import from file</button>
+			<button onclick="cardsImportField()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Paste &amp; import">Paste &amp; import</button>
+			<button onclick="cardsImport()" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700" data-l10n="Import JSON from clipboard">Import JSON from clipboard</button>
+		</div>
+		<textarea id="cards-io" rows="4" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 hidden" placeholder="JSON data"></textarea>
 	</div>
 
 	<div id="event-send-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
@@ -1107,7 +1169,6 @@
 			<select id="snapshot-compare-master" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 mb-3"></select>
 			<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Snapshot to check">Snapshot to check</label>
 			<select id="snapshot-compare-check" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 mb-3"></select>
-			<div id="snapshot-compare-mask" class="space-y-1 mb-3"></div>
 			<div class="flex gap-2 justify-end">
 				<button onclick="document.getElementById('snapshot-compare-modal').classList.add('hidden')" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
 				<button onclick="snapshotCompareRun()" class="px-4 py-1.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Compare">Compare</button>
@@ -1146,6 +1207,7 @@ function switchTab(name) {
 	active.classList.add('bg-blue-600', 'text-white', 'dark:bg-blue-500', 'dark:text-white');
 	if (name === 'c-apdu') cApduSwitchSubtab('sim');
 	else if (name === 'scp80') setHelpAnchor(scp80HelpAnchor);
+	else if (name === 'cards') { cardsRender(); setHelpAnchor('cards'); }
 	else if (name === 'pysim') setHelpAnchor(pysimHelpAnchor);
 	else if (name === 'profiler') { profilerSetView('list'); setHelpAnchor('profiler'); }
 	else if (name === 'phone') phoneSwitchSubtab('phone');
@@ -1164,11 +1226,9 @@ function scp80SwitchSubtab(name) {
 		btn.classList.toggle('dark:text-slate-300', !isActive);
 	});
 	document.getElementById('scp80-sub-sp').classList.toggle('hidden', name !== 'sp');
-	document.getElementById('scp80-sub-cards').classList.toggle('hidden', name !== 'cards');
 	document.getElementById('scp80-sub-ram').classList.toggle('hidden', name !== 'ram');
-	if (name === 'cards') cardsRender();
 	if (name === 'ram') ramRender();
-	scp80HelpAnchor = { sp: 'secured-packet', cards: 'cards', ram: 'ram' }[name] || 'secured-packet';
+	scp80HelpAnchor = { sp: 'secured-packet', ram: 'ram' }[name] || 'secured-packet';
 	setHelpAnchor(scp80HelpAnchor);
 }
 
@@ -5518,6 +5578,12 @@ async function ramInstallCap(sp) {
 		spi1: sp.spi1, spi2: '01', kic: sp.kic, kid: sp.kid,
 		tar: sp.tar, cntr: sp.cntr, kicKey: sp.kicKey, kidKey: sp.kidKey,
 	};
+	const loadSize = (document.getElementById('ram-load-size').value || '').trim();
+	if (loadSize !== '') {
+		const n = parseInt(loadSize, 10);
+		if (!(n >= 1 && n <= 240)) { alert(t('LOAD block size must be 1..240')); return; }
+		body.load_block_size = n;
+	}
 
 	const data = await pysimFetch('/api/ram-install', body);
 
@@ -5535,7 +5601,16 @@ async function ramInstallCap(sp) {
 
 	if (data.success) {
 		ramSaveCntr(data.final_cntr);
-		resultEl.textContent = t('Install OK') + ' — load_file_aid=' + data.load_file_aid + ' module_aid=' + data.module_aid;
+		let sizeInfo = '';
+		if (data.load_block_size) {
+			sizeInfo = ' — ' + t('LOAD blocks') + ': ' + data.load_block_size + ' B';
+			if (data.load_block_size_clamped) {
+				sizeInfo += ' (' + t('clamped from') + ' ' + data.load_block_size_requested + ')';
+			} else if (!data.load_block_size_requested) {
+				sizeInfo += ' (' + t('auto-fit') + ')';
+			}
+		}
+		resultEl.textContent = t('Install OK') + ' — load_file_aid=' + data.load_file_aid + ' module_aid=' + data.module_aid + sizeInfo;
 		resultEl.classList.remove('hidden', 'text-red-600'); resultEl.classList.add('text-green-600');
 	} else {
 		resultEl.textContent = t('Install FAILED at step:') + ' ' + data.failed_step + (data.error ? ' (' + data.error + ')' : '');
@@ -5703,6 +5778,7 @@ async function stkMenuRespond(result) {
 
 // ===== Cards storage =====
 let cards = [];
+let _cardsEditIdx = null;
 
 function cardsLoad() {
 	try {
@@ -5717,39 +5793,113 @@ function cardsSave() {
 	localStorage.setItem('otaman_cards', JSON.stringify(cards));
 	cardsRebuildSelect();
 	cardsRender();
+	scp81PushPskMap();
+}
+
+// The card form's PSK fields feed the SCP81 PSK map: the listener selects the
+// key by the identity the card presents in the TLS handshake.
+function cardsPskMap() {
+	const out = [];
+	for (const c of cards) {
+		const id = (c.pskIdentity || '').trim();
+		const key = (c.pskKey || '').replace(/\s/g, '');
+		if (id && /^[0-9a-fA-F]+$/.test(key) && key.length % 2 === 0) {
+			out.push({identity: id, psk_hex: key});
+		}
+	}
+	return out;
+}
+
+function cardsPskName(identity) {
+	const c = cards.find(x => (x.pskIdentity || '') === identity);
+	return c ? c.name : '';
+}
+
+function cardsFormValues() {
+	const val = id => {
+		const el = document.getElementById('cards-' + id);
+		return el ? el.value.trim() : '';
+	};
+	return {
+		name: val('name'),
+		iccid: val('iccid'),
+		kic: val('kic'),
+		kid: val('kid'),
+		spi1: val('spi1'),
+		spi2: val('spi2'),
+		tar: val('tar'),
+		cntr: val('cntr'),
+		kicKey: val('kic-key'),
+		kidKey: val('kid-key'),
+		pskIdentity: val('psk-id'),
+		pskKey: val('psk-key').replace(/\s/g, '').toUpperCase(),
+	};
+}
+
+function cardsSetFormMode() {
+	const btn = document.getElementById('cards-add-btn');
+	if (btn) btn.textContent = _cardsEditIdx === null ? t('Add') : t('Save');
+	const cancel = document.getElementById('cards-cancel-btn');
+	if (cancel) cancel.classList.toggle('hidden', _cardsEditIdx === null);
+}
+
+function cardsClearForm() {
+	['name','iccid','kic','kid','spi1','spi2','tar','cntr','kic-key','kid-key',
+	 'psk-id','psk-key'].forEach(id => {
+		const el = document.getElementById('cards-' + id);
+		if (el) el.value = '';
+	});
 }
 
 function cardsAdd() {
-	const name = document.getElementById('cards-name').value.trim();
-	const iccid = document.getElementById('cards-iccid').value.trim();
-	const kic = document.getElementById('cards-kic').value.trim();
-	const kid = document.getElementById('cards-kid').value.trim();
-	const spi1 = document.getElementById('cards-spi1').value.trim();
-	const spi2 = document.getElementById('cards-spi2').value.trim();
-	const tar = document.getElementById('cards-tar').value.trim();
-	const cntr = document.getElementById('cards-cntr').value.trim();
-	const kicKey = document.getElementById('cards-kic-key').value.trim();
-	const kidKey = document.getElementById('cards-kid-key').value.trim();
-	if (!name) { alert('Name is required'); return; }
-	if (!kic || !kid) { alert('KIc and KID are required'); return; }
-	if (!kicKey || !kidKey) { alert('KIc key and KID key are required'); return; }
-	if (iccid && cards.some(c => c.iccid === iccid)) { alert('Card with this ICCID already exists'); return; }
-	cards.push({
-		name: name,
-		iccid: iccid,
-		kic: kic,
-		kid: kid,
-		spi1: spi1 || '16',
-		spi2: spi2 || '01',
-		tar: tar,
-		cntr: cntr || '0000000001',
-		kicKey: kicKey,
-		kidKey: kidKey,
-	});
+	const v = cardsFormValues();
+	if (!v.name) { alert(t('Name is required')); return; }
+	if (!v.kic || !v.kid) { alert('KIc and KID are required'); return; }
+	if (!v.kicKey || !v.kidKey) { alert('KIc key and KID key are required'); return; }
+	if ((v.pskKey && !v.pskIdentity) || (!v.pskKey && v.pskIdentity)) {
+		alert(t('PSK identity and PSK key must be set together'));
+		return;
+	}
+	if (v.pskKey && !/^[0-9A-F]{32}$/.test(v.pskKey)) {
+		alert(t('PSK key must be 32 hex characters'));
+		return;
+	}
+	if (v.iccid && cards.some((c, i) => c.iccid === v.iccid && i !== _cardsEditIdx)) {
+		alert('Card with this ICCID already exists'); return;
+	}
+	if (_cardsEditIdx !== null && cards[_cardsEditIdx]) {
+		cards[_cardsEditIdx] = Object.assign({}, cards[_cardsEditIdx], v);
+	} else {
+		cards.push(Object.assign({}, v, {
+			spi1: v.spi1 || '16',
+			spi2: v.spi2 || '01',
+			cntr: v.cntr || '0000000001',
+		}));
+	}
 	cardsSave();
-	['name','iccid','kic','kid','spi1','spi2','tar','cntr','kic-key','kid-key'].forEach(id => {
-		document.getElementById('cards-' + id).value = '';
-	});
+	cardsCancelEdit();
+}
+
+function cardsEdit(i) {
+	const c = cards[i];
+	if (!c) return;
+	_cardsEditIdx = i;
+	const set = (id, value) => {
+		const el = document.getElementById('cards-' + id);
+		if (el) el.value = value == null ? '' : value;
+	};
+	set('name', c.name); set('iccid', c.iccid); set('kic', c.kic); set('kid', c.kid);
+	set('spi1', c.spi1); set('spi2', c.spi2); set('tar', c.tar); set('cntr', c.cntr);
+	set('kic-key', c.kicKey); set('kid-key', c.kidKey);
+	set('psk-id', c.pskIdentity); set('psk-key', c.pskKey);
+	cardsSetFormMode();
+	document.getElementById('cards-name').focus();
+}
+
+function cardsCancelEdit() {
+	_cardsEditIdx = null;
+	cardsSetFormMode();
+	cardsClearForm();
 }
 
 function ramCardIdxAfterRemove(idx, removedIdx) {
@@ -5761,16 +5911,27 @@ function ramCardIdxAfterRemove(idx, removedIdx) {
 function cardsRemove(i) {
 	_ramCardIdx = ramCardIdxAfterRemove(_ramCardIdx, i);
 	cards.splice(i, 1);
+	if (_cardsEditIdx === i) _cardsEditIdx = null;
+	else if (_cardsEditIdx !== null && _cardsEditIdx > i) _cardsEditIdx--;
 	cardsSave();
-	cardsRender();
 }
 
 function cardsRender() {
 	const tbody = document.getElementById('cards-tbody');
-	if (!cards.length) { tbody.innerHTML = '<tr><td colspan="9" class="py-2 text-gray-400">' + t('No cards defined.') + '</td></tr>'; return; }
+	if (!tbody) return;
+	if (!cards.length) {
+		tbody.innerHTML = '<tr><td colspan="10" class="py-2 text-gray-400">' + t('No cards defined.') + '</td></tr>';
+		return;
+	}
 	let html = '';
 	for (let i = 0; i < cards.length; i++) {
 		const c = cards[i];
+		let ota = '<span class="text-gray-400">—</span>';
+		if (c.pskKey && c.pskIdentity) {
+			ota = '<span class="text-emerald-600 dark:text-emerald-400" title="' + esc(c.pskIdentity) + '">✓</span>';
+		} else if (c.pskKey || c.pskIdentity) {
+			ota = '<span class="text-amber-500" title="' + esc(t('PSK identity and PSK key must be set together')) + '">⚠</span>';
+		}
 		html += '<tr class="border-b border-gray-100 dark:border-slate-700">';
 		html += '<td class="py-1 px-2 font-medium">' + esc(c.name) + '</td>';
 		html += '<td class="py-1 px-2 font-mono text-xs">' + esc(c.iccid) + '</td>';
@@ -5780,7 +5941,9 @@ function cardsRender() {
 		html += '<td class="py-1 px-2 font-mono text-xs text-center">' + esc(c.spi2) + '</td>';
 		html += '<td class="py-1 px-2 font-mono text-xs">' + esc(c.tar || '') + '</td>';
 		html += '<td class="py-1 px-2 font-mono text-xs">' + esc(c.cntr) + '</td>';
-		html += '<td class="py-1 px-2"><button onclick="cardsRemove(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700 hover:bg-red-200">' + t('Remove') + '</button></td>';
+		html += '<td class="py-1 px-2 text-center">' + ota + '</td>';
+		html += '<td class="py-1 px-2 whitespace-nowrap"><button onclick="cardsEdit(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + t('Edit') + '</button> '
+			+ '<button onclick="cardsRemove(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + t('Remove') + '</button></td>';
 		html += '</tr>';
 	}
 	tbody.innerHTML = html;
@@ -5863,6 +6026,8 @@ async function cardsImport(text) {
 				cntr: entry.cntr || '0000000001',
 				kicKey: entry.kicKey || '',
 				kidKey: entry.kidKey || '',
+				pskIdentity: entry.pskIdentity || '',
+				pskKey: (entry.pskKey || '').replace(/\s/g, '').toUpperCase(),
 			});
 			added++;
 		}
@@ -7122,10 +7287,28 @@ async function pysimProactiveLogRender() {
 
 // ===== SCP81: HTTP OTA listener (dump capture / PSK TLS server) =====
 let _scp81Timer = null;
+let _scp81LastStatus = null;
 
 function scp81ModeChanged() {
 	const mode = document.getElementById('scp81-mode').value;
-	document.getElementById('scp81-psk-row').style.display = (mode === 'tls') ? '' : 'none';
+	const row = document.getElementById('scp81-script-row');
+	if (row) row.style.display = (mode === 'tls') ? '' : 'none';
+}
+
+function scp81SwitchSubtab(name) {
+	document.querySelectorAll('.scp81-subtab').forEach(btn => {
+		const active = btn.dataset.scp81Sub === name;
+		btn.classList.toggle('bg-blue-600', active);
+		btn.classList.toggle('text-white', active);
+		btn.classList.toggle('bg-gray-200', !active);
+		btn.classList.toggle('dark:bg-slate-700', !active);
+		btn.classList.toggle('text-gray-700', !active);
+		btn.classList.toggle('dark:text-slate-300', !active);
+	});
+	document.getElementById('scp81-sub-listener').classList.toggle('hidden', name !== 'listener');
+	document.getElementById('scp81-sub-scripts').classList.toggle('hidden', name !== 'scripts');
+	if (name === 'scripts') { scriptsRender(); scriptsRebuildSelect(); }
+	else { scp81ModeChanged(); scp81StatusRefresh(); }
 }
 
 function scp81Msg(text, cls) {
@@ -7158,6 +7341,22 @@ function scp81LogLine(e) {
 	if (e.error) parts.push(e.error);
 	if (e.hex) parts.push(e.hex.slice(0, 96));
 	return parts.join(' ');
+}
+
+function scp81LogEntryHtml(e) {
+	let html = esc(scp81LogLine(e));
+	if (e.kind === 'tls-handshake' && e.identity) {
+		if (e.psk_match) {
+			const name = (typeof cardsPskName === 'function') ? cardsPskName(e.identity) : '';
+			html += ' <span class="text-emerald-600 dark:text-emerald-400">[' +
+				esc(t('matched')) + (name ? ': ' + esc(name) : '') + ']</span>';
+		} else {
+			html += ' <span class="text-red-500">[' + esc(t('unknown identity')) + ']</span>';
+		}
+	} else if (e.kind === 'tls-psk-unknown') {
+		html += ' <span class="text-red-500">[' + esc(t('unknown identity')) + ']</span>';
+	}
+	return html;
 }
 
 function scp81DecodeGetStatus(hex) {
@@ -7369,11 +7568,33 @@ function scp81ResultLines(group) {
 	return lines;
 }
 
+// Human-readable progress line for the configured script. `done`/`total`
+// count only the script's own APDUs; listing continuation pages are separate,
+// so a fully executed script never reads as 'pending' while a page is in
+// flight.
+function scp81ScriptStateText(script) {
+	const total = script.total || (script.script || []).length;
+	if (!script.kind || script.kind === 'none' || !total) return '';
+	const executed = (script.done || []).length;
+	let s = script.kind + ': ' + executed + '/' + total + ' ' + t('executed');
+	const pending = script.pending;
+	if (pending && !pending.page) {
+		s += ' · ' + t('waiting for card');
+	} else if ((pending && pending.page) || script.pages_queued) {
+		s += ' · ' + t('listing pages') + (script.pages ? ' (' + script.pages + ')' : '') + '…';
+	} else if (script.complete) {
+		s += ' · ' + t('completed');
+	}
+	return s;
+}
+
 async function scp81ResultsRefresh() {
 	const el = document.getElementById('scp81-results');
 	if (!el) return;
 	try {
 		const script = await pysimFetch('/api/scp81/script');
+		const state = document.getElementById('scp81-results-state');
+		if (state) state.textContent = scp81ScriptStateText(script);
 		const groups = scp81GroupResults(script);
 		if (!groups.length) {
 			el.innerHTML = '<span class="text-gray-400">' + t('No entries yet.') + '</span>';
@@ -7383,7 +7604,7 @@ async function scp81ResultsRefresh() {
 			const lines = scp81ResultLines(g);
 			const label = scp81CmdLabel(g.apdu);
 			const head = g.apdu + (label ? '  ' + label : '') +
-				(g.results.length > 1 ? '  (' + g.results.length + ' pages)' : '');
+				(g.results.length > 1 ? '  (' + g.results.length + ' ' + t('pages') + ')' : '');
 			return '<div class="py-1 border-b border-gray-100 dark:border-slate-700/50">' +
 				'<div class="text-gray-500 dark:text-slate-500">' + esc(head) + '</div>' +
 				lines.map(l => '<div class="break-all">' + esc(l) + '</div>').join('') + '</div>';
@@ -7397,6 +7618,7 @@ async function scp81StatusRefresh() {
 	const el = document.getElementById('scp81-state');
 	try {
 		const st = await pysimFetch('/api/scp81/status');
+		_scp81LastStatus = st;
 		const l = st.listener;
 		const bip = st.bip || {};
 		if (!l) {
@@ -7405,9 +7627,15 @@ async function scp81StatusRefresh() {
 		}
 		let s = l.mode + ' ' + l.host + ':' + l.port;
 		if (l.mode === 'tls') {
-			s += ' | PSK ' + t('configured');
-			if (l.identity_seen) s += ' | id: ' + l.identity_seen;
-			else if (l.psk_identity) s += ' | id: ' + l.psk_identity;
+			const ids = l.psk_identities || [];
+			s += ' | PSK: ' + ids.length;
+			if (l.identity_seen) {
+				const name = cardsPskName(l.identity_seen);
+				s += ' | id: ' + l.identity_seen + ' [' +
+					(l.identity_matched
+						? t('matched') + (name ? ': ' + name : '')
+						: t('unknown identity')) + ']';
+			}
 		}
 		const ch = (bip.channels || []).map(c => 'ch' + c.id + ' in:' + c.bytes_in + ' out:' + c.bytes_out).join(', ');
 		if (ch) s += ' | ' + ch;
@@ -7429,7 +7657,7 @@ async function scp81LogRefresh() {
 			return;
 		}
 		el.innerHTML = entries.map(e =>
-			'<div class="py-0.5 border-b border-gray-100 dark:border-slate-700/50 break-all">' + esc(scp81LogLine(e)) + '</div>'
+			'<div class="py-0.5 border-b border-gray-100 dark:border-slate-700/50 break-all">' + scp81LogEntryHtml(e) + '</div>'
 		).join('');
 	} catch (err) {
 		el.innerHTML = '<span class="text-red-500">Error: ' + esc(String(err.message || err)) + '</span>';
@@ -7444,15 +7672,21 @@ async function scp81Start() {
 		port: parseInt(document.getElementById('scp81-port').value.trim() || '8443', 10),
 	};
 	if (mode === 'tls') {
-		const key = document.getElementById('scp81-psk-hex').value.replace(/\s+/g, '');
-		if (!key) {
-			scp81Msg(t('PSK key (hex)') + ': ' + t('required'), 'text-red-500');
+		const map = cardsPskMap();
+		if (!map.length) {
+			scp81Msg(t('No card preset has a PSK identity and key') +
+				' (' + t('Cards') + ')', 'text-red-500');
 			return;
 		}
-		body.psk_hex = key;
-		// Always send the identity: empty means "accept any identity".
-		body.psk_identity = document.getElementById('scp81-psk-id').value.trim();
-		body.script = document.getElementById('scp81-script').value;
+		body.psk_map = map;
+		const sel = document.getElementById('scp81-script');
+		const chosen = scripts.find(s => s.id === sel.value);
+		if (chosen) {
+			body.script = chosen.apdus;
+			body.script_kind = chosen.name;
+		} else {
+			body.script = 'none';
+		}
 	}
 	try {
 		const resp = await pysimFetch('/api/scp81/bip', body);
@@ -7466,30 +7700,37 @@ async function scp81Start() {
 	}
 }
 
-async function scp81QueueCapInstall() {
-	const fileInput = document.getElementById('scp81-cap-file');
-	const file = fileInput.files[0];
-	if (!file) { scp81Msg(t('Select a .cap file'), 'text-red-500'); return; }
-	if (file.size > 48 * 1024) { scp81Msg(t('CAP file exceeds 48 kB limit'), 'text-red-500'); return; }
-	scp81Msg(t('Reading CAP file...'), 'text-gray-500');
+// Push preset PSK edits into a running listener (no restart needed). The
+// table's signature is compared first: cardsSave() also runs on SCP80 counter
+// syncs, which must not re-post an unchanged table. Without a TLS listener
+// the server just answers 'not running'.
+let _scp81PskSig = null;
+
+function scp81PushPskMap() {
+	const map = cardsPskMap();
+	const sig = JSON.stringify(map);
+	if (sig === _scp81PskSig) return;
+	_scp81PskSig = sig;
+	if (!map.length) return;
+	pysimFetch('/api/scp81/psk-map', {psk_map: map})
+		.then(() => scp81StatusRefresh())
+		.catch(() => {});
+}
+
+async function scp81RestartScript() {
+	const sel = document.getElementById('scp81-script');
+	const chosen = scripts.find(s => s.id === sel.value);
+	if (!chosen) {
+		scp81Msg(t('Select a script'), 'text-red-500');
+		return;
+	}
 	try {
-		const capHex = await ramReadFileHex(file);
-		const resp = await pysimFetch('/api/scp81/ram-install', {
-			cap_hex: capHex,
-			sd_aid: (document.getElementById('scp81-cap-sd').value || '').replace(/[^0-9a-fA-F]/g, ''),
-			install_params: (document.getElementById('scp81-cap-params').value || '').replace(/[^0-9a-fA-F]/g, ''),
-			stk_params: (document.getElementById('scp81-cap-stk').value || '').replace(/[^0-9a-fA-F]/g, ''),
-			make_selectable: document.getElementById('scp81-cap-makesel').checked,
-		});
-		if (resp.ok) {
-			scp81Msg(t('Queued') + ': ' + resp.apdus + ' ' + t('APDUs') + ' (' +
-				t('INSTALL / LOAD / INSTALL') + ') - ' + t('send a push to run it'),
-				'text-emerald-600 dark:text-emerald-400');
-		} else {
-			scp81Msg(resp.error || t('Error'), 'text-red-500');
-		}
+		const resp = await pysimFetch('/api/scp81/queue',
+			{apdus: chosen.apdus, kind: chosen.name, force: true});
+		if (resp.ok) scp81Msg(t('Script restarted') + ': ' + chosen.name,
+			'text-emerald-600 dark:text-emerald-400');
+		else scp81Msg(resp.error || resp.reason || t('Error'), 'text-red-500');
 		scp81ResultsRefresh();
-		scp81LogRefresh();
 	} catch (err) {
 		scp81Msg(String(err.message || err), 'text-red-500');
 	}
@@ -7517,8 +7758,206 @@ async function scp81LogClear() {
 	}
 }
 
+// ===== SCP81 scripts (named APDU lists) =====
+// A script is only a list of C-APDUs: the server is agnostic to what they do
+// and just serves them to the card, tracking which ones were executed.
+const SCP81_EXPLORE_APDUS = ['80CAFF2100', '80F28002024F0000', '80CA008500',
+	'80F24002024F0000', '80F22002024F0000', '80F21002024F0000'];
+let scripts = [];
+let _scriptsEditId = null;
+let _scriptsNewKind = 'empty';
+
+function scriptsLoad() {
+	try {
+		const d = localStorage.getItem('otaman_scripts');
+		scripts = d ? JSON.parse(d) : [];
+	} catch (e) { scripts = []; }
+	scriptsRebuildSelect();
+}
+
+function scriptsPersist() {
+	localStorage.setItem('otaman_scripts', JSON.stringify(scripts));
+	scriptsRebuildSelect();
+	scriptsRender();
+}
+
+function scriptsRebuildSelect() {
+	const sel = document.getElementById('scp81-script');
+	if (!sel) return;
+	const prev = sel.value;
+	let html = '<option value="none">' + t('None') + '</option>';
+	for (const s of scripts) {
+		html += '<option value="' + esc(s.id) + '">' + esc(s.name) +
+			' (' + (s.apdus || []).length + ')</option>';
+	}
+	sel.innerHTML = html;
+	if (prev && (prev === 'none' || scripts.some(s => s.id === prev))) sel.value = prev;
+}
+
+function scriptsTemplateChanged() {
+	const tpl = document.getElementById('scripts-template').value;
+	document.getElementById('scripts-install-params').classList.toggle('hidden', tpl !== 'install');
+	document.getElementById('scripts-delete-params').classList.toggle('hidden', tpl !== 'delete');
+}
+
+function scriptsNew() {
+	const tpl = document.getElementById('scripts-template').value;
+	scriptsMsg('');
+	if (tpl === 'empty') { scriptsEdit(null, 'empty', '', []); return; }
+	if (tpl === 'explore') { scriptsEdit(null, 'explore', 'Explore', SCP81_EXPLORE_APDUS.slice()); return; }
+	// Install/delete: fill the parameter form above, then press Generate.
+	scriptsTemplateChanged();
+}
+
+function scriptsEdit(id, kind, name, apdus) {
+	const s = id ? scripts.find(x => x.id === id) : null;
+	_scriptsEditId = s ? s.id : null;
+	_scriptsNewKind = kind || (s && s.kind) || 'empty';
+	document.getElementById('scripts-name').value = s ? s.name : (name || '');
+	document.getElementById('scripts-apdus').value = ((s ? s.apdus : apdus) || []).join('\n');
+	document.getElementById('scripts-editor').classList.remove('hidden');
+	document.getElementById('scripts-name').focus();
+}
+
+function scriptsCancel() {
+	_scriptsEditId = null;
+	document.getElementById('scripts-editor').classList.add('hidden');
+}
+
+function scriptsMsg(text, cls) {
+	const el = document.getElementById('scripts-msg');
+	if (!el) return;
+	if (!text) { el.classList.add('hidden'); return; }
+	el.textContent = text;
+	el.className = 'text-xs mt-2 ' + (cls || 'text-gray-500 dark:text-slate-400');
+}
+
+function scriptsParseApdus(text) {
+	const out = [];
+	for (const line of (text || '').split(/\r?\n/)) {
+		const clean = line.replace(/[#;].*$/, '').replace(/\s+/g, '').toUpperCase();
+		if (!clean) continue;
+		if (!/^[0-9A-F]+$/.test(clean) || clean.length % 2 || clean.length < 8) {
+			return {error: line.trim()};
+		}
+		out.push(clean);
+	}
+	return {apdus: out};
+}
+
+function scp81ScriptId() {
+	return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function scriptsSave() {
+	const name = document.getElementById('scripts-name').value.trim();
+	if (!name) { scriptsMsg(t('Name is required'), 'text-red-500'); return; }
+	const parsed = scriptsParseApdus(document.getElementById('scripts-apdus').value);
+	if (parsed.error !== undefined) {
+		scriptsMsg(t('Invalid APDU') + ': ' + parsed.error, 'text-red-500');
+		return;
+	}
+	if (!parsed.apdus.length) { scriptsMsg(t('Add at least one APDU'), 'text-red-500'); return; }
+	if (_scriptsEditId) {
+		const s = scripts.find(x => x.id === _scriptsEditId);
+		if (s) { s.name = name; s.apdus = parsed.apdus; }
+	} else {
+		scripts.push({id: scp81ScriptId(), name: name, kind: _scriptsNewKind,
+			created: new Date().toISOString(), apdus: parsed.apdus});
+	}
+	scriptsPersist();
+	scriptsCancel();
+	scriptsMsg(t('Saved.'), 'text-emerald-600 dark:text-emerald-400');
+}
+
+function scriptsDelete(id) {
+	const s = scripts.find(x => x.id === id);
+	if (!s) return;
+	if (!confirm(t('Delete script') + ' "' + s.name + '"?')) return;
+	scripts = scripts.filter(x => x.id !== id);
+	if (_scriptsEditId === id) scriptsCancel();
+	scriptsPersist();
+}
+
+function scriptsRender() {
+	const tbody = document.getElementById('scripts-tbody');
+	if (!tbody) return;
+	if (!scripts.length) {
+		tbody.innerHTML = '<tr><td colspan="5" class="py-2 text-gray-400">' + t('No scripts defined.') + '</td></tr>';
+		return;
+	}
+	let html = '';
+	for (const s of scripts) {
+		html += '<tr class="border-b border-gray-100 dark:border-slate-700">';
+		html += '<td class="py-1 px-2 font-medium">' + esc(s.name) + '</td>';
+		html += '<td class="py-1 px-2 text-xs text-gray-500 dark:text-slate-400">' + esc(t(s.kind || 'empty')) + '</td>';
+		html += '<td class="py-1 px-2 font-mono text-xs">' + ((s.apdus || []).length) + '</td>';
+		html += '<td class="py-1 px-2 text-xs">' + esc((s.created || '').slice(0, 10)) + '</td>';
+		html += '<td class="py-1 px-2 whitespace-nowrap">' +
+			'<button onclick="scriptsEdit(\'' + esc(s.id) + '\')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + t('Edit') + '</button> ' +
+			'<button onclick="scriptsDelete(\'' + esc(s.id) + '\')" class="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + t('Remove') + '</button></td>';
+		html += '</tr>';
+	}
+	tbody.innerHTML = html;
+}
+
+async function scriptsGenerateInstall() {
+	const fileInput = document.getElementById('scripts-cap-file');
+	const file = fileInput.files[0];
+	if (!file) { scriptsMsg(t('Select a .cap file'), 'text-red-500'); return; }
+	if (file.size > 48 * 1024) { scriptsMsg(t('CAP file exceeds 48 kB limit'), 'text-red-500'); return; }
+	scriptsMsg(t('Reading CAP file...'), 'text-gray-500');
+	try {
+		const capHex = await ramReadFileHex(file);
+		const resp = await pysimFetch('/api/scp81/gen-install', {
+			cap_hex: capHex,
+			sd_aid: (document.getElementById('scripts-cap-sd').value || '').replace(/[^0-9a-fA-F]/g, ''),
+			install_params: (document.getElementById('scripts-cap-params').value || '').replace(/[^0-9a-fA-F]/g, ''),
+			stk_params: (document.getElementById('scripts-cap-stk').value || '').replace(/[^0-9a-fA-F]/g, ''),
+			make_selectable: document.getElementById('scripts-cap-makesel').checked,
+		});
+		if (!resp.ok) { scriptsMsg(resp.error || t('Error'), 'text-red-500'); return; }
+		scriptsMsg('');
+		scriptsEdit(null, 'install', 'Install ' + (resp.module_aid || ''),
+			resp.apdus || []);
+		scriptsMsg(t('INSTALL / LOAD / INSTALL') + ': ' + (resp.apdus || []).length + ' ' + t('APDUs'),
+			'text-emerald-600 dark:text-emerald-400');
+	} catch (err) {
+		scriptsMsg(String(err.message || err), 'text-red-500');
+	}
+}
+
+function scp81DeleteApdus(aids, p2) {
+	// GP DELETE (Card Spec 2.3.1 Table 11-20/22): one APDU per AID, P2.b8
+	// selects "object only" ('00') or "object and related objects" ('80').
+	return (aids || []).map(aid =>
+		'80E4' + (p2 || '00') + '00' +
+		(aid.length / 2).toString(16).padStart(2, '0').toUpperCase() + aid + '00');
+}
+
+function scriptsGenerateDelete() {
+	const p2 = document.getElementById('scripts-delete-p2').value || '00';
+	const aids = (document.getElementById('scripts-delete-aids').value || '')
+		.split(/\r?\n/)
+		.map(s => s.replace(/\s+/g, '').toUpperCase())
+		.filter(Boolean);
+	if (!aids.length) { scriptsMsg(t('Add at least one AID'), 'text-red-500'); return; }
+	for (const aid of aids) {
+		if (!/^[0-9A-F]+$/.test(aid) || aid.length % 2) {
+			scriptsMsg(t('Invalid APDU') + ': ' + aid, 'text-red-500');
+			return;
+		}
+	}
+	const apdus = scp81DeleteApdus(aids, p2);
+	scriptsMsg('');
+	scriptsEdit(null, 'delete', 'Delete ' + aids.length + ' AID' + (aids.length > 1 ? 's' : ''),
+		apdus);
+}
+
 function scp81Enter() {
 	scp81ModeChanged();
+	scriptsLoad();
+	scriptsRender();
 	scp81StatusRefresh();
 	scp81LogRefresh();
 	if (_scp81Timer) clearInterval(_scp81Timer);
@@ -8074,6 +8513,30 @@ function profilerNewId() {
 	return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 }
 
+// Name for a cloned profile: "Copy of <name>", suffixed "(2)", "(3)" ... when
+// that name is already taken.
+function profilerCloneName(name, existingNames) {
+	const base = t('Copy of') + ' ' + (name || '');
+	let candidate = base;
+	for (let n = 2; (existingNames || []).includes(candidate); n++) {
+		candidate = base + ' (' + n + ')';
+	}
+	return candidate;
+}
+
+function profilerClone(i) {
+	const p = profiles[i];
+	if (!p) return;
+	const copy = JSON.parse(JSON.stringify(p));
+	copy.id = profilerNewId();
+	copy.name = profilerCloneName(p.name, profiles.map(x => x.name));
+	copy.created = new Date().toISOString();
+	profiles.splice(i + 1, 0, copy);
+	profilerSave();
+	profilerRenderList();
+	profilerEdit(i + 1);
+}
+
 function profilerNormHex(s) {
 	return (s || '').toUpperCase().replace(/[^0-9A-F?]/g, '');
 }
@@ -8164,6 +8627,7 @@ function profilerRenderList() {
 		html += '<button data-needs="card" onclick="profilerCheck(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">' + esc(t('Check card')) + ' ▶</button>';
 		html += '<button onclick="profilerCheckSnapshotPick(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700">' + esc(t('Check card snapshot')) + '</button>';
 		html += '<button onclick="profilerEdit(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + esc(t('Edit')) + '</button>';
+		html += '<button onclick="profilerClone(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">' + esc(t('Clone')) + '</button>';
 		html += '<button onclick="profilerExport(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-gray-600 text-white hover:bg-gray-700">' + esc(t('Export')) + '</button>';
 		html += '<button onclick="profilerDelete(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
 		html += '</span></div>';
@@ -9177,17 +9641,9 @@ async function profilerCheckSnapshot(i, si) {
 		{ expected: p.name, actual: s.name, prefix: true });
 }
 
-function profilerMaskFidForFile(f, maskFids) {
-	if (!maskFids) return null;
-	const seg = (f.path || '').toUpperCase().split('/').pop();
-	if (maskFids.has(seg)) return seg;
-	for (const fid in PROFILER_MASK_PREFIX4_FIDS) {
-		if (maskFids.has(fid) && f.name && PROFILER_MASK_PREFIX4_FIDS[fid] === f.name) return fid;
-	}
-	return null;
-}
-
-function profilerRulesFromSnapshot(master, maskFids) {
+// Snapshot comparison is always exact: unlike a profile (which may carry
+// mask rules), every captured file is compared byte-for-byte.
+function profilerRulesFromSnapshot(master) {
 	const rules = [];
 	for (const f of (master.files || [])) {
 		const rule = {
@@ -9206,9 +9662,7 @@ function profilerRulesFromSnapshot(master, maskFids) {
 			if (f.content.kind === 'record') {
 				rule.content = { mode: 'exact', kind: 'record', records: f.content.records };
 			} else if (typeof f.content.data === 'string') {
-				rule.content = profilerMaskFidForFile(f, maskFids)
-					? { mode: 'mask', kind: 'transparent', expected: profilerMaskPrefix4(f.content.data) }
-					: { mode: 'exact', kind: 'transparent', expected: f.content.data };
+				rule.content = { mode: 'exact', kind: 'transparent', expected: f.content.data };
 			}
 		}
 		rules.push(rule);
@@ -9231,13 +9685,6 @@ function snapshotCompareOpen() {
 	check.innerHTML = opts;
 	master.value = '0';
 	check.value = String(snapshots.length > 1 ? 1 : 0);
-	let mhtml = '';
-	for (const fid in PROFILER_MASK_PREFIX4_FIDS) {
-		mhtml += '<label class="flex items-center gap-2 text-sm">' +
-			'<input type="checkbox" data-mask-fid="' + fid + '" checked>' +
-			'<span>' + esc(t('Match first 4 bytes for')) + ' ' + esc(PROFILER_MASK_PREFIX4_FIDS[fid]) + '</span></label>';
-	}
-	document.getElementById('snapshot-compare-mask').innerHTML = mhtml;
 	document.getElementById('snapshot-compare-modal').classList.remove('hidden');
 }
 
@@ -9255,12 +9702,8 @@ async function snapshotCompareRun() {
 	const master = snapshots[+document.getElementById('snapshot-compare-master').value];
 	const check = snapshots[+document.getElementById('snapshot-compare-check').value];
 	if (!master || !check) return;
-	const maskFids = new Set();
-	document.querySelectorAll('#snapshot-compare-mask input[data-mask-fid]').forEach(cb => {
-		if (cb.checked) maskFids.add(cb.getAttribute('data-mask-fid'));
-	});
 	document.getElementById('snapshot-compare-modal').classList.add('hidden');
-	const pseudo = { name: master.name + ' → ' + check.name, rules: profilerRulesFromSnapshot(master, maskFids) };
+	const pseudo = { name: master.name + ' → ' + check.name, rules: profilerRulesFromSnapshot(master) };
 	await profilerRunProfile(pseudo, profilerSnapshotSource(check), { kind: 'snapshot', from: master.name, to: check.name }, profilerExtraFileResults(master, check),
 		{ expected: master.name, actual: check.name });
 }
@@ -9419,6 +9862,7 @@ async function profilerRunRule(r, source) {
 				res.checks.push({ label: 'content.rec' + exp[j].num, expected: exp[j].data, actual: act[j].data, ok: ok });
 			}
 			if (matched.length) res.recordsMatched = matched;
+			res.recordsTotal = exp.length;
 			if (recMismatch) res.recordsMismatch = true;
 		} else {
 			const ok = sizeMismatch ? profilerMatchMin(r.content.mode, r.content.expected, rd.data) : profilerMatch(r.content.mode, r.content.expected, rd.data);
@@ -9500,6 +9944,18 @@ function profilerNumRanges(nums) {
 	}
 	if (start !== null) parts.push(start === prev ? String(start) : start + '-' + prev);
 	return parts.join(', ');
+}
+
+// Matched record numbers with a count: [8], total 8 -> "1 of 8 (#8)"; ranges
+// are prefixed too ([1,2,3,5] -> "#1–#3, #5") so the numbers cannot be read
+// as a count ("matching records: 8" used to mean record number 8).
+function profilerMatchedRecordsText(matched, total) {
+	const n = (matched || []).length;
+	if (!n) return '';
+	const nums = profilerNumRanges(matched)
+		.split(', ').map(p => '#' + p.replace(/-/g, '\u2013#')).join(', ');
+	const tot = (total === undefined || total === null) ? n : total;
+	return n + ' ' + t('of') + ' ' + tot + ' (' + nums + ')';
 }
 
 // Checks whose expected/actual are raw data (hex), rendered as aligned fields.
@@ -9822,7 +10278,8 @@ function profilerRenderReport(results, labels) {
 		}
 		const recFailed = r.recordsMismatch || (r.checks || []).some(c => /^content\.rec\d+$/.test(c.label) && !c.ok);
 		if (recFailed && r.recordsMatched && r.recordsMatched.length) {
-			html += '<div class="text-xs text-emerald-600 mt-1">' + esc(t('matching records')) + ': ' + esc(profilerNumRanges(r.recordsMatched)) + '</div>';
+			html += '<div class="text-xs text-emerald-600 mt-1">' + esc(t('matching records')) + ': ' +
+				esc(profilerMatchedRecordsText(r.recordsMatched, r.recordsTotal)) + '</div>';
 		}
 		html += '</div>';
 	}
@@ -10019,6 +10476,8 @@ const LANG_RU = {
 	'Raw': 'Данные как на карте',
 	'Decoded': 'Декодированные данные',
 	'Edit': 'Редактировать',
+	'Clone': 'Клонировать',
+	'Copy of': 'Копия',
 	'Execute': 'Выполнить',
 	'Send': 'Отправить',
 	'Custom files are added in file manager tree and included in card scan.': 'Пользовательские файлы добавляются в менеджер файлов и учитываются при чтении карт.',
@@ -10195,6 +10654,7 @@ const LANG_RU = {
 	'filetype and size': 'тип файла и размер',
 	'filetype and records': 'тип файла и записи',
 	'matching records': 'совпадающие записи',
+	'of': 'из',
 	'None': 'Нет',
 	'Exact': 'Точное',
 	'Mask': 'Маска',
@@ -10228,6 +10688,52 @@ const LANG_RU = {
 	"HTTP agent ID (text, X-Admin-From)": "ID HTTP агента (текст, X-Admin-From)",
 	'URI (text→hex)': 'URI (текст→hex)',
 	"Wrapped in Command Scripting template ('AA')": "Обёртка в Command Scripting template ('AA')",
+	'Listener': 'Слушатель',
+	'Scripts': 'Скрипты',
+	'Empty': 'Пустой',
+	'Explore': 'Обзор',
+	'New': 'Новый',
+	'New script from': 'Новый скрипт из',
+	'Generate': 'Сгенерировать',
+	'Kind': 'Тип',
+	'Created': 'Создан',
+	'matched': 'совпал',
+	'unknown identity': 'неизвестный идентификатор',
+	'executed': 'выполнено',
+	'pending': 'ожидает',
+	'Name is required': 'Укажите имя',
+	'Saved.': 'Сохранено.',
+	'Invalid APDU': 'Некорректный APDU',
+	'Add at least one APDU': 'Добавьте хотя бы один APDU',
+	'Add at least one AID': 'Добавьте хотя бы один AID',
+	'Delete script': 'Удалить скрипт',
+	'No scripts defined.': 'Скрипты не заданы.',
+	'Select a script': 'Выберите скрипт',
+	'Script restarted': 'Скрипт перезапущен',
+	'Restart script': 'Перезапустить скрипт',
+	'waiting for card': 'ожидание ответа карты',
+	'listing pages': 'страницы списка',
+	'completed': 'завершено',
+	'pages': 'стр.',
+	'PSK identity and PSK key must be set together': 'PSK identity и PSK-ключ нужно задавать вместе',
+	'PSK key must be 32 hex characters': 'PSK-ключ должен содержать 32 hex-символа',
+	'No card preset has a PSK identity and key': 'Ни у одной карты не заданы PSK identity и ключ',
+	'Scripts are stored locally in your browser and sent to the server when a listener starts.': 'Скрипты хранятся локально в браузере и передаются серверу при запуске слушателя.',
+	'PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.': 'PSK-ключи берутся из пресетов карт (вкладка «Карты»): слушатель выбирает ключ по идентификатору, который карта присылает в TLS-рукопожатии.',
+	'The .cap is only used to generate the APDUs: the script stores the APDU list, not the file.': '.cap используется только для генерации APDU: в скрипте хранится список APDU, а не файл.',
+	'APDUs (one hex C-APDU per line)': 'APDU (по одному hex C-APDU в строке)',
+	'AIDs to delete (one per line)': 'AID для удаления (по одному в строке)',
+	'Delete parameters (P2)': 'Параметры удаления (P2)',
+	'Object only': 'Только объект',
+	'Object and related objects': 'Объект и связанные объекты',
+	'SD AID (empty = ISD)': 'AID SD (пусто = ISD)',
+	'CAP file': 'CAP-файл',
+	'LOAD block size (bytes, empty = auto-fit)': 'Размер блока LOAD (байт, пусто = авто)',
+	'Splits the load file into LOAD APDUs that fit one SCP80 SMS; auto-fit picks the largest size that encodes into 140 octets.': 'Разбивает load-файл на LOAD APDU, помещающиеся в один SMS SCP80; авто-подбор выбирает максимальный размер, укладывающийся в 140 октетов.',
+	'LOAD block size must be 1..240': 'Размер блока LOAD должен быть в диапазоне 1..240',
+	'LOAD blocks': 'Блоки LOAD',
+	'clamped from': 'ограничено с',
+	'auto-fit': 'авто',
 };
 let currentLang = 'en';
 
@@ -10283,7 +10789,8 @@ function refreshDynamicI18n() {
 	}
 	if (isViewVisible('profiler-scan-modal')) profilerScanRefreshOptions();
 	pysimUpdateStateIndicator();
-	if (isViewVisible('scp80-sub-cards')) cardsRender();
+	if (isViewVisible('tab-cards')) { cardsRender(); cardsSetFormMode(); }
+	if (isViewVisible('scp81-sub-scripts')) { scriptsRender(); scriptsRebuildSelect(); }
 	if (_ramExplorerData && isViewVisible('ram-explorer')) ramRenderExplorer();
 	if (isViewVisible('tab-phone')) {
 		if (isViewVisible('phone-sub-phone')) {

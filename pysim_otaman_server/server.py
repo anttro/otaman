@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.18'
+VERSION = '2.2.0'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -625,6 +625,28 @@ def _ota_reference(spi1, spi2, kic, kid, tar_hex, cntr_hex, apdu_hex, kic_key_he
     return b2h(out), spi
 
 
+def _max_load_block_size(spi1, spi2, kic, kid, tar_hex, cntr_hex,
+                         kic_key_hex, kid_key_hex, requested=240):
+    """Largest LOAD block payload that still fits one SMS (TS 31.115).
+
+    pySim's SMS dialect refuses to encode a secured packet above 140 octets,
+    so a LOAD APDU of the default 240-byte block cannot be sent over SCP80.
+    Trial-encode a synthetic LOAD APDU for decreasing payload sizes (the
+    cipher padding makes a closed-form bound unreliable) and return the
+    largest one that encodes; 0 = not even a 1-byte block fits."""
+    cap = max(1, min(int(requested or 240), 240))
+    for n in range(cap, 0, -1):
+        apdu = '80E80000%02X%s00' % (n, '00' * n)
+        try:
+            out_hex, _ = _ota_reference(spi1, spi2, kic, kid, tar_hex, cntr_hex,
+                                        apdu, kic_key_hex, kid_key_hex)
+        except ValueError:
+            continue
+        if len(out_hex) // 2 <= 140:
+            return n
+    return 0
+
+
 def _decode_por(spi1, spi2, kic, kid, cntr_hex, kic_key_hex, kid_key_hex, response_hex):
     from pySim.ota import OtaDialectSms, CompactRemoteResp
     from osmocom.utils import h2b, b2h
@@ -826,7 +848,12 @@ _PLI_DATA = {q: '' for q in PLI_QUALIFIER_NAMES}
 
 _BIP = httpota.BipTerminal()
 _SCP81_LISTENER = None
-_SCP81_PSK = {}
+# PSK table of the TLS listener: identity -> key (memory only, never logged or
+# persisted; the PWA sends it from the card presets at listener start).
+# _SCP81_PSK_LEGACY keeps a single-key start (psk_hex [+ psk_identity]) so an
+# API restart without psk_map/psk_hex can reuse it.
+_SCP81_PSKS = {}
+_SCP81_PSK_LEGACY = None
 
 _POLL_ENABLED = False
 _POLL_INTERVAL = 30
@@ -1299,8 +1326,10 @@ def _scp81_listener_status():
         return None
     if isinstance(_SCP81_LISTENER, scp81.PskTlsServer):
         return {'mode': 'tls', 'host': _SCP81_LISTENER.host, 'port': _SCP81_LISTENER.port,
-                'psk_identity': _SCP81_LISTENER.identity,
+                'psk_identities': _SCP81_LISTENER.psk_identities,
+                'psk_wildcard': _SCP81_LISTENER.wildcard_psk is not None,
                 'identity_seen': _SCP81_LISTENER.identity_seen,
+                'identity_matched': _SCP81_LISTENER.identity_matched,
                 'chunked': _SCP81_LISTENER.chunked,
                 'chunk_size': _SCP81_LISTENER.chunk_size,
                 'keep_alive': _SCP81_LISTENER.keep_alive,
@@ -1376,49 +1405,73 @@ def _bip_data_available(ch):
 # from the next POST's Response Scripting template ('AB'/'AF', with '80'
 # executed-count and '23' R-APDU TLVs whose last two bytes are SW1 SW2).
 
-_SCP81_SCRIPTS = {
-    # The command sequence of the reference administration server
-    # (samples/HTTP_OTA/httpota_adminserver_php_v2, get_next_apdu), extended
-    # with the registries: GET DATA FF21 (extended card resources / free
-    # memory), GET DATA 0085, then GET STATUS with P2=02 (TLV structure,
-    # 'first or all') and data '4F00' (match all): P1=80 (Issuer Security
-    # Domain), P1=40 (applications and supplementary security domains),
-    # P1=20 (executable load files), P1=10 (ELF and their modules);
-    # Le=00 so no GET RESPONSE is needed. Long listings answer SW CAFE and
-    # are auto-continued with the same command carrying P2.b1=1 ('next').
-    'explore': ['80CAFF2100', '80F28002024F0000', '80CA008500',
-                '80F24002024F0000', '80F22002024F0000', '80F21002024F0000'],
-    'none': [],
-}
-_SCP81_SCRIPT = list(_SCP81_SCRIPTS['explore'])
-_SCP81_SCRIPT_SENT = 0
+# The command script served to the card, set by the PWA at listener start (an
+# explicit APDU list) or via /api/scp81/queue. The server is agnostic to what
+# the APDUs do: it serves them one per administration POST and tracks
+# execution so a resumed session sends only the leftover APDUs.
+#   _SCP81_SCRIPT_BASE   the configured APDU list (never mutated)
+#   _SCP81_SCRIPT_NEXT   index in BASE of the next APDU to send
+#   _SCP81_SCRIPT_DONE   BASE indices the card reported (executed, any result)
+#   _SCP81_SCRIPT_PENDING the APDU sent in the previous POST, waiting for the
+#                        card's X-Admin-Script-Status report (None = none); a
+#                        session that dies before the report resends it
+#   _SCP81_SCRIPT_RESULTS one entry per reported APDU
+#                        {index, pos, page, apdu, rapdu, sw}
+#   _SCP81_SCRIPT_PAGE_QUEUE continuation pages auto-inserted for truncated
+#                        GET STATUS listings (sent before BASE[NEXT])
+_SCP81_SCRIPT_BASE = []
+_SCP81_SCRIPT_NEXT = 0
+_SCP81_SCRIPT_DONE = set()
+_SCP81_SCRIPT_PENDING = None
 _SCP81_SCRIPT_RESULTS = []
-# Continuation pages: long GET STATUS listings answer SW CAFE with 127-byte
-# pages; the responder auto-inserts a GET STATUS (P2=02, last AID as search
-# criterion) after each page until the listing ends.
-_SCP81_SCRIPT_INSERTED = []
+_SCP81_SCRIPT_PAGE_QUEUE = []
+_SCP81_SCRIPT_SENT_NO = 0
 _SCP81_PAGES = 0
 SCP81_MAX_PAGES = 24
-# What the queued script is ('explore', 'none', 'custom' or 'ram-install').
-_SCP81_SCRIPT_KIND = 'explore'
+# What the queued script is ('none', 'custom' or the name the PWA sent).
+_SCP81_SCRIPT_KIND = 'none'
+
+
+def _scp81_restart_run():
+    """Start a new run over the configured script (fresh dialog): clear the
+    execution marks, the continuation pages and the results."""
+    global _SCP81_SCRIPT_NEXT, _SCP81_SCRIPT_DONE, _SCP81_SCRIPT_PENDING
+    global _SCP81_SCRIPT_RESULTS, _SCP81_SCRIPT_PAGE_QUEUE, _SCP81_PAGES
+    global _SCP81_SCRIPT_SENT_NO
+    _SCP81_SCRIPT_NEXT = 0
+    _SCP81_SCRIPT_DONE = set()
+    _SCP81_SCRIPT_PENDING = None
+    _SCP81_SCRIPT_RESULTS = []
+    _SCP81_SCRIPT_PAGE_QUEUE = []
+    _SCP81_SCRIPT_SENT_NO = 0
+    _SCP81_PAGES = 0
+
+
+def _scp81_script_mid_run():
+    """True while a run has started and not finished (queue replaces it only
+    with force)."""
+    return (0 < _SCP81_SCRIPT_NEXT < len(_SCP81_SCRIPT_BASE)
+            or _SCP81_SCRIPT_PENDING is not None
+            or bool(_SCP81_SCRIPT_PAGE_QUEUE))
+
+
+def _scp81_reset_script(script, kind):
+    """Install a new APDU script and clear all execution progress."""
+    global _SCP81_SCRIPT_BASE, _SCP81_SCRIPT_KIND
+    _SCP81_SCRIPT_BASE = [re.sub(r'\s', '', a).upper() for a in script if a]
+    _SCP81_SCRIPT_KIND = kind
+    _scp81_restart_run()
+    _BIP.log('script-queued', script_kind=kind, apdus=len(_SCP81_SCRIPT_BASE))
 
 
 def _scp81_queue_script(apdus, kind='custom', force=False):
     """Replace the SCP81 command script with a new APDU list. Refuses while
     a script is mid-run unless forced; the list runs on the card's next POST."""
-    global _SCP81_SCRIPT, _SCP81_SCRIPT_SENT, _SCP81_SCRIPT_RESULTS
-    global _SCP81_SCRIPT_INSERTED, _SCP81_PAGES, _SCP81_SCRIPT_KIND
-    if not force and 0 < _SCP81_SCRIPT_SENT < len(_SCP81_SCRIPT):
+    if not force and _scp81_script_mid_run():
         return {'queued': False, 'reason': 'script in progress',
-                'sent': _SCP81_SCRIPT_SENT, 'of': len(_SCP81_SCRIPT)}
-    _SCP81_SCRIPT = [a.upper().replace(' ', '') for a in apdus]
-    _SCP81_SCRIPT_KIND = kind
-    _SCP81_SCRIPT_SENT = 0
-    _SCP81_SCRIPT_RESULTS = []
-    _SCP81_SCRIPT_INSERTED = []
-    _SCP81_PAGES = 0
-    _BIP.log('script-queued', script_kind=kind, apdus=len(_SCP81_SCRIPT))
-    return {'queued': True, 'apdus': len(_SCP81_SCRIPT)}
+                'next': _SCP81_SCRIPT_NEXT, 'of': len(_SCP81_SCRIPT_BASE)}
+    _scp81_reset_script(apdus, kind)
+    return {'queued': True, 'apdus': len(_SCP81_SCRIPT_BASE)}
 _SCP81_SCRIPT_TEMPLATE = 'indefinite'
 _SCP81_SCRIPT_CR_TAG = False
 # None = short per-command Next-URI ('/N'); '' = omit the header (spec: the
@@ -1531,54 +1584,125 @@ def _scp81_continuation(apdu):
     return '%s%02X%s' % (u[:6], p2, u[8:])
 
 
+def _scp81_script_state():
+    """State of the configured command script for `GET /api/scp81/script`.
+
+    Progress counts only the configured APDUs (`total`/`done`); the C-APDU
+    awaiting the card's report is reported as `pending` ({index, pos, page,
+    apdu} or null) and the auto-inserted listing continuation pages as
+    `pages`/`pages_queued`, so a run whose script APDUs are all executed is
+    not mistaken for 'still pending' while a page is in flight."""
+    pending = None
+    if _SCP81_SCRIPT_PENDING is not None:
+        p = _SCP81_SCRIPT_PENDING
+        pending = {'index': p['index'], 'pos': p.get('pos'),
+                   'page': bool(p.get('page')), 'apdu': p['apdu']}
+    return {'script': list(_SCP81_SCRIPT_BASE),
+            'next': _SCP81_SCRIPT_NEXT,
+            'total': len(_SCP81_SCRIPT_BASE),
+            'done': sorted(_SCP81_SCRIPT_DONE),
+            'pending': pending,
+            'pages': _SCP81_PAGES,
+            'pages_queued': len(_SCP81_SCRIPT_PAGE_QUEUE),
+            'complete': (len(_SCP81_SCRIPT_DONE) >= len(_SCP81_SCRIPT_BASE)
+                         and _SCP81_SCRIPT_PENDING is None
+                         and not _SCP81_SCRIPT_PAGE_QUEUE),
+            'kind': _SCP81_SCRIPT_KIND,
+            'template': _SCP81_SCRIPT_TEMPLATE,
+            'cr_tag': _SCP81_SCRIPT_CR_TAG,
+            'results': _SCP81_SCRIPT_RESULTS}
+
+
 def _scp81_script_responder(method, target, headers, body):
     """Remote Administration Server side of the administration session: send
-    the next scripted C-APDU or close the session (TS 102 226 / GP 4.4.2)."""
-    global _SCP81_SCRIPT_SENT, _SCP81_SCRIPT_RESULTS, _SCP81_PAGES
-    global _SCP81_SCRIPT_INSERTED
+    the next scripted C-APDU or close the session (TS 102 226 / GP 4.4.2).
+
+    Execution tracking: an APDU counts as executed only when the card reports
+    it in the next POST (X-Admin-Script-Status, with the Response Scripting
+    template on success). A session that dies before the report leaves the
+    APDU pending: a resumed dialog (X-Admin-Resume) resends it, while a POST
+    without that header is a fresh dialog where the script runs from the
+    start (so a completed script runs again on a new trigger)."""
+    global _SCP81_SCRIPT_NEXT, _SCP81_SCRIPT_DONE, _SCP81_SCRIPT_PENDING
+    global _SCP81_SCRIPT_RESULTS, _SCP81_SCRIPT_PAGE_QUEUE, _SCP81_PAGES
+    global _SCP81_SCRIPT_SENT_NO
     status = headers.get('x-admin-script-status')
-    if status is not None:
-        index = _SCP81_SCRIPT_SENT
+    resume = headers.get('x-admin-resume')
+    pending = _SCP81_SCRIPT_PENDING
+    if pending is not None:
+        _SCP81_SCRIPT_PENDING = None
+        index = pending['index']
+        if status is not None:
+            # The card reports the outcome of the pending C-APDU.
+            if status != 'ok':
+                _BIP.log('script-status', index=index, status=status)
+            else:
+                count, rapdus = _scp81_parse_response(body)
+                for rapdu, sw in rapdus:
+                    _BIP.log('script-rapdu', index=index, sw=sw, bytes=len(rapdu),
+                             hex=rapdu.hex().upper()[:2000])
+                    _SCP81_SCRIPT_RESULTS.append(
+                        {'index': index, 'pos': pending.get('pos'),
+                         'page': bool(pending.get('page')), 'sw': sw,
+                         'apdu': pending['apdu'],
+                         'rapdu': rapdu.hex().upper()})
+                if rapdus:
+                    if pending['apdu'].startswith('80CAFF21'):
+                        decoded = _scp81_decode_memory(rapdus[-1][0])
+                        if decoded:
+                            _BIP.log('script-memory', **decoded)
+                    # '63 10' = "more data available" (GP Table 11-38); the
+                    # live card uses a proprietary 'CA FE' for the same case.
+                    if (rapdus[-1][1].upper() in ('CAFE', '6310')
+                            and _SCP81_PAGES < SCP81_MAX_PAGES):
+                        cont = _scp81_continuation(pending['apdu'])
+                        if cont:
+                            _SCP81_PAGES += 1
+                            _SCP81_SCRIPT_PAGE_QUEUE.append(cont)
+                            _BIP.log('script-page', index=index,
+                                     page=_SCP81_PAGES, apdu=cont)
+            if pending.get('pos') is not None:
+                _SCP81_SCRIPT_DONE.add(pending['pos'])
+        elif resume:
+            # Resumed dialog: the pending APDU was never reported, so it is
+            # still unexecuted - put it back in line and resend it.
+            if pending.get('page'):
+                _SCP81_SCRIPT_PAGE_QUEUE.insert(0, pending['apdu'])
+            else:
+                _SCP81_SCRIPT_NEXT = pending['pos']
+                _SCP81_SCRIPT_DONE.discard(pending['pos'])
+            _BIP.log('script-resend', index=index, apdu=pending['apdu'])
+        else:
+            # Fresh dialog (new trigger): the script runs from the start.
+            _scp81_restart_run()
+    elif status is not None:
+        # A report without a pending APDU (the server may have restarted
+        # mid-session): log the R-APDUs but do not advance anything.
         if status != 'ok':
-            _BIP.log('script-status', index=index, status=status)
+            _BIP.log('script-status', index=None, status=status)
         else:
             count, rapdus = _scp81_parse_response(body)
-            apdu = _SCP81_SCRIPT[index - 1].upper() if (_SCP81_SCRIPT and index >= 1) else ''
             for rapdu, sw in rapdus:
-                _BIP.log('script-rapdu', index=index, sw=sw, bytes=len(rapdu),
+                _BIP.log('script-rapdu', index=None, sw=sw, bytes=len(rapdu),
                          hex=rapdu.hex().upper()[:2000])
-                _SCP81_SCRIPT_RESULTS.append({'index': index, 'sw': sw,
-                                              'apdu': apdu,
-                                              'rapdu': rapdu.hex().upper()})
-            if rapdus and _SCP81_SCRIPT and index >= 1:
-                if apdu.startswith('80CAFF21'):
-                    decoded = _scp81_decode_memory(rapdus[-1][0])
-                    if decoded:
-                        _BIP.log('script-memory', **decoded)
-                # '63 10' = "more data available" (GP Table 11-38); the live
-                # card uses a proprietary 'CA FE' for the same condition.
-                if rapdus[-1][1].upper() in ('CAFE', '6310') and _SCP81_PAGES < SCP81_MAX_PAGES:
-                    cont = _scp81_continuation(apdu)
-                    if cont:
-                        _SCP81_PAGES += 1
-                        _SCP81_SCRIPT.insert(_SCP81_SCRIPT_SENT, cont)
-                        _SCP81_SCRIPT_INSERTED.append(cont)
-                        _BIP.log('script-page', index=index, page=_SCP81_PAGES,
-                                 apdu=cont)
-    else:
-        # First (or resumed) POST of a session: run the script from the start.
-        # Drop continuation pages inserted by a previous session.
-        if _SCP81_SCRIPT_INSERTED:
-            _SCP81_SCRIPT[:] = [a for a in _SCP81_SCRIPT
-                                if a not in _SCP81_SCRIPT_INSERTED]
-            _SCP81_SCRIPT_INSERTED = []
-        _SCP81_SCRIPT_SENT = 0
-        _SCP81_SCRIPT_RESULTS = []
-        _SCP81_PAGES = 0
-    if _SCP81_SCRIPT_SENT < len(_SCP81_SCRIPT):
-        apdu = _SCP81_SCRIPT[_SCP81_SCRIPT_SENT]
-        _SCP81_SCRIPT_SENT += 1
-        _BIP.log('script-send', index=_SCP81_SCRIPT_SENT, apdu=apdu)
+    elif not resume:
+        # First POST of a fresh dialog: reset a previous run.
+        _scp81_restart_run()
+    apdu = None
+    if _SCP81_SCRIPT_PAGE_QUEUE:
+        apdu = _SCP81_SCRIPT_PAGE_QUEUE.pop(0)
+        _SCP81_SCRIPT_PENDING = {'index': _SCP81_SCRIPT_SENT_NO + 1,
+                                 'pos': None, 'page': True, 'apdu': apdu}
+    elif _SCP81_SCRIPT_NEXT < len(_SCP81_SCRIPT_BASE):
+        pos = _SCP81_SCRIPT_NEXT
+        apdu = _SCP81_SCRIPT_BASE[pos]
+        _SCP81_SCRIPT_NEXT = pos + 1
+        _SCP81_SCRIPT_PENDING = {'index': _SCP81_SCRIPT_SENT_NO + 1,
+                                 'pos': pos, 'page': False, 'apdu': apdu}
+    if apdu is not None:
+        index = _SCP81_SCRIPT_PENDING['index']
+        _SCP81_SCRIPT_SENT_NO = index
+        _BIP.log('script-send', index=index, apdu=apdu)
         headers = _scp81_response_headers()
         if _SCP81_TARGETED_APP:
             headers['X-Admin-Targeted-Application'] = _SCP81_TARGETED_APP
@@ -1587,7 +1711,7 @@ def _scp81_script_responder(method, target, headers, body):
         # query-less Next-URI makes the card abort the TLS session. A '%d'
         # in the configured/default URI is replaced with the command number.
         template = _SCP81_NEXT_URI if _SCP81_NEXT_URI is not None else '/api/scp81?req=%d'
-        next_uri = template % _SCP81_SCRIPT_SENT if '%d' in template else template
+        next_uri = template % index if '%d' in template else template
         if next_uri:
             headers['X-Admin-Next-URI'] = next_uri
         u = apdu.upper()
@@ -1606,7 +1730,7 @@ def _scp81_script_responder(method, target, headers, body):
                 headers['Content-Length'] = str(len(body_out))
         headers['Content-Type'] = scp81.GP_CT_COMMAND
         return 200, headers, body_out
-    _BIP.log('script-done', sent=_SCP81_SCRIPT_SENT,
+    _BIP.log('script-done', sent=_SCP81_SCRIPT_SENT_NO,
              results=len(_SCP81_SCRIPT_RESULTS))
     headers = _scp81_response_headers()
     if _SCP81_APACHE_HEADERS:
@@ -1627,10 +1751,101 @@ def _scp81_response_headers():
     return headers
 
 
+def _parse_psk_map(raw):
+    """Parse a PSK lookup table from an API request.
+
+    Accepts a list of {identity, psk_hex} objects (the PWA form) or a
+    {identity: psk_hex} map; entries without a usable identity or key are
+    skipped. Returns (table, error)."""
+    if raw is None:
+        return None, None
+    if isinstance(raw, dict):
+        raw = [{'identity': k, 'psk_hex': v} for k, v in raw.items()]
+    if not isinstance(raw, list):
+        return None, 'psk_map must be a list of {identity, psk_hex}'
+    table = {}
+    for item in raw:
+        if not isinstance(item, dict):
+            return None, 'psk_map entries must be {identity, psk_hex} objects'
+        ident = str(item.get('identity') or '').strip()
+        key_hex = re.sub(r'\s', '', str(item.get('psk_hex') or ''))
+        if not key_hex or not ident:
+            continue
+        try:
+            key = bytes.fromhex(key_hex)
+        except ValueError:
+            return None, 'psk_map[%s]: psk_hex is not valid hex' % ident
+        if key:
+            table[ident] = key
+    return table, None
+
+
+def _redact_psk_fields(body):
+    """Copy of a request body with PSK key material masked (keys must never
+    reach the logs; identities stay visible for diagnostics)."""
+    if not isinstance(body, dict):
+        return body
+    out = dict(body)
+    if out.get('psk_hex'):
+        out['psk_hex'] = '<redacted>'
+    psk_map = out.get('psk_map')
+    if isinstance(psk_map, dict):
+        out['psk_map'] = {k: '<redacted>' for k in psk_map}
+    elif isinstance(psk_map, list):
+        out['psk_map'] = [
+            dict(e, psk_hex='<redacted>')
+            if isinstance(e, dict) and e.get('psk_hex') else e
+            for e in psk_map]
+    return out
+
+
+def _scp81_update_psk_map(body):
+    """Replace the PSK table of the running TLS listener. The card presets are
+    the source of truth; the PWA pushes edits without a listener restart."""
+    global _SCP81_PSKS, _SCP81_PSK_LEGACY
+    table, err = _parse_psk_map((body or {}).get('psk_map'))
+    if err:
+        return {'ok': False, 'error': err}
+    if not table:
+        return {'ok': False, 'error': 'no usable PSK entries (identity + key required)'}
+    if not isinstance(_SCP81_LISTENER, scp81.PskTlsServer):
+        return {'ok': False, 'error': 'PSK TLS listener is not running'}
+    _SCP81_LISTENER.set_psk_map(table)
+    _SCP81_PSKS = dict(table)
+    _SCP81_PSK_LEGACY = None
+    _BIP.log('tls-psk-map', identities=sorted(table))
+    return {'ok': True, 'identities': sorted(table),
+            'listener': _scp81_listener_status()}
+
+
+def _scp81_gen_install(body):
+    """Generate the RAM APDU sequence for a .cap without touching the listener
+    or the running script. The PWA uses it to turn an 'Install from .cap'
+    script template into INSTALL [for load] / LOAD blocks / INSTALL [for
+    install] APDUs; the .cap itself is never stored."""
+    body = body or {}
+    cap_hex = re.sub(r'\s', '', body.get('cap_hex') or '')
+    if not cap_hex:
+        return {'ok': False, 'error': 'No cap_hex provided'}
+    try:
+        loadfile_aid, module_aid, loadfile_data = _cap_parse(cap_hex)
+        seq = _cap_apdu_sequence(
+            loadfile_aid, module_aid, loadfile_data,
+            sd_aid=re.sub(r'\s', '', body.get('sd_aid') or ''),
+            privileges=re.sub(r'\s', '', body.get('privileges') or '') or '00',
+            install_params=re.sub(r'\s', '', body.get('install_params') or ''),
+            stk_params=re.sub(r'\s', '', body.get('stk_params') or ''),
+            make_selectable=bool(body.get('make_selectable', True)))
+    except Exception as e:
+        return {'ok': False, 'error': 'cap parse failed: %s' % e}
+    _BIP.log('gen-install', apdus=len(seq), load_file_aid=loadfile_aid,
+             module_aid=module_aid)
+    return {'ok': True, 'apdus': seq, 'load_file_aid': loadfile_aid,
+            'module_aid': module_aid}
+
+
 def _scp81_bip_control(body):
-    global _SCP81_LISTENER, _SCP81_PSK
-    global _SCP81_SCRIPT, _SCP81_SCRIPT_SENT, _SCP81_SCRIPT_RESULTS
-    global _SCP81_SCRIPT_INSERTED, _SCP81_PAGES, _SCP81_SCRIPT_KIND
+    global _SCP81_LISTENER, _SCP81_PSKS, _SCP81_PSK_LEGACY
     global _SCP81_SCRIPT_TEMPLATE, _SCP81_SCRIPT_CR_TAG, _SCP81_NEXT_URI
     global _SCP81_LINK_EVENTS, _SCP81_TARGETED_APP, _SCP81_APACHE_HEADERS
     global _SCP81_CHUNKED
@@ -1651,34 +1866,47 @@ def _scp81_bip_control(body):
         _SCP81_LISTENER = None
     _BIP.disable()
     if mode == 'tls':
-        psk_hex = body.get('psk_hex') or _SCP81_PSK.get('psk_hex')
-        if not psk_hex:
-            return {'ok': False, 'error': 'psk_hex is required for tls mode'}
-        try:
-            psk = bytes.fromhex(re.sub(r'\s', '', psk_hex))
-        except ValueError:
-            return {'ok': False, 'error': 'psk_hex is not valid hex'}
-        if not psk:
-            return {'ok': False, 'error': 'psk_hex is empty'}
-        identity = body.get('psk_identity')
-        if identity is not None:
-            identity = identity.strip() or None    # empty clears the pin
+        raw_map = body.get('psk_map')
+        table, err = _parse_psk_map(raw_map)
+        if err:
+            return {'ok': False, 'error': err}
+        if raw_map is not None and not table:
+            return {'ok': False,
+                    'error': 'psk_map has no usable entries (identity + key required)'}
+        psk = None
+        identity = None
+        psk_hex = body.get('psk_hex') or ''
+        if table:
+            pass                        # table sent by the PWA from the presets
+        elif psk_hex:
+            # Legacy single-key form (API/tests): psk_hex [+ psk_identity].
+            try:
+                psk = bytes.fromhex(re.sub(r'\s', '', psk_hex))
+            except ValueError:
+                return {'ok': False, 'error': 'psk_hex is not valid hex'}
+            if not psk:
+                return {'ok': False, 'error': 'psk_hex is empty'}
+            identity = body.get('psk_identity')
+            if identity is not None:
+                identity = identity.strip() or None    # empty clears the pin
+        elif _SCP81_PSKS:
+            table = dict(_SCP81_PSKS)   # reuse the table of the last start
+        elif _SCP81_PSK_LEGACY:
+            psk, identity = _SCP81_PSK_LEGACY   # reuse the last single key
         else:
-            identity = _SCP81_PSK.get('psk_identity')
-        _SCP81_PSK = {'psk_hex': psk_hex, 'psk_identity': identity}
-        script = body.get('script', 'explore')
-        if isinstance(script, list):
-            _SCP81_SCRIPT = [re.sub(r'\s', '', s) for s in script if s]
-            _SCP81_SCRIPT_KIND = 'custom'
-        elif script in _SCP81_SCRIPTS:
-            _SCP81_SCRIPT = list(_SCP81_SCRIPTS[script])
-            _SCP81_SCRIPT_KIND = script
-        else:
-            return {'ok': False, 'error': 'unknown script preset: %s' % script}
-        _SCP81_SCRIPT_SENT = 0
-        _SCP81_SCRIPT_RESULTS = []
-        _SCP81_SCRIPT_INSERTED = []
-        _SCP81_PAGES = 0
+            return {'ok': False, 'error': 'no PSK configured: send psk_map '
+                                          '(card presets) or psk_hex'}
+        script = body.get('script')
+        if isinstance(script, str):
+            if script in ('none', ''):
+                _scp81_reset_script([], 'none')
+            else:
+                return {'ok': False, 'error': 'unknown script preset: %s; send an '
+                                              'explicit APDU list or none' % script}
+        elif isinstance(script, list):
+            _scp81_reset_script(script, body.get('script_kind') or 'custom')
+        # No 'script' key: keep the configured script and its run progress
+        # (an explicit list starts a fresh run).
         template = body.get('script_template', 'indefinite')
         if template not in ('indefinite', 'definite'):
             return {'ok': False, 'error': 'script_template must be indefinite or definite'}
@@ -1698,7 +1926,7 @@ def _scp81_bip_control(body):
         cs = body.get('chunk_size')
         chunk_size = int(cs) if cs not in (None, '') else 0
         _SCP81_LISTENER = scp81.PskTlsServer(
-            host, port, psk, identity=identity,
+            host, port, psk, identity=identity, psk_map=(table or None),
             responder=_scp81_script_responder,
             chunked=bool(body.get('chunked', True)),
             chunk_size=chunk_size,
@@ -1711,10 +1939,14 @@ def _scp81_bip_control(body):
             conn_header=(body.get('conn_header') or 'none'),
             answer_delay=(body.get('answer_delay') or 0),
             on_log=lambda kind, **fields: _BIP.log(kind, **fields))
+        _SCP81_PSKS = dict(_SCP81_LISTENER.psk_map)
+        _SCP81_PSK_LEGACY = None if table else (psk, identity)
         _BIP.on_data = _bip_data_available
         _BIP.enable(host, _SCP81_LISTENER.port)
         return {'ok': True, 'bip': _BIP.status(), 'listener': _scp81_listener_status(),
-                'script': _SCP81_SCRIPT, 'script_template': _SCP81_SCRIPT_TEMPLATE,
+                'script': list(_SCP81_SCRIPT_BASE),
+                'script_kind': _SCP81_SCRIPT_KIND,
+                'script_template': _SCP81_SCRIPT_TEMPLATE,
                 'cr_tag': _SCP81_SCRIPT_CR_TAG, 'link_events': _SCP81_LINK_EVENTS,
                 'targeted_app': _SCP81_TARGETED_APP,
                 'apache_headers': _SCP81_APACHE_HEADERS,
@@ -2782,10 +3014,7 @@ class PysimHandler(BaseHTTPRequestHandler):
             self._log_resp(resp)
         elif self.path == '/api/scp81/script':
             self._log_req()
-            resp = {'script': _SCP81_SCRIPT, 'sent': _SCP81_SCRIPT_SENT,
-                    'kind': _SCP81_SCRIPT_KIND,
-                    'template': _SCP81_SCRIPT_TEMPLATE, 'cr_tag': _SCP81_SCRIPT_CR_TAG,
-                    'results': _SCP81_SCRIPT_RESULTS}
+            resp = _scp81_script_state()
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path.startswith('/api/'):
@@ -3453,14 +3682,57 @@ class PysimHandler(BaseHTTPRequestHandler):
                 make_selectable = body.get('make_selectable', True)
                 privileges_hex = body.get('privileges', '').replace(' ', '') or '00'
 
+                # LOAD block size: the default 240-byte payload cannot be sent
+                # over SCP80 (pySim refuses a secured packet above one SMS).
+                # Fit it automatically, or honour an explicit override capped
+                # to what still encodes into a single SMS.
+                block_size_req = body.get('load_block_size')
+                if block_size_req in (None, ''):
+                    block_size_req = None
+                else:
+                    try:
+                        block_size_req = int(block_size_req)
+                    except (TypeError, ValueError):
+                        block_size_req = -1
+                    if not 1 <= block_size_req <= 240:
+                        err = {'success': False,
+                               'error': 'load_block_size must be 1..240'}
+                        self._send_json(err, 400)
+                        self._log_resp(err)
+                        return
+                max_block = _max_load_block_size(spi1, spi2, kic, kid, tar, cntr,
+                                                 kic_key, kid_key,
+                                                 requested=block_size_req or 240)
+                if max_block < 1:
+                    err = {'success': False,
+                           'error': 'no LOAD block fits a single SMS with these '
+                                    'SCP80 parameters'}
+                    self._send_json(err, 500)
+                    self._log_resp(err)
+                    return
+                block_size = min(block_size_req, max_block) if block_size_req else max_block
+                block_clamped = block_size_req is not None and block_size != block_size_req
+                sys.stderr.write('RAM-INSTALL: LOAD block size %d bytes%s\n' % (
+                    block_size,
+                    (' (requested %d, clamped to fit one SMS)' % block_size_req)
+                    if block_clamped else ''))
+
                 steps = []
+                encode_error = None
                 include_cpi = body.get('includeCpi', True)
                 spi2_val = int(spi2, 16)
                 por_in_submit = bool(spi2_val & 0x20)
 
                 def _send_gp_apdu(apdu_hex, step_name):
-                    nonlocal cntr
-                    sp_hex, _ = _ota_reference(spi1, spi2, kic, kid, tar, cntr, apdu_hex, kic_key, kid_key)
+                    nonlocal cntr, encode_error
+                    try:
+                        sp_hex, _ = _ota_reference(spi1, spi2, kic, kid, tar, cntr, apdu_hex, kic_key, kid_key)
+                    except ValueError as e:
+                        encode_error = str(e)
+                        steps.append({'name': step_name, 'por_status': 'encode_error',
+                                      'sw': encode_error})
+                        sys.stderr.write('RAM-INSTALL: %s encode failed: %s\n' % (step_name, e))
+                        return False
                     sp_bytes = bytes.fromhex(sp_hex)
                     max_chunk = 130
                     chunks = [sp_bytes[i:i + max_chunk] for i in range(0, len(sp_bytes), max_chunk)]
@@ -3514,7 +3786,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                     loadfile_aid, module_aid, loadfile_data, sd_aid=sd_aid,
                     privileges=privileges_hex,
                     install_params=install_params_hex, stk_params=stk_params_hex,
-                    make_selectable=make_selectable)
+                    make_selectable=make_selectable, block_size=block_size)
                 sys.stderr.write('RAM-INSTALL: %d APDUs (INSTALL / %d x LOAD / INSTALL) loadfile_aid=%s\n' % (
                     len(seq), len(seq) - 2, loadfile_aid))
                 for apdu_idx, gp_apdu in enumerate(seq):
@@ -3526,14 +3798,20 @@ class PysimHandler(BaseHTTPRequestHandler):
                         step_name = 'LOAD (%d/%d)' % (apdu_idx, len(seq) - 2)
                     if not _send_gp_apdu(gp_apdu, step_name):
                         resp = {'success': False, 'steps': steps, 'failed_step': len(steps),
-                                'error': '%s failed' % step_name,
-                                'load_file_aid': loadfile_aid, 'module_aid': module_aid}
+                                'error': encode_error or ('%s failed' % step_name),
+                                'load_file_aid': loadfile_aid, 'module_aid': module_aid,
+                                'load_block_size': block_size,
+                                'load_block_size_requested': block_size_req,
+                                'load_block_size_clamped': block_clamped}
                         self._send_json(resp)
                         self._log_resp(resp)
                         return
 
                 resp = {'success': True, 'steps': steps, 'load_file_aid': loadfile_aid,
-                        'module_aid': module_aid, 'final_cntr': cntr}
+                        'module_aid': module_aid, 'final_cntr': cntr,
+                        'load_block_size': block_size,
+                        'load_block_size_requested': block_size_req,
+                        'load_block_size_clamped': block_clamped}
                 sys.stderr.write('RAM-INSTALL: Complete — loadfile_aid=%s module_aid=%s cntr=%s\n' % (
                     loadfile_aid, module_aid, cntr))
                 self._send_json(resp)
@@ -3545,10 +3823,19 @@ class PysimHandler(BaseHTTPRequestHandler):
                 self._log_resp(err)
         elif self.path == '/api/scp81/bip':
             body = self._read_body()
-            # Never log the pre-shared key.
-            self._log_req(dict(body, psk_hex='<redacted>') if isinstance(body, dict) and body.get('psk_hex') else body)
+            # Never log the pre-shared keys.
+            self._log_req(_redact_psk_fields(body))
             try:
                 resp = _scp81_bip_control(body)
+            except Exception as e:
+                resp = {'ok': False, 'error': str(e)}
+            self._send_json(resp)
+            self._log_resp(resp)
+        elif self.path == '/api/scp81/psk-map':
+            body = self._read_body()
+            self._log_req(_redact_psk_fields(body))
+            try:
+                resp = _scp81_update_psk_map(body)
             except Exception as e:
                 resp = {'ok': False, 'error': str(e)}
             self._send_json(resp)
@@ -3572,34 +3859,13 @@ class PysimHandler(BaseHTTPRequestHandler):
                                     'runs on the card next POST (push/trigger)')
             self._send_json(resp)
             self._log_resp(resp)
-        elif self.path == '/api/scp81/ram-install':
+        elif self.path == '/api/scp81/gen-install':
             body = self._read_body()
             self._log_req(body)
-            cap_hex = (body.get('cap_hex') or '').replace(' ', '')
-            if not cap_hex:
-                resp = {'ok': False, 'error': 'No cap_hex provided'}
-            elif _SCP81_LISTENER is None:
-                resp = {'ok': False, 'error': 'SCP81 listener is not running'}
-            else:
-                try:
-                    loadfile_aid, module_aid, loadfile_data = _cap_parse(cap_hex)
-                    seq = _cap_apdu_sequence(
-                        loadfile_aid, module_aid, loadfile_data,
-                        sd_aid=(body.get('sd_aid') or '').replace(' ', ''),
-                        privileges=(body.get('privileges') or '').replace(' ', '') or '00',
-                        install_params=(body.get('install_params') or '').replace(' ', ''),
-                        stk_params=(body.get('stk_params') or '').replace(' ', ''),
-                        make_selectable=bool(body.get('make_selectable', True)))
-                    queued = _scp81_queue_script(seq, kind='ram-install',
-                                                 force=bool(body.get('force', False)))
-                    resp = dict(queued, ok=bool(queued.get('queued')),
-                                load_file_aid=loadfile_aid,
-                                module_aid=module_aid, apdus=len(seq))
-                    if queued.get('queued'):
-                        resp['note'] = ('queued as the SCP81 command script; '
-                                        'runs on the card next POST (push/trigger)')
-                except Exception as e:
-                    resp = {'ok': False, 'error': 'cap parse failed: %s' % e}
+            try:
+                resp = _scp81_gen_install(body)
+            except Exception as e:
+                resp = {'ok': False, 'error': str(e)}
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path == '/api/scp81/log-clear':

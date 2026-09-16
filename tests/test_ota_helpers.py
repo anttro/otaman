@@ -26,6 +26,7 @@ from pysim_otaman_server.server import (
     _decode_por,
     _decode_tr,
     _log_proactive,
+    _max_load_block_size,
     _ota_reference,
     _record_tr,
     _spi_from_bytes,
@@ -175,6 +176,29 @@ class TestOtaReference(unittest.TestCase):
         out, spi = _ota_reference('1e', '19', '22', '22', 'b00011', '0000000011', AES_APDU, KIC_AES, KID_AES)
         self.assertEqual(out, AES_REFERENCE_VECTORS[('1e', '19')])
         self.assertEqual(spi['counter'], 'counter_must_be_lower')
+
+    def test_max_load_block_size_fits_one_sms(self):
+        # LOAD blocks are too large for SCP80 at the 240-byte default (pySim
+        # refuses a secured packet above 140 octets), so the helper finds the
+        # largest payload that still encodes into a single SMS.
+        mx = _max_load_block_size('16', '01', '15', '15', 'b00000',
+                                  '0000000001', K, K)
+        self.assertGreater(mx, 0)
+        self.assertLessEqual(mx, 240)
+        def load_apdu(n):
+            return '80E80000%02X%s00' % (n, '00' * n)
+        out, _ = _ota_reference('16', '01', '15', '15', 'b00000',
+                                '0000000001', load_apdu(mx), K, K)
+        self.assertLessEqual(len(out) // 2, 140)
+        with self.assertRaises(ValueError):
+            _ota_reference('16', '01', '15', '15', 'b00000',
+                           '0000000001', load_apdu(mx + 1), K, K)
+
+    def test_max_load_block_size_respects_the_requested_cap(self):
+        mx = _max_load_block_size('16', '01', '15', '15', 'b00000',
+                                  '0000000001', K, K, requested=50)
+        self.assertLessEqual(mx, 50)
+        self.assertGreater(mx, 0)
 
 
 class TestDecodePor(unittest.TestCase):
@@ -896,3 +920,45 @@ class CapApduSequenceTest(unittest.TestCase):
         expected = 'C4' + _ber_len_lower(700) + data   # 700 = 0x2BC
         self.assertEqual(joined.upper(), expected.upper())
         self.assertEqual(int(seq[3][8:10], 16), len(expected) // 2 - 480)
+
+    def test_custom_block_size_splits_into_more_blocks(self):
+        # A smaller block size (SCP80: fit one SMS) slices the load file TLV
+        # into consecutive chunks of that size, the last block marked P1=0x80
+        # with the block counter in P2.
+        from pysim_otaman_server.server import _cap_apdu_sequence
+        data = ''.join('%02X' % (i % 256) for i in range(700))   # TLV = 704 bytes
+        seq = _cap_apdu_sequence('A00000010001', 'A000000100', data, block_size=100)
+        self.assertEqual(len(seq), 10)                 # INSTALL + 8 LOAD + INSTALL
+        loads = seq[1:-1]
+        self.assertEqual(len(loads), 8)
+        for i, apdu in enumerate(loads):
+            self.assertEqual(apdu[:8], '80E8%s%02X' % ('80' if i == 7 else '00', i))
+        def payload(apdu):
+            lc = int(apdu[8:10], 16)
+            return apdu[10:10 + lc * 2]
+        joined = ''.join(payload(a) for a in loads)
+        self.assertEqual(len(joined) // 2, 704)        # C4 82 02BC + 700 data bytes
+        self.assertTrue(joined.startswith('C482'))
+        self.assertEqual(int(loads[0][8:10], 16), 100)
+        self.assertEqual(int(loads[-1][8:10], 16), 4)  # 704 = 7*100 + 4
+
+    def test_gen_install_returns_the_apdu_list(self):
+        # /api/scp81/gen-install: build the INSTALL/LOAD/INSTALL list for a
+        # .cap without touching any listener or script state.
+        from pysim_otaman_server.server import _scp81_gen_install
+        resp = _scp81_gen_install({'cap_hex': self._mini_cap(), 'privileges': '01'})
+        self.assertTrue(resp['ok'], resp)
+        self.assertEqual(resp['load_file_aid'], 'A00000010001')
+        self.assertEqual(resp['module_aid'], 'A000000100')
+        self.assertEqual(len(resp['apdus']), 3)
+        self.assertTrue(resp['apdus'][0].startswith('80E60200'))
+        self.assertTrue(resp['apdus'][1].startswith('80E88000'))
+        self.assertTrue(resp['apdus'][2].startswith('80E60C00'))
+        self.assertNotIn('queued', resp)   # generation only, no queueing
+
+    def test_gen_install_rejects_bad_input(self):
+        from pysim_otaman_server.server import _scp81_gen_install
+        self.assertFalse(_scp81_gen_install({})['ok'])
+        resp = _scp81_gen_install({'cap_hex': '00'})
+        self.assertFalse(resp['ok'])
+        self.assertIn('cap parse failed', resp['error'])

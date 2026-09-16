@@ -44,7 +44,7 @@
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Header</strong> — the app version, an <strong>INSTALL PWA</strong> button (shown when the browser offers installation, enabling offline use), links to the project on GitHub and to this help, an <strong>EN/RU</strong> language toggle, and a dark/light <strong>theme</strong> toggle.</li>
 		<li>Language and theme choices are stored in <code class="font-mono text-sm">localStorage</code> and persist across reloads.</li>
-		<li>Top-level tabs: <strong>Remote APDU</strong> (<strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong>, <strong>C-APDU Parser</strong>, <strong>Response parser</strong>), <strong>SCP80</strong> (<strong>Secured Packet</strong>, <strong>Cards</strong>, <strong>RAM</strong>), <strong>Profiler</strong> (list tabs <strong>Profiles</strong>, <strong>Card snapshots</strong>, <strong>Custom files</strong>), <strong>Card reader</strong> (<strong>File manager</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>), and <strong>Phone simulator</strong>.</li>
+		<li>Top-level tabs: <strong>Remote APDU</strong> (<strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong>, <strong>C-APDU Parser</strong>, <strong>Response parser</strong>), <strong>SCP80</strong> (<strong>Secured Packet</strong>, <strong>RAM</strong>), <strong>SCP81</strong> (<strong>Listener</strong>, <strong>Scripts</strong>), <strong>Cards</strong>, <strong>Profiler</strong> (list tabs <strong>Profiles</strong>, <strong>Card snapshots</strong>, <strong>Custom files</strong>), <strong>Card reader</strong> (<strong>File manager</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>), and <strong>Phone simulator</strong>.</li>
 		<li>The <strong>help</strong> link opens this documentation at the section matching the current view (e.g. the Profiler tab opens &sect;5).</li>
 	</ul>
 
@@ -275,7 +275,7 @@
 	<p class="text-sm mb-3">A &ldquo;Verify vs pySim&rdquo; button cross-checks the assembled packet against pySim&rsquo;s reference <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. A &ldquo;Send to Card&rdquo; button delivers it via SMS-PP-DOWNLOAD ENVELOPE (when connected to the server). The returned Proof of Receipt is decoded and shown as a PoR status line (status, TAR, counter, raw PoR); the last command&rsquo;s status word and response data are filled into the <strong>Response parser</strong> tab, and a successful PoR advances the replay counter and clears the packet.</p>
 
 	<h3 id="cards" class="text-lg font-medium mb-2">3.2 Cards</h3>
-	<p class="mb-2">Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet view can auto-fill keys and parameters.</p>
+	<p class="mb-2">Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet view can auto-fill keys and parameters, and so the SCP81 HTTP OTA listener can look up PSK keys. The Cards tab is a top-level tab.</p>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Field</th><th class="text-left py-1 px-2">Description</th></tr></thead>
 		<tbody>
@@ -285,20 +285,22 @@
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Replay counter (5 bytes)</td></tr>
-			<tr><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex chars (8/16/24-byte 3DES) or 32/48/64 hex chars (16/24/32-byte AES) keys</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex chars (8/16/24-byte 3DES) or 32/48/64 hex chars (16/24/32-byte AES) keys</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">PSK identity</td><td class="py-1 px-2">SCP81 HTTP OTA: the identity the card sends in the TLS handshake (e.g. <code class="font-mono text-sm">89390100000129506903</code>)</td></tr>
+			<tr><td class="py-1 px-2">PSK key</td><td class="py-1 px-2">SCP81 HTTP OTA: 32 hex chars (16 bytes). The listener selects this key when the card presents the matching identity; a preset with a key but no identity is ignored (and flagged in the table)</td></tr>
 		</tbody>
 	</table>
-	<p class="text-sm mb-3">Presets can be shared with <strong>Export as JSON</strong> and <strong>Export to file</strong>, and restored with <strong>Import from file</strong>, <strong>Paste &amp; import</strong>, or <strong>Import JSON from clipboard</strong>. The selected card preset auto-fills the Secured Packet form.</p>
+	<p class="text-sm mb-3">The <strong>SCP81</strong> column shows whether the preset supplies a usable PSK pair. <strong>Edit</strong> loads a preset into the form (the button becomes <strong>Save</strong>; <strong>Cancel</strong> clears it) so fields can be changed without re-entering the card. Presets can be shared with <strong>Export as JSON</strong> and <strong>Export to file</strong>, and restored with <strong>Import from file</strong>, <strong>Paste &amp; import</strong>, or <strong>Import JSON from clipboard</strong>. The selected card preset auto-fills the Secured Packet form; edits are pushed into a running SCP81 listener automatically.</p>
 
 	<h3 id="ram" class="text-lg font-medium mb-2">3.3 RAM</h3>
-	<p class="mb-2">Delivers Remote Application Management operations as SCP80 secured packets via SMS-PP-DOWNLOAD ENVELOPE. The card must support SCP03 (AES or 3DES). A saved card preset from the <strong>Cards</strong> sub-tab provides the SPI, keys, TAR, and counter.</p>
+	<p class="mb-2">Delivers Remote Application Management operations as SCP80 secured packets via SMS-PP-DOWNLOAD ENVELOPE. The card must support SCP03 (AES or 3DES). A saved card preset from the <strong>Cards</strong> tab provides the SPI, keys, TAR, and counter.</p>
 
 	<h4 id="ram-operations" class="font-medium mb-1">Operations</h4>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Operation</th><th class="text-left py-1 px-2">Description</th></tr></thead>
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Explore Card (all GP data)</td><td class="py-1 px-2">Queries GET STATUS for ISD, Applications, ELFs, and ELF Modules, plus GET DATA FF21 for memory info. Results appear in an explorer view with per-item <strong>Delete</strong> buttons.</td></tr>
-			<tr><td class="py-1 px-2">Install Package (.cap file)</td><td class="py-1 px-2">Sends a <code class="font-mono text-sm">.cap</code> file to the card via the server: INSTALL[for load] &rarr; LOAD &times;N &rarr; INSTALL[for install (+make selectable)].</td></tr>
+			<tr><td class="py-1 px-2">Install Package (.cap file)</td><td class="py-1 px-2">Sends a <code class="font-mono text-sm">.cap</code> file to the card via the server: INSTALL[for load] &rarr; LOAD &times;N &rarr; INSTALL[for install (+make selectable)]. The load file is split into LOAD APDUs that each fit one SCP80 SMS; the <strong>LOAD block size</strong> field overrides the auto-fitted size (empty = largest size whose secured packet still encodes into 140 octets), so a large <code>.cap</code> simply takes several SMS.</td></tr>
 		</tbody>
 	</table>
 
@@ -378,7 +380,7 @@
 		<li><strong>Profile from card</strong> — scans the equipped card and generates one rule per existing file (see below), then opens the editor.</li>
 		<li><strong>Profile from snapshot</strong> — picks a saved card snapshot and generates one rule per captured file using the same scan options (see below), without a card reader; the profile name is prefilled with the snapshot name.</li>
 		<li><strong>Import profile</strong> — loads a ruleset from a JSON file (the name is stored inside the JSON).</li>
-		<li>Each profile row shows its name and creation time, with <strong>Check card ▶</strong>, <strong>Check card snapshot</strong>, <strong>Edit</strong>, <strong>Export</strong> (download JSON), and <strong>Delete</strong> actions.</li>
+		<li>Each profile row shows its name and creation time, with <strong>Check card ▶</strong>, <strong>Check card snapshot</strong>, <strong>Edit</strong>, <strong>Clone</strong>, <strong>Export</strong> (download JSON), and <strong>Delete</strong> actions. <strong>Clone</strong> copies the profile under the name <em>Copy of &lt;profile&gt;</em> (with a <code class="font-mono text-sm">(2)</code>, <code class="font-mono text-sm">(3)</code>… suffix when that name already exists) and opens the copy in the editor, so both the name and the contents can be adjusted before saving.</li>
 	</ul>
 	<h4 class="font-medium mb-1">Filesystem rules</h4>
 	<p class="text-sm mb-2">Rules run sequentially. The editor shows the symbolic pySim name (when known) next to each rule&rsquo;s path; use <strong>Add rule</strong> to append one and <strong>Save</strong> to keep the changes. A filesystem rule is defined by:</p>
@@ -399,7 +401,7 @@
 		<li><strong>Import snapshot</strong> &mdash; loads a snapshot from a JSON file.</li>
 		<li>Each snapshot row has <strong>Open</strong>, <strong>Export</strong>, and <strong>Delete</strong>. <strong>Open</strong> shows all captured data read-only (raw FCI with the decoded FCI, contents); only the snapshot name is editable.</li>
 		<li><strong>Check card snapshot</strong> on a profile row runs the profile rules against a snapshot you pick from the list, without a card reader. The report is the same as a live check: the actual side is labelled with the snapshot name (<em>actual (snapshot name)</em>) and the header reads <em>Profile verification results for: &lt;profile&gt; &rarr; &lt;snapshot name&gt;</em>; files whose contents were not captured during the scan are reported as unverifiable errors.</li>
-		<li><strong>Compare snapshots</strong> compares two snapshots offline, exactly like a profile check: pick the <em>master</em> snapshot and the <em>snapshot to check</em>, optionally masking the first 4 bytes of EF.IMSI/EF.ICCID (on by default), and get the same pass/fail report; in that report the header reads <em>Snapshot comparison results: &lt;master&gt; &rarr; &lt;checked&gt;</em> and the mismatch fields and the FCI comparison columns are labeled with the master and checked snapshot names instead of expected/actual. Files present only in the checked snapshot are reported as extra files. Back to list returns to the Card snapshots tab.</li>
+		<li><strong>Compare snapshots</strong> compares two snapshots offline, exactly like a profile check but <strong>always exact</strong> (no content masking): pick the <em>master</em> snapshot and the <em>snapshot to check</em> and get the same pass/fail report; in that report the header reads <em>Snapshot comparison results: &lt;master&gt; &rarr; &lt;checked&gt;</em> and the mismatch fields and the FCI comparison columns are labeled with the master and checked snapshot names instead of expected/actual. Files present only in the checked snapshot are reported as extra files. Back to list returns to the Card snapshots tab.</li>
 	</ul>
 
 </section>

@@ -51,6 +51,16 @@ TLS_VERSIONS = {
 }
 
 
+def _norm_identity(identity):
+    """Normalize a PSK identity to the str OpenSSL reports (CPython hands it
+    to the PSK callback as a str; bytes are decoded byte-exact)."""
+    if identity is None:
+        return None
+    if isinstance(identity, (bytes, bytearray)):
+        return bytes(identity).decode('latin-1')
+    return str(identity)
+
+
 def parse_http_request(data):
     """Parse an HTTP/1.1 request head (bytes up to CRLFCRLF) into
     (method, target, headers dict with lower-case names)."""
@@ -120,13 +130,29 @@ def build_http_response(status, reason, headers, body=b'', chunked=False,
 class PskTlsServer:
     """PSK TLS listener speaking the GP remote administration HTTP dialog."""
 
-    def __init__(self, host, port, psk, identity=None, on_log=None,
+    def __init__(self, host, port, psk=None, identity=None, on_log=None,
                  responder=None, timeout=10.0, chunked=False, chunk_size=0,
                  keep_alive=False, compact_headers=False, tls_version='1.2',
                  cipher=None, on_before_close=None, keylog=None,
-                 conn_header=None, half_close=False, answer_delay=0.0):
+                 conn_header=None, half_close=False, answer_delay=0.0,
+                 psk_map=None):
+        # PSK lookup table: identity -> key. With an explicit psk_map a
+        # handshake is accepted only for a listed identity; the legacy
+        # single-key form (psk + optional identity pin, pin None = accept any
+        # identity) remains for scripts and tests.
+        self.wildcard_psk = None
+        self.psk_map = {}
+        if psk_map is not None:
+            self.psk_map = {_norm_identity(k): bytes(v)
+                            for k, v in dict(psk_map).items() if v}
+        elif psk is not None:
+            pin = _norm_identity(identity)
+            if pin is None:
+                self.wildcard_psk = psk
+            else:
+                self.psk_map = {pin: bytes(psk)}
         self.psk = psk
-        self.identity = identity
+        self.identity = _norm_identity(identity)
         self.on_log = on_log
         self.responder = responder or self._default_responder
         self.timeout = timeout
@@ -165,6 +191,7 @@ class PskTlsServer:
         # SEND-DATA conversation to settle before it accepts the response).
         self.answer_delay = float(answer_delay or 0)
         self.identity_seen = None
+        self.identity_matched = None
         self.stopped = False
         self.conns = []
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -223,14 +250,34 @@ class PskTlsServer:
         return ctx
 
     def _psk_cb(self, identity):
-        """OpenSSL asks for the key of the identity the client sent."""
-        self.identity_seen = identity
-        if self.identity is not None and identity != self.identity:
-            self.log('tls-psk-unknown', identity=identity)
-            # A dummy key keeps the callback type-safe; the handshake then
-            # fails on the Finished MAC check.
+        """OpenSSL asks for the key of the identity the client sent.
+
+        The identity is looked up in the configured table (identity -> key);
+        without a match the handshake fails on the Finished MAC check with a
+        dummy key, and the attempt is logged as 'tls-psk-unknown'."""
+        ident = _norm_identity(identity)
+        self.identity_seen = ident
+        key = self.psk_map.get(ident) if ident is not None else None
+        if key is None:
+            # Legacy single-key mode: no identity pin accepts any identity.
+            key = self.wildcard_psk
+        self.identity_matched = key is not None
+        if key is None:
+            self.log('tls-psk-unknown', identity=ident)
             return b'\x00' * 16
-        return self.psk
+        return key
+
+    @property
+    def psk_identities(self):
+        """Identities the listener looks up (keys are never exposed)."""
+        return sorted(self.psk_map)
+
+    def set_psk_map(self, psk_map):
+        """Replace the identity -> key table of a running listener."""
+        self.psk_map = {_norm_identity(k): bytes(v)
+                        for k, v in dict(psk_map).items() if v}
+        self.wildcard_psk = None
+        return self.psk_identities
 
     @staticmethod
     def _default_responder(method, target, headers, body):
@@ -285,7 +332,8 @@ class PskTlsServer:
         try:
             tls = self.ctx.wrap_socket(conn, server_side=True)
             self.log('tls-handshake', peer=peer, cipher=tls.cipher()[0],
-                     version=tls.version(), identity=self.identity_seen)
+                     version=tls.version(), identity=self.identity_seen,
+                     psk_match=self.identity_matched)
             while not self.stopped:
                 req = self._read_request(tls)
                 if req is None:
@@ -304,15 +352,15 @@ class PskTlsServer:
                 status, resp_headers, resp_body = self.responder(
                     method, target, headers, body)
                 reason = {200: 'OK', 204: 'No Content'}.get(status, 'Status')
-                conn = self.conn_header
-                if conn == 'none':
-                    conn = None
-                elif conn is None:
-                    conn = 'keep-alive' if self.keep_alive else 'close'
+                conn_hdr = self.conn_header
+                if conn_hdr == 'none':
+                    conn_hdr = None
+                elif conn_hdr is None:
+                    conn_hdr = 'keep-alive' if self.keep_alive else 'close'
                 response = build_http_response(
                     status, reason, resp_headers, resp_body,
                     chunked=self.chunked, compact=self.compact_headers,
-                    connection=conn)
+                    connection=conn_hdr)
                 # The card's HTTP client reads its response record-by-record:
                 # the whole response must arrive in ONE TLS record (chunk_size
                 # 0), otherwise a split head stalls it and a head-only record
