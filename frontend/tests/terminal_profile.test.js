@@ -117,6 +117,9 @@ test('Phone tab exposes the TERMINAL PROFILE block and Configure dialog', () => 
 	assert.ok(html.includes('id="tp-apply-btn"'));
 	// the preset select sits above the hex field, not next to it
 	assert.ok(html.indexOf('id="tp-preset"') < html.indexOf('id="tp-hex"'));
+	// Apply/Cancel sit at the top (right of the preset/hex fields), above the
+	// long bits grid, so they are reachable without scrolling
+	assert.ok(html.indexOf('id="tp-apply-btn"') < html.indexOf('id="tp-form"'));
 });
 
 test('tpLayoutGroups lays the byte blocks out in the configured columns', () => {
