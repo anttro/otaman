@@ -100,6 +100,11 @@ test('file manager keeps sort/probe controls above the scrolling tree', () => {
 test('custom files form has add/save and cancel controls', () => {
     assert.match(html, /id="pysim-cf-add-btn"[^>]*data-l10n="Add"/);
     assert.match(html, /id="pysim-cf-cancel-btn"[^>]*class="hidden[^"]*"[^>]*data-l10n="Cancel"/);
+    // canonical path form: root + parent DF + 4-hex FID, no free-form path
+    assert.ok(html.includes('id="pysim-cf-root"'));
+    assert.ok(html.includes('id="pysim-cf-parent"'));
+    assert.ok(html.includes('id="pysim-cf-fid"'));
+    assert.ok(!html.includes('id="pysim-cf-path"'));
     assert.ok(html.includes("event.key==='Enter')pysimCustomSubmit()"));
     assert.ok(!html.includes('pysimCustomAdd'));
 });

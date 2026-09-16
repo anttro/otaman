@@ -179,6 +179,7 @@ def main():
     server.sms_sc = opts.sms_sm_sc
     server.log_requests = opts.log_requests
     server.terminal_profile = opts.terminal_profile
+    server.cli_terminal_profile = opts.terminal_profile
     server.web_dir = opts.web_dir
     server.sim_menu = sim_menu
     server.event_list = event_list

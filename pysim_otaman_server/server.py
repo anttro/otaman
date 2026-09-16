@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.2.1'
+VERSION = '2.2.3'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -2876,6 +2876,36 @@ def _send_terminal_profile(scc, tp_hex):
     return sim_menu, event_list
 
 
+def _validate_tp_hex(hex_str):
+    """Validate a TERMINAL PROFILE hex string. Returns (hex_or_None, error)."""
+    h = re.sub(r'\s', '', str(hex_str or '')).upper()
+    if not h:
+        return None, 'profile is empty'
+    if not re.fullmatch(r'[0-9A-F]+', h):
+        return None, 'profile is not valid hex'
+    if len(h) % 2:
+        return None, 'profile must have an even number of hex digits'
+    if len(h) // 2 > 255:
+        return None, 'profile exceeds 255 bytes'
+    return h, None
+
+
+def _resend_terminal_profile(server, scc):
+    """Re-send the current TERMINAL PROFILE and reset the STK session state.
+    Shared by /api/rescue and the runtime profile update; the value lives in
+    server.terminal_profile (CLI default, overridable at runtime)."""
+    server.stk_pending = None
+    server.menu_active = False
+    _cancel_menu_timeout()
+    server.event_list = None
+    _reset_proactive_log()
+    sm, el = _send_terminal_profile(scc, server.terminal_profile)
+    server.sim_menu = sm
+    server.event_list = el
+    return {'ok': True, 'profile': server.terminal_profile,
+            'menu': sm is not None, 'events': el}
+
+
 def _make_menu_fetch_handler(server, resp):
     """on_fetch callback for the menu chain: pauses on user-interactive commands
     and stores the pending command so a TERMINAL RESPONSE can be sent later."""
@@ -3135,6 +3165,13 @@ class PysimHandler(BaseHTTPRequestHandler):
             resp = self.server.event_list or []
             self._send_json(resp)
             self._log_resp(resp)
+        elif self.path == '/api/terminal-profile':
+            self._log_req()
+            tp = getattr(self.server, 'terminal_profile', None) or ''
+            resp = {'profile': tp or None, 'bytes': len(tp) // 2,
+                    'cli_default': getattr(self.server, 'cli_terminal_profile', None)}
+            self._send_json(resp)
+            self._log_resp(resp)
         elif self.path == '/api/pli-qualifiers':
             qualifiers = [{'code': '%02X' % q, 'name': PLI_QUALIFIER_NAMES[q]} for q in PLI_QUALIFIER_NAMES]
             self._send_json(qualifiers)
@@ -3285,15 +3322,37 @@ class PysimHandler(BaseHTTPRequestHandler):
                 self._log_resp({'error': 'no terminal profile configured'})
                 return
             sys.stderr.write('RESCUE: re-sending TERMINAL PROFILE\n')
-            self.server.stk_pending = None
-            self.server.menu_active = False
-            _cancel_menu_timeout()
-            self.server.event_list = None
-            _reset_proactive_log()
-            sm, el = _send_terminal_profile(scc, self.server.terminal_profile)
-            self.server.sim_menu = sm
-            self.server.event_list = el
-            resp = {'menu': sm is not None, 'events': el}
+            resp = _resend_terminal_profile(self.server, scc)
+            self._send_json(resp)
+            self._log_resp(resp)
+        elif self.path == '/api/terminal-profile':
+            body = self._read_body()
+            self._log_req(body)
+            scc = self.server.scc
+            if not scc:
+                self._send_json({'error': _err('reader_not_init', lang)}, 503)
+                self._log_resp({'error': _err('reader_not_init', lang)})
+                return
+            profile = body.get('profile')
+            if profile is not None:
+                h, perr = _validate_tp_hex(profile)
+                if perr:
+                    self._send_json({'error': perr}, 400)
+                    self._log_resp({'error': perr})
+                    return
+                self.server.terminal_profile = h
+            if not self.server.terminal_profile:
+                self._send_json({'error': 'no terminal profile configured'}, 400)
+                self._log_resp({'error': 'no terminal profile configured'})
+                return
+            sys.stderr.write('TERMINAL-PROFILE: re-sending %s\n' % self.server.terminal_profile)
+            try:
+                resp = _resend_terminal_profile(self.server, scc)
+            except Exception as e:
+                resp = {'ok': False, 'error': str(e)}
+                self._send_json(resp, 502)
+                self._log_resp(resp)
+                return
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path == '/api/help':

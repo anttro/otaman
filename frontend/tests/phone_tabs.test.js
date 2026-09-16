@@ -27,7 +27,8 @@ const code = extractFunc(html, 'phoneSwitchSubtab') + '\n' +
 	'globalThis.pysimEventsRender = () => { globalThis._events = (globalThis._events || 0) + 1; };\n' +
 	'globalThis.pysimProactiveLogRender = () => { globalThis._log = (globalThis._log || 0) + 1; };\n' +
 	'globalThis.pysimPollStatusInit = () => { globalThis._poll = (globalThis._poll || 0) + 1; };\n' +
-	'globalThis.pysimPliRender = () => { globalThis._pli = (globalThis._pli || 0) + 1; };\n';
+	'globalThis.pysimPliRender = () => { globalThis._pli = (globalThis._pli || 0) + 1; };\n' +
+	'globalThis.tpRefresh = () => { globalThis._tp = (globalThis._tp || 0) + 1; };\n';
 eval(code);
 
 function makeClassList() {
@@ -52,7 +53,7 @@ function setup() {
 		getElementById: id => panels[id] || null,
 	};
 	globalThis._anchor = null;
-	globalThis._stk = globalThis._events = globalThis._log = globalThis._poll = globalThis._pli = 0;
+	globalThis._stk = globalThis._events = globalThis._log = globalThis._poll = globalThis._pli = globalThis._tp = 0;
 	return { buttons, panels };
 }
 
@@ -80,4 +81,5 @@ test('Phone pill shows the phone panel and renders CAT views', () => {
 	assert.strictEqual(globalThis._log, 1);
 	assert.strictEqual(globalThis._poll, 1);
 	assert.strictEqual(globalThis._pli, 0);
+	assert.strictEqual(globalThis._tp, 1);
 });

@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.1</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.3</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -737,12 +737,27 @@
 
 			<div id="profiler-list-custom" class="hidden">
 				<div class="mb-2 text-xs font-mono text-gray-600 dark:text-slate-400" data-l10n="Custom files are added in file manager tree and included in card scan.">Custom files are added in file manager tree and included in card scan.</div>
-				<div class="flex gap-2 items-center mb-2">
-					<input id="pysim-cf-path" class="font-mono flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="3F00/6F46" onkeydown="if(event.key==='Enter')pysimCustomSubmit()">
-					<input id="pysim-cf-name" class="font-mono w-48 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2.5 dark:bg-slate-800" placeholder="EF.SPN" onkeydown="if(event.key==='Enter')pysimCustomSubmit()">
-					<button id="pysim-cf-add-btn" onclick="pysimCustomSubmit()" class="px-3 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
-					<button id="pysim-cf-cancel-btn" onclick="pysimCustomEditCancel()" class="hidden px-3 py-2.5 bg-gray-600 text-white text-sm font-medium rounded hover:bg-gray-700 whitespace-nowrap" data-l10n="Cancel">Cancel</button>
+				<div class="flex flex-wrap gap-2 items-end mb-2">
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Root (MF / ADF)">Root (MF / ADF)</label>
+						<select id="pysim-cf-root" onchange="pysimCustomRootChanged()" class="font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2 dark:bg-slate-800"></select>
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Parent DF">Parent DF</label>
+						<select id="pysim-cf-parent" class="font-mono w-56 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2 dark:bg-slate-800"></select>
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="FID (4 hex)">FID (4 hex)</label>
+						<input id="pysim-cf-fid" maxlength="4" class="font-mono w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800" placeholder="6F46" onkeydown="if(event.key==='Enter')pysimCustomSubmit()">
+					</div>
+					<div class="flex-1 min-w-[180px]">
+						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Alias (EF. / DF.)">Alias (EF. / DF.)</label>
+						<input id="pysim-cf-name" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800" placeholder="EF.SPN" onkeydown="if(event.key==='Enter')pysimCustomSubmit()">
+					</div>
+					<button id="pysim-cf-add-btn" onclick="pysimCustomSubmit()" class="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
+					<button id="pysim-cf-cancel-btn" onclick="pysimCustomEditCancel()" class="hidden px-3 py-2 bg-gray-600 text-white text-sm font-medium rounded hover:bg-gray-700 whitespace-nowrap" data-l10n="Cancel">Cancel</button>
 				</div>
+				<div class="text-xs text-gray-500 dark:text-slate-400 mb-2" data-l10n="Full path from MF or an ADF; the parent DF must be defined here first.">Full path from MF or an ADF; the parent DF must be defined here first.</div>
 				<div id="pysim-cf-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 			<input type="file" id="pysim-cf-file" accept=".json,application/json" class="hidden" onchange="pysimCustomImportFile(this)">
 				<div class="flex flex-wrap gap-2 mt-2">
@@ -907,6 +922,15 @@
 						<span class="text-xs text-gray-500 dark:text-slate-400" data-l10n="Polling">Polling</span>
 						<button id="pli-pause-btn" data-needs="server" onclick="pysimPollToggle()" class="px-2.5 py-1 text-sm rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed">OFF</button>
 						<span id="pli-poll-stat" class="text-xs text-gray-400"></span>
+					</div>
+				</div>
+				<div class="border border-gray-200 dark:border-slate-700 rounded p-3">
+					<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="TERMINAL PROFILE">TERMINAL PROFILE</div>
+					<div id="tp-current" class="text-xs font-mono text-gray-600 dark:text-slate-400 break-all max-w-xs mb-2" data-l10n="Loading...">Loading...</div>
+					<div class="flex items-center gap-2">
+						<button id="tp-send-btn" data-needs="card" onclick="tpSend()" class="px-2.5 py-1 text-sm rounded bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Send">Send</button>
+						<button id="tp-configure-btn" data-needs="server" onclick="tpOpen()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Configure">Configure</button>
+						<span id="tp-status" class="text-xs text-gray-400 dark:text-slate-500"></span>
 					</div>
 				</div>
 				<div class="flex-1 min-w-0 border border-gray-200 dark:border-slate-700 rounded p-3">
@@ -1128,6 +1152,29 @@
 		</div>
 	</div>
 
+	<div id="tp-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[85vh] overflow-auto">
+			<h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="TERMINAL PROFILE">TERMINAL PROFILE</h3>
+			<div class="flex flex-wrap items-end gap-3 mb-3">
+				<div>
+					<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Preset (device model)">Preset (device model)</label>
+					<select id="tp-preset" onchange="tpPresetChanged()" class="w-72 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800"></select>
+				</div>
+				<div class="flex-1 min-w-[280px]">
+					<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile (hex)">Profile (hex)</label>
+					<input id="tp-hex" oninput="tpHexInput()" spellcheck="false" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+				</div>
+			</div>
+			<div id="tp-error" class="hidden text-xs text-red-500 mb-2"></div>
+			<div class="text-xs text-gray-500 dark:text-slate-400 mb-2" data-l10n="Bits are decoded per TS 102 223 5.2; the hex field is authoritative and bytes/bits outside the table are preserved as-is.">Bits are decoded per TS 102 223 5.2; the hex field is authoritative and bytes/bits outside the table are preserved as-is.</div>
+			<div id="tp-form" class="max-h-[45vh] overflow-auto border border-gray-200 dark:border-slate-700 rounded p-2 text-xs font-mono text-gray-600 dark:text-slate-400"></div>
+			<div class="flex gap-2 justify-end mt-3">
+				<button onclick="tpClose()" class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
+				<button id="tp-apply-btn" onclick="tpApply()" class="px-4 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Apply">Apply</button>
+			</div>
+		</div>
+	</div>
+
 	<div id="profiler-scan-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
 		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 max-h-[85vh] overflow-auto">
 			<h3 id="profiler-scan-title" class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="Profile from card">Profile from card</h3>
@@ -1276,6 +1323,7 @@ function phoneSwitchSubtab(name) {
 		pysimEventsRender();
 		pysimProactiveLogRender();
 		pysimPollStatusInit();
+		tpRefresh();
 	}
 	setHelpAnchor({ phone: 'stk-menu', tr: 'pli-dict' }[name] || 'stk-menu');
 }
@@ -6245,25 +6293,43 @@ function getParentPath(node) {
 	return segs;
 }
 
+// Canonical path of a tree node from MF or an ADF root, matching the custom
+// file paths ("MF/7F20/6F46", "ADF.USIM/6F07").
+function pysimFsNodePath(node) {
+	const segs = [];
+	let n = node;
+	while (n) {
+		if (n.name === 'MF') { segs.unshift('MF'); break; }
+		if (n.name && n.name.startsWith('ADF.')) { segs.unshift(n.name); break; }
+		segs.unshift(((n.fid || n.name) || '').toUpperCase());
+		n = n.parent;
+	}
+	return segs.join('/');
+}
+
 function pysimCustomInject(node) {
-	if (!node || !node.fid) return;
-	const pfid = node.fid.toLowerCase();
+	if (!node) return;
+	const basePath = pysimFsNodePath(node);
 	for (const c of pysimCustomFiles) {
-		if (c.parentFid.toLowerCase() !== pfid) continue;
-		const existing = (node.children || []).find(ch => ch.fid?.toLowerCase() === c.fid.toLowerCase());
+		if (pysimCustomParent(c) !== basePath) continue;
+		const fid = pysimCustomFid(c);
+		const existing = (node.children || []).find(ch => (ch.fid || '').toUpperCase() === fid);
 		if (existing) {
 			existing.name = c.name;
+			existing.kind = c.kind;
 			existing.custom = true;
+			existing.customPath = c.path;
 		} else {
 			node.children = node.children || [];
 			node.children.push({
 				name: c.name,
-				fid: c.fid,
-				isDir: c.name.startsWith('DF.') || c.name.startsWith('ADF.'),
+				fid: fid,
+				isDir: c.kind === 'df',
 				children: null,
 				expanded: false,
 				exists: null,
 				custom: true,
+				customPath: c.path,
 				parent: node,
 			});
 		}
@@ -6896,6 +6962,244 @@ const PLI_QUALIFIERS = [
 	{code:'16',name:'CAG information list'},{code:'17',name:'Rejected slices information'},
 	{code:'1A',name:'Supported Radio Access Technologies'},
 ];
+
+// TERMINAL PROFILE bit allocation (TS 102 223 V18.3.0 5.2 + 3GPP
+// annex bits; bytes 1..33). Index 0 = bit 1 = first byte b8; bit n is
+// byte floor(n/8)+1, mask 0x80 >> (n%8). Bytes beyond 33 fall back to
+// generic labels in the UI.
+const TP_BITS = [
+  'Profile download', 'SMS-PP data download', 'Cell Broadcast data download', 'Menu selection',
+  'SMS-PP data download', 'Timer expiration', 'USSD string DO support in CC by USIM', 'Call Control by NAA',
+  'Command result', 'Call Control by NAA', 'Call Control by NAA', 'MO short message control support',
+  'Call Control by NAA', 'UCS2 Entry supported', 'UCS2 Display supported', 'Display Text',
+  'Proactive UICC: DISPLAY TEXT', 'Proactive UICC: GET INKEY', 'Proactive UICC: GET INPUT', 'Proactive UICC: MORE TIME',
+  'Proactive UICC: PLAY TONE', 'Proactive UICC: POLL INTERVAL', 'Proactive UICC: POLLING OFF', 'Proactive UICC: REFRESH',
+  'Proactive UICC: SELECT ITEM', 'Proactive UICC: SEND SHORT MESSAGE with 3GPP-SMS-TPDU', 'Proactive UICC: SEND SS', 'Proactive UICC: SEND USSD',
+  'Proactive UICC: SET UP CALL', 'Proactive UICC: SET UP MENU', 'Proactive UICC: PROVIDE LOCAL INFORMATION (MCC, MNC, LAC, Cell ID & IMEI)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (NMR)',
+  'Proactive UICC: SET UP EVENT LIST', 'Event: MT call', 'Event: Call connected', 'Event: Call disconnected',
+  'Event: Location status', 'Event: User activity', 'Event: Idle screen available', 'Event: Card reader status',
+  'Event: Language selection', 'Event: Browser Termination', 'Event: Data available', 'Event: Channel status',
+  'Event: Access Technology Change', 'Event: Display parameters changed', 'Event: Local Connection', 'Event: Network Search Mode Change',
+  'Proactive UICC: POWER ON CARD', 'Proactive UICC: POWER OFF CARD', 'Proactive UICC: PERFORM CARD RESET', 'Proactive UICC: GET READER STATUS (Card reader status)',
+  'Proactive UICC: GET READER STATUS (Card reader identifier)', 'RFU', 'RFU', 'RFU',
+  'Proactive UICC: TIMER MANAGEMENT (start, stop)', 'Proactive UICC: TIMER MANAGEMENT (get current value)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (date, time and time zone)', 'GET INKEY',
+  'SET UP IDLE MODE TEXT', 'RUN AT COMMAND', 'SETUP CALL', 'Call Control by NAA',
+  'DISPLAY TEXT', 'SEND DTMF command', 'Proactive UICC: PROVIDE LOCAL INFORMATION (NMR)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (language)',
+  'Proactive UICC: PROVIDE LOCAL INFORMATION (Timing Advance)', 'Proactive UICC: LANGUAGE NOTIFICATION', 'Proactive UICC: LAUNCH BROWSER', 'Proactive UICC: PROVIDE LOCAL INFORMATION (Access Technology)',
+  'Soft keys support for SELECT ITEM', 'Soft keys support for SET UP MENU ITEM', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'Proactive UICC: OPEN CHANNEL', 'Proactive UICC: CLOSE CHANNEL', 'Proactive UICC: RECEIVE DATA', 'Proactive UICC: SEND DATA',
+  'Proactive UICC: GET CHANNEL STATUS', 'Proactive UICC: SERVICE SEARCH', 'Proactive UICC: GET SERVICE INFORMATION', 'Proactive UICC: DECLARE SERVICE',
+  'BIP supported Bearer: CSD', 'BIP supported Bearer: GPRS', 'BIP supported Bearer: Bluetooth', 'BIP supported Bearer: IrDA',
+  'BIP supported Bearer: RS232', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'BIP: TCP, UICC in client mode, remote connection', 'BIP: UDP, UICC in client mode, remote connection', 'BIP: TCP, UICC in server mode', 'BIP: TCP, UICC in client mode, local connection',
+  'BIP: UDP, UICC in client mode, local connection', 'BIP: direct communication channel', 'reserved by 3GPP (E-UTRAN)', 'reserved by 3GPP (HSDPA)',
+  'Proactive UICC: DISPLAY TEXT (variable timeout)', 'Proactive UICC: GET INKEY (help while waiting for immediate response or variable timeout)', 'USB (BIP supported bearer)', 'Proactive UICC: GET INKEY (variable timeout)',
+  'Proactive UICC: PROVIDE LOCAL INFORMATION (ESN)', 'reserved by 3GPP (Call control on GPRS)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (IMEISV)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (Search mode change)',
+  'reserved by TIA/EIA-136-270 (protocol version support)', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'reserved by CCAT', 'reserved by CCAT', 'reserved by CCAT', 'reserved by CCAT',
+  'reserved by CCAT', 'reserved by CCAT', 'reserved by CCAT', 'reserved by CCAT',
+  'WML', 'XHTML', 'HTML', 'CHTML',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'reserved by 3GPP (UTRAN PS with extended parameters)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (battery state)', 'Proactive UICC: PLAY TONE (melody/themed tones)', 'Multi-media calls in SET UP CALL',
+  'reserved by 3GPP (Toolkit-initiated GBA)', 'Proactive UICC: RETRIEVE MULTIMEDIA MESSAGE', 'Proactive UICC: SUBMIT MULTIMEDIA MESSAGE', 'Proactive UICC: DISPLAY MULTIMEDIA MESSAGE',
+  'Proactive UICC: SET FRAMES', 'Proactive UICC: GET FRAMES STATUS', 'MMS notification download', 'Alpha identifier in REFRESH',
+  'reserved by 3GPP (Geographical location reporting)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (MEID)', 'reserved by 3GPP (PLI NMR for multiple access technologies)', 'reserved by 3GPP/3GPP2 (USSD data download and application mode)',
+  'Maximum number of frames supported (value field)', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'Event: Browsing status', 'Event: MMS transfer status', 'Event: Frame information changed', 'reserved by 3GPP (Event: I-WLAN access status)',
+  'reserved by 3GPP (Event: Network rejection)', 'Event: HCI connectivity', 'reserved by 3GPP (E-UTRAN in Event Network Rejection)', 'Multiple access technologies supported (Event Access Technology Change / PLI)',
+  'reserved by 3GPP (Event: CSG cell selection)', 'Event: Contactless state request', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'Text alignment left', 'Text alignment centre', 'Text alignment right', 'Font size normal',
+  'Font size large', 'Font size small', 'RFU', 'RFU',
+  'Style normal', 'Style bold', 'Style italic', 'Style underlined',
+  'Style strikethrough', 'Style text foreground colour', 'Style text background colour', 'RFU',
+  'reserved by 3GPP (I-WLAN bearer)', 'reserved by 3GPP (PLI WSID of the current I-WLAN connection)', 'TERMINAL APPLICATIONS', 'reserved by 3GPP (Steering of Roaming REFRESH)',
+  'RFU', 'RFU', 'RFU', 'RFU',
+  'Proactive UICC: Contactless State Changed', 'reserved by 3GPP (CSG cell discovery)', 'Confirmation parameters for OPEN CHANNEL in Terminal Server mode', 'reserved by 3GPP (Communication control for IMS)',
+  'CAT over the modem interface', 'reserved by 3GPP (Incoming IMS data event)', 'reserved by 3GPP (IMS registration event)', 'Proactive UICC: Profile/Envelope/Command Container, ENCAPSULATED SESSION CONTROL',
+  'reserved by 3GPP (IMS as BIP bearer)', 'reserved by 3GPP (PLI H(e)NB IP address)', 'reserved by 3GPP (PLI H(e)NB surrounding macrocells)', 'Launch parameters for OPEN CHANNEL in Terminal Server mode',
+  'Direct communication channel for OPEN CHANNEL in Terminal Server mode', 'Security for Profile/Envelope/Command Container and ENCAPSULATED SESSION CONTROL', 'CAT service list for eCAT client', 'Refresh enforcement policy',
+  'DNS server address request for OPEN CHANNEL (packet data bearer)', 'Network Access Name reuse indication for CLOSE CHANNEL', 'Event: Poll Interval Negotiation', 'reserved by 3GPP (ProSe usage information reporting)',
+  'Proactive UICC: PROVIDE LOCAL INFORMATION (Supported Radio Access Technologies)', 'reserved by 3GPP (Event: WLAN access status)', 'reserved by 3GPP (WLAN bearer)', 'reserved by 3GPP (PLI WLAN identifier)',
+];
+
+// TERMINAL PROFILE presets (device/model -> profile hex). Add new entries
+// here; the Configure dialog lists them by name.
+const TP_PRESETS = [
+	{ name: 'Xiaomi Mi A1 (BIP-capable handset, project default)', profile: 'FFFFFFFF7F9F00DFFF03021FE2000000C3FB000704117800710100000038428003' },
+	{ name: 'Quectel GSM module (AT+STKPD manual example)', profile: 'FFFFFFFF7F1F007FFF00001F230811060700' },
+];
+
+function tpNorm(hex) { return (hex || '').toUpperCase().replace(/[^0-9A-F]/g, ''); }
+
+function tpValid(hex) { return hex.length > 0 && hex.length % 2 === 0 && hex.length <= 510; }
+
+function tpGetBit(hex, n) {
+	const byteIdx = n >> 3;
+	if (byteIdx * 2 + 2 > hex.length) return null;
+	const b = parseInt(hex.substr(byteIdx * 2, 2), 16);
+	return !!(b & (0x80 >> (n & 7)));
+}
+
+function tpSetBit(hex, n, on) {
+	const bytes = hex.match(/../g) || [];
+	const byteIdx = n >> 3;
+	while (bytes.length <= byteIdx) bytes.push('00');
+	let b = parseInt(bytes[byteIdx], 16);
+	const mask = 0x80 >> (n & 7);
+	b = on ? (b | mask) : (b & ~mask);
+	bytes[byteIdx] = b.toString(16).padStart(2, '0').toUpperCase();
+	return bytes.join('');
+}
+
+function tpBitLabel(n) {
+	if (n < TP_BITS.length) return TP_BITS[n];
+	return 'RFU (byte ' + ((n >> 3) + 1) + ' b' + (8 - (n & 7)) + ')';
+}
+
+function tpRenderForm() {
+	const el = document.getElementById('tp-form');
+	if (!el) return;
+	const hex = tpNorm(document.getElementById('tp-hex').value);
+	if (!tpValid(hex)) { el.innerHTML = ''; return; }
+	const bytes = hex.length / 2;
+	let html = '';
+	for (let bi = 0; bi < bytes; bi++) {
+		html += '<div class="mb-1.5"><div class="text-gray-500 dark:text-slate-400">' +
+			esc(t('Byte')) + ' ' + (bi + 1) + '</div><div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">';
+		for (let k = 0; k < 8; k++) {
+			const n = bi * 8 + k;
+			const label = tpBitLabel(n);
+			html += '<label class="flex items-center gap-1 min-w-0"><input type="checkbox" ' +
+				(tpGetBit(hex, n) ? 'checked ' : '') +
+				'onchange="tpToggle(' + n + ', this.checked)"> ' +
+				'<span class="truncate" title="' + escHtml('b' + (8 - k) + ' ' + label) + '">b' + (8 - k) + ' ' + esc(label) + '</span></label>';
+		}
+		html += '</div></div>';
+	}
+	el.innerHTML = html;
+}
+
+function tpToggle(n, on) {
+	const hex = tpNorm(document.getElementById('tp-hex').value);
+	if (!tpValid(hex)) return;
+	document.getElementById('tp-hex').value = tpSetBit(hex, n, on);
+	tpSyncPreset();
+}
+
+function tpHexInput() {
+	const err = document.getElementById('tp-error');
+	const hex = tpNorm(document.getElementById('tp-hex').value);
+	if (!tpValid(hex)) {
+		err.textContent = t('Profile must be non-empty hex with an even number of digits');
+		err.classList.remove('hidden');
+		document.getElementById('tp-form').innerHTML = '';
+		return;
+	}
+	err.classList.add('hidden');
+	tpRenderForm();
+	tpSyncPreset();
+}
+
+function tpSyncPreset() {
+	const sel = document.getElementById('tp-preset');
+	if (!sel) return;
+	const hex = tpNorm(document.getElementById('tp-hex').value);
+	const idx = TP_PRESETS.findIndex(p => p.profile === hex);
+	sel.value = idx >= 0 ? String(idx) : 'custom';
+}
+
+function tpPresetChanged() {
+	const sel = document.getElementById('tp-preset');
+	if (!sel || sel.value === 'custom') return;
+	const p = TP_PRESETS[parseInt(sel.value, 10)];
+	if (!p) return;
+	document.getElementById('tp-hex').value = p.profile;
+	tpHexInput();
+}
+
+function tpStatusMsg(text, cls) {
+	const el = document.getElementById('tp-status');
+	if (!el) return;
+	el.textContent = text || '';
+	el.className = 'text-xs ' + (cls || 'text-gray-400 dark:text-slate-500');
+}
+
+async function tpRefresh() {
+	try {
+		const d = await pysimFetch('/api/terminal-profile');
+		const el = document.getElementById('tp-current');
+		if (el) el.textContent = d.profile
+			? d.profile + '  (' + d.bytes + ' ' + t('bytes') + ')'
+			: t('not configured');
+		return d;
+	} catch (e) {
+		const el = document.getElementById('tp-current');
+		if (el && el.textContent === t('Loading...')) el.textContent = '—';
+		return null;
+	}
+}
+
+async function tpOpen() {
+	const d = await tpRefresh();
+	const sel = document.getElementById('tp-preset');
+	let html = '<option value="custom">' + esc(t('Custom')) + '</option>';
+	TP_PRESETS.forEach((p, i) => {
+		html += '<option value="' + i + '">' + esc(p.name) + '</option>';
+	});
+	sel.innerHTML = html;
+	document.getElementById('tp-hex').value = (d && d.profile) || '';
+	document.getElementById('tp-error').classList.add('hidden');
+	document.getElementById('tp-modal').classList.remove('hidden');
+	tpHexInput();
+}
+
+function tpClose() { document.getElementById('tp-modal').classList.add('hidden'); }
+
+async function tpApply() {
+	const hex = tpNorm(document.getElementById('tp-hex').value);
+	if (!tpValid(hex)) { tpHexInput(); return; }
+	try {
+		const resp = await pysimFetch('/api/terminal-profile', { profile: hex });
+		if (!resp.ok) { tpStatusMsg(resp.error || t('Error'), 'text-red-500'); return; }
+		tpClose();
+		tpStatusMsg(t('Applied') + ' (' + resp.profile.length / 2 + ' ' + t('bytes') + ')' +
+			(resp.menu ? ' · ' + t('menu updated') : ''), 'text-emerald-600 dark:text-emerald-400');
+		tpRefresh();
+	} catch (e) {
+		tpStatusMsg(String(e.message || e), 'text-red-500');
+	}
+}
+
+async function tpSend() {
+	try {
+		const resp = await pysimFetch('/api/terminal-profile', {});
+		if (!resp.ok) { tpStatusMsg(resp.error || t('Error'), 'text-red-500'); return; }
+		tpStatusMsg(t('Sent') + (resp.menu ? ' · ' + t('menu updated') : ''),
+			'text-emerald-600 dark:text-emerald-400');
+		tpRefresh();
+		stkCheckMenu();
+		pysimEventsRender();
+		pysimProactiveLogRender();
+	} catch (e) {
+		tpStatusMsg(String(e.message || e), 'text-red-500');
+	}
+}
+
+
 
 async function pysimEventsRender() {
 	const el = document.getElementById('pysim-event-list');
@@ -8334,13 +8638,122 @@ async function pysimPliSave() {
 }
 
 // ===== custom files =====
+// A custom file has a canonical full path rooted at MF or an ADF
+// ("MF/A153/4954", "ADF.USIM/6F07"); the parent DF must be defined as a
+// custom file before a file under it can be added. Entries are stored as
+// {path, name, kind} with kind derived from the alias prefix (EF./DF.).
 let pysimCustomFiles = [];
+let _pysimCustomDropped = 0;
+const CUSTOM_ROOTS = ['MF', 'ADF.USIM', 'ADF.ISIM'];
+
+function pysimCustomNormPath(path) {
+	let p = (path || '').trim().toUpperCase().replace(/\s+/g, '');
+	if (!p) return '';
+	const parts = p.split('/').filter(Boolean);
+	if (parts[0] === '3F00') parts[0] = 'MF';
+	return parts.join('/');
+}
+
+function pysimCustomKindForName(name) {
+	const n = (name || '').toUpperCase();
+	if (n.startsWith('DF.')) return 'df';
+	if (n.startsWith('EF.')) return 'ef';
+	return null;
+}
+
+function pysimCustomFid(entry) { return entry.path.split('/').pop(); }
+function pysimCustomParent(entry) { return entry.path.split('/').slice(0, -1).join('/'); }
+function pysimCustomRoot(entry) { return entry.path.split('/')[0]; }
+
+function pysimCustomValidate(root, parentPath, fid, name, entries, editIndex) {
+	if (!CUSTOM_ROOTS.includes(root)) {
+		return {error: t('Root must be MF, ADF.USIM or ADF.ISIM')};
+	}
+	fid = (fid || '').trim().toUpperCase();
+	if (!/^[0-9A-F]{4}$/.test(fid)) return {error: t('FID must be 4 hex characters')};
+	const kind = pysimCustomKindForName(name);
+	if (!kind) return {error: t('Alias must start with "EF." or "DF."')};
+	if (parentPath !== root) {
+		const idx = entries.findIndex((e, i) => i !== editIndex && e.path === parentPath);
+		if (idx < 0) return {error: t('Parent DF is not defined as a custom file:') + ' ' + parentPath};
+		if (entries[idx].kind !== 'df') return {error: t('Parent is not a DF:') + ' ' + parentPath};
+	}
+	const path = (parentPath === root ? root : parentPath) + '/' + fid;
+	if (entries.some((e, i) => i !== editIndex && e.path === path)) {
+		return {error: t('File already defined:') + ' ' + path};
+	}
+	return {error: null, path: path, kind: kind};
+}
+
+function pysimCustomRewriteDescendants(entries, oldPath, newPath) {
+	for (const e of entries) {
+		if (e.path.startsWith(oldPath + '/')) {
+			e.path = newPath + e.path.slice(oldPath.length);
+		}
+	}
+}
+
+// Normalize a list of raw entries (storage or import): legacy "3F00/..." and
+// relative "a153/4954" forms are resolved against the custom DFs; entries
+// that cannot be resolved to a valid canonical path are dropped.
+function pysimCustomNormalizeEntries(raw, existing) {
+	const pending = raw.filter(e => e && e.path && e.name)
+		.map((e, i) => ({idx: i, path: pysimCustomNormPath(e.path),
+			name: String(e.name).toUpperCase()}));
+	const base = (existing || []).slice();
+	const accepted = base.slice();
+	const resolved = [];
+	let dropped = 0;
+	let progress = true;
+	while (pending.length && progress) {
+		progress = false;
+		for (let i = 0; i < pending.length; i++) {
+			const e = pending[i];
+			let path = e.path;
+			const parts = path.split('/');
+			if (!CUSTOM_ROOTS.includes(parts[0])) {
+				// relative: resolve the leading FID against a known custom DF
+				const df = accepted.find(x => x.kind === 'df' && pysimCustomFid(x) === parts[0]);
+				if (!df) continue;
+				path = df.path + '/' + parts.slice(1).join('/');
+			}
+			const root = path.split('/')[0];
+			const res = pysimCustomValidate(root, pysimCustomParent({path: path}),
+				pysimCustomFid({path: path}), e.name, accepted, null);
+			if (res.error) {
+				pending.splice(i, 1);
+				dropped++;
+				i--;
+				progress = true;
+				continue;
+			}
+			accepted.push({path: res.path, name: e.name, kind: res.kind});
+			resolved.push({idx: e.idx, entry: accepted[accepted.length - 1]});
+			pending.splice(i, 1);
+			i--;
+			progress = true;
+		}
+	}
+	dropped += pending.length;
+	resolved.sort((a, b) => a.idx - b.idx);
+	return {files: base.concat(resolved.map(r => r.entry)), dropped: dropped};
+}
 
 function pysimCustomLoad() {
+	let raw = [];
 	try {
 		const d = localStorage.getItem('pysim_custom_files');
-		pysimCustomFiles = d ? JSON.parse(d) : [];
-	} catch (e) { pysimCustomFiles = []; }
+		raw = d ? JSON.parse(d) : [];
+	} catch (e) { raw = []; }
+	if (!Array.isArray(raw)) raw = [];
+	const res = pysimCustomNormalizeEntries(raw, []);
+	pysimCustomFiles = res.files;
+	_pysimCustomDropped = res.dropped;
+	if (res.dropped) {
+		console.warn('custom files: dropped ' + res.dropped + ' invalid legacy entr' +
+			(res.dropped === 1 ? 'y' : 'ies'));
+	}
+	pysimCustomSave();
 }
 
 function pysimCustomSave() {
@@ -8349,25 +8762,48 @@ function pysimCustomSave() {
 
 let pysimCustomEditIndex = null;
 
-function pysimCustomSubmit() {
-	const pathEl = document.getElementById('pysim-cf-path');
-	const nameEl = document.getElementById('pysim-cf-name');
-	const path = pathEl.value.trim().toUpperCase();
-	const name = nameEl.value.trim();
-	if (!path || !name) return;
-	if (!name.startsWith('EF.') && !name.startsWith('DF.')) {
-		alert('Alias must start with "EF." or "DF."');
-		return;
+function pysimCustomRenderRoots() {
+	const sel = document.getElementById('pysim-cf-root');
+	if (!sel) return;
+	const prev = sel.value;
+	sel.innerHTML = CUSTOM_ROOTS.map(r => '<option value="' + esc(r) + '">' + esc(r) + '</option>').join('');
+	if (CUSTOM_ROOTS.includes(prev)) sel.value = prev;
+}
+
+function pysimCustomRenderParents() {
+	const sel = document.getElementById('pysim-cf-parent');
+	if (!sel) return;
+	const root = document.getElementById('pysim-cf-root').value || CUSTOM_ROOTS[0];
+	const prev = sel.value;
+	let html = '<option value="' + esc(root) + '">' + esc(t('— root —')) + '</option>';
+	for (const c of pysimCustomFiles) {
+		if (c.kind !== 'df' || pysimCustomRoot(c) !== root) continue;
+		html += '<option value="' + esc(c.path) + '">' + esc(c.path + ' → ' + c.name) + '</option>';
 	}
-	const parts = path.split('/').filter(Boolean);
-	if (parts.length < 2) { alert('Path must have at least 2 parts, e.g. 3F00/6F46'); return; }
-	const fid = parts[parts.length - 1];
-	const parentFid = parts[parts.length - 2];
-	if (pysimCustomFiles.some((c, i) => i !== pysimCustomEditIndex && c.path.toUpperCase() === path)) { alert('Path already exists'); return; }
+	sel.innerHTML = html;
+	if (prev && (prev === root || pysimCustomFiles.some(c => c.path === prev && c.kind === 'df'))) {
+		sel.value = prev;
+	}
+}
+
+function pysimCustomRootChanged() {
+	pysimCustomRenderParents();
+}
+
+function pysimCustomSubmit() {
+	const root = document.getElementById('pysim-cf-root').value;
+	const parentPath = document.getElementById('pysim-cf-parent').value || root;
+	const fid = document.getElementById('pysim-cf-fid').value;
+	const nameEl = document.getElementById('pysim-cf-name');
+	const name = nameEl.value.trim();
+	const res = pysimCustomValidate(root, parentPath, fid, name, pysimCustomFiles, pysimCustomEditIndex);
+	if (res.error) { alert(res.error); return; }
 	if (pysimCustomEditIndex !== null) {
-		pysimCustomFiles[pysimCustomEditIndex] = { path, name, fid, parentFid };
+		const oldPath = pysimCustomFiles[pysimCustomEditIndex].path;
+		if (oldPath !== res.path) pysimCustomRewriteDescendants(pysimCustomFiles, oldPath, res.path);
+		pysimCustomFiles[pysimCustomEditIndex] = {path: res.path, name: name, kind: res.kind};
 	} else {
-		pysimCustomFiles.push({ path, name, fid, parentFid });
+		pysimCustomFiles.push({path: res.path, name: name, kind: res.kind});
 	}
 	pysimCustomSave();
 	pysimCustomRender();
@@ -8378,20 +8814,24 @@ function pysimCustomEdit(i) {
 	const c = pysimCustomFiles[i];
 	if (!c) return;
 	pysimCustomEditIndex = i;
-	const pathEl = document.getElementById('pysim-cf-path');
+	pysimCustomRenderRoots();
+	document.getElementById('pysim-cf-root').value = pysimCustomRoot(c);
+	pysimCustomRenderParents();
+	document.getElementById('pysim-cf-parent').value = pysimCustomParent(c);
+	document.getElementById('pysim-cf-fid').value = pysimCustomFid(c);
 	document.getElementById('pysim-cf-name').value = c.name;
-	pathEl.value = c.path;
 	const btn = document.getElementById('pysim-cf-add-btn');
 	btn.textContent = t('Save');
 	btn.setAttribute('data-l10n', 'Save');
 	document.getElementById('pysim-cf-cancel-btn').classList.remove('hidden');
-	pathEl.focus();
+	document.getElementById('pysim-cf-fid').focus();
 }
 
 function pysimCustomEditCancel() {
 	pysimCustomEditIndex = null;
-	document.getElementById('pysim-cf-path').value = '';
+	document.getElementById('pysim-cf-fid').value = '';
 	document.getElementById('pysim-cf-name').value = '';
+	pysimCustomRenderParents();
 	const btn = document.getElementById('pysim-cf-add-btn');
 	btn.textContent = t('Add');
 	btn.setAttribute('data-l10n', 'Add');
@@ -8399,23 +8839,41 @@ function pysimCustomEditCancel() {
 }
 
 function pysimCustomRemove(i) {
-	if (pysimCustomEditIndex !== null) {
-		if (i === pysimCustomEditIndex) pysimCustomEditCancel();
-		else if (i < pysimCustomEditIndex) pysimCustomEditIndex--;
+	const c = pysimCustomFiles[i];
+	if (!c) return;
+	const children = pysimCustomFiles.filter(e => e.path.startsWith(c.path + '/'));
+	if (children.length) {
+		if (!confirm(t('Delete') + ' ' + c.path + ' ' + t('and') + ' ' + children.length + ' ' +
+			t('child file(s)?'))) return;
 	}
-	pysimCustomFiles.splice(i, 1);
+	pysimCustomFiles = pysimCustomFiles.filter((e, j) =>
+		j !== i && !e.path.startsWith(c.path + '/'));
+	if (pysimCustomEditIndex !== null) {
+		if (pysimCustomEditIndex === i) pysimCustomEditCancel();
+		else if (pysimCustomEditIndex > i) pysimCustomEditIndex--;
+	}
 	pysimCustomSave();
 	pysimCustomRender();
 }
 
 function pysimCustomRender() {
 	const el = document.getElementById('pysim-cf-list');
-	if (!pysimCustomFiles.length) { el.innerHTML = '<span class="text-gray-400">No custom files defined.</span>'; return; }
+	if (!el) return;
 	let html = '';
+	if (_pysimCustomDropped) {
+		html += '<div class="text-amber-600 dark:text-amber-400 py-1">' + esc(t('Dropped invalid legacy entries:')) +
+			' ' + _pysimCustomDropped + '</div>';
+	}
+	if (!pysimCustomFiles.length) {
+		html += '<span class="text-gray-400">' + esc(t('No custom files defined.')) + '</span>';
+		el.innerHTML = html;
+		return;
+	}
 	for (let i = 0; i < pysimCustomFiles.length; i++) {
 		const c = pysimCustomFiles[i];
 		html += '<div class="flex items-center gap-2 py-1 border-b border-gray-200 dark:border-slate-700">';
 		html += '<span class="text-gray-500">' + esc(c.path) + '</span> <span class="text-blue-600 dark:text-blue-400">→</span> <b>' + esc(c.name) + '</b>';
+		html += '<span class="text-gray-400">(' + esc(c.kind.toUpperCase()) + ')</span>';
 		html += '<span class="ml-auto flex gap-2">';
 		html += '<button onclick="pysimCustomEdit(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + esc(t('Edit')) + '</button>';
 		html += '<button onclick="pysimCustomRemove(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">' + esc(t('Delete')) + '</button>';
@@ -8441,25 +8899,13 @@ async function pysimCustomImport(text) {
 		if (text == null) text = await navigator.clipboard.readText();
 		const imported = JSON.parse(text);
 		if (!Array.isArray(imported)) throw new Error('Expected an array');
-		let added = 0;
-		for (const entry of imported) {
-			if (!entry.path || !entry.name) continue;
-			const path = entry.path.toUpperCase();
-			if (!pysimCustomFiles.some(c => c.path.toUpperCase() === path)) {
-				const parts = path.split('/').filter(Boolean);
-				pysimCustomFiles.push({
-					path: path,
-					name: entry.name.toUpperCase(),
-					fid: (entry.fid || parts[parts.length - 1]).toUpperCase(),
-					parentFid: (entry.parentFid || parts[parts.length - 2]).toUpperCase(),
-				});
-				added++;
-			}
-		}
+		const res = pysimCustomNormalizeEntries(imported, pysimCustomFiles);
+		const added = res.files.length - pysimCustomFiles.length;
+		pysimCustomFiles = res.files;
 		pysimCustomSave();
 		pysimCustomRender();
 		const el = document.getElementById('pysim-cf-io');
-		el.value = 'Imported ' + added + ' files.';
+		el.value = 'Imported ' + added + ' file(s)' + (res.dropped ? ', dropped ' + res.dropped : '') + '.';
 		setTimeout(() => { el.classList.add('hidden'); }, 2000);
 	} catch (e) {
 		alert('Import error: ' + e.message);
@@ -8487,6 +8933,8 @@ function pysimCustomImportField() {
 
 // Init custom files
 pysimCustomLoad();
+pysimCustomRenderRoots();
+pysimCustomRenderParents();
 
 // ===== Profiler =====
 let profiles = [];
@@ -9922,14 +10370,10 @@ async function profilerRunRule(r, source) {
 
 function profilerCustomNameForPath(path) {
 	if (!path) return null;
-	const norm = path.toUpperCase();
+	const norm = pysimCustomNormPath(path);
+	if (!norm) return null;
 	for (const c of pysimCustomFiles) {
-		const parts = c.path.split('/').filter(Boolean);
-		if (!parts.length) continue;
-		let segs;
-		if (parts[0].toUpperCase() === '3F00') segs = ['MF'].concat(parts.slice(1));
-		else segs = parts;
-		if (segs.join('/').toUpperCase() === norm) return c.name;
+		if (pysimCustomNormPath(c.path) === norm) return c.name;
 	}
 	return null;
 }
@@ -10786,6 +11230,36 @@ const LANG_RU = {
 	'Pass-through requires the target host and port': 'Для режима проброса нужны host и port внешнего сервера',
 	'ADM verified': 'ADM подтверждён',
 	'ADM not verified': 'ADM не подтверждён',
+	'TERMINAL PROFILE': 'TERMINAL PROFILE',
+	'Preset (device model)': 'Пресет (модель устройства)',
+	'Profile (hex)': 'Профиль (hex)',
+	'Apply': 'Применить',
+	'Configure': 'Настроить',
+	'Custom': 'Другой',
+	'not configured': 'не задан',
+	'bytes': 'байт',
+	'Byte': 'Байт',
+	'Applied': 'Применено',
+	'Sent': 'Отправлено',
+	'menu updated': 'меню обновлено',
+	'Profile must be non-empty hex with an even number of digits': 'Профиль должен быть непустым hex с чётным числом цифр',
+	'Bits are decoded per TS 102 223 5.2; the hex field is authoritative and bytes/bits outside the table are preserved as-is.': 'Биты декодируются по TS 102 223 5.2; поле hex — основное, байты и биты вне таблицы сохраняются как есть.',
+	'Root (MF / ADF)': 'Корень (MF / ADF)',
+	'Parent DF': 'Родительский DF',
+	'FID (4 hex)': 'FID (4 hex)',
+	'Alias (EF. / DF.)': 'Псевдоним (EF. / DF.)',
+	'Full path from MF or an ADF; the parent DF must be defined here first.': 'Полный путь от MF или ADF; родительский DF должен быть создан здесь заранее.',
+	'Root must be MF, ADF.USIM or ADF.ISIM': 'Корень должен быть MF, ADF.USIM или ADF.ISIM',
+	'FID must be 4 hex characters': 'FID должен состоять из 4 hex-символов',
+	'Alias must start with "EF." or "DF."': 'Псевдоним должен начинаться с «EF.» или «DF.»',
+	'Parent DF is not defined as a custom file:': 'Родительский DF не создан как пользовательский файл:',
+	'Parent is not a DF:': 'Родитель не является DF:',
+	'File already defined:': 'Файл уже задан:',
+	'— root —': '— корень —',
+	'and': 'и',
+	'child file(s)?': 'дочерних файлов?',
+	'Dropped invalid legacy entries:': 'Отброшено некорректных старых записей:',
+	'No custom files defined.': 'Пользовательские файлы не заданы.',
 };
 let currentLang = 'en';
 

@@ -41,6 +41,8 @@ connect and warns if versions are incompatible.
 | `/api/proactive-log` | GET | Last 50 proactive commands |
 | `/api/status-poll` | POST | Manual STATUS poll + FETCH if 91XX |
 | `/api/rescue` | POST | Re-send TERMINAL PROFILE to recover CAT session |
+| `/api/terminal-profile` | GET | Current TERMINAL PROFILE (hex) + CLI default |
+| `/api/terminal-profile` | POST | Set and re-send the TERMINAL PROFILE at runtime (in-memory) |
 | `/api/poll-status` | GET | Background STATUS polling state |
 | `/api/poll-toggle` | POST | Enable/disable background polling |
 | `/api/pli-qualifiers` | GET | List of qualifier codes with descriptions |
@@ -423,11 +425,36 @@ proactive chain (FETCH → TERMINAL RESPONSE) until it settles. Returns:
 ### `POST /api/rescue`
 
 Recovers a stuck CAT session by clearing the pending state and re-sending the
-TERMINAL PROFILE. Returns whether a menu and event list were captured again:
+TERMINAL PROFILE. Returns whether a menu and event list were captured again
+(plus the profile used):
 
 ```json
-{"menu": true, "events": [4, 5]}
+{"ok": true, "profile": "FFFF...", "menu": true, "events": [4, 5]}
 ```
+
+### `GET /api/terminal-profile`
+
+The TERMINAL PROFILE currently in effect and the CLI default (for reference;
+runtime changes are in-memory only):
+
+```json
+{"profile": "FFFFFFFF7F9F00DFFF03021FE2000000C3FB000704117800710100000038428003",
+ "bytes": 33,
+ "cli_default": "FFFFFFFF7F9F00DFFF03021FE2000000C3FB000704117800710100000038428003"}
+```
+
+### `POST /api/terminal-profile`
+
+Sets the TERMINAL PROFILE at runtime (in-memory) and re-sends it to the card,
+resetting the STK session state exactly like `/api/rescue`. Body with a new
+profile, or `{}` to re-send the current one:
+
+```json
+{"profile": "FFFFFFFF7F1F007FFF00001F230811060700"}
+```
+
+Hex, even number of digits, 1–255 bytes. Response is the same shape as
+`/api/rescue` (with `ok: true`); invalid hex is a 400, no reader a 503.
 
 ### `GET /api/poll-status`
 

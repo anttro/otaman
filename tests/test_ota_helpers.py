@@ -1028,3 +1028,43 @@ class CapApduSequenceTest(unittest.TestCase):
         resp = _scp81_gen_install({'cap_hex': '00'})
         self.assertFalse(resp['ok'])
         self.assertIn('cap parse failed', resp['error'])
+
+
+class TerminalProfileTest(unittest.TestCase):
+    """Runtime TERMINAL PROFILE: hex validation and re-send."""
+
+    def test_validate_tp_hex(self):
+        from pysim_otaman_server.server import _validate_tp_hex
+        self.assertEqual(_validate_tp_hex('ff 00 80'), ('FF0080', None))
+        self.assertEqual(_validate_tp_hex('80FF'), ('80FF', None))
+        for bad in ('', '   ', 'F', 'XYZ', 'FF0', 'FF' * 256):
+            h, err = _validate_tp_hex(bad)
+            self.assertIsNone(h, bad)
+            self.assertTrue(err, bad)
+
+    def test_resend_terminal_profile_resets_state_and_sends(self):
+        import types
+        from pysim_otaman_server import server as srv
+        server_obj = types.SimpleNamespace(
+            terminal_profile='FF00', stk_pending={'type': 'display_text'},
+            menu_active=True, event_list=[0x03], sim_menu='old')
+        seen = []
+        old_send = srv._send_terminal_profile
+
+        def fake_send(scc, tp):
+            seen.append(tp)
+            return 'menu', [0x09]
+
+        srv._send_terminal_profile = fake_send
+        try:
+            resp = srv._resend_terminal_profile(server_obj, object())
+        finally:
+            srv._send_terminal_profile = old_send
+        self.assertTrue(resp['ok'])
+        self.assertEqual(resp['profile'], 'FF00')
+        self.assertEqual(seen, ['FF00'])
+        self.assertIsNone(server_obj.stk_pending)
+        self.assertFalse(server_obj.menu_active)
+        self.assertEqual(server_obj.event_list, [0x09])
+        self.assertEqual(server_obj.sim_menu, 'menu')
+        self.assertTrue(resp['menu'])
