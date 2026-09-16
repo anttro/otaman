@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.3</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.10</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -926,7 +926,6 @@
 				</div>
 				<div class="border border-gray-200 dark:border-slate-700 rounded p-3">
 					<div class="mb-1 text-sm text-gray-500 dark:text-slate-400" data-l10n="TERMINAL PROFILE">TERMINAL PROFILE</div>
-					<div id="tp-current" class="text-xs font-mono text-gray-600 dark:text-slate-400 break-all max-w-xs mb-2" data-l10n="Loading...">Loading...</div>
 					<div class="flex items-center gap-2">
 						<button id="tp-send-btn" data-needs="card" onclick="tpSend()" class="px-2.5 py-1 text-sm rounded bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Send">Send</button>
 						<button id="tp-configure-btn" data-needs="server" onclick="tpOpen()" class="px-2.5 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Configure">Configure</button>
@@ -1155,15 +1154,13 @@
 	<div id="tp-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
 		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[85vh] overflow-auto">
 			<h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="TERMINAL PROFILE">TERMINAL PROFILE</h3>
-			<div class="flex flex-wrap items-end gap-3 mb-3">
-				<div>
-					<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Preset (device model)">Preset (device model)</label>
-					<select id="tp-preset" onchange="tpPresetChanged()" class="w-72 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800"></select>
-				</div>
-				<div class="flex-1 min-w-[280px]">
-					<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile (hex)">Profile (hex)</label>
-					<input id="tp-hex" oninput="tpHexInput()" spellcheck="false" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
-				</div>
+			<div class="mb-3">
+				<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Preset (device model)">Preset (device model)</label>
+				<select id="tp-preset" onchange="tpPresetChanged()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800"></select>
+			</div>
+			<div class="mb-3">
+				<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile (hex)">Profile (hex)</label>
+				<input id="tp-hex" oninput="tpHexInput()" spellcheck="false" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
 			</div>
 			<div id="tp-error" class="hidden text-xs text-red-500 mb-2"></div>
 			<div class="text-xs text-gray-500 dark:text-slate-400 mb-2" data-l10n="Bits are decoded per TS 102 223 5.2; the hex field is authoritative and bytes/bits outside the table are preserved as-is.">Bits are decoded per TS 102 223 5.2; the hex field is authoritative and bytes/bits outside the table are preserved as-is.</div>
@@ -6967,10 +6964,15 @@ const PLI_QUALIFIERS = [
 // annex bits; bytes 1..33). Index 0 = bit 1 = first byte b8; bit n is
 // byte floor(n/8)+1, mask 0x80 >> (n%8). Bytes beyond 33 fall back to
 // generic labels in the UI.
+// TERMINAL PROFILE bit allocation: bytes 1..39 per ETSI TS 102 223
+// V18.3.0 5.2, 3GPP-defined bits named per ETSI TS 131 111 V18.12.0 5.2
+// (no "reserved by 3GPP" placeholders). Index 0 = bit 1 = first byte b8;
+// bit n is byte floor(n/8)+1, mask 0x80 >> (n%8). Bytes beyond the
+// table fall back to generic labels in the UI.
 const TP_BITS = [
   'Profile download', 'SMS-PP data download', 'Cell Broadcast data download', 'Menu selection',
-  'SMS-PP data download', 'Timer expiration', 'USSD string DO support in CC by USIM', 'Call Control by NAA',
-  'Command result', 'Call Control by NAA', 'Call Control by NAA', 'MO short message control support',
+  'SMS-PP data download', 'Timer expiration', 'USSD string data object support in Call Control by USIM', 'Call Control by NAA',
+  'Command result', 'Call Control by NAA', 'Call Control by NAA', 'MO short message control by USIM',
   'Call Control by NAA', 'UCS2 Entry supported', 'UCS2 Display supported', 'Display Text',
   'Proactive UICC: DISPLAY TEXT', 'Proactive UICC: GET INKEY', 'Proactive UICC: GET INPUT', 'Proactive UICC: MORE TIME',
   'Proactive UICC: PLAY TONE', 'Proactive UICC: POLL INTERVAL', 'Proactive UICC: POLLING OFF', 'Proactive UICC: REFRESH',
@@ -6980,7 +6982,7 @@ const TP_BITS = [
   'Event: Location status', 'Event: User activity', 'Event: Idle screen available', 'Event: Card reader status',
   'Event: Language selection', 'Event: Browser Termination', 'Event: Data available', 'Event: Channel status',
   'Event: Access Technology Change', 'Event: Display parameters changed', 'Event: Local Connection', 'Event: Network Search Mode Change',
-  'Proactive UICC: POWER ON CARD', 'Proactive UICC: POWER OFF CARD', 'Proactive UICC: PERFORM CARD RESET', 'Proactive UICC: GET READER STATUS (Card reader status)',
+  'Proactive UICC: POWER ON CARD', 'Proactive UICC: POWER OFF CARD', 'Proactive UICC: PERFORM CARD APDU', 'Proactive UICC: GET READER STATUS (Card reader status)',
   'Proactive UICC: GET READER STATUS (Card reader identifier)', 'RFU', 'RFU', 'RFU',
   'Proactive UICC: TIMER MANAGEMENT (start, stop)', 'Proactive UICC: TIMER MANAGEMENT (get current value)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (date, time and time zone)', 'GET INKEY',
   'SET UP IDLE MODE TEXT', 'RUN AT COMMAND', 'SETUP CALL', 'Call Control by NAA',
@@ -7001,24 +7003,24 @@ const TP_BITS = [
   'RFU', 'RFU', 'RFU', 'RFU',
   'RFU', 'RFU', 'RFU', 'RFU',
   'BIP: TCP, UICC in client mode, remote connection', 'BIP: UDP, UICC in client mode, remote connection', 'BIP: TCP, UICC in server mode', 'BIP: TCP, UICC in client mode, local connection',
-  'BIP: UDP, UICC in client mode, local connection', 'BIP: direct communication channel', 'reserved by 3GPP (E-UTRAN)', 'reserved by 3GPP (HSDPA)',
+  'BIP: UDP, UICC in client mode, local connection', 'BIP: direct communication channel', 'E-UTRAN', 'HSDPA',
   'Proactive UICC: DISPLAY TEXT (variable timeout)', 'Proactive UICC: GET INKEY (help while waiting for immediate response or variable timeout)', 'USB (BIP supported bearer)', 'Proactive UICC: GET INKEY (variable timeout)',
-  'Proactive UICC: PROVIDE LOCAL INFORMATION (ESN)', 'reserved by 3GPP (Call control on GPRS)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (IMEISV)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (Search mode change)',
-  'reserved by TIA/EIA-136-270 (protocol version support)', 'RFU', 'RFU', 'RFU',
+  'Proactive UICC: PROVIDE LOCAL INFORMATION (ESN)', 'CALL CONTROL on GPRS', 'Proactive UICC: PROVIDE LOCAL INFORMATION (IMEISV)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (Search mode change)',
+  'Protocol version support (TIA/EIA-136-270)', 'RFU', 'RFU', 'RFU',
   'RFU', 'RFU', 'RFU', 'RFU',
-  'reserved by CCAT', 'reserved by CCAT', 'reserved by CCAT', 'reserved by CCAT',
-  'reserved by CCAT', 'reserved by CCAT', 'reserved by CCAT', 'reserved by CCAT',
+  'Reserved for CCAT', 'Reserved for CCAT', 'Reserved for CCAT', 'Reserved for CCAT',
+  'Reserved for CCAT', 'Reserved for CCAT', 'Reserved for CCAT', 'Reserved for CCAT',
   'WML', 'XHTML', 'HTML', 'CHTML',
   'RFU', 'RFU', 'RFU', 'RFU',
-  'reserved by 3GPP (UTRAN PS with extended parameters)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (battery state)', 'Proactive UICC: PLAY TONE (melody/themed tones)', 'Multi-media calls in SET UP CALL',
-  'reserved by 3GPP (Toolkit-initiated GBA)', 'Proactive UICC: RETRIEVE MULTIMEDIA MESSAGE', 'Proactive UICC: SUBMIT MULTIMEDIA MESSAGE', 'Proactive UICC: DISPLAY MULTIMEDIA MESSAGE',
+  'Support of UTRAN PS with extended parameters', 'Proactive UICC: PROVIDE LOCAL INFORMATION (battery state)', 'Proactive UICC: PLAY TONE (melody/themed tones)', 'Multi-media calls in SET UP CALL',
+  'Toolkit-initiated GBA', 'Proactive UICC: RETRIEVE MULTIMEDIA MESSAGE', 'Proactive UICC: SUBMIT MULTIMEDIA MESSAGE', 'Proactive UICC: DISPLAY MULTIMEDIA MESSAGE',
   'Proactive UICC: SET FRAMES', 'Proactive UICC: GET FRAMES STATUS', 'MMS notification download', 'Alpha identifier in REFRESH',
-  'reserved by 3GPP (Geographical location reporting)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (MEID)', 'reserved by 3GPP (PLI NMR for multiple access technologies)', 'reserved by 3GPP/3GPP2 (USSD data download and application mode)',
+  'Geographical Location Reporting', 'Proactive UICC: PROVIDE LOCAL INFORMATION (MEID)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (NMR (UTRAN/E-UTRAN/Satellite E-UTRAN/NG-RAN/Satellite NG-RAN))', 'USSD Data download and application mode',
   'Maximum number of frames supported (value field)', 'RFU', 'RFU', 'RFU',
   'RFU', 'RFU', 'RFU', 'RFU',
-  'Event: Browsing status', 'Event: MMS transfer status', 'Event: Frame information changed', 'reserved by 3GPP (Event: I-WLAN access status)',
-  'reserved by 3GPP (Event: Network rejection)', 'Event: HCI connectivity', 'reserved by 3GPP (E-UTRAN in Event Network Rejection)', 'Multiple access technologies supported (Event Access Technology Change / PLI)',
-  'reserved by 3GPP (Event: CSG cell selection)', 'Event: Contactless state request', 'RFU', 'RFU',
+  'Event: Browsing status', 'Event: MMS transfer status', 'Event: Frame information changed', 'Event: I-WLAN Access status',
+  'Event: Network Rejection for GERAN/UTRAN', 'Event: HCI connectivity', 'Event: Network Rejection for E-UTRAN/Satellite E-UTRAN', 'Multiple access technologies supported (Event Access Technology Change / PLI)',
+  'Event: CSG Cell Selection', 'Event: Contactless state request', 'RFU', 'RFU',
   'RFU', 'RFU', 'RFU', 'RFU',
   'RFU', 'RFU', 'RFU', 'RFU',
   'RFU', 'RFU', 'RFU', 'RFU',
@@ -7026,14 +7028,26 @@ const TP_BITS = [
   'Font size large', 'Font size small', 'RFU', 'RFU',
   'Style normal', 'Style bold', 'Style italic', 'Style underlined',
   'Style strikethrough', 'Style text foreground colour', 'Style text background colour', 'RFU',
-  'reserved by 3GPP (I-WLAN bearer)', 'reserved by 3GPP (PLI WSID of the current I-WLAN connection)', 'TERMINAL APPLICATIONS', 'reserved by 3GPP (Steering of Roaming REFRESH)',
+  'I-WLAN bearer support', 'Proactive UICC: PROVIDE LOCAL INFORMATION (WSID of the current I-WLAN connection)', 'TERMINAL APPLICATIONS', '"Steering of Roaming" REFRESH support',
   'RFU', 'RFU', 'RFU', 'RFU',
-  'Proactive UICC: Contactless State Changed', 'reserved by 3GPP (CSG cell discovery)', 'Confirmation parameters for OPEN CHANNEL in Terminal Server mode', 'reserved by 3GPP (Communication control for IMS)',
-  'CAT over the modem interface', 'reserved by 3GPP (Incoming IMS data event)', 'reserved by 3GPP (IMS registration event)', 'Proactive UICC: Profile/Envelope/Command Container, ENCAPSULATED SESSION CONTROL',
-  'reserved by 3GPP (IMS as BIP bearer)', 'reserved by 3GPP (PLI H(e)NB IP address)', 'reserved by 3GPP (PLI H(e)NB surrounding macrocells)', 'Launch parameters for OPEN CHANNEL in Terminal Server mode',
+  'Proactive UICC: Contactless State Changed', 'Support of CSG cell discovery', 'Confirmation parameters for OPEN CHANNEL in Terminal Server mode', 'Communication Control for IMS',
+  'CAT over the modem interface', 'Support for Incoming IMS Data event', 'Support for IMS Registration event', 'Proactive UICC: Profile/Envelope/Command Container, ENCAPSULATED SESSION CONTROL',
+  'IMS support', 'Support of PROVIDE LOCAL INFORMATION, H(e)NB IP address', 'Support of PROVIDE LOCAL INFORMATION, H(e)NB surrounding macrocells', 'Launch parameters for OPEN CHANNEL in Terminal Server mode',
   'Direct communication channel for OPEN CHANNEL in Terminal Server mode', 'Security for Profile/Envelope/Command Container and ENCAPSULATED SESSION CONTROL', 'CAT service list for eCAT client', 'Refresh enforcement policy',
-  'DNS server address request for OPEN CHANNEL (packet data bearer)', 'Network Access Name reuse indication for CLOSE CHANNEL', 'Event: Poll Interval Negotiation', 'reserved by 3GPP (ProSe usage information reporting)',
-  'Proactive UICC: PROVIDE LOCAL INFORMATION (Supported Radio Access Technologies)', 'reserved by 3GPP (Event: WLAN access status)', 'reserved by 3GPP (WLAN bearer)', 'reserved by 3GPP (PLI WLAN identifier)',
+  'DNS server address request for OPEN CHANNEL (packet data bearer)', 'Network Access Name reuse indication for CLOSE CHANNEL', 'Event: Poll Interval Negotiation', 'ProSe usage information reporting',
+  'Proactive UICC: PROVIDE LOCAL INFORMATION (Supported Radio Access Technologies)', 'Event: WLAN Access status', 'WLAN bearer support', 'Proactive UICC: PROVIDE LOCAL INFORMATION (WLAN identifier of the current WLAN connection)',
+  'URI support for SEND SHORT MESSAGE', 'IMS URI supported for SET UP CALL', 'Media Type "Voice" supported for SET UP CALL and Call Control by USIM', 'Media Type "Video" supported for SET UP CALL and Call Control by USIM',
+  'Proactive UICC: PROVIDE LOCAL INFORMATION (E-UTRAN Timing Advance Information)', 'REFRESH with "eUICC Profile State Change" mode', 'Extended Rejection Cause Code in Event: Network Rejection for E-UTRAN', 'Reserved for future use',
+  'Proactive UICC: GET INPUT (Variable Time out)', 'Data Connection Status Change Event support – PDP Connection', 'Data Connection Status Change Event support – PDN Connection', 'REFRESH with "Application Update" mode',
+  'Proactive UICC: LSI COMMAND with "Proactive session request"', 'Proactive UICC: LSI COMMAND with "UICC Platform Reset"', 'RFU', 'RFU',
+  'Data Connection Status Change Event support – PDU Connection', 'Event: Network Rejection for NG-RAN', 'Non-IP Data Delivery support', 'Support of PROVIDE LOCAL INFORMATION, Slice(s) information',
+  'REFRESH "Steering of Roaming" SOR-CMCI parameter support', 'Event: Network Rejection for Satellite NG-RAN', 'Support of CAG feature', 'Event: Slices Status Change',
+  'Support of PROVIDE LOCAL INFORMATION, Rejected Slice(s) Information', 'Support of Extended information for PLI (Location Information), Event: Location Status, Event: Network Rejection', 'Support of chaining of PLI/Envelope commands', '5G ProSe usage information reporting',
+  'Reserved for future use', 'Reserved for future use', 'Reserved for future use', 'Reserved for future use',
+  'Reserved for future use', 'Reserved for future use', 'Reserved for future use', 'Reserved for future use',
+  'Reserved for future use', 'Reserved for future use', 'Reserved for future use', 'Reserved for future use',
+  'Proactive UICC: PROVIDE LOCAL INFORMATION (NG-RAN/Satellite NG-RAN Timing Advance Information)', 'Reserved for future use', 'Reserved for future use', 'Reserved for future use',
+  'Reserved for future use', 'Reserved for future use', 'Reserved for future use', 'Reserved for future use',
 ];
 
 // TERMINAL PROFILE presets (device/model -> profile hex). Add new entries
@@ -7041,6 +7055,13 @@ const TP_BITS = [
 const TP_PRESETS = [
 	{ name: 'Xiaomi Mi A1 (BIP-capable handset, project default)', profile: 'FFFFFFFF7F9F00DFFF03021FE2000000C3FB000704117800710100000038428003' },
 	{ name: 'Quectel GSM module (AT+STKPD manual example)', profile: 'FFFFFFFF7F1F007FFF00001F230811060700' },
+	{ name: 'Samsung S21+ 5G', profile: 'FFFFFFFF7F9D00DFFF00001FE2000000C3EB00000000400050000000000800000000' },
+	{ name: 'Samsung A55 5G', profile: 'FFFFFFFF7F9D00DFFF00001FE2000000C3EB000000004000500000000008000003303002000001' },
+	{ name: 'Xiaomi Redmi Note 10 LTE', profile: 'FFFFFFFF7F9F00FFFF03021FE2000000C3EB00000411580071000000003808800700' },
+	{ name: 'Sony Xperia Z5c LTE', profile: 'FFFFFFFF7F9F00DFFF03071FE2080C00C3EB00000001480051000000000800' },
+	{ name: 'Huawei E5573c / M150 (LTE)', profile: 'FFFFFFEF1F9C009B8500001F22000000C3CB000000010000900000000008' },
+	{ name: 'Huawei E173 3G modem', profile: '2965D7E11F90001FD50000000000000000E00000' },
+	{ name: 'Nokia 7210 2G', profile: 'FFFFFFFF7F3F00DFFF00001FE28A0D0203290000020040' },
 ];
 
 function tpNorm(hex) { return (hex || '').toUpperCase().replace(/[^0-9A-F]/g, ''); }
@@ -7070,6 +7091,30 @@ function tpBitLabel(n) {
 	return 'RFU (byte ' + ((n >> 3) + 1) + ' b' + (8 - (n & 7)) + ')';
 }
 
+// Fixed byte-block layout: [firstByte, lastByte, columns] with 1-based
+// inclusive ranges (0 = "to the end of the profile"). Each byte block is a
+// vertical bit list; the groups place the blocks in 1..4 columns.
+const TP_LAYOUT = [
+	[1, 12, 2],
+	[13, 16, 4],
+	[17, 18, 2],
+	[19, 21, 3],
+	[22, 25, 2],
+	[26, 28, 3],
+	[29, 30, 2],
+	[31, 0, 1],
+];
+
+function tpLayoutGroups(totalBytes) {
+	const groups = [];
+	for (const [from, to, cols] of TP_LAYOUT) {
+		const end = to === 0 ? totalBytes : Math.min(to, totalBytes);
+		if (from > end) continue;
+		groups.push({from: from, to: end, cols: cols});
+	}
+	return groups;
+}
+
 function tpRenderForm() {
 	const el = document.getElementById('tp-form');
 	if (!el) return;
@@ -7077,18 +7122,25 @@ function tpRenderForm() {
 	if (!tpValid(hex)) { el.innerHTML = ''; return; }
 	const bytes = hex.length / 2;
 	let html = '';
-	for (let bi = 0; bi < bytes; bi++) {
-		html += '<div class="mb-1.5"><div class="text-gray-500 dark:text-slate-400">' +
-			esc(t('Byte')) + ' ' + (bi + 1) + '</div><div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">';
-		for (let k = 0; k < 8; k++) {
-			const n = bi * 8 + k;
-			const label = tpBitLabel(n);
-			html += '<label class="flex items-center gap-1 min-w-0"><input type="checkbox" ' +
-				(tpGetBit(hex, n) ? 'checked ' : '') +
-				'onchange="tpToggle(' + n + ', this.checked)"> ' +
-				'<span class="truncate" title="' + escHtml('b' + (8 - k) + ' ' + label) + '">b' + (8 - k) + ' ' + esc(label) + '</span></label>';
+	for (const g of tpLayoutGroups(bytes)) {
+		html += '<div style="display:grid;grid-template-columns:repeat(' + g.cols +
+			',minmax(0,1fr));gap:0.5rem;align-items:start;margin-bottom:0.5rem">';
+		for (let bi = g.from - 1; bi < g.to; bi++) {
+			html += '<div class="border border-gray-200 dark:border-slate-700 rounded p-1.5">';
+			html += '<div class="text-gray-500 dark:text-slate-400 mb-0.5">' + esc(t('Byte')) + ' ' + (bi + 1) + '</div>';
+			for (let k = 0; k < 8; k++) {
+				const n = bi * 8 + k;
+				const mask = 'b' + (8 - k);
+				const label = tpBitLabel(n);
+				html += '<label class="flex items-start gap-1 mb-0.5">' +
+					'<input type="checkbox" class="mt-0.5 shrink-0" ' +
+					(tpGetBit(hex, n) ? 'checked ' : '') +
+					'onchange="tpToggle(' + n + ', this.checked)"> ' +
+					'<span title="' + escHtml(mask + ' ' + label) + '">' + esc(mask + ' ' + label) + '</span></label>';
+			}
+			html += '</div>';
 		}
-		html += '</div></div>';
+		html += '</div>';
 	}
 	el.innerHTML = html;
 }
@@ -7140,15 +7192,8 @@ function tpStatusMsg(text, cls) {
 
 async function tpRefresh() {
 	try {
-		const d = await pysimFetch('/api/terminal-profile');
-		const el = document.getElementById('tp-current');
-		if (el) el.textContent = d.profile
-			? d.profile + '  (' + d.bytes + ' ' + t('bytes') + ')'
-			: t('not configured');
-		return d;
+		return await pysimFetch('/api/terminal-profile');
 	} catch (e) {
-		const el = document.getElementById('tp-current');
-		if (el && el.textContent === t('Loading...')) el.textContent = '—';
 		return null;
 	}
 }
@@ -8930,11 +8975,6 @@ function pysimCustomImportField() {
 	el.classList.remove('hidden');
 	el.focus();
 }
-
-// Init custom files
-pysimCustomLoad();
-pysimCustomRenderRoots();
-pysimCustomRenderParents();
 
 // ===== Profiler =====
 let profiles = [];
@@ -11332,6 +11372,11 @@ const userLang = (navigator.language || '').split('-')[0];
 currentLang = localStorage.getItem('lang') || (userLang === 'ru' ? 'ru' : 'en');
 document.getElementById('lang-btn').textContent = currentLang.toUpperCase();
 updateHelpLink();
+
+// Init custom files (after the language init: validation/rendering uses t())
+pysimCustomLoad();
+pysimCustomRenderRoots();
+pysimCustomRenderParents();
 
 cardsLoad();
 pysimStartAvailabilityProbe();

@@ -97,6 +97,13 @@ test('file manager keeps sort/probe controls above the scrolling tree', () => {
     assert.match(html, /style="max-height:65vh"[^>]*>\s*<div id="pysim-fs-tree">/);
 });
 
+test('custom-files init runs after the language init', () => {
+    // pysimCustomLoad/RenderParents call t(): running them before
+    // currentLang is initialized throws a TDZ error and aborts the rest
+    // of the script (all later handlers fail with 'before initialization').
+    assert.ok(html.indexOf('// Init custom files') > html.indexOf("let currentLang = 'en';"));
+});
+
 test('custom files form has add/save and cancel controls', () => {
     assert.match(html, /id="pysim-cf-add-btn"[^>]*data-l10n="Add"/);
     assert.match(html, /id="pysim-cf-cancel-btn"[^>]*class="hidden[^"]*"[^>]*data-l10n="Cancel"/);
