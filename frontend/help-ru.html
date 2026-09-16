@@ -45,7 +45,7 @@
 		<li><strong>Шапка</strong> — версия приложения, кнопка <strong>INSTALL PWA</strong> (появляется, когда браузер предлагает установку, для офлайн-работы), ссылки на проект на GitHub и на эту справку, переключатель языка <strong>EN/RU</strong> и переключатель тёмной/светлой <strong>темы</strong>. Рядом с заголовком небольшой индикатор показывает состояние сервера/карты (серая точка = подключение, красная = нет сервера, значки карты = нет карты / инициализация / карта готова) и компактный значок <strong>ADM ✓</strong> (зелёный, администраторский PIN подтверждён) или <strong>ADM ✗</strong> (красный, не подтверждён) для текущей сессии карты.</li>
 		<li>Выбор языка и темы хранится в <code class="font-mono text-sm">localStorage</code> и сохраняется между перезагрузками.</li>
 		<li>Вкладки верхнего уровня: <strong>Remote APDU</strong> (<strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong>, <strong>Разбор C-APDU</strong>, <strong>&laquo;Парсер ответов&raquo;</strong>), <strong>SCP80</strong> (<strong>Secured Packet</strong>, <strong>RAM</strong>), <strong>SCP81</strong> (<strong>&laquo;Слушатель&raquo;</strong>, <strong>&laquo;Скрипты&raquo;</strong>), <strong>&laquo;Карты&raquo;</strong>, <strong>&laquo;Профайлер&raquo;</strong> (вкладки <strong>&laquo;Профили&raquo;</strong>, <strong>&laquo;Снимки карт&raquo;</strong>, <strong>&laquo;Пользовательские файлы&raquo;</strong>), <strong>&laquo;Картридер&raquo;</strong> (<strong>Файловый менеджер</strong>, <strong>Командная строка pySim</strong>, <strong>Отправка APDU</strong>) и <strong>&laquo;Симулятор телефона&raquo;</strong>.</li>
-		<li>Ссылка <strong>справка</strong> открывает эту документацию на разделе, соответствующем текущему представлению (например, вкладка &laquo;Профайлер&raquo; открывает &sect;5).</li>
+		<li>Ссылка <strong>справка</strong> открывает эту документацию на разделе, соответствующем текущему представлению (например, вкладка &laquo;Профайлер&raquo; открывает &sect;7).</li>
 	</ul>
 
 
@@ -274,25 +274,7 @@
 	</ul>
 	<p class="text-sm mb-3">Кнопка <strong>Проверить в pySim</strong> сверяет собранный пакет с эталонной реализацией <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. Кнопка <strong>Отправить на карту</strong> доставляет пакет через ENVELOPE SMS-PP-DOWNLOAD (при подключении к серверу). Полученный Proof of Receipt декодируется и показывается строкой статуса PoR (статус, TAR, счётчик, сырой PoR); статусное слово и данные ответа последней команды подставляются в подвкладку <strong>&laquo;Парсер ответов&raquo;</strong> (Remote APDU), а успешный PoR увеличивает счётчик повторов и очищает пакет.</p>
 
-	<h3 id="cards" class="text-lg font-medium mb-2">3.2 Карты</h3>
-	<p class="mb-2">Хранит предустановки карт локально в браузере (<code class="font-mono text-sm">localStorage</code>), чтобы представление Secured Packet могло автоматически подставлять ключи и параметры, а слушатель SCP81 HTTP OTA — находить PSK-ключи. Вкладка &laquo;Карты&raquo; — верхнеуровневая.</p>
-	<table class="w-full text-sm mb-3 border-collapse">
-		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Поле</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
-		<tbody>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Понятная метка</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Опциональный идентификатор карты</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Индикаторы ключа и алгоритма (например, 15 = индекс 1, 3DES-CBC2; x2 = AES)</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Счётчик повторов (5 байт)</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex-символа (ключи 8/16/24 байта 3DES) или 32/48/64 hex-символа (ключи 16/24/32 байта AES)</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">PSK identity</td><td class="py-1 px-2">SCP81 HTTP OTA: идентификатор, который карта присылает в TLS-рукопожатии (например, <code class="font-mono text-sm">89390100000129506903</code>)</td></tr>
-			<tr><td class="py-1 px-2">PSK key</td><td class="py-1 px-2">SCP81 HTTP OTA: 32 hex-символа (16 байт). Слушатель выбирает этот ключ, когда карта предъявляет совпадающий идентификатор; предустановка с ключом без идентификатора игнорируется (и помечается в таблице)</td></tr>
-		</tbody>
-	</table>
-	<p class="text-sm mb-3">Столбец <strong>SCP81</strong> показывает, задана ли в предустановке рабочая пара PSK. Кнопка <strong>Изменить</strong> загружает предустановку в форму (кнопка становится <strong>Сохранить</strong>; <strong>Отмена</strong> очищает форму), поэтому поля можно менять без повторного ввода карты. Обмен предустановками: <strong>Экспорт в JSON</strong> и <strong>Экспорт в файл</strong> для выгрузки, <strong>Импорт из файла</strong>, <strong>Вставить и импортировать</strong> или <strong>Импорт JSON из буфера</strong> для загрузки. Выбранная предустановка автоматически заполняет форму Secured Packet; изменения сразу передаются работающему слушателю SCP81.</p>
-
-	<h3 id="ram" class="text-lg font-medium mb-2">3.3 RAM</h3>
+	<h3 id="ram" class="text-lg font-medium mb-2">3.2 RAM</h3>
 	<p class="mb-2">Выполняет операции удалённого управления приложениями (Remote Application Management) как защищённые пакеты SCP80 через SMS-PP-DOWNLOAD ENVELOPE. Карта должна поддерживать SCP03 (AES или 3DES). Предустановка карты со вкладки <strong>Карты</strong> обеспечивает SPI, ключи, TAR и счётчик.</p>
 
 	<h4 id="ram-operations" class="font-medium mb-1">Операции</h4>
@@ -315,10 +297,53 @@
 
 
 <section class="mb-10">
-	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Вкладка &laquo;Картридер&raquo; (pySim)</h2>
+	<h2 id="cards" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Вкладка &laquo;Карты&raquo;</h2>
+	<p class="mb-2">Хранит предустановки карт локально в браузере (<code class="font-mono text-sm">localStorage</code>), чтобы представление Secured Packet могло автоматически подставлять ключи и параметры, а слушатель SCP81 HTTP OTA — находить PSK-ключи. &laquo;Карты&raquo; — верхнеуровневая вкладка.</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Поле</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Понятная метка (обязательна)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Опциональный идентификатор карты</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Индикаторы ключа и алгоритма (например, 15 = индекс 1, 3DES-CBC2; x2 = AES); задаются вместе с ключами</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Счётчик повторов (5 байт); увеличивается и сохраняется после каждой успешной отправки SCP80</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex-символа (ключи 8/16/24 байта 3DES) или 32/48/64 hex-символа (ключи 16/24/32 байта AES)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">PSK identity</td><td class="py-1 px-2">SCP81 HTTP OTA: идентификатор, который карта присылает в TLS-рукопожатии (например, <code class="font-mono text-sm">89390100000129506903</code>)</td></tr>
+			<tr><td class="py-1 px-2">PSK key</td><td class="py-1 px-2">SCP81 HTTP OTA: 32 hex-символа (16 байт) для PSK TLS-слушателя; ключ выбирается по идентификатору, который предъявляет карта</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-3">Столбец <strong>SCP81</strong> показывает, задана ли в предустановке рабочая пара PSK: <strong>&#10003;</strong> (зелёный) — идентификатор и ключ заданы; <strong>&#9888;</strong> (жёлтый) — задано только одно из двух, и слушатель такую предустановку игнорирует; <strong>&mdash;</strong> — PSK нет. Идентификатор и ключ PSK задаются вместе. Кнопка <strong>Редактировать</strong> загружает предустановку в форму (кнопка Add становится <strong>Сохранить</strong>; <strong>Отмена</strong> очищает форму), поэтому поля можно менять без повторного ввода карты; <strong>Удалить</strong> удаляет строку. Обмен предустановками: <strong>Экспорт в JSON</strong> и <strong>Экспорт в файл</strong> для выгрузки, <strong>Импорт из файла</strong>, <strong>Вставить и импортировать</strong> или <strong>Импорт JSON из буфера</strong> для загрузки. Выбранная предустановка автоматически заполняет форму Secured Packet; изменения сразу передаются работающему слушателю SCP81.</p>
+</section>
+
+<section class="mb-10">
+	<h2 id="scp81" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Вкладка SCP81</h2>
+	<p class="mb-3">Управляет HTTP OTA (GP RAM over HTTP, GPC v2.2 Amendment B): BIP-канал карты перенаправляется на цель, которую слушает сервер (или на внешнюю платформу), а терминальная сторона административной сессии эмулируется. Две подвкладки: <strong>&laquo;Слушатель&raquo;</strong> и <strong>&laquo;Скрипты&raquo;</strong>.</p>
+	<h3 id="scp81-listener" class="text-lg font-medium mb-2">5.1 Слушатель</h3>
+	<p class="mb-2">Кнопки <strong>Start</strong> / <strong>Остановить</strong> управляют целью; <strong>Перезапустить скрипт</strong> ставит выбранный скрипт в очередь заново с <code class="font-mono text-sm">force</code>, начиная прогон с первого APDU. Режимы:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>PSK TLS сервер</strong> (по умолчанию) — PSK TLS-слушатель на <strong>Хост</strong>:<strong>Порт</strong>, отвечающий PSK-наборами TLS 1.2 из спецификации и ведущий HTTP-диалог административной сессии GP (заголовки <code class="font-mono text-sm">X-Admin-*</code>, <code class="font-mono text-sm">200</code> со строкой команд или <code class="font-mono text-sm">204 No Content</code>). PSK-ключи берутся из предустановок карт (вкладка <strong>&laquo;Карты&raquo;</strong>): ключ выбирается по идентификатору, который карта присылает в рукопожатии; если ни у одной предустановки нет пары, <strong>Start</strong> не запускается. Ключ не сохраняется и не записывается в журнал; незнакомый идентификатор помечается в журнале как <code class="font-mono text-sm">tls-psk-unknown</code>.</li>
+		<li><strong>Проброс (внешний сервер)</strong> — без локального слушателя: каждый BIP-канал подключается к указанной внешней платформе (нужны <strong>Хост</strong> и <strong>Порт</strong>), которая завершает TLS и ведёт административный диалог; запрошенный картой адрес только журналируется.</li>
+		<li><strong>Захват (dump)</strong> — принимает TCP-канал карты и записывает всё, что она отправляет (например, TLS ClientHello), не отвечая.</li>
+	</ul>
+	<p class="mb-2"><strong>Сценарий</strong> выбирает список команд, отдаваемый в сессии — <strong>Нет</strong> (оставить настроенный на сервере скрипт) или один из скриптов подвкладки <strong>&laquo;Скрипты&raquo;</strong>; выбранный список передаётся серверу при старте слушателя.</p>
+	<p class="text-sm mb-3">Строка состояния показывает слушатель, согласованный идентификатор и активные каналы (байты in/out). Панель <strong>Script results (R-APDUs)</strong> перечисляет каждый отданный C-APDU с его R-APDU/SW и прогрессом <em>done/total</em>; журнал <strong>HTTP OTA log</strong> фиксирует OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA и каждый шаг TLS/HTTP/скрипта (<code class="font-mono text-sm">tls-handshake</code>, <code class="font-mono text-sm">tls-request</code>, <code class="font-mono text-sm">script-send</code>, <code class="font-mono text-sm">script-rapdu</code>, <code class="font-mono text-sm">script-page</code>, <code class="font-mono text-sm">script-done</code>, <code class="font-mono text-sm">data-available</code>, <code class="font-mono text-sm">peer-close</code>), кнопка <strong>Clear</strong> очищает его.</p>
+	<h3 id="scp81-scripts" class="text-lg font-medium mb-2">5.2 Скрипты</h3>
+	<p class="text-sm mb-2">Именованные списки APDU хранятся локально (<code class="font-mono text-sm">otaman_scripts</code>) и передаются серверу при старте слушателя. Каждый список — последовательность hex C-APDU (по одной в строке; допускаются комментарии <code class="font-mono text-sm">#</code>/<code class="font-mono text-sm">;</code>). Кнопка <strong>Новый</strong> создаёт список из шаблона:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Empty</strong> — начать с пустого списка.</li>
+		<li><strong>Explore</strong> — эталонная административная последовательность (<code class="font-mono text-sm">GET DATA FF21</code>, листинги GET STATUS ISD/ELF/приложений, <code class="font-mono text-sm">GET DATA 0085</code>); длинные листинги автоматически продолжаются страницами <code class="font-mono text-sm">SW 6310/CAFE</code>.</li>
+		<li><strong>Install from .cap</strong> — выберите <code class="font-mono text-sm">.cap</code>, при необходимости SD AID, параметры install/STK и <em>Make selectable</em>; кнопка <strong>Сгенерировать</strong> строит INSTALL [for load] &rarr; LOAD &times;N &rarr; INSTALL [for install]. Файл используется только для генерации APDU &mdash; он не сохраняется, как и его имя.</li>
+		<li><strong>Delete</strong> — список AID (по одному в строке) и P2 (<em>object only</em> / <em>object and related objects</em>) &rarr; APDU DELETE.</li>
+	</ul>
+	<p class="text-sm mb-3">Таблица показывает имя, тип, число APDU и время создания каждого скрипта, а также кнопки <strong>Редактировать</strong> и <strong>Удалить</strong>; в редакторе есть поле имени и текстовая область APDU. В ходе сессии сервер отдаёт по одному C-APDU на каждый POST карты и отслеживает выполнение: карта сообщает статус в следующем POST (<code class="font-mono text-sm">X-Admin-Script-Status</code>), оборвавшаяся сессия досылает только невыполненные APDU (<code class="font-mono text-sm">X-Admin-Resume</code> продолжает, новый диалог начинает заново), а завершённый скрипт закрывается ответом <code class="font-mono text-sm">204 No Content</code>. Конструктор RAM/GP вкладки Remote APDU может отправить цепочку команд прямо в прогон кнопкой <strong>&laquo;В очередь SCP81&raquo;</strong>.</p>
+</section>
+
+<section class="mb-10">
+	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Вкладка &laquo;Картридер&raquo; (pySim)</h2>
 	<p class="mb-3">Подключение к локальному <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> для работы с картой: введите URL сервера (по умолчанию <code class="font-mono text-sm">http://127.0.0.1:8080</code>) и нажмите <strong>Подключиться</strong>. Область статуса показывает состояние ридера/карты, а <strong>Подключить карту</strong> (пере)инициализирует карту после вставки. Подвкладки: <strong>Файловый менеджер</strong>, <strong>Командная строка pySim</strong> и <strong>Отправка APDU</strong>. <strong>&laquo;Профайлер&raquo;</strong> и <strong>&laquo;Симулятор телефона&raquo;</strong> — отдельные вкладки верхнего уровня.</p>
 
-	<h3 id="file-manager" class="text-lg font-medium mb-2">4.1 Файловый менеджер</h3>
+	<h3 id="file-manager" class="text-lg font-medium mb-2">6.1 Файловый менеджер</h3>
 	<p class="text-sm mb-2">Дерево файловой системы отображается слева; выбор файла открывает панель деталей справа. Элементы сгруппированы: DF выше EF, сортировка по <strong>FID</strong> или символьному <strong>имени</strong> (пиллы и кнопка <strong>«Проверить все файлы»</strong> закреплены над прокручиваемым деревом; выбор сохраняется в <code class="font-mono text-sm">localStorage</code>). При выборе файла над содержимым также показываются FID, тип файла, размер / структура записей и декодированный FCI.</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Прочитать</strong> — чтение файла (автоопределение transparent/record)</li>
@@ -327,13 +352,13 @@
 		<li><strong>Проверить все файлы</strong> — обход всего дерева (включая пользовательские файлы) с пометкой каждого элемента: есть (обычный вид) или нет (красный ✗, без стрелки разворачивания); существующие пустые DF показывают <code class="font-mono text-sm">(пусто)</code>. Отображается прогресс <em>N / всего</em>, обход можно остановить; в конце — сводка «есть/нет». Файлы проверяются только при разворачивании или проверке — просмотр остаётся ленивым.</li>
 	</ul>
 
-	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">4.2 Командная строка pySim</h3>
+	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">6.2 Командная строка pySim</h3>
 	<p class="text-sm mb-3">Выполнение любых команд pySim-shell с подсказками (300&nbsp;мс) и автодополнением.</p>
 
-	<h3 id="raw-apdu" class="text-lg font-medium mb-2">4.3 Отправка APDU</h3>
+	<h3 id="raw-apdu" class="text-lg font-medium mb-2">6.3 Отправка APDU</h3>
 	<p class="text-sm mb-3">Отправка произвольного APDU и просмотр ответа.</p>
 
-<h3 id="usage-scenarios" class="text-lg font-medium mb-2">4.4 Сценарии использования</h3>
+<h3 id="usage-scenarios" class="text-lg font-medium mb-2">6.4 Сценарии использования</h3>
 
 	<h4 id="scenario-a" class="font-medium mb-1">Сценарий A &mdash; Работа с файлами, не входящими в модель pySim (&laquo;Пользовательские файлы&raquo;)</h4>
 	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
@@ -372,7 +397,7 @@
 
 
 <section class="mb-10">
-	<h2 id="profiler" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Профайлер</h2>
+	<h2 id="profiler" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Профайлер</h2>
 	<p class="text-sm mb-2">Проверяет соответствие карты именованному <strong>профилю</strong> — упорядоченному набору правил, описывающих ожидаемую файловую систему и (опционально) содержимое файлов. Профили хранятся в <code class="font-mono text-sm">localStorage</code>.</p>
 	<h4 class="font-medium mb-1">Список профилей</h4>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
@@ -412,13 +437,13 @@
 	<p class="text-sm mb-3">Добавление файлов, не покрытых моделью pySim. Пользовательский файл всегда имеет полный путь от <strong>MF</strong> или ADF (<strong>ADF.USIM</strong>, <strong>ADF.ISIM</strong>): выберите корень, введите путь <strong>родительского DF</strong> (сам корень, стандартный DF из дерева файлового менеджера или пользовательский DF &mdash; любой вложенности, с подсказками при вводе; родитель, ещё не встречавшийся в дереве, остаётся допустимым и помечается <code class="font-mono text-sm">⚠</code>), 4-hex <strong>FID</strong> и псевдоним (<code class="font-mono text-sm">EF.&hellip;</code>/<code class="font-mono text-sm">DF.&hellip;</code>; префикс определяет, EF это или DF). Канонический путь убирает прежнюю неоднозначность, когда один и тот же файл можно было описать и относительно, и абсолютно. Добавленные файлы появляются в дереве &laquo;Файловый менеджер&raquo;; в каждой строке есть <strong>&laquo;Редактировать&raquo;</strong> (путь + псевдоним; изменение пути DF перепривязывает дочерние записи &mdash; кнопка становится <strong>&laquo;Сохранить&raquo;</strong>, <strong>&laquo;Отмена&raquo;</strong> отменяет) и <strong>&laquo;Удалить&raquo;</strong> (удаление DF удаляет и его дочерние записи после подтверждения). Список сохраняется в <code class="font-mono text-sm">localStorage</code>; обмен &mdash; <strong>Экспорт в JSON</strong> / <strong>Экспорт в файл</strong> / <strong>Импорт</strong>; старые относительные пути (например, <code class="font-mono text-sm">a153/4954</code>) разрешаются при загрузке, неразрешимые отбрасываются и отмечаются в списке.</p>
 
 <section class="mb-10">
-	<h2 id="proactive-uicc" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Симулятор телефона</h2>
+	<h2 id="proactive-uicc" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">8. Симулятор телефона</h2>
 	<p class="text-sm mb-3">Работа с сессией Card Application Toolkit. Две подвкладки: <strong>&laquo;Телефон&raquo;</strong> (меню STK, STATUS и опрос, подписанные события, журнал проактивных команд) и <strong>&laquo;Конфигурация TR&raquo;</strong> (данные ответов, подставляемые в TERMINAL RESPONSE для проактивных команд).</p>
 
-	<h3 id="stk-menu" class="text-lg font-medium mb-2">6.1 Меню STK</h3>
+	<h3 id="stk-menu" class="text-lg font-medium mb-2">8.1 Меню STK</h3>
 	<p class="text-sm mb-3">Если карта выдала команду SET UP MENU, вверху этого представления появляется блок &laquo;Меню STK&raquo; с изумрудной кнопкой <strong>STK: &lt;название&gt;</strong>, открывающей оверлей меню (браузер STK-меню карты). Если карта не задала меню, вместо кнопки показывается &laquo;Меню не задано картой&raquo;. Состояние меню обновляется при каждом открытии представления. Интерактивные проактивные команды всегда получают TERMINAL RESPONSE: оверлей ждёт вашего выбора, и если вы не ответили и не нажали <strong>Timeout</strong>, сервер сам отвечает результатом timeout через <code class="font-mono text-sm">--menu-timeout</code> секунд (по умолчанию 60, <code class="font-mono text-sm">0</code> отключает). <strong>Назад</strong> и <strong>Timeout</strong> продолжают диалог с картой: если карта в ответ выдаёт следующую проактивную команду (SELECT ITEM или DISPLAY TEXT), панель показывает её; кэшированное верхнее меню появляется только когда карте больше нечего выполнять.</p>
 
-	<h3 id="subscribed-events" class="text-lg font-medium mb-2">6.2 Подписанные события (SET UP EVENT LIST)</h3>
+	<h3 id="subscribed-events" class="text-lg font-medium mb-2">8.2 Подписанные события (SET UP EVENT LIST)</h3>
 	<p class="text-sm mb-2">События, которые отслеживает карта. У каждого события есть кнопка <strong>Отправить</strong>, открывающая форму, специфичную для типа события:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>События без данных</strong> (User Activity, Idle Screen, Data Available, &hellip;) — уведомление в один клик</li>
@@ -428,16 +453,16 @@
 	</ul>
 	<p class="text-sm mb-3">Отправка события использует <code class="font-mono text-sm">ENVELOPE(Event Download)</code> по TS 102 223 / TS 131 111.</p>
 
-	<h3 id="proactive-log" class="text-lg font-medium mb-2">6.3 Журнал проактивных команд</h3>
+	<h3 id="proactive-log" class="text-lg font-medium mb-2">8.3 Журнал проактивных команд</h3>
 	<p class="text-sm mb-2">Хронологический список извлечённых проактивных команд. Каждая строка показывает время, код типа, имя и декодированный квалификатор (для команд, у которых он есть). Раскрытие строки показывает декодированную команду: текст и пункты DISPLAY TEXT / SELECT ITEM / SET UP MENU, параметры BIP-каналов, действия TIMER MANAGEMENT, названия квалификаторов PROVIDE LOCAL INFORMATION (все стандартные, включая ESN 07, MEID 0B и Supported RATs 1A) и SEND SHORT MESSAGE — разбирается SMS TPDU (тип, TP-MR, TP-DA, TP-PID, TP-DCS, срок действия, TP-UDL), а пользовательские данные показываются как текст для текстовых кодировок (GSM&nbsp;7-бит, UCS2, 8-бит) или как secured-пакет (TS&nbsp;31.115) при TP-PID&nbsp;=&nbsp;<code class="font-mono text-sm">7F</code> (SIM data download); заголовки конкатенации UDH декодируются. Для команд с данными ответа показывается строка <code class="font-mono text-sm">Ответ:</code> с байтами TERMINAL RESPONSE (без служебных TLV); ответы PROVIDE LOCAL INFORMATION декодируются через словарь данных PLI.</p>
 
-	<h3 id="terminal-profile" class="text-lg font-medium mb-2">6.4 TERMINAL PROFILE</h3>
-	<p class="text-sm mb-3">Блок <strong>TERMINAL PROFILE</strong> (рядом с «STATUS и опрос») содержит кнопки <strong>«Отправить»</strong> (повторная отправка, как «Спасение») и <strong>«Настроить»</strong>. В диалоге настройки: селектор пресетов (модели устройств, например профиль BIP-совместимого аппарата из этого проекта), поле hex и форма с флажком на каждый бит профиля по <strong>TS 102 223 §5.2</strong> (байты 1&ndash;33; далее — обобщённые подписи); каждый байт — вертикальный список битов; блоки размещены фиксированными группами (байты 1–12 в 2 колонки, 13–16 в 4, 17–18 в 2, 19–21 в 3, 22–25 в 2, 26–28 в 3, 29–30 в 2, далее по одному в строке); переключение бита обновляет hex, а правка hex перерисовывает форму &mdash; поле hex основное, неизвестные байты и биты сохраняются. Кнопка <strong>«Применить»</strong> отправляет новое значение на сервер (и далее на карту), сбрасывая STK-сессию как «Спасение»; изменение хранится только в памяти (значение <code class="font-mono text-sm">--terminal-profile</code> — стартовое по умолчанию).</p>
+	<h3 id="terminal-profile" class="text-lg font-medium mb-2">8.4 TERMINAL PROFILE</h3>
+	<p class="text-sm mb-3">Блок <strong>TERMINAL PROFILE</strong> (рядом с «STATUS и опрос») содержит кнопки <strong>«Отправить»</strong> (повторная отправка, как «Спасение») и <strong>«Настроить»</strong>. В диалоге настройки: селектор пресетов (модели устройств, например профиль BIP-совместимого аппарата из этого проекта), поле hex и форма с флажком на каждый бит профиля по <strong>TS 102 223 §5.2</strong> / <strong>TS 31.111 §5.2</strong> (байты 1&ndash;39; для битов 3GPP используются имена из TS 31.111); каждый байт — вертикальный список битов; блоки размещены фиксированными группами (байты 1–12 в 2 колонки, 13–16 в 4, 17–18 в 2, 19–21 в 3, 22–25 в 2, 26–28 в 3, 29–30 в 2, далее по одному в строке); переключение бита обновляет hex, а правка hex перерисовывает форму &mdash; поле hex основное, неизвестные байты и биты сохраняются. Кнопка <strong>«Применить»</strong> отправляет новое значение на сервер (и далее на карту), сбрасывая STK-сессию как «Спасение»; изменение хранится только в памяти (значение <code class="font-mono text-sm">--terminal-profile</code> — стартовое по умолчанию).</p>
 
-	<h3 id="status-polling" class="text-lg font-medium mb-2">6.5 Опрос STATUS</h3>
+	<h3 id="status-polling" class="text-lg font-medium mb-2">8.5 Опрос STATUS</h3>
 	<p class="text-sm mb-3">Кнопка <strong>Отправить STATUS</strong> отправляет STATUS (F2) вручную. Переключатель <strong>Опрос</strong> включает фоновый опрос: после настраиваемого интервала бездействия (аргумент сервера <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;с, по умолчанию 30&nbsp;с, <code class="font-mono text-sm">0</code> отключает опрос) сервер отправляет STATUS и обрабатывает любую ожидающую проактивную команду. При извлечении карты опрос останавливается, а состояние карты сбрасывается.</p>
 
-	<h3 id="pli-dict" class="text-lg font-medium mb-2">6.6 &laquo;Конфигурация TR&raquo; &mdash; данные ответа PROVIDE LOCAL INFORMATION</h3>
+	<h3 id="pli-dict" class="text-lg font-medium mb-2">8.6 &laquo;Конфигурация TR&raquo; &mdash; данные ответа PROVIDE LOCAL INFORMATION</h3>
 	<p class="text-sm mb-2">Редактируемые hex-значения для всех 22 квалификаторов PLI (TS 102 223 &sect;8.6 + TS 131 111). У десяти квалификаторов есть встроенные формы декодирования/кодирования:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
@@ -450,10 +475,10 @@
 </section>
 
 <section class="mb-10">
-	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Установка сервера</h2>
+	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">9. Установка сервера</h2>
 	<p class="mb-3">Для работы с картой (вкладка &laquo;Картридер&raquo;, &laquo;Симулятор телефона&raquo;, доставка OTA) нужен локальный <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — встроенный в OTAMan HTTP-сервер, оборачивающий pySim, работающий с ридером через PC/SC или serial и раздающий сам PWA (откройте <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
 
-	<h3 id="prerequisites" class="text-lg font-medium mb-2">7.1 Требования</h3>
+	<h3 id="prerequisites" class="text-lg font-medium mb-2">9.1 Требования</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Python 3.8+</strong> с <code class="font-mono text-sm">pip</code></li>
 		<li><strong>Git</strong></li>
@@ -461,20 +486,20 @@
 		<li><strong>Только Windows</strong> — используйте <strong>Python 3.10&ndash;3.13</strong> (рекомендуется 3.13): <code class="font-mono text-sm">pyscard</code> (обёртка драйвера PC/SC) поставляет готовые wheels для этих версий. На Python 3.9 / 3.14 pip собирает <code class="font-mono text-sm">pyscard</code> из исходников, для чего требуются Microsoft C++ Build Tools (&laquo;Desktop development with C++&raquo;). Мост SMPP (<code class="font-mono text-sm">smpp.twisted3</code>) на Windows намеренно не устанавливается, поэтому для Python 3.10&ndash;3.13 C++ Build Tools не нужны.</li>
 	</ul>
 
-	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Быстрый старт — Linux / macOS</h3>
+	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">9.2 Быстрый старт — Linux / macOS</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 chmod +x setup.sh start.sh
 ./setup.sh          # создаёт .venv, устанавливает pysim + сервер (однократно)
 ./start.sh          # запускает сервер (PWA + API, автоопределение ридера)</pre>
 
-	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">7.3 Быстрый старт — Windows</h3>
+	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">9.3 Быстрый старт — Windows</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 setup.bat           # создаёт .venv, устанавливает pysim + сервер (однократно)
 start.bat           # запускает сервер (PWA + API)</pre>
 
-	<h3 id="helper-scripts" class="text-lg font-medium mb-2">7.4 Вспомогательные скрипты</h3>
+	<h3 id="helper-scripts" class="text-lg font-medium mb-2">9.4 Вспомогательные скрипты</h3>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Скрипт</th><th class="text-left py-1 px-2">Назначение</th></tr></thead>
 		<tbody>
@@ -483,7 +508,7 @@ start.bat           # запускает сервер (PWA + API)</pre>
 		</tbody>
 	</table>
 
-	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">7.5 Автоопределение ридера</h3>
+	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">9.5 Автоопределение ридера</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>PC/SC (Linux)</strong> — <code class="font-mono text-sm">start.sh</code> передаёт <code class="font-mono text-sm">-p 0</code>, если запущен демон <code class="font-mono text-sm">pcscd</code></li>
 		<li><strong>PC/SC (Windows)</strong> — <code class="font-mono text-sm">start.bat</code> всегда использует <code class="font-mono text-sm">-p 0</code> (PC/SC встроен в Windows)</li>
@@ -492,7 +517,7 @@ start.bat           # запускает сервер (PWA + API)</pre>
 	</ul>
 	<p class="text-sm mb-3">Если карта отсутствует, вкладка &laquo;Картридер&raquo; показывает &laquo;Карта не обнаружена. Вставьте карту и нажмите Подключить карту&raquo;.</p>
 
-	<h3 id="manual-install" class="text-lg font-medium mb-2">7.6 Ручная установка</h3>
+	<h3 id="manual-install" class="text-lg font-medium mb-2">9.6 Ручная установка</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3"># Создать и активировать venv
 python3 -m venv .venv
 source .venv/bin/activate   # Linux/macOS
@@ -511,7 +536,7 @@ pysim-otaman-server --http-port 8080</pre>
 
 
 <section class="mb-10">
-	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">8. Совместимость версий</h2>
+	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">10. Совместимость версий</h2>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (OTAMan)</th><th class="text-left py-1 px-2">Сервер</th><th class="text-left py-1 px-2">Статус</th></tr></thead>
 		<tbody>

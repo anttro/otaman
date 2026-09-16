@@ -45,7 +45,7 @@
 		<li><strong>Header</strong> — the app version, an <strong>INSTALL PWA</strong> button (shown when the browser offers installation, enabling offline use), links to the project on GitHub and to this help, an <strong>EN/RU</strong> language toggle, and a dark/light <strong>theme</strong> toggle. Next to the title a small status indicator shows the server/card state (gray dot = connecting, red dot = no server connection, card icons = no card / equipping / equipped) and a compact <strong>ADM ✓</strong> (green, administrator PIN verified) or <strong>ADM ✗</strong> (red, not verified) badge for the current card session.</li>
 		<li>Language and theme choices are stored in <code class="font-mono text-sm">localStorage</code> and persist across reloads.</li>
 		<li>Top-level tabs: <strong>Remote APDU</strong> (<strong>SIM RFM</strong>, <strong>USIM RFM</strong>, <strong>Expanded Script</strong>, <strong>RAM/GP</strong>, <strong>HTTP OTA</strong>, <strong>C-APDU Parser</strong>, <strong>Response parser</strong>), <strong>SCP80</strong> (<strong>Secured Packet</strong>, <strong>RAM</strong>), <strong>SCP81</strong> (<strong>Listener</strong>, <strong>Scripts</strong>), <strong>Cards</strong>, <strong>Profiler</strong> (list tabs <strong>Profiles</strong>, <strong>Card snapshots</strong>, <strong>Custom files</strong>), <strong>Card reader</strong> (<strong>File manager</strong>, <strong>pySim command line</strong>, <strong>Raw APDU</strong>), and <strong>Phone simulator</strong>.</li>
-		<li>The <strong>help</strong> link opens this documentation at the section matching the current view (e.g. the Profiler tab opens &sect;5).</li>
+		<li>The <strong>help</strong> link opens this documentation at the section matching the current view (e.g. the Profiler tab opens &sect;7).</li>
 	</ul>
 
 
@@ -241,7 +241,7 @@
 
 <section class="mb-10">
 	<h2 id="scp80" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">3. SCP80 tab</h2>
-	<p class="mb-3">The <strong>SCP80</strong> top-level tab groups the SCP80-related views. It is switched by three pills: <strong>Secured Packet</strong>, <strong>Cards</strong>, and <strong>RAM</strong>. Assembles SCP80 secured packets per ETSI TS 102 225.</p>
+	<p class="mb-3">The <strong>SCP80</strong> top-level tab groups the SCP80-related views. It is switched by two pills: <strong>Secured Packet</strong> and <strong>RAM</strong>. Assembles SCP80 secured packets per ETSI TS 102 225.</p>
 
 	<h3 id="secured-packet" class="text-lg font-medium mb-2">3.1 Secured Packet</h3>
 	<p class="mb-2">Builds SCP80 secured packets per ETSI TS 102 225.</p>
@@ -274,25 +274,7 @@
 	</ul>
 	<p class="text-sm mb-3">A &ldquo;Verify vs pySim&rdquo; button cross-checks the assembled packet against pySim&rsquo;s reference <code class="font-mono text-sm">OtaDialectSms.encode_cmd</code>. A &ldquo;Send to Card&rdquo; button delivers it via SMS-PP-DOWNLOAD ENVELOPE (when connected to the server). The returned Proof of Receipt is decoded and shown as a PoR status line (status, TAR, counter, raw PoR); the last command&rsquo;s status word and response data are filled into the <strong>Response parser</strong> tab, and a successful PoR advances the replay counter and clears the packet.</p>
 
-	<h3 id="cards" class="text-lg font-medium mb-2">3.2 Cards</h3>
-	<p class="mb-2">Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet view can auto-fill keys and parameters, and so the SCP81 HTTP OTA listener can look up PSK keys. The Cards tab is a top-level tab.</p>
-	<table class="w-full text-sm mb-3 border-collapse">
-		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Field</th><th class="text-left py-1 px-2">Description</th></tr></thead>
-		<tbody>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Human-readable label</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Optional card identifier</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Key and algorithm indicators (e.g. 15 = index 1, 3DES-CBC2; x2 = AES)</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Replay counter (5 bytes)</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex chars (8/16/24-byte 3DES) or 32/48/64 hex chars (16/24/32-byte AES) keys</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">PSK identity</td><td class="py-1 px-2">SCP81 HTTP OTA: the identity the card sends in the TLS handshake (e.g. <code class="font-mono text-sm">89390100000129506903</code>)</td></tr>
-			<tr><td class="py-1 px-2">PSK key</td><td class="py-1 px-2">SCP81 HTTP OTA: 32 hex chars (16 bytes). The listener selects this key when the card presents the matching identity; a preset with a key but no identity is ignored (and flagged in the table)</td></tr>
-		</tbody>
-	</table>
-	<p class="text-sm mb-3">The <strong>SCP81</strong> column shows whether the preset supplies a usable PSK pair. <strong>Edit</strong> loads a preset into the form (the button becomes <strong>Save</strong>; <strong>Cancel</strong> clears it) so fields can be changed without re-entering the card. Presets can be shared with <strong>Export as JSON</strong> and <strong>Export to file</strong>, and restored with <strong>Import from file</strong>, <strong>Paste &amp; import</strong>, or <strong>Import JSON from clipboard</strong>. The selected card preset auto-fills the Secured Packet form; edits are pushed into a running SCP81 listener automatically.</p>
-
-	<h3 id="ram" class="text-lg font-medium mb-2">3.3 RAM</h3>
+	<h3 id="ram" class="text-lg font-medium mb-2">3.2 RAM</h3>
 	<p class="mb-2">Delivers Remote Application Management operations as SCP80 secured packets via SMS-PP-DOWNLOAD ENVELOPE. The card must support SCP03 (AES or 3DES). A saved card preset from the <strong>Cards</strong> tab provides the SPI, keys, TAR, and counter.</p>
 
 	<h4 id="ram-operations" class="font-medium mb-1">Operations</h4>
@@ -315,10 +297,53 @@
 
 
 <section class="mb-10">
-	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Card reader (pySim) tab</h2>
+	<h2 id="cards" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Cards tab</h2>
+	<p class="mb-2">Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet view can auto-fill keys and parameters, and so the SCP81 HTTP OTA listener can look up PSK keys. Cards is a top-level tab.</p>
+	<table class="w-full text-sm mb-3 border-collapse">
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Field</th><th class="text-left py-1 px-2">Description</th></tr></thead>
+		<tbody>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Human-readable label (required)</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Optional card identifier</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Key and algorithm indicators (e.g. 15 = index 1, 3DES-CBC2; x2 = AES), required together with the keys</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Counter</td><td class="py-1 px-2">Replay counter (5 bytes); advanced and saved after each successful SCP80 send</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc key / KID key</td><td class="py-1 px-2">16/24/32 hex chars (8/16/24-byte 3DES) or 32/48/64 hex chars (16/24/32-byte AES) keys</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">PSK identity</td><td class="py-1 px-2">SCP81 HTTP OTA: the identity the card sends in the TLS handshake (e.g. <code class="font-mono text-sm">89390100000129506903</code>)</td></tr>
+			<tr><td class="py-1 px-2">PSK key</td><td class="py-1 px-2">SCP81 HTTP OTA: 32 hex chars (16 bytes) for the PSK TLS listener, picked by the identity the card presents</td></tr>
+		</tbody>
+	</table>
+	<p class="text-sm mb-3">The <strong>SCP81</strong> column shows whether the preset supplies a usable PSK pair: <strong>&#10003;</strong> (green) — identity and key set; <strong>&#9888;</strong> (amber) — only one of the two, so the listener ignores the preset; <strong>&mdash;</strong> — no PSK. PSK identity and key must be set together. <strong>Edit</strong> loads a preset into the form (the Add button becomes <strong>Save</strong>; <strong>Cancel</strong> clears it) so fields can be changed without re-entering the card; <strong>Remove</strong> deletes the row. Presets can be shared with <strong>Export as JSON</strong> / <strong>Export to file</strong> and restored with <strong>Import from file</strong>, <strong>Paste &amp; import</strong>, or <strong>Import JSON from clipboard</strong>. The selected card preset auto-fills the Secured Packet form; edits are pushed into a running SCP81 listener automatically.</p>
+</section>
+
+<section class="mb-10">
+	<h2 id="scp81" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. SCP81 tab</h2>
+	<p class="mb-3">Drives HTTP OTA (GP RAM over HTTP, GPC v2.2 Amendment B): the card's BIP channel is redirected to a target the server listens on (or to an external platform), and the terminal side of the administration session is emulated. Two pills: <strong>Listener</strong> and <strong>Scripts</strong>.</p>
+	<h3 id="scp81-listener" class="text-lg font-medium mb-2">5.1 Listener</h3>
+	<p class="mb-2"><strong>Start</strong> / <strong>Stop</strong> control the target; <strong>Restart script</strong> queues the selected script again with <code class="font-mono text-sm">force</code>, restarting its run from the first APDU. Modes:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>PSK TLS server</strong> (default) — a PSK TLS listener on <strong>Host</strong>:<strong>Port</strong> that answers with the TLS 1.2 PSK cipher suites of the spec and speaks the GP HTTP administration dialog (<code class="font-mono text-sm">X-Admin-*</code> headers, <code class="font-mono text-sm">200</code> with a command string or <code class="font-mono text-sm">204 No Content</code>). PSK keys come from the card presets (<strong>Cards</strong> tab): the listener picks the key by the identity the card sends in the handshake, and <strong>Start</strong> is refused when no preset has both parts. The key is never stored or logged; <code class="font-mono text-sm">tls-psk-unknown</code> marks an unrecognised identity.</li>
+		<li><strong>Pass-through (external server)</strong> — no local listener: every BIP channel is connected to the configured external platform (<strong>Host</strong> and <strong>Port</strong> required), which terminates TLS and runs the administration dialog; the address the card requests is only logged.</li>
+		<li><strong>Capture (dump)</strong> — accepts the card's TCP channel and logs whatever it sends (e.g. the TLS ClientHello) without answering.</li>
+	</ul>
+	<p class="mb-2"><strong>Script</strong> selects the command list served over the session — <strong>None</strong> (leave the server's configured script) or one of the scripts from the <strong>Scripts</strong> pill; the chosen list is sent to the server when the listener starts.</p>
+	<p class="text-sm mb-3">The state line shows the listener, the negotiated identity and live channels (bytes in/out). <strong>Script results (R-APDUs)</strong> lists each served C-APDU with its R-APDU/SW and a <em>done/total</em> progress; the <strong>HTTP OTA log</strong> records OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA and every TLS/HTTP/script step (<code class="font-mono text-sm">tls-handshake</code>, <code class="font-mono text-sm">tls-request</code>, <code class="font-mono text-sm">script-send</code>, <code class="font-mono text-sm">script-rapdu</code>, <code class="font-mono text-sm">script-page</code>, <code class="font-mono text-sm">script-done</code>, <code class="font-mono text-sm">data-available</code>, <code class="font-mono text-sm">peer-close</code>), with <strong>Clear</strong>.</p>
+	<h3 id="scp81-scripts" class="text-lg font-medium mb-2">5.2 Scripts</h3>
+	<p class="text-sm mb-2">Named APDU lists stored locally (<code class="font-mono text-sm">otaman_scripts</code>) and sent to the server when a listener starts. Each list is a sequence of hex C-APDUs (one per line; <code class="font-mono text-sm">#</code>/<code class="font-mono text-sm">;</code> comments allowed). <strong>New</strong> creates one from a template:</p>
+	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
+		<li><strong>Empty</strong> — start from scratch.</li>
+		<li><strong>Explore</strong> — the reference administration sequence (<code class="font-mono text-sm">GET DATA FF21</code>, GET STATUS ISD/ELF/application listings, <code class="font-mono text-sm">GET DATA 0085</code>); long listings auto-continue through the <code class="font-mono text-sm">SW 6310/CAFE</code> pages.</li>
+		<li><strong>Install from .cap</strong> — pick a <code class="font-mono text-sm">.cap</code> plus optional SD AID, install/STK parameters and <em>make selectable</em>; <strong>Generate</strong> builds INSTALL [for load] &rarr; LOAD &times;N &rarr; INSTALL [for install]. The file is only used to generate the APDUs &mdash; it is not stored, not even its name.</li>
+		<li><strong>Delete</strong> — AID list (one per line) and P2 (<em>object only</em> / <em>object and related objects</em>) &rarr; DELETE APDUs.</li>
+	</ul>
+	<p class="text-sm mb-3">The table lists each script with its kind, APDU count and creation time, plus <strong>Edit</strong> and <strong>Delete</strong>; the editor has a name field and the APDU textarea. Over a session the server serves one C-APDU per card POST and tracks execution: the card reports status in its next POST (<code class="font-mono text-sm">X-Admin-Script-Status</code>), a session that dies resends only the unexecuted APDUs (<code class="font-mono text-sm">X-Admin-Resume</code> continues, a fresh dialog restarts), and a completed script is closed with <code class="font-mono text-sm">204 No Content</code>. The Remote APDU tab's RAM/GP builder can feed a command chain straight into the run with <strong>Queue in SCP81</strong>.</p>
+</section>
+
+<section class="mb-10">
+	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Card reader (pySim) tab</h2>
 	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations: enter the server URL (default <code class="font-mono text-sm">http://127.0.0.1:8080</code>) and press <strong>Connect</strong>. The status area shows the reader/card state, and <strong>Equip card</strong> (re)initializes the card after insertion. Sub-tabs: <strong>File manager</strong>, <strong>pySim command line</strong>, and <strong>Raw APDU</strong>. The <strong>Profiler</strong> and <strong>Phone simulator</strong> are separate top-level tabs.</p>
 
-	<h3 id="file-manager" class="text-lg font-medium mb-2">4.1 File manager</h3>
+	<h3 id="file-manager" class="text-lg font-medium mb-2">6.1 File manager</h3>
 	<p class="text-sm mb-2">The file system tree is displayed on the left; selecting a file opens its detail pane on the right. Entries are grouped with DFs above EFs and sorted by <strong>FID</strong> or symbolic <strong>Name</strong> (pills pinned above the scrolling tree together with <strong>Probe all files</strong>; the choice is remembered in <code class="font-mono text-sm">localStorage</code>). Selecting a file also shows its FID, file type, size / record layout and the decoded FCI above the content pane.</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Read</strong> — reads the selected file (auto-detects transparent vs record files)</li>
@@ -327,13 +352,13 @@
 		<li><strong>Probe all files</strong> — walks the whole tree (including custom files) and marks every entry present (normal) or absent (red ✗, no expand arrow); empty-but-present DFs show <code class="font-mono text-sm">(empty)</code>. Shows progress <em>N / total</em>, can be stopped, and finishes with a present/absent summary. Files are only verified when expanded or probed — browsing stays lazy.</li>
 	</ul>
 
-	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">4.2 pySim command line</h3>
+	<h3 id="pysim-cmdline" class="text-lg font-medium mb-2">6.2 pySim command line</h3>
 	<p class="text-sm mb-3">Execute any pySim-shell command with usage hints (300&nbsp;ms) and autocomplete.</p>
 
-	<h3 id="raw-apdu" class="text-lg font-medium mb-2">4.3 Raw APDU</h3>
+	<h3 id="raw-apdu" class="text-lg font-medium mb-2">6.3 Raw APDU</h3>
 	<p class="text-sm mb-3">Send an arbitrary APDU and view the raw response.</p>
 
-<h3 id="usage-scenarios" class="text-lg font-medium mb-2">4.4 Usage scenarios</h3>
+<h3 id="usage-scenarios" class="text-lg font-medium mb-2">6.4 Usage scenarios</h3>
 
 	<h4 id="scenario-a" class="font-medium mb-1">Scenario A &mdash; Working with files not in pySim&rsquo;s model (Custom files)</h4>
 	<ol class="list-decimal list-inside text-sm space-y-1 mb-3">
@@ -372,7 +397,7 @@
 
 
 <section class="mb-10">
-	<h2 id="profiler" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">5. Profiler</h2>
+	<h2 id="profiler" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Profiler</h2>
 	<p class="text-sm mb-2">Verifies that a card matches a named <strong>profile</strong> — an ordered set of rules describing the expected file system and (optionally) file contents. Profiles are stored in <code class="font-mono text-sm">localStorage</code>.</p>
 	<h4 class="font-medium mb-1">Profile list</h4>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
@@ -412,13 +437,13 @@
 	<p class="text-sm mb-3">Add files that pySim&rsquo;s model does not cover. A custom file always has a full path rooted at <strong>MF</strong> or an ADF (<strong>ADF.USIM</strong>, <strong>ADF.ISIM</strong>): pick the root, type the <strong>parent DF</strong> path (the root itself, a standard DF known from the file-manager tree, or a custom DF &mdash; any depth, with suggestions while you type; a parent that has not been seen in the tree yet stays valid and is marked <code class="font-mono text-sm">⚠</code>), the 4-hex <strong>FID</strong> and an alias (<code class="font-mono text-sm">EF.&hellip;</code>/<code class="font-mono text-sm">DF.&hellip;</code>; the prefix decides whether the entry is an EF or a DF). The canonical path removes the old ambiguity where the same file could be described both relatively and absolutely. Added files appear in the File manager tree; each row has <strong>Edit</strong> (path + alias; changing a DF&rsquo;s path re-points its child entries &mdash; the button becomes <strong>Save</strong>, <strong>Cancel</strong> aborts) and <strong>Delete</strong> (deleting a DF also deletes its child entries after a confirmation). The list persists in <code class="font-mono text-sm">localStorage</code> and can be shared with <strong>Export as JSON</strong> / <strong>Export to file</strong> / <strong>Import</strong>; legacy relative paths (e.g. <code class="font-mono text-sm">a153/4954</code>) are resolved on load, unresolvable ones are dropped and reported in the list.</p>
 
 <section class="mb-10">
-	<h2 id="proactive-uicc" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Phone simulator</h2>
+	<h2 id="proactive-uicc" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">8. Phone simulator</h2>
 	<p class="text-sm mb-3">Interacts with the Card Application Toolkit session. The view has two pills: <strong>Phone</strong> (STK menu, STATUS and polling, subscribed events, proactive command log) and <strong>TR Config</strong> (response data injected into TERMINAL RESPONSEs for proactive commands).</p>
 
-	<h3 id="stk-menu" class="text-lg font-medium mb-2">6.1 STK menu</h3>
+	<h3 id="stk-menu" class="text-lg font-medium mb-2">8.1 STK menu</h3>
 	<p class="text-sm mb-3">When the card has issued a SET UP MENU command, a &ldquo;STK menu&rdquo; block appears at the top of this view with an emerald <strong>STK: &lt;title&gt;</strong> button that opens the menu overlay (same as the card&rsquo;s STK menu browser). If the card has not set up a menu, the block shows &ldquo;No menu set by the card&rdquo; instead. The menu state is refreshed each time the view is opened. User-interactive proactive commands always get a TERMINAL RESPONSE: the overlay pauses for your choice, and if you neither answer nor press <strong>Timeout</strong>, the server answers with a timeout result after the <code class="font-mono text-sm">--menu-timeout</code> seconds (default 60, <code class="font-mono text-sm">0</code> disables). <strong>Back</strong> and <strong>Timeout</strong> keep the dialogue with the card going: when the card replies with a further proactive command (SELECT ITEM or DISPLAY TEXT) the panel shows it; the cached top menu appears only when the card has nothing more to execute.</p>
 
-	<h3 id="subscribed-events" class="text-lg font-medium mb-2">6.2 Subscribed events (SET UP EVENT LIST)</h3>
+	<h3 id="subscribed-events" class="text-lg font-medium mb-2">8.2 Subscribed events (SET UP EVENT LIST)</h3>
 	<p class="text-sm mb-2">The events the card monitors. Each event has a <strong>Send</strong> button that opens a form specific to the event type:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>No-data events</strong> (User Activity, Idle Screen, Data Available, &hellip;) — one-click notification</li>
@@ -428,16 +453,16 @@
 	</ul>
 	<p class="text-sm mb-3">Sending an event uses <code class="font-mono text-sm">ENVELOPE(Event Download)</code> per TS 102 223 / TS 131 111.</p>
 
-	<h3 id="proactive-log" class="text-lg font-medium mb-2">6.3 Proactive command log</h3>
+	<h3 id="proactive-log" class="text-lg font-medium mb-2">8.3 Proactive command log</h3>
 	<p class="text-sm mb-2">Chronological list of fetched proactive commands. Each row shows the elapsed time, type code, name, and a decoded qualifier (for commands that have one). Expanding a row shows the decoded command: DISPLAY TEXT / SELECT ITEM / SET UP MENU text and items, BIP channel parameters, TIMER MANAGEMENT actions, PROVIDE LOCAL INFORMATION qualifier names (all standard qualifiers, including ESN 07, MEID 0B and Supported RATs 1A), and SEND SHORT MESSAGE &mdash; the SMS TPDU is parsed (type, TP-MR, TP-DA, TP-PID, TP-DCS, validity period, TP-UDL) with the user data shown as text for text codings (GSM&nbsp;7-bit, UCS2, 8-bit) or as a secured packet (TS&nbsp;31.115) when TP-PID&nbsp;=&nbsp;<code class="font-mono text-sm">7F</code> (SIM data download); UDH concatenation headers are decoded. Commands with response data show a <code class="font-mono text-sm">Response:</code> line with the TERMINAL RESPONSE bytes (boilerplate TLVs stripped); PROVIDE LOCAL INFORMATION responses are decoded using the PLI data dictionary decoders.</p>
 
-	<h3 id="terminal-profile" class="text-lg font-medium mb-2">6.4 TERMINAL PROFILE</h3>
-	<p class="text-sm mb-3">The <strong>TERMINAL PROFILE</strong> block (next to STATUS and Polling) offers <strong>Send</strong> (re-sends it, like Rescue) and <strong>Configure</strong>. The Configure dialog has a preset selector (device models, e.g. this project's BIP-capable handset profile), a hex field and a form with one checkbox per profile bit decoded per <strong>TS 102 223 §5.2</strong> (bytes 1&ndash;33; later bytes get generic labels), each byte is a vertical list of its bits, placed in fixed column groups (bytes 1-12 in 2 columns, 13-16 in 4, 17-18 in 2, 19-21 in 3, 22-25 in 2, 26-28 in 3, 29-30 in 2, later bytes one per row); toggling a bit updates the hex and editing the hex re-renders the form &mdash; the hex field is authoritative and unknown bytes/bits are preserved. <strong>Apply</strong> sends the new value to the server (and on to the card), resetting the STK session like Rescue; the change is in-memory only (the <code class="font-mono text-sm">--terminal-profile</code> CLI value is the startup default).</p>
+	<h3 id="terminal-profile" class="text-lg font-medium mb-2">8.4 TERMINAL PROFILE</h3>
+	<p class="text-sm mb-3">The <strong>TERMINAL PROFILE</strong> block (next to STATUS and Polling) offers <strong>Send</strong> (re-sends it, like Rescue) and <strong>Configure</strong>. The Configure dialog has a preset selector (device models, e.g. this project's BIP-capable handset profile), a hex field and a form with one checkbox per profile bit decoded per <strong>TS 102 223 &sect;5.2</strong> / <strong>TS 31.111 &sect;5.2</strong> (bytes 1&ndash;39, 3GPP-defined bits use the TS 31.111 names), each byte is a vertical list of its bits, placed in fixed column groups (bytes 1-12 in 2 columns, 13-16 in 4, 17-18 in 2, 19-21 in 3, 22-25 in 2, 26-28 in 3, 29-30 in 2, later bytes one per row); toggling a bit updates the hex and editing the hex re-renders the form &mdash; the hex field is authoritative and unknown bytes/bits are preserved. <strong>Apply</strong> sends the new value to the server (and on to the card), resetting the STK session like Rescue; the change is in-memory only (the <code class="font-mono text-sm">--terminal-profile</code> CLI value is the startup default).</p>
 
-	<h3 id="status-polling" class="text-lg font-medium mb-2">6.5 STATUS polling</h3>
+	<h3 id="status-polling" class="text-lg font-medium mb-2">8.5 STATUS polling</h3>
 	<p class="text-sm mb-3">A <strong>Send STATUS</strong> button issues a manual STATUS (F2). A <strong>Polling</strong> toggle enables background polling: after a configurable idle interval (server CLI <code class="font-mono text-sm">--poll-interval</code>, 1&ndash;255&nbsp;s, default 30&nbsp;s, <code class="font-mono text-sm">0</code> disables polling) the server sends STATUS and handles any pending proactive command. Polling stops and card state resets if the card is removed.</p>
 
-	<h3 id="pli-dict" class="text-lg font-medium mb-2">6.6 TR Config &mdash; PROVIDE LOCAL INFORMATION response data</h3>
+	<h3 id="pli-dict" class="text-lg font-medium mb-2">8.6 TR Config &mdash; PROVIDE LOCAL INFORMATION response data</h3>
 	<p class="text-sm mb-2">Editable hex values for all 22 PLI qualifiers (TS 102 223 &sect;8.6 + TS 131 111). Ten qualifiers have inline decode/encode forms:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>00</strong> Location Info (MCC, MNC, LAC/TAC, Cell ID)</li>
@@ -450,10 +475,10 @@
 </section>
 
 <section class="mb-10">
-	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">7. Server installation</h2>
+	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">9. Server installation</h2>
 	<p class="mb-3">Live card operations (Card reader tab, Phone simulator, OTA delivery) require the local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — a small HTTP server bundled with OTAMan that wraps pySim, talks to the reader over PC/SC or serial, and also serves the PWA itself (open <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
 
-	<h3 id="prerequisites" class="text-lg font-medium mb-2">7.1 Prerequisites</h3>
+	<h3 id="prerequisites" class="text-lg font-medium mb-2">9.1 Prerequisites</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Python 3.8+</strong> with <code class="font-mono text-sm">pip</code></li>
 		<li><strong>Git</strong></li>
@@ -461,20 +486,20 @@
 		<li><strong>Windows only</strong> — use <strong>Python 3.10&ndash;3.13</strong> (3.13 recommended): <code class="font-mono text-sm">pyscard</code> (the PC/SC driver wrapper) ships precompiled wheels for these versions. On Python 3.9 / 3.14 pip builds <code class="font-mono text-sm">pyscard</code> from source, which requires Microsoft C++ Build Tools (&ldquo;Desktop development with C++&rdquo;). The SMPP bridge (<code class="font-mono text-sm">smpp.twisted3</code>) is intentionally not installed on Windows, so no C++ Build Tools are needed for Python 3.10&ndash;3.13.</li>
 	</ul>
 
-	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">7.2 Quick start — Linux / macOS</h3>
+	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">9.2 Quick start — Linux / macOS</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 chmod +x setup.sh start.sh
 ./setup.sh          # creates .venv, installs pysim + server (run once)
 ./start.sh          # starts the server (serves PWA + API, auto-detects reader)</pre>
 
-	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">7.3 Quick start — Windows</h3>
+	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">9.3 Quick start — Windows</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
 cd otaman
 setup.bat           # creates .venv, installs pysim + server (run once)
 start.bat           # starts the server (serves PWA + API)</pre>
 
-	<h3 id="helper-scripts" class="text-lg font-medium mb-2">7.4 Helper scripts</h3>
+	<h3 id="helper-scripts" class="text-lg font-medium mb-2">9.4 Helper scripts</h3>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Script</th><th class="text-left py-1 px-2">Purpose</th></tr></thead>
 		<tbody>
@@ -483,7 +508,7 @@ start.bat           # starts the server (serves PWA + API)</pre>
 		</tbody>
 	</table>
 
-	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">7.5 Reader auto-detection</h3>
+	<h3 id="reader-autodetect" class="text-lg font-medium mb-2">9.5 Reader auto-detection</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>PC/SC (Linux)</strong> — <code class="font-mono text-sm">start.sh</code> passes <code class="font-mono text-sm">-p 0</code> when the <code class="font-mono text-sm">pcscd</code> daemon is running</li>
 		<li><strong>PC/SC (Windows)</strong> — <code class="font-mono text-sm">start.bat</code> always uses <code class="font-mono text-sm">-p 0</code> (PC/SC is built into Windows)</li>
@@ -492,7 +517,7 @@ start.bat           # starts the server (serves PWA + API)</pre>
 	</ul>
 	<p class="text-sm mb-3">If no card is present, the Card reader tab shows &ldquo;No card detected&rdquo;. Insert the card and click <strong>Equip card</strong> to initialize it.</p>
 
-	<h3 id="manual-install" class="text-lg font-medium mb-2">7.6 Manual installation</h3>
+	<h3 id="manual-install" class="text-lg font-medium mb-2">9.6 Manual installation</h3>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3"># Create and activate a venv
 python3 -m venv .venv
 source .venv/bin/activate   # Linux/macOS
@@ -511,7 +536,7 @@ pysim-otaman-server --http-port 8080</pre>
 
 
 <section class="mb-10">
-	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">8. Version compatibility</h2>
+	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">10. Version compatibility</h2>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (OTAMan)</th><th class="text-left py-1 px-2">Server</th><th class="text-left py-1 px-2">Status</th></tr></thead>
 		<tbody>

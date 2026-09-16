@@ -7792,6 +7792,7 @@ function scp81SwitchSubtab(name) {
 	document.getElementById('scp81-sub-scripts').classList.toggle('hidden', name !== 'scripts');
 	if (name === 'scripts') { scriptsRender(); scriptsRebuildSelect(); }
 	else { scp81ModeChanged(); scp81StatusRefresh(); }
+	setHelpAnchor(name === 'scripts' ? 'scp81-scripts' : 'scp81-listener');
 }
 
 function scp81Msg(text, cls) {
@@ -8449,6 +8450,8 @@ function scp81Enter() {
 	scriptsRender();
 	scp81StatusRefresh();
 	scp81LogRefresh();
+	setHelpAnchor(document.getElementById('scp81-sub-scripts').classList.contains('hidden')
+		? 'scp81-listener' : 'scp81-scripts');
 	if (_scp81Timer) clearInterval(_scp81Timer);
 	_scp81Timer = setInterval(() => {
 		if (document.getElementById('tab-scp81').classList.contains('hidden')) return;

@@ -146,3 +146,25 @@ test('profile list has a Profile from snapshot button', () => {
     assert.ok(html.includes('function profilerScanFromSnapshot(si)'));
     assert.ok(html.includes('function profilerBuildFileRuleFromSnapshot('));
 });
+
+test('every help anchor used by the UI exists in help.html', () => {
+    const help = fs.readFileSync(path.join(__dirname, '..', 'help.html'), 'utf8');
+    const ids = new Set([...help.matchAll(/id="([^"]+)"/g)].map(m => m[1]));
+    const anchors = new Set();
+    // static maps in `xHelpAnchor = {...}` and inline `setHelpAnchor({...})`
+    for (const re of [/HelpAnchor\s*=\s*\{([^}]*)\}/g, /setHelpAnchor\s*\(\s*\{([^}]*)\}/g]) {
+        for (const m of html.matchAll(re)) {
+            for (const v of m[1].matchAll(/'([a-z0-9-]+)'/g)) anchors.add(v[1]);
+        }
+    }
+    for (const m of html.matchAll(/setHelpAnchor\('([^']+)'\)/g)) anchors.add(m[1]);
+    for (const m of html.matchAll(/HelpAnchor\s*=[^;]*\|\|\s*'([a-z0-9-]+)'/g)) anchors.add(m[1]);
+    for (const m of html.matchAll(/setHelpAnchor\s*\([^()]*\|\|\s*'([a-z0-9-]+)'/g)) anchors.add(m[1]);
+    assert.ok(anchors.size >= 15, 'expected at least 15 help anchors, got ' + anchors.size);
+    const missing = [...anchors].filter(a => !ids.has(a));
+    assert.deepStrictEqual(missing, [], 'help.html lacks sections for: ' + missing.join(', '));
+    // the SCP81 tab wires its own anchors and the targets exist
+    assert.ok(ids.has('scp81') && ids.has('scp81-listener') && ids.has('scp81-scripts'));
+    assert.ok(html.includes("'scp81-listener' : 'scp81-scripts'"));
+    assert.ok(html.includes("? 'scp81-scripts' : 'scp81-listener'"));
+});

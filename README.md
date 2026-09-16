@@ -31,7 +31,7 @@ npm run build
 
 ## Interface
 
-Six top-level tabs: **Remote APDU**, **SCP80**, **SCP81**, **Profiler**, **Card reader**, and **Phone simulator**. **Remote APDU** and **SCP80** use pill sub-tabs; the Card reader tab has three sub-tabs: **File manager**, **pySim command line**, and **Raw APDU**; the Profiler tab lists **Profiles**, **Card snapshots**, and **Custom files**.
+Seven top-level tabs: **Remote APDU**, **SCP80**, **SCP81**, **Cards**, **Profiler**, **Card reader**, and **Phone simulator**. **Remote APDU** and **SCP80** use pill sub-tabs; the **SCP81** tab has **Listener** and **Scripts** pills; the Card reader tab has three sub-tabs: **File manager**, **pySim command line**, and **Raw APDU**; the Profiler tab lists **Profiles**, **Card snapshots**, and **Custom files**.
 
 ---
 
@@ -349,7 +349,7 @@ Decodes a raw command response: pick the command that was sent, enter the SW (e.
 
 ## SCP80 tab
 
-The **SCP80** top-level tab groups SCP80-related views, switched by three pills: **Secured Packet**, **Cards**, and **RAM**. Assembles secured packets per ETSI TS 102 225.
+The **SCP80** top-level tab groups SCP80-related views, switched by two pills: **Secured Packet** and **RAM**. Assembles secured packets per ETSI TS 102 225.
 
 ### Secured Packet
 
@@ -433,23 +433,25 @@ Delivery PoR (SPI2 `01`) is simpler — the card returns the PoR directly in the
 
 ### Cards
 
-Stores saved card configurations (presets). Each preset stores the cryptographic keys, SPI settings, TAR, and replay counter needed for SCP80 operations.
+Stores saved card configurations (presets) in `localStorage`. A preset holds the cryptographic keys, SPI settings, TAR and replay counter for SCP80 operations, plus the **PSK identity / PSK key** pair used by the SCP81 HTTP OTA listener. Cards is a **top-level tab**.
 
 | Field | Description |
 |---|---|
+| Name | Human-readable label (required) |
+| ICCID | Optional card identifier |
 | SPI1 / SPI2 | Security level and PoR settings |
+| KIc / KID index | Key version number (required together with the keys) |
 | KIc / KID key | Encryption and MAC key hex |
-| KIc / KID index | Key version number |
 | TAR | Toolkit Application Reference (3 bytes) |
 | Counter (CNTR) | 10-digit hex replay counter, auto-incremented after each successful SCP80 send |
+| PSK identity | SCP81 HTTP OTA: the identity the card sends in the TLS handshake |
+| PSK key | SCP81 HTTP OTA: 32 hex chars (16 bytes); the listener picks it by the identity the card presents |
 
-**Add a card:** fill in the name, SPI1/SPI2, KIc/KID keys and indices, TAR, and click **Add**. The card appears in the list and becomes available in the RAM tab's **Card preset** dropdown.
+The **SCP81** column shows whether the preset supplies a usable PSK pair: **✓** (identity and key), **⚠** (only one of the two — the listener ignores such a preset), **—** (no PSK). Identity and key must be set together.
 
-**Edit a card:** click a card in the list, modify fields, click **Save**.
+**Add a card:** fill in the name, ICCID (optional), SPI1/SPI2, KIc/KID keys and indices, TAR, the SCP81 PSK pair (optional) and click **Add**. The card appears in the list and becomes available in the RAM tab's **Card preset** dropdown.
 
-**Delete a card:** select a card, click **Delete**. Removes the preset from `localStorage`.
-
-**Counter:** the 10-digit hex counter (CNTR) is auto-incremented after each successful SCP80 send (both manual Secured Packet sends and RAM operations). The updated counter is saved back to the preset automatically.
+**Edit / remove:** **Edit** loads a preset into the form (the Add button becomes **Save**; **Cancel** clears the form); **Remove** deletes the row from `localStorage`. A successful SCP80 send advances and stores the replay counter, and edits are pushed into a running SCP81 listener automatically.
 
 ### RAM
 
@@ -586,13 +588,30 @@ Values persist on the server until restart. Apply → hex updates; Save → POST
 
 ## SCP81
 
-The **SCP81** tab drives HTTP OTA (GP RAM over HTTP, GPC v2.2 Amendment B). The card's BIP channel is always redirected to a local listener on the server:
+The **SCP81** tab drives HTTP OTA (GP RAM over HTTP, GPC v2.2 Amendment B) and has two pills: **Listener** and **Scripts**.
 
-- **Capture (dump)** — accepts the card's TCP channel and logs whatever it sends (e.g. the TLS ClientHello) without answering. Use it to inspect what the card asks for.
-- **PSK TLS server** — answers the handshake with the TLS 1.2 PSK cipher suites of the spec and speaks the GP HTTP administration dialog (`X-Admin-*` headers, `200` with a command string or `204 No Content`). Enter the **PSK Identity** the card uses and the **PSK key (hex)**; the key is only sent to the local server, never stored or logged.
-- **Script** — the command script served over the session: **Memory + ELF info** (default) sends `GET DATA FF21` (available non-volatile/volatile memory, applet count) and `GET STATUS P1=20/10` (Executable Load Files and modules registry) as RAM/GP commands in TS 102 226 Command Scripting templates, one C-APDU per request; **None** closes every session with `204`. Custom APDU lists are accepted by the API.
+The **Listener** starts/stops the target the card's BIP channel is redirected to, in one of three modes:
 
-The state line shows the listener, the negotiated identity and live channels (bytes in/out); the log records OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA and every TLS/HTTP/script step, including each R-APDU (`script-rapdu`, `script-memory`). The same controls are available through `POST /api/scp81/bip` and `GET /api/scp81/script` (see `docs/api.md`).
+- **PSK TLS server** (default) — a PSK TLS listener on **Host:Port** that answers with the TLS 1.2 PSK cipher suites of the spec and speaks the GP HTTP administration dialog (`X-Admin-*` headers, `200` with a command string or `204 No Content`). PSK keys come from the card presets (**Cards** tab): the key is picked by the identity the card sends in the handshake, and Start is refused when no preset has both parts. Keys are never stored or logged; an unrecognised identity is logged as `tls-psk-unknown`.
+- **Pass-through (external server)** — no local listener: every BIP channel is connected to the configured external platform (Host and Port required), which terminates TLS and runs the administration dialog; the address the card requests is only logged.
+- **Capture (dump)** — accepts the card's TCP channel and logs whatever it sends (e.g. the TLS ClientHello) without answering.
+
+**Script** selects the command list served over the session: **None** (leave the server's configured script) or one of the scripts created in the **Scripts** pill; **Restart script** re-queues the selected script with `force`, starting over from the first APDU.
+
+The state line shows the listener, the negotiated identity and live channels (bytes in/out); **Script results (R-APDUs)** lists each served C-APDU with its R-APDU and SW (`done/total` progress); the **HTTP OTA log** records OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA and every TLS/HTTP/script step (`tls-handshake`, `tls-request`, `script-send`, `script-rapdu`, `script-page`, `script-done`, `data-available`, `peer-close`). The same controls are available through `POST /api/scp81/bip` and `GET /api/scp81/script` (see `docs/api.md`).
+
+### Scripts
+
+The **Scripts** pill manages named APDU lists stored in `localStorage` (`otaman_scripts`) and sent to the server when a listener starts. Each list is a sequence of hex C-APDUs, one per line (`#`/`;` comments allowed). **New** creates one from a template:
+
+| Template | What it builds |
+|---|---|
+| **Empty** | an empty list |
+| **Explore** | the reference administration sequence (`GET DATA FF21`, GET STATUS ISD/ELF/application listings, `GET DATA 0085`); long listings auto-continue through `SW 6310/CAFE` pages |
+| **Install from .cap** | INSTALL [for load] → LOAD ×N → INSTALL [for install] from a `.cap` (optional SD AID, install/STK parameters, make selectable) via `POST /api/scp81/gen-install`; the file is only used to generate the APDUs — it is not stored, not even its name |
+| **Delete** | DELETE APDUs from an AID list (one per line) with P2 = object only / object and related objects |
+
+The table lists each script with kind, APDU count and creation time; **Edit** opens the name + APDU editor and **Delete** removes it. Over a session the server serves one C-APDU per card POST and tracks execution: the card reports status in its next POST (`X-Admin-Script-Status`), a session that dies resends only the unexecuted APDUs (`X-Admin-Resume` continues, a fresh dialog restarts), and a completed script is closed with `204 No Content`. The Remote APDU → **RAM/GP** builder can feed a command chain straight into the run with **Queue in SCP81**.
 
 ## PWA
 
