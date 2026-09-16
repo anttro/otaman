@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.10</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.11</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -744,7 +744,8 @@
 					</div>
 					<div>
 						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Parent DF">Parent DF</label>
-						<select id="pysim-cf-parent" class="font-mono w-56 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-2 dark:bg-slate-800"></select>
+						<input id="pysim-cf-parent" list="pysim-cf-parent-list" oninput="pysimCustomParentInput()" onkeydown="if(event.key==='Enter')pysimCustomSubmit()" class="font-mono w-72 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-2 dark:bg-slate-800" placeholder="MF/7F20 or ADF.USIM/5F3A">
+						<datalist id="pysim-cf-parent-list"></datalist>
 					</div>
 					<div>
 						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="FID (4 hex)">FID (4 hex)</label>
@@ -757,7 +758,7 @@
 					<button id="pysim-cf-add-btn" onclick="pysimCustomSubmit()" class="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
 					<button id="pysim-cf-cancel-btn" onclick="pysimCustomEditCancel()" class="hidden px-3 py-2 bg-gray-600 text-white text-sm font-medium rounded hover:bg-gray-700 whitespace-nowrap" data-l10n="Cancel">Cancel</button>
 				</div>
-				<div class="text-xs text-gray-500 dark:text-slate-400 mb-2" data-l10n="Full path from MF or an ADF; the parent DF must be defined here first.">Full path from MF or an ADF; the parent DF must be defined here first.</div>
+				<div class="text-xs text-gray-500 dark:text-slate-400 mb-2" data-l10n="The parent may be any DF path — a standard DF from the tree or a custom DF, any depth; parents not yet seen in the tree are marked ⚠.">The parent may be any DF path — a standard DF from the tree or a custom DF, any depth; parents not yet seen in the tree are marked ⚠.</div>
 				<div id="pysim-cf-list" class="text-xs font-mono text-gray-600 dark:text-slate-400"></div>
 			<input type="file" id="pysim-cf-file" accept=".json,application/json" class="hidden" onchange="pysimCustomImportFile(this)">
 				<div class="flex flex-wrap gap-2 mt-2">
@@ -6317,6 +6318,7 @@ function pysimCustomInject(node) {
 		const fid = pysimCustomFid(c);
 		const existing = (node.children || []).find(ch => (ch.fid || '').toUpperCase() === fid);
 		if (existing) {
+			if (existing.modelName === undefined) existing.modelName = existing.name;
 			existing.name = c.name;
 			existing.kind = c.kind;
 			existing.custom = true;
@@ -6336,6 +6338,37 @@ function pysimCustomInject(node) {
 			});
 		}
 	}
+}
+
+// Re-apply the custom-file list to the already-loaded tree: drop injected
+// nodes whose entry is gone, restore renamed model nodes, inject anew.
+function pysimCustomRefreshTree() {
+	if (!pysimFsTreeRoot) return;
+	const prune = node => {
+		if (!node.children) return;
+		node.children = node.children.filter(ch => {
+			if (!ch.custom) return true;
+			if (pysimCustomFiles.some(c => c.path === ch.customPath)) return true;
+			if (ch.modelName !== undefined) {
+				ch.name = ch.modelName;
+				delete ch.modelName;
+				delete ch.custom;
+				delete ch.customPath;
+				delete ch.kind;
+				return true;
+			}
+			return false;
+		});
+	};
+	const walk = node => {
+		prune(node);
+		pysimCustomInject(node);
+		for (const ch of (node.children || [])) {
+			if (ch.isDir) walk(ch);
+		}
+	};
+	walk(pysimFsTreeRoot);
+	pysimFsRenderTree();
 }
 
 let pysimFsSort = localStorage.getItem('otaman_fs_sort') === 'name' ? 'name' : 'fid';
@@ -6581,6 +6614,23 @@ function pysimFsFindNode(name, root) {
 		}
 	}
 	return null;
+}
+
+// Find a node by its canonical path ("MF/7F20/6F46", "ADF.USIM/6F07"), so
+// custom-file parents can be resolved against the loaded tree (standard DFs
+// included, at any depth). Returns null when the path is not loaded yet.
+function pysimFsFindNodeByPath(path) {
+	const want = pysimCustomNormPath(path);
+	if (!want || !pysimFsTreeRoot) return null;
+	const walk = node => {
+		if (pysimCustomNormPath(pysimFsNodePath(node)) === want) return node;
+		for (const c of (node.children || [])) {
+			const hit = walk(c);
+			if (hit) return hit;
+		}
+		return null;
+	};
+	return walk(pysimFsTreeRoot);
 }
 
 async function pysimFsToggleDir(name) {
@@ -8730,20 +8780,66 @@ function pysimCustomFid(entry) { return entry.path.split('/').pop(); }
 function pysimCustomParent(entry) { return entry.path.split('/').slice(0, -1).join('/'); }
 function pysimCustomRoot(entry) { return entry.path.split('/')[0]; }
 
+// Parent DF suggestions for the current root: the root, custom DFs and every
+// DF node known from the loaded file-manager tree (standard pySim files),
+// at any depth.
+function pysimCustomKnownDfPaths(root) {
+	const out = [];
+	const seen = new Set();
+	const add = p => { if (p && !seen.has(p)) { seen.add(p); out.push(p); } };
+	add(root);
+	for (const c of pysimCustomFiles) {
+		if (c.kind === 'df' && pysimCustomRoot(c) === root) add(c.path);
+	}
+	const walk = node => {
+		for (const ch of (node.children || [])) {
+			if (!ch.isDir) continue;
+			const p = pysimFsNodePath(ch);
+			if (p && p.split('/')[0] === root) add(p);
+			walk(ch);
+		}
+	};
+	if (pysimFsTreeRoot) walk(pysimFsTreeRoot);
+	return out.sort();
+}
+
+// Where a parent path comes from: root, a custom DF, a DF of the loaded tree,
+// a known non-DF (error), or unknown (allowed, flagged as a warning).
+function pysimCustomParentStatus(parentPath) {
+	const p = pysimCustomNormPath(parentPath);
+	if (!p || p.split('/').length <= 1) return {status: 'root', source: null};
+	const c = pysimCustomFiles.find(e => e.path === p);
+	if (c) return {status: c.kind === 'df' ? 'df' : 'not-df', source: 'custom'};
+	const node = (typeof pysimFsFindNodeByPath === 'function') ? pysimFsFindNodeByPath(p) : null;
+	if (node) return {status: node.isDir ? 'df' : 'not-df', source: 'tree'};
+	return {status: 'unknown', source: null};
+}
+
 function pysimCustomValidate(root, parentPath, fid, name, entries, editIndex) {
-	if (!CUSTOM_ROOTS.includes(root)) {
+	parentPath = pysimCustomNormPath(parentPath) || root;
+	// a bare FID chain typed without the root is completed from the selector
+	const first = parentPath.split('/')[0];
+	if (!CUSTOM_ROOTS.includes(first) && /^[0-9A-F]{4}$/.test(first)) {
+		parentPath = pysimCustomNormPath(root + '/' + parentPath);
+	}
+	if (!CUSTOM_ROOTS.includes(parentPath.split('/')[0])) {
 		return {error: t('Root must be MF, ADF.USIM or ADF.ISIM')};
+	}
+	const segs = parentPath.split('/');
+	if (segs.length > 1 && !segs.slice(1).every(s => /^[0-9A-F]{4}$/.test(s))) {
+		return {error: t('Parent must be the root or a chain of 4-hex FIDs (e.g. MF/7F20)')};
 	}
 	fid = (fid || '').trim().toUpperCase();
 	if (!/^[0-9A-F]{4}$/.test(fid)) return {error: t('FID must be 4 hex characters')};
 	const kind = pysimCustomKindForName(name);
 	if (!kind) return {error: t('Alias must start with "EF." or "DF."')};
-	if (parentPath !== root) {
-		const idx = entries.findIndex((e, i) => i !== editIndex && e.path === parentPath);
-		if (idx < 0) return {error: t('Parent DF is not defined as a custom file:') + ' ' + parentPath};
-		if (entries[idx].kind !== 'df') return {error: t('Parent is not a DF:') + ' ' + parentPath};
+	// A parent known here to be an EF is an error; a parent that is a standard
+	// DF (or not seen yet) is fine - the tree resolves it later.
+	const parent = entries.find((e, i) => i !== editIndex && e.path === parentPath);
+	if (parent && parent.kind !== 'df') {
+		return {error: t('Parent is not a DF:') + ' ' + parentPath};
 	}
-	const path = (parentPath === root ? root : parentPath) + '/' + fid;
+	const path = parentPath + '/' + fid;
 	if (entries.some((e, i) => i !== editIndex && e.path === path)) {
 		return {error: t('File already defined:') + ' ' + path};
 	}
@@ -8836,23 +8932,34 @@ function pysimCustomRenderRoots() {
 }
 
 function pysimCustomRenderParents() {
-	const sel = document.getElementById('pysim-cf-parent');
-	if (!sel) return;
+	const list = document.getElementById('pysim-cf-parent-list');
+	if (!list) return;
 	const root = document.getElementById('pysim-cf-root').value || CUSTOM_ROOTS[0];
-	const prev = sel.value;
-	let html = '<option value="' + esc(root) + '">' + esc(t('— root —')) + '</option>';
-	for (const c of pysimCustomFiles) {
-		if (c.kind !== 'df' || pysimCustomRoot(c) !== root) continue;
-		html += '<option value="' + esc(c.path) + '">' + esc(c.path + ' → ' + c.name) + '</option>';
+	let html = '';
+	for (const p of pysimCustomKnownDfPaths(root)) {
+		const c = pysimCustomFiles.find(e => e.path === p && e.kind === 'df');
+		html += '<option value="' + esc(p) + '">' + esc(c ? p + ' → ' + c.name : p) + '</option>';
 	}
-	sel.innerHTML = html;
-	if (prev && (prev === root || pysimCustomFiles.some(c => c.path === prev && c.kind === 'df'))) {
-		sel.value = prev;
-	}
+	list.innerHTML = html;
 }
 
 function pysimCustomRootChanged() {
+	const sel = document.getElementById('pysim-cf-root');
+	const inp = document.getElementById('pysim-cf-parent');
+	const first = pysimCustomNormPath(inp && inp.value).split('/')[0];
+	if (CUSTOM_ROOTS.includes(first) && first !== sel.value) inp.value = sel.value;
 	pysimCustomRenderParents();
+}
+
+// Keep the root selector (and its suggestions) in step with a typed parent path.
+function pysimCustomParentInput() {
+	const sel = document.getElementById('pysim-cf-root');
+	const inp = document.getElementById('pysim-cf-parent');
+	const first = pysimCustomNormPath(inp && inp.value).split('/')[0];
+	if (CUSTOM_ROOTS.includes(first) && sel.value !== first) {
+		sel.value = first;
+		pysimCustomRenderParents();
+	}
 }
 
 function pysimCustomSubmit() {
@@ -8863,6 +8970,11 @@ function pysimCustomSubmit() {
 	const name = nameEl.value.trim();
 	const res = pysimCustomValidate(root, parentPath, fid, name, pysimCustomFiles, pysimCustomEditIndex);
 	if (res.error) { alert(res.error); return; }
+	const parent = pysimCustomParent({path: res.path});
+	if (pysimCustomParentStatus(parent).status === 'not-df') {
+		alert(t('Parent is not a DF:') + ' ' + parent);
+		return;
+	}
 	if (pysimCustomEditIndex !== null) {
 		const oldPath = pysimCustomFiles[pysimCustomEditIndex].path;
 		if (oldPath !== res.path) pysimCustomRewriteDescendants(pysimCustomFiles, oldPath, res.path);
@@ -8873,6 +8985,7 @@ function pysimCustomSubmit() {
 	pysimCustomSave();
 	pysimCustomRender();
 	pysimCustomEditCancel();
+	pysimCustomRefreshTree();
 }
 
 function pysimCustomEdit(i) {
@@ -8919,6 +9032,7 @@ function pysimCustomRemove(i) {
 	}
 	pysimCustomSave();
 	pysimCustomRender();
+	pysimCustomRefreshTree();
 }
 
 function pysimCustomRender() {
@@ -8936,8 +9050,11 @@ function pysimCustomRender() {
 	}
 	for (let i = 0; i < pysimCustomFiles.length; i++) {
 		const c = pysimCustomFiles[i];
+		const warn = pysimCustomParentStatus(pysimCustomParent(c)).status === 'unknown'
+			? '<span class="text-amber-600 dark:text-amber-400" title="' + esc(t('Parent DF not seen in the tree yet')) + '">⚠</span> '
+			: '';
 		html += '<div class="flex items-center gap-2 py-1 border-b border-gray-200 dark:border-slate-700">';
-		html += '<span class="text-gray-500">' + esc(c.path) + '</span> <span class="text-blue-600 dark:text-blue-400">→</span> <b>' + esc(c.name) + '</b>';
+		html += '<span class="text-gray-500">' + warn + esc(c.path) + '</span> <span class="text-blue-600 dark:text-blue-400">→</span> <b>' + esc(c.name) + '</b>';
 		html += '<span class="text-gray-400">(' + esc(c.kind.toUpperCase()) + ')</span>';
 		html += '<span class="ml-auto flex gap-2">';
 		html += '<button onclick="pysimCustomEdit(' + i + ')" class="px-2 py-0.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">' + esc(t('Edit')) + '</button>';
@@ -8969,6 +9086,7 @@ async function pysimCustomImport(text) {
 		pysimCustomFiles = res.files;
 		pysimCustomSave();
 		pysimCustomRender();
+		pysimCustomRefreshTree();
 		const el = document.getElementById('pysim-cf-io');
 		el.value = 'Imported ' + added + ' file(s)' + (res.dropped ? ', dropped ' + res.dropped : '') + '.';
 		setTimeout(() => { el.classList.add('hidden'); }, 2000);
@@ -11309,14 +11427,14 @@ const LANG_RU = {
 	'Parent DF': 'Родительский DF',
 	'FID (4 hex)': 'FID (4 hex)',
 	'Alias (EF. / DF.)': 'Псевдоним (EF. / DF.)',
-	'Full path from MF or an ADF; the parent DF must be defined here first.': 'Полный путь от MF или ADF; родительский DF должен быть создан здесь заранее.',
+	'The parent may be any DF path — a standard DF from the tree or a custom DF, any depth; parents not yet seen in the tree are marked ⚠.': 'Родителем может быть любой путь DF — стандартный DF из дерева или пользовательский DF, любой вложенности; DF, ещё не встречавшиеся в дереве, помечаются ⚠.',
 	'Root must be MF, ADF.USIM or ADF.ISIM': 'Корень должен быть MF, ADF.USIM или ADF.ISIM',
 	'FID must be 4 hex characters': 'FID должен состоять из 4 hex-символов',
 	'Alias must start with "EF." or "DF."': 'Псевдоним должен начинаться с «EF.» или «DF.»',
-	'Parent DF is not defined as a custom file:': 'Родительский DF не создан как пользовательский файл:',
+	'Parent must be the root or a chain of 4-hex FIDs (e.g. MF/7F20)': 'Родитель — корень или цепочка 4-hex FID (например, MF/7F20)',
 	'Parent is not a DF:': 'Родитель не является DF:',
+	'Parent DF not seen in the tree yet': 'Родительский DF ещё не встречался в дереве',
 	'File already defined:': 'Файл уже задан:',
-	'— root —': '— корень —',
 	'and': 'и',
 	'child file(s)?': 'дочерних файлов?',
 	'Dropped invalid legacy entries:': 'Отброшено некорректных старых записей:',

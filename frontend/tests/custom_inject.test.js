@@ -21,10 +21,11 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-let code = 'var pysimCustomFiles = [];\n';
-for (const fn of ['pysimFsNodePath', 'pysimCustomInject', 'pysimCustomParent', 'pysimCustomFid']) {
+let code = 'var pysimCustomFiles = [];\nvar pysimFsTreeRoot = null;\n';
+for (const fn of ['pysimFsNodePath', 'pysimCustomInject', 'pysimCustomRefreshTree', 'pysimCustomParent', 'pysimCustomFid']) {
 	code += extractFunc(html, fn) + '\n';
 }
+code += 'globalThis.pysimFsRenderTree = () => {};\n';
 eval(code);
 
 function node(name, fid, parent, children) {
@@ -99,4 +100,26 @@ test('injected DFs are directories and can host their own children', () => {
 	pysimCustomInject(df);
 	assert.strictEqual(df.children.length, 1);
 	assert.strictEqual(df.children[0].name, 'EF.UNDER-NEW');
+});
+
+test('refresh restores renamed model nodes and drops injected ones', () => {
+	const t = tree();
+	pysimFsTreeRoot = t.mf;
+	pysimCustomFiles = [{ path: 'MF/5F03/6F46', name: 'EF.RENAMED', kind: 'ef' }];
+	pysimCustomRefreshTree();
+	assert.strictEqual(t.dfC.children[0].name, 'EF.RENAMED');
+	assert.strictEqual(t.dfC.children[0].custom, true);
+	// deleting the entry brings the model name back
+	pysimCustomFiles = [];
+	pysimCustomRefreshTree();
+	assert.strictEqual(t.dfC.children[0].name, 'EF.X');
+	assert.ok(!t.dfC.children[0].custom);
+	assert.strictEqual(t.dfC.children[0].modelName, undefined);
+	// injected nodes disappear together with their entry
+	pysimCustomFiles = [{ path: 'MF/5F10', name: 'DF.NEW', kind: 'df' }];
+	pysimCustomRefreshTree();
+	assert.ok(t.mf.children.some(c => c.fid === '5F10'));
+	pysimCustomFiles = [];
+	pysimCustomRefreshTree();
+	assert.ok(!t.mf.children.some(c => c.fid === '5F10'));
 });

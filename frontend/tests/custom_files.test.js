@@ -21,17 +21,18 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-let code = 'var pysimCustomFiles = [];\nvar pysimCustomEditIndex = null;\nvar _pysimCustomDropped = 0;\n';
+let code = 'var pysimCustomFiles = [];\nvar pysimCustomEditIndex = null;\nvar _pysimCustomDropped = 0;\nvar pysimFsTreeRoot = null;\n';
 for (const fn of ['pysimCustomNormPath', 'pysimCustomKindForName', 'pysimCustomFid',
-	'pysimCustomParent', 'pysimCustomRoot', 'pysimCustomValidate',
-	'pysimCustomRewriteDescendants', 'pysimCustomNormalizeEntries', 'pysimCustomSave',
-	'pysimCustomRenderRoots', 'pysimCustomRenderParents', 'pysimCustomRootChanged',
-	'pysimCustomSubmit', 'pysimCustomEdit', 'pysimCustomEditCancel',
-	'pysimCustomRemove', 'pysimCustomRender']) {
+	'pysimCustomParent', 'pysimCustomRoot', 'pysimCustomKnownDfPaths', 'pysimCustomParentStatus',
+	'pysimCustomValidate', 'pysimCustomRewriteDescendants', 'pysimCustomNormalizeEntries',
+	'pysimCustomSave', 'pysimCustomRenderRoots', 'pysimCustomRenderParents',
+	'pysimCustomRootChanged', 'pysimCustomParentInput', 'pysimCustomSubmit',
+	'pysimCustomEdit', 'pysimCustomEditCancel', 'pysimCustomRemove', 'pysimCustomRender',
+	'pysimFsNodePath', 'pysimFsFindNodeByPath', 'pysimCustomInject', 'pysimCustomRefreshTree']) {
 	code += extractFunc(html, fn) + '\n';
 }
 code += html.match(/const CUSTOM_ROOTS = \[[^\]]*\];/)[0].replace('const ', 'var ') + '\n';
-code += 'globalThis.esc = s => s;\nglobalThis.t = s => s;\n';
+code += 'globalThis.esc = s => s;\nglobalThis.t = s => s;\nglobalThis.pysimFsRenderTree = () => {};\n';
 eval(code);
 
 function fakeEl(id) {
@@ -53,6 +54,7 @@ function setup(entries) {
 	const els = {
 		'pysim-cf-root': fakeEl('pysim-cf-root'),
 		'pysim-cf-parent': fakeEl('pysim-cf-parent'),
+		'pysim-cf-parent-list': fakeEl('pysim-cf-parent-list'),
 		'pysim-cf-fid': fakeEl('pysim-cf-fid'),
 		'pysim-cf-name': fakeEl('pysim-cf-name'),
 		'pysim-cf-list': fakeEl('pysim-cf-list'),
@@ -73,6 +75,7 @@ function setup(entries) {
 	pysimCustomFiles = (entries || []).map(e => Object.assign({}, e));
 	pysimCustomEditIndex = null;
 	_pysimCustomDropped = 0;
+	pysimFsTreeRoot = null;
 	pysimCustomRenderRoots();
 	pysimCustomRenderParents();
 	return els;
@@ -115,12 +118,24 @@ test('migration resolves legacy relative paths and drops the unresolvable', () =
 	assert.strictEqual(res.dropped, 2);
 });
 
-test('validation requires a defined parent DF and a valid FID/alias', () => {
+test('validation accepts standard/unknown parents but rejects known EFs', () => {
 	const files = [{ path: 'MF/A153', name: 'DF.A1', kind: 'df' }];
-	// parent not defined
-	assert.match(pysimCustomValidate('MF', 'MF/A999', '6F46', 'EF.SPN', files, null).error, /not defined/);
+	// a parent that is not a custom entry is accepted: it may be a standard DF
+	// from the card model, or simply not seen in the tree yet
+	const unknown = pysimCustomValidate('MF', 'MF/A999', '6F46', 'EF.SPN', files, null);
+	assert.strictEqual(unknown.error, null);
+	assert.strictEqual(unknown.path, 'MF/A999/6F46');
 	// parent defined -> ok
 	assert.strictEqual(pysimCustomValidate('MF', 'MF/A153', '6F46', 'EF.SPN', files, null).path, 'MF/A153/6F46');
+	// a bare FID chain typed without the root is completed from the selector
+	assert.strictEqual(pysimCustomValidate('MF', 'A153', '6F46', 'EF.SPN', files, null).path, 'MF/A153/6F46');
+	// deep chains are fine
+	assert.strictEqual(pysimCustomValidate('MF', 'MF/7F20/5F01', '6F46', 'EF.DEEP', [], null).path, 'MF/7F20/5F01/6F46');
+	// a parent known here to be an EF is rejected
+	assert.match(pysimCustomValidate('MF', 'MF/A153/6F46', '1234', 'EF.X',
+		files.concat([{ path: 'MF/A153/6F46', name: 'EF.OTHER', kind: 'ef' }]), null).error, /not a DF/);
+	// parent segments must be 4-hex FIDs
+	assert.match(pysimCustomValidate('MF', 'MF/FOO', '6F46', 'EF.SPN', files, null).error, /4-hex/);
 	// bad FID
 	assert.match(pysimCustomValidate('MF', 'MF', '6F4', 'EF.SPN', files, null).error, /4 hex/);
 	// bad alias
@@ -135,21 +150,62 @@ test('validation requires a defined parent DF and a valid FID/alias', () => {
 	assert.match(pysimCustomValidate('MFX', 'MFX', '6F46', 'EF.SPN', files, null).error, /Root/);
 });
 
-test('root and parent selectors list roots and defined DFs', () => {
+test('root and parent suggestions list roots, custom DFs and tree DFs', () => {
 	const els = setup([
 		{ path: 'MF/A153', name: 'DF.A1', kind: 'df' },
 		{ path: 'MF/A153/4954', name: 'EF.SPNS', kind: 'ef' },
 		{ path: 'ADF.USIM/6F07', name: 'EF.IMSI', kind: 'ef' },
 	]);
 	assert.deepStrictEqual(els['pysim-cf-root'].options(), ['MF', 'ADF.USIM', 'ADF.ISIM']);
-	const parents = els['pysim-cf-parent'].options();
+	let parents = els['pysim-cf-parent-list'].options();
 	assert.ok(parents.includes('MF'));
 	assert.ok(parents.includes('MF/A153'));
 	assert.ok(!parents.includes('MF/A153/4954'), 'EFs are not parent options');
+	// DFs known from the loaded file tree are suggested, at any depth
+	pysimFsTreeRoot = { name: 'MF', fid: '3F00', isDir: true, parent: null, children: [] };
+	const df = { name: 'DF.TELECOM', fid: '7F10', isDir: true, parent: pysimFsTreeRoot, children: [] };
+	const sub = { name: 'DF.SUB', fid: '5F01', isDir: true, parent: df, children: [] };
+	df.children = [sub];
+	pysimFsTreeRoot.children = [df];
+	pysimCustomRenderParents();
+	parents = els['pysim-cf-parent-list'].options();
+	assert.ok(parents.includes('MF/7F10'));
+	assert.ok(parents.includes('MF/7F10/5F01'));
 	// the ADF root is always a valid parent
 	els['pysim-cf-root'].value = 'ADF.USIM';
 	pysimCustomRootChanged();
-	assert.deepStrictEqual(els['pysim-cf-parent'].options(), ['ADF.USIM']);
+	assert.deepStrictEqual(els['pysim-cf-parent-list'].options(), ['ADF.USIM']);
+});
+
+test('parent status classifies root, custom, tree and unknown parents', () => {
+	setup([
+		{ path: 'MF/A153', name: 'DF.A1', kind: 'df' },
+		{ path: 'MF/A153/4954', name: 'EF.SPNS', kind: 'ef' },
+	]);
+	assert.strictEqual(pysimCustomParentStatus('MF').status, 'root');
+	assert.strictEqual(pysimCustomParentStatus('MF/A153').status, 'df');
+	assert.strictEqual(pysimCustomParentStatus('MF/A153/4954').status, 'not-df');
+	assert.strictEqual(pysimCustomParentStatus('MF/FFFF').status, 'unknown');
+	pysimFsTreeRoot = { name: 'MF', fid: '3F00', isDir: true, parent: null, children: [] };
+	const df = { name: 'DF.GSM', fid: '7F20', isDir: true, parent: pysimFsTreeRoot, children: [] };
+	df.children = [{ name: 'EF.SPN', fid: '6F46', isDir: false, parent: df, children: null }];
+	pysimFsTreeRoot.children = [df];
+	assert.strictEqual(pysimCustomParentStatus('MF/7F20').status, 'df');
+	assert.strictEqual(pysimCustomParentStatus('MF/7F20/6F46').status, 'not-df');
+	assert.strictEqual(pysimCustomParentStatus('MF/7F20/9999').status, 'unknown');
+});
+
+test('import keeps canonical entries whose parent is outside the custom list', () => {
+	const res = pysimCustomNormalizeEntries([
+		{ path: '3F00/7f20/5f01/6f46', name: 'EF.DEEP' },
+		{ path: 'mf/ffff/6f46', name: 'EF.ORPHAN' },
+		{ path: 'MF/6F46', name: 'NOPE' },
+	], []);
+	assert.deepStrictEqual(res.files, [
+		{ path: 'MF/7F20/5F01/6F46', name: 'EF.DEEP', kind: 'ef' },
+		{ path: 'MF/FFFF/6F46', name: 'EF.ORPHAN', kind: 'ef' },
+	]);
+	assert.strictEqual(res.dropped, 1);
 });
 
 test('submit adds files under the root and under a defined DF', () => {
@@ -165,13 +221,17 @@ test('submit adds files under the root and under a defined DF', () => {
 	pysimCustomSubmit();
 	assert.deepStrictEqual(pysimCustomFiles.map(c => c.path),
 		['MF/6F46', 'MF/A153', 'MF/A153/4954']);
-	// adding under an undefined parent is rejected
-	fill(els, 'MF', 'MF', '1111', 'EF.X');
-	els['pysim-cf-parent'].value = 'MF/A153';
-	els['pysim-cf-fid'].value = '2222';
-	els['pysim-cf-name'].value = 'BAD';
+	// a parent that is not a custom entry is allowed (it may be a standard DF
+	// the tree has not loaded yet)
+	fill(els, 'MF', 'MF/A153', '2222', 'EF.ORPHAN');
 	pysimCustomSubmit();
-	assert.ok(globalThis.alertCalls.length === 1);
+	assert.deepStrictEqual(pysimCustomFiles.map(c => c.path),
+		['MF/6F46', 'MF/A153', 'MF/A153/4954', 'MF/A153/2222']);
+	assert.strictEqual(globalThis.alertCalls.length, 0);
+	// a parent known here to be an EF is rejected
+	fill(els, 'MF', 'MF/A153/4954', '3333', 'EF.NOPE');
+	pysimCustomSubmit();
+	assert.deepStrictEqual(globalThis.alertCalls, ['Parent is not a DF: MF/A153/4954']);
 });
 
 test('editing a DF FID rewrites its descendants', () => {
