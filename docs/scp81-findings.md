@@ -255,9 +255,21 @@ installed/registered entries were invisible (the installed package
 `AA1902BC225801` was missing from the ELF registry). The correct value is
 `P2=03` = "**Get next occurrence(s)**".
 
-**Fix:** `_scp81_continuation` emits `80F2 <P1> 03 <Lc> 4F <len> <lastAID> 00`
-and the earlier duplicate entry per page is gone (the criterion entry is no
-longer re-returned).
+**Fix:** the continuation repeats the *same* GET STATUS command with P2.b1
+set (`80F2 <P1> 03 <same data> 00`) - the pagination state lives in the card.
+A changed `4F` criterion is a match filter, not a position: `P2=03` combined
+with the last AID as criterion is rejected with SW 6A80, and `P2=02` with it
+returns that single match (the duplicate seen earlier). The card's
+truncation warning is its proprietary `CA FE`; GP defines `63 10` (Table
+11-38) and both trigger the continuation.
+
+**Also fixed (same week):** the explore script's P1 values - per Table 11-33
+`P1=40` is *applications and supplementary security domains*, `P1=20` the
+*ELF registry* and `P1=10` *ELF+modules*; the script never queried the
+ELF-only registry, which is why the installed package `AA1902BC225801` was
+invisible. Labels/decoder updated; the remote APDU script builder's P1 map
+(0x02 load / 0x0C install / 0x08 make-selectable / 0x40 reg-update / 0x10
+extradition) was already correct.
 
 ## Next tests / work
 

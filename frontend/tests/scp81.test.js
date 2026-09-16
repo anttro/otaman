@@ -124,7 +124,8 @@ test('scp81DecodeAdminParams decodes the stored 0085 answer', () => {
 
 test('scp81CmdLabel names the explore commands', () => {
 	assert.strictEqual(scp81CmdLabel('80CAFF2100'), 'GET DATA FF21 (extended card resources)');
-	assert.strictEqual(scp81CmdLabel('80F24002024F0000'), 'GET STATUS P1=40 (executable load files)');
-	assert.strictEqual(scp81CmdLabel('80F21002024F0000'), 'GET STATUS P1=10 (applications)');
+	assert.strictEqual(scp81CmdLabel('80F24002024F0000'), 'GET STATUS P1=40 (applications and security domains)');
+	assert.strictEqual(scp81CmdLabel('80F22002024F0000'), 'GET STATUS P1=20 (executable load files)');
+	assert.strictEqual(scp81CmdLabel('80F21002024F0000'), 'GET STATUS P1=10 (executable load files and modules)');
 	assert.strictEqual(scp81CmdLabel('80E8800000'), 'LOAD');
 });

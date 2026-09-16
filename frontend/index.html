@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.15</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.16</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -7170,7 +7170,7 @@ function scp81DecodeGetStatus(hex) {
 		if (ln === 0x81 && i + 3 <= bytes.length) { ln = bytes[i + 2]; off = i + 3; }
 		if (off + ln > bytes.length) break;
 		const content = bytes.slice(off, off + ln);
-		const entry = { aid: null, lifecycle: null, privileges: null, modules: [] };
+		const entry = { aid: null, lifecycle: null, privileges: null, modules: [], elf: null, sd: null };
 		const toHex = v => v.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
 		let k = 0;
 		while (k + 2 <= content.length) {
@@ -7186,6 +7186,8 @@ function scp81DecodeGetStatus(hex) {
 			else if (tag === 0x9F70) entry.lifecycle = val.length ? val[val.length - 1].toString(16).padStart(2, '0').toUpperCase() : null;
 			else if (tag === 0xC5) entry.privileges = toHex(val);
 			else if (tag === 0x84) entry.modules.push(toHex(val));
+			else if (tag === 0xC4) entry.elf = toHex(val);
+			else if (tag === 0xCC) entry.sd = toHex(val);
 			k += hdr + tlen;
 		}
 		if (entry.aid) out.push(entry);
@@ -7199,8 +7201,9 @@ function scp81CmdLabel(apdu) {
 	if (a.startsWith('80CAFF21')) return 'GET DATA FF21 (extended card resources)';
 	if (a.startsWith('80CA0085')) return 'GET DATA 0085 (HTTP administration parameters)';
 	if (a.startsWith('80F280')) return 'GET STATUS P1=80 (Issuer Security Domain)';
-	if (a.startsWith('80F240')) return 'GET STATUS P1=40 (executable load files)';
-	if (a.startsWith('80F210')) return 'GET STATUS P1=10 (applications)';
+	if (a.startsWith('80F240')) return 'GET STATUS P1=40 (applications and security domains)';
+	if (a.startsWith('80F220')) return 'GET STATUS P1=20 (executable load files)';
+	if (a.startsWith('80F210')) return 'GET STATUS P1=10 (executable load files and modules)';
 	if (a.startsWith('80E6')) return 'INSTALL';
 	if (a.startsWith('80E8')) return 'LOAD';
 	if (a.startsWith('80CA')) return 'GET DATA ' + a.slice(4, 8);
@@ -7350,7 +7353,8 @@ function scp81ResultLines(group) {
 		unique.forEach(e => {
 			const priv = (typeof decodePrivileges === 'function' && e.privileges) ? decodePrivileges(e.privileges) : (e.privileges || '');
 			lines.push(e.aid + (e.lifecycle ? '  life=' + e.lifecycle : '') + (priv ? '  [' + priv + ']' : '') +
-				(e.modules.length ? '  module=' + e.modules.join(',') : ''));
+				(e.elf ? '  elf=' + e.elf : '') + (e.modules.length ? '  module=' + e.modules.join(',') : '') +
+				(e.sd ? '  sd=' + e.sd : ''));
 		});
 		const bad = group.results.filter(r => r.sw && r.sw !== '9000' && r.sw !== 'CAFE');
 		bad.forEach(r => lines.push('SW ' + r.sw));

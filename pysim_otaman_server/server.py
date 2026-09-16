@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.15'
+VERSION = '2.1.16'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1380,12 +1380,14 @@ _SCP81_SCRIPTS = {
     # The command sequence of the reference administration server
     # (samples/HTTP_OTA/httpota_adminserver_php_v2, get_next_apdu), extended
     # with the registries: GET DATA FF21 (extended card resources / free
-    # memory), GET STATUS P1=80 (Issuer Security Domain), GET DATA 0085,
-    # GET STATUS P1=40 (executable load files / ELF), GET STATUS P1=10
-    # (applications/applets); P2=02 with data '4F00' selects the TLV format,
-    # Le=00 so no GET RESPONSE is needed.
+    # memory), GET DATA 0085, then GET STATUS with P2=02 (TLV structure,
+    # 'first or all') and data '4F00' (match all): P1=80 (Issuer Security
+    # Domain), P1=40 (applications and supplementary security domains),
+    # P1=20 (executable load files), P1=10 (ELF and their modules);
+    # Le=00 so no GET RESPONSE is needed. Long listings answer SW CAFE and
+    # are auto-continued with the same command carrying P2.b1=1 ('next').
     'explore': ['80CAFF2100', '80F28002024F0000', '80CA008500',
-                '80F24002024F0000', '80F21002024F0000'],
+                '80F24002024F0000', '80F22002024F0000', '80F21002024F0000'],
     'none': [],
 }
 _SCP81_SCRIPT = list(_SCP81_SCRIPTS['explore'])
@@ -1508,51 +1510,19 @@ def _scp81_decode_memory(rapdu):
     return out or None
 
 
-def _scp81_last_aid(rapdu):
-    """Last complete AID (the '4F' TLV of a GET STATUS entry) in a page.
-
-    The page is a stream of 'E3' entries; a 127-byte page may end mid-entry,
-    so only complete entries count. Unknown leading bytes (seen in live
-    pages) are skipped."""
-    last = None
-    i = 0
-    while i + 2 <= len(rapdu):
-        if rapdu[i] != 0xE3:
-            i += 1
-            continue
-        ln = rapdu[i + 1]
-        off = i + 2
-        if ln == 0x81 and i + 3 <= len(rapdu):
-            ln = rapdu[i + 2]
-            off = i + 3
-        if off + ln > len(rapdu):
-            break
-        content = rapdu[off:off + ln]
-        if len(content) >= 2 and content[0] == 0x4F:
-            alen = content[1]
-            if 2 + alen <= len(content):
-                last = content[2:2 + alen]
-        i = off + ln
-    return last
-
-
-def _scp81_continuation(apdu, rapdu):
+def _scp81_continuation(apdu):
     """Continuation APDU for a truncated GET STATUS page, or None.
 
-    GET STATUS P2=02 with the last returned AID as search criterion asks the
-    card for the next occurrence (GP GET STATUS, next-occurrence mode)."""
+    GET STATUS P2.b1 distinguishes first/all (0) from the *next* batch (1)
+    of the matches for the SAME search criteria; the pagination state lives
+    in the card, so the continuation is the same command with P2.b1 set.
+    Using a changed search criterion (the last returned AID) was rejected
+    with SW 6A80 - the criterion is a match filter, not a position."""
     u = apdu.upper()
-    if not u.startswith('80F2'):
+    if not u.startswith('80F2') or len(u) < 8:
         return None
-    aid = _scp81_last_aid(rapdu)
-    if not aid:
-        return None
-    lc = 2 + len(aid)
-    # P2=03 = "get next occurrence(s)" (Table 11-34); P2=02 ("first or all")
-    # made the card return the first listing again, so every continuation
-    # page repeated its search criterion and the scan stopped early - the
-    # newly installed package never appeared in the registry.
-    return '80F2%s03%02X4F%02X%s00' % (u[4:6], lc, len(aid), aid.hex().upper())
+    p2 = int(u[6:8], 16) | 0x01
+    return '%s%02X%s' % (u[:6], p2, u[8:])
 
 
 def _scp81_script_responder(method, target, headers, body):
@@ -1579,12 +1549,11 @@ def _scp81_script_responder(method, target, headers, body):
                     decoded = _scp81_decode_memory(rapdus[-1][0])
                     if decoded:
                         _BIP.log('script-memory', **decoded)
-                if rapdus[-1][1].upper() == 'CAFE' and _SCP81_PAGES < SCP81_MAX_PAGES:
-                    cont = _scp81_continuation(apdu, rapdus[-1][0])
-                    if cont and cont in _SCP81_SCRIPT_INSERTED:
-                        # The card returned the same page again: stop paging.
-                        _BIP.log('script-page-stalled', index=index, apdu=cont)
-                    elif cont:
+                # '63 10' = "more data available" (GP Table 11-38); the live
+                # card uses a proprietary 'CA FE' for the same condition.
+                if rapdus[-1][1].upper() in ('CAFE', '6310') and _SCP81_PAGES < SCP81_MAX_PAGES:
+                    cont = _scp81_continuation(apdu)
+                    if cont:
                         _SCP81_PAGES += 1
                         _SCP81_SCRIPT.insert(_SCP81_SCRIPT_SENT, cont)
                         _SCP81_SCRIPT_INSERTED.append(cont)
