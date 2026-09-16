@@ -22,7 +22,7 @@ function extractFunc(src, name) {
 }
 
 let code = 'var pysimFsTreeRoot = null;\nvar _pysimFsProbe = null;\nvar pysimFsSort = "fid";\n';
-for (const fn of ['getParentSel', 'getParentPath', 'pysimFsSortChildren', 'pysimFsLoadChildren', 'pysimFsSelectBody', 'pysimFsProbeUi', 'pysimFsProbeAll']) {
+for (const fn of ['getParentSel', 'getParentPath', 'pysimFsSortChildren', 'pysimFsLoadChildren', 'pysimFsSelectBody', 'pysimFsFitTree', 'pysimFsProbeUi', 'pysimFsProbeAll']) {
 	code += extractFunc(html, fn) + '\n';
 }
 code += 'globalThis.esc = s => s;\nglobalThis.t = s => s;\nglobalThis.pysimCustomInject = () => {};\n';

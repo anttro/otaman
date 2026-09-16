@@ -95,6 +95,10 @@ test('file manager keeps sort/probe controls above the scrolling tree', () => {
     assert.ok(html.indexOf('id="pysim-fs-probe-btn"') < html.indexOf('id="pysim-fs-tree"'));
     assert.ok(html.indexOf('pysim-fs-sort-pill') < html.indexOf('id="pysim-fs-tree"'));
     assert.match(html, /style="max-height:65vh"[^>]*>\s*<div id="pysim-fs-tree">/);
+    // the runtime fit caps it to the free viewport space; 65vh stays only as
+    // the no-JS fallback
+    assert.match(html, /function pysimFsFitTree\(/);
+    assert.match(html, /addEventListener\('resize', pysimFsFitTree\)/);
 });
 
 test('custom-files init runs after the language init', () => {

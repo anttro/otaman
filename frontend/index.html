@@ -1154,21 +1154,25 @@
 	<div id="tp-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
 		<div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[85vh] overflow-auto">
 			<h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200" data-l10n="TERMINAL PROFILE">TERMINAL PROFILE</h3>
-			<div class="mb-3">
-				<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Preset (device model)">Preset (device model)</label>
-				<select id="tp-preset" onchange="tpPresetChanged()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800"></select>
-			</div>
-			<div class="mb-3">
-				<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile (hex)">Profile (hex)</label>
-				<input id="tp-hex" oninput="tpHexInput()" spellcheck="false" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+			<div class="flex gap-3 items-start mb-3">
+				<div class="flex-1 min-w-0">
+					<div class="mb-3">
+						<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Preset (device model)">Preset (device model)</label>
+						<select id="tp-preset" onchange="tpPresetChanged()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800"></select>
+					</div>
+					<div>
+						<label class="block mb-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Profile (hex)">Profile (hex)</label>
+						<input id="tp-hex" oninput="tpHexInput()" spellcheck="false" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800">
+					</div>
+				</div>
+				<div class="flex gap-2 shrink-0 mt-5">
+					<button onclick="tpClose()" class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
+					<button id="tp-apply-btn" onclick="tpApply()" class="px-4 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Apply">Apply</button>
+				</div>
 			</div>
 			<div id="tp-error" class="hidden text-xs text-red-500 mb-2"></div>
 			<div class="text-xs text-gray-500 dark:text-slate-400 mb-2" data-l10n="Bits are decoded per TS 102 223 5.2; the hex field is authoritative and bytes/bits outside the table are preserved as-is.">Bits are decoded per TS 102 223 5.2; the hex field is authoritative and bytes/bits outside the table are preserved as-is.</div>
 			<div id="tp-form" class="max-h-[45vh] overflow-auto border border-gray-200 dark:border-slate-700 rounded p-2 text-xs font-mono text-gray-600 dark:text-slate-400"></div>
-			<div class="flex gap-2 justify-end mt-3">
-				<button onclick="tpClose()" class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Cancel">Cancel</button>
-				<button id="tp-apply-btn" onclick="tpApply()" class="px-4 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" data-l10n="Apply">Apply</button>
-			</div>
 		</div>
 	</div>
 
@@ -1259,7 +1263,7 @@ function switchTab(name) {
 	if (name === 'c-apdu') cApduSwitchSubtab('sim');
 	else if (name === 'scp80') setHelpAnchor(scp80HelpAnchor);
 	else if (name === 'cards') { cardsRender(); setHelpAnchor('cards'); }
-	else if (name === 'pysim') setHelpAnchor(pysimHelpAnchor);
+	else if (name === 'pysim') { setHelpAnchor(pysimHelpAnchor); pysimFsFitTree(); }
 	else if (name === 'profiler') { profilerSetView('list'); setHelpAnchor('profiler'); }
 	else if (name === 'phone') phoneSwitchSubtab('phone');
 	else if (name === 'scp81') scp81Enter();
@@ -6157,6 +6161,7 @@ function pysimSwitchSubtab(name) {
 	});
 	pysimHelpAnchor = {cmd:'pysim-cmdline', apdu:'raw-apdu', files:'file-manager'}[name] || 'card-reader';
 	setHelpAnchor(pysimHelpAnchor);
+	if (name === 'files') pysimFsFitTree();
 }
 
 function pysimCmdKeydown(e) {
@@ -6437,8 +6442,10 @@ function pysimFsSelectBody(node) {
 function pysimFsProbeUi(text, stopLabel) {
 	const status = document.getElementById('pysim-fs-probe-status');
 	if (status) {
+		const wasVisible = !status.classList.contains('hidden');
 		status.textContent = text;
 		status.classList.toggle('hidden', !text);
+		if (wasVisible !== !text) pysimFsFitTree();
 	}
 	const btn = document.getElementById('pysim-fs-probe-btn');
 	if (btn) {
@@ -6504,10 +6511,23 @@ async function pysimFsProbeAll() {
 	pysimFsProbeUi(summary, false);
 }
 
+function pysimFsFitTree() {
+	// Cap the tree to the space actually left below its top edge, minus a
+	// small gap, so the page itself never grows a scrollbar (the inline
+	// 65vh style is only the no-JS fallback).
+	const tree = document.getElementById('pysim-fs-tree');
+	const box = tree && tree.parentElement;
+	if (!box || box.offsetParent === null) return;
+	const top = box.getBoundingClientRect().top + window.scrollY;
+	const avail = Math.round(window.innerHeight - top - 12);
+	box.style.maxHeight = Math.max(200, avail) + 'px';
+}
+
 function pysimFsRenderTree() {
 	const el = document.getElementById('pysim-fs-tree');
 	if (!pysimFsTreeRoot) { el.innerHTML = '(loading)'; return; }
 	el.innerHTML = pysimFsRenderNode(pysimFsTreeRoot, 0);
+	pysimFsFitTree();
 }
 
 function pysimFsRenderNode(node, depth) {
@@ -10824,6 +10844,7 @@ snapshotsLoad();
 document.querySelectorAll('.pysim-subtab').forEach(btn => {
 	btn.addEventListener('click', () => pysimSwitchSubtab(btn.dataset.pysimSub));
 });
+window.addEventListener('resize', pysimFsFitTree);
 
 // ===== i18n =====
 const LANG_RU = {
