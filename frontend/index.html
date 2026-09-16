@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.17</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.18</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -5789,11 +5789,16 @@ function cardsRender() {
 function cardsRebuildSelect() {
 	const sel = document.getElementById('sp-card-sel');
 	if (!sel) return;
+	// Keep the current selection: cardsSave() runs after every send (counter
+	// sync) and an innerHTML rebuild otherwise resets the dropdown to its
+	// first option, forcing a manual re-select each time (fixed 2.1.18).
+	const prev = sel.value;
 	let html = '<option value="">' + t('— Select card —') + '</option>';
 	for (let i = 0; i < cards.length; i++) {
 		html += '<option value="' + i + '">' + esc(cards[i].name) + ' (' + esc(cards[i].iccid) + ')</option>';
 	}
 	sel.innerHTML = html;
+	if (prev !== '' && cards[parseInt(prev, 10)]) sel.value = prev;
 }
 
 function cardsApply(idx) {
