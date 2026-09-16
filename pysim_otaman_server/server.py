@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.11'
+VERSION = '2.1.12'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -414,9 +414,12 @@ def _cap_apdu_sequence(loadfile_aid, module_aid, loadfile_data, sd_aid='',
     ifl_data = _lv(loadfile_aid) + _lv(sd) + '00' + '00' + '00'
     apdus = ['80E60200%02X%s00' % (len(ifl_data) // 2, ifl_data)]
     loadfile_tlv = 'C4' + _ber_len(len(loadfile_data) // 2) + loadfile_data
-    total_bytes = len(loadfile_tlv) // 2
-    blocks = [loadfile_tlv[i * 2:(i + block_size) * 2]
-              for i in range(0, (total_bytes + block_size - 1) // block_size)]
+    # Split the TLV into consecutive 240-byte blocks (char offsets, 2 per
+    # byte). The earlier form indexed with the block number ('i * 2'), which
+    # produced overlapping 1-byte-shifted copies - the card failed mid-load
+    # with SW 6400 (live 2026-09-16).
+    blocks = [loadfile_tlv[off:off + block_size * 2]
+              for off in range(0, len(loadfile_tlv), block_size * 2)]
     for i, block in enumerate(blocks):
         p1 = 0x80 if i == len(blocks) - 1 else 0x00
         apdus.append('80E8%02X%02X%02X%s00' % (p1, i % 256, len(block) // 2, block))

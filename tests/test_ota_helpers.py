@@ -879,10 +879,20 @@ class CapApduSequenceTest(unittest.TestCase):
         self.assertIn('06A00000010001' + '05A000000100' + '05A000000100' + '0100', seq[2])
 
     def test_load_blocks_split_and_counter(self):
-        from pysim_otaman_server.server import _cap_apdu_sequence
-        data = 'AB' * 700          # 700 bytes -> C4 TLV 703 -> 3 x 240-byte blocks
+        from pysim_otaman_server.server import _cap_apdu_sequence, _ber_len as _ber_len_lower
+        data = ''.join('%02X' % (i % 256) for i in range(700))
         seq = _cap_apdu_sequence('A00000010001', 'A000000100', data)
         self.assertEqual(len(seq), 5)          # INSTALL + 3 LOAD + INSTALL
         self.assertEqual(seq[1][:8], '80E80000')
         self.assertEqual(seq[2][:8], '80E80001')
         self.assertEqual(seq[3][:8], '80E88002')   # last block: P1=0x80
+        # The blocks are consecutive chunks and reassemble the load file TLV
+        # byte-for-byte (a shifted/overlapping split fails the card mid-load).
+        def payload(apdu):
+            lc = int(apdu[8:10], 16)
+            return apdu[10:10 + lc * 2]
+        joined = payload(seq[1]) + payload(seq[2]) + payload(seq[3])
+        self.assertTrue(joined.startswith('C482'))
+        expected = 'C4' + _ber_len_lower(700) + data   # 700 = 0x2BC
+        self.assertEqual(joined.upper(), expected.upper())
+        self.assertEqual(int(seq[3][8:10], 16), len(expected) // 2 - 480)

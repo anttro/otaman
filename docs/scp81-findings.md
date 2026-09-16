@@ -213,6 +213,22 @@ lengths are BER-encoded (`_ber_len_bytes`); the same rule as the BIP channel
 data TLV fix earlier the same day. Tests cover the 245-byte LOAD body, the
 short-form case and the definite variant.
 
+## RESOLVED 2026-09-16d: RAM install - LOAD blocks were overlapping copies
+
+**Root cause:** the LOAD block slicer indexed the load file TLV with the
+*block number* (`loadfile_tlv[i * 2:(i + 240) * 2] for i in range(blocks)`)
+instead of a *character offset*, so every block after the first was a
+1-byte-shifted copy of its predecessor. On the wire the cap header repeated
+every 239 bytes. The card accepted the first three blocks and failed block 4
+with `SW 6400` (execution error), then refused the rest (`6985`) and the
+final INSTALL answered `6A88`. The same slicing lived in the SCP80
+/api/ram-install path (the helper was extracted from it), so multi-block caps
+could never install there either.
+
+**Fix:** consecutive chunks at char offsets
+(`range(0, len(tlv), 240 * 2)`), with a reassembly test that pins the joined
+blocks to the C4 TLV byte for byte.
+
 ## Next tests / work
 
 1. **UI:** group the per-page R-APDUs under their logical command in the
