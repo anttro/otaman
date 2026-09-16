@@ -790,3 +790,26 @@ class QueueScriptTest(unittest.TestCase):
             server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
             server._SCP81_SCRIPT_SENT = 0
             server._SCP81_SCRIPT_KIND = 'explore'
+
+
+class ScriptBodyLengthTest(unittest.TestCase):
+    def test_long_c_apdu_uses_ber_long_form(self):
+        from pysim_otaman_server.server import _scp81_command_body
+        apdu = '80E80000F0' + 'AB' * 239 + '00'      # exactly 245-byte LOAD
+        body = _scp81_command_body(apdu)
+        # AE 80 22 81 F5 <245 bytes> 00 00
+        self.assertEqual(body[:5].hex().upper(), 'AE802281F5')
+        self.assertEqual(body[-2:].hex().upper(), '0000')
+        self.assertEqual(len(body), 5 + 245 + 2)
+
+    def test_short_apdu_stays_short_form(self):
+        from pysim_otaman_server.server import _scp81_command_body
+        self.assertEqual(_scp81_command_body('80CAFF2100').hex().upper(),
+                         'AE80220580CAFF21000000')
+
+    def test_definite_variant_ber_lengths(self):
+        from pysim_otaman_server.server import _scp81_command_body
+        apdu = 'AB' * 130
+        body = _scp81_command_body(apdu, definite=True)
+        # AA 81 85 22 81 82 <130 bytes>  (outer 1+2+130 = 133 = 0x85)
+        self.assertEqual(body[:6].hex().upper(), 'AA8185228182')

@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.10'
+VERSION = '2.1.11'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1436,16 +1436,27 @@ _SCP81_CHUNKED = False
 _SCP81_LINK_EVENTS = True
 
 
+def _ber_len_bytes(n):
+    """BER-TLV length as bytes (short form up to 127, then 0x81/0x82)."""
+    if n < 0x80:
+        return bytes([n])
+    if n < 0x100:
+        return bytes([0x81, n])
+    return bytes([0x82, n >> 8, n & 0xFF])
+
+
 def _scp81_command_body(apdu_hex, definite=False, cr_tag=False):
     """Command Scripting template with one C-APDU TLV: the indefinite-length
     variant ('AE 80 22 <len> <apdu> 00 00', recommended for RAM over HTTPS) or
     the definite-length one ('AA <len> 22 <len> <apdu>'). The C-APDU TLV tag
     is '22' per TS 101 220 (CR flag 0); some cards expect the CR-set 'A2'
-    instead, so it is configurable."""
+    instead, so it is configurable. Both lengths are BER-encoded: a raw byte
+    above 0x7F is read as a long-form marker by the card, which garbles the
+    script (the 245-byte LOAD commands of a RAM install, live 2026-09-16)."""
     apdu = bytes.fromhex(re.sub(r'\s', '', apdu_hex))
-    cmd_tlv = bytes([0xA2 if cr_tag else 0x22, len(apdu)]) + apdu
+    cmd_tlv = bytes([0xA2 if cr_tag else 0x22]) + _ber_len_bytes(len(apdu)) + apdu
     if definite:
-        return bytes([0xAA, len(cmd_tlv)]) + cmd_tlv
+        return bytes([0xAA]) + _ber_len_bytes(len(cmd_tlv)) + cmd_tlv
     return bytes([0xAE, 0x80]) + cmd_tlv + b'\x00\x00'
 
 

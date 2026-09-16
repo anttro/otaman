@@ -197,6 +197,22 @@ continuation with `D276000005AA060200000000B00000` -> page 2 `SW 9000`
 `D276000005AAFFCAFE0001/0010`, `A0000001515350`, `A000000151535041`).
 Full session: 7/7 commands, all `X-Admin-Script-Status: ok`.
 
+## RESOLVED 2026-09-16c: RAM install over SCP81 - BER length in the script template
+
+**Root cause:** `_scp81_command_body` wrote the C-APDU TLV length as a raw
+byte (`AE 80 22 F5 <245 bytes> 00 00` for a 245-byte LOAD). BER reads a byte
+above 0x7F as a long-form marker, so the card mis-parsed every LOAD >128
+bytes; the small INSTALL commands (<128 bytes) executed normally, which made
+the install look alive. Symptoms: the card accepted the LOAD responses with
+`X-Admin-Script-Status: ok` but sent a degenerate `AF 80` body, no LOAD
+R-APDU appeared in the results, and the final INSTALL [for install] answered
+`6A88` (module not found) because the package was never loaded.
+
+**Fix:** both the indefinite ("22" TLV) and definite ("AA" outer) template
+lengths are BER-encoded (`_ber_len_bytes`); the same rule as the BIP channel
+data TLV fix earlier the same day. Tests cover the 245-byte LOAD body, the
+short-form case and the definite variant.
+
 ## Next tests / work
 
 1. **UI:** group the per-page R-APDUs under their logical command in the
