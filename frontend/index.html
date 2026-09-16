@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.11</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.12</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -174,7 +174,7 @@
 			<label class="block mb-1 text-sm font-medium text-gray-700 dark:text-slate-300" data-l10n="SD params tag">SD params tag</label>
 			<select id="hota-store-tag" onchange="hotaUpdatePreview()" class="w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
 				<option value="85">'85' — GP v2.2 Amendment B v1.1 (Table 4-4)</option>
-				<option value="A5">'A5' — GP v2.2 Amendment B v1.1.3</option>
+				<option value="A5">'A5' — not in the pinned v1.1 spec (unverified)</option>
 			</select>
 		</div>
 
@@ -188,7 +188,8 @@
 				<button onclick="hotaAddTlv()" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ TLV">+ TLV</button>
 				<button onclick="hotaAddPreset('devid')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ Device Identities">+ Device Identities</button>
 				<button onclick="hotaAddPreset('alpha')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ Alpha (empty)">+ Alpha (empty)</button>
-				<button onclick="hotaAddPreset('bearer')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ Bearer (GPRS)">+ Bearer (GPRS)</button>
+				<button onclick="hotaAddPreset('cmddet')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ Command details">+ Command details</button>
+				<button onclick="hotaAddPreset('bearer')" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="+ Bearer (default)">+ Bearer (default)</button>
 			</div>
 		</div>
 
@@ -219,13 +220,13 @@
 			</label>
 			<div id="hota-retry-fields" class="hidden space-y-2">
 				<div class="flex gap-2">
-					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Retry counter (B0,00=unlimited)">Retry counter (B0,00=unlimited)</label>
+					<div class="flex-1"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Retry counter (2 bytes, hex)">Retry counter (2 bytes, hex)</label>
 						<input id="hota-retry-counter" maxlength="4" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="B000">
 					</div>
 				</div>
 				<div class="flex gap-2">
 					<div class="w-16"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Hours">Hours</label>
-						<input id="hota-delay-h" type="number" min="0" max="255" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="0">
+						<input id="hota-delay-h" type="number" min="0" max="99" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="0">
 					</div>
 					<div class="w-16"><label class="block text-xs text-gray-600 dark:text-slate-400" data-l10n="Minutes">Minutes</label>
 						<input id="hota-delay-m" type="number" min="0" max="59" class="font-mono w-full border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800" placeholder="0">
@@ -1339,17 +1340,21 @@ function _hotaBerLen(n) {
 	if (n < 256) return '81' + n.toString(16).padStart(2, '0').toUpperCase();
 	return '82' + n.toString(16).padStart(4, '0').toUpperCase();
 }
-function _hotaTlv(tag8, val8) { const v = _hotaHex(val8); return tag8.toUpperCase() + _hotaBerLen(v.length / 2) + v; }
+// Hex normalisation for byte strings: an odd digit count is padded on the
+// left so a half byte can never corrupt the TLV length field.
+function _hotaPad(s) { const v = _hotaHex(s); return v.length % 2 ? '0' + v : v; }
+function _hotaTlv(tag8, val8) { const v = _hotaPad(val8); return _hotaHex(tag8) + _hotaBerLen(v.length / 2) + v; }
 
 function hotaTlv(tag, value) { return _hotaTlv(tag, value); }
 function hotaBuildConn(tlvs) {
 	let content = '';
 	for (const t of tlvs) {
-		const v = _hotaHex(t.value);
 		if (!t.tag) continue;
-		content += t.tag.toUpperCase() + _hotaBerLen(v.length / 2) + v;
+		const v = _hotaPad(t.value);
+		content += _hotaHex(t.tag) + _hotaBerLen(v.length / 2) + v;
 	}
-	return '84' + _hotaBerLen(content.length / 2) + content;
+	// '84' is 1-n per Table 4-5: an empty container must be left out entirely
+	return content ? '84' + _hotaBerLen(content.length / 2) + content : '';
 }
 function hotaBuildSec(s) {
 	const psk = _hotaAsciiHex(s.pskIdentity);
@@ -1359,35 +1364,52 @@ function hotaBuildSec(s) {
 	return '85' + _hotaBerLen(data.length / 2) + data;
 }
 function hotaBuildRetry(r) {
-	const counter = _hotaHex(r.counter);
-	const hh = (parseInt(r.delayH) || 0).toString(16).padStart(2, '0').toUpperCase();
-	const mm = (parseInt(r.delayM) || 0).toString(16).padStart(2, '0').toUpperCase();
-	const ss = (parseInt(r.delayS) || 0).toString(16).padStart(2, '0').toUpperCase();
-	const timerTlv = '2503' + hh + mm + ss;
+	const counter = _hotaHex(r.counter).padStart(4, '0').slice(-4);
+	// Retry waiting delay = the TS 102 223 '25' timer value; each field uses
+	// the TP-SCTS semi-octet order of TS 23.040 9.1.2.3 (low nibble = most
+	// significant digit), i.e. 1 min = '10', 20 s = '02', 10 min = '01'.
+	const clamp = (v, max) => Math.min(max, Math.max(0, parseInt(v, 10) || 0));
+	const semi = v => (((v % 10) << 4) | Math.floor(v / 10)).toString(16).padStart(2, '0').toUpperCase();
+	const timerTlv = '2503' + semi(clamp(r.delayH, 99)) + semi(clamp(r.delayM, 59)) + semi(clamp(r.delayS, 59));
 	const report = _hotaHex(r.reportFailure);
-	const content = counter + timerTlv + (report && report.length % 2 === 0 ? report : '');
+	const content = counter + timerTlv + (report.length % 2 === 0 ? report : '');
 	return '86' + _hotaBerLen(content.length / 2) + content;
 }
 function hotaBuildHttpPost(h) {
-	const host = _hotaAsciiHex(h.host);
-	const agent = _hotaAsciiHex(h.agent);
-	const uri = _hotaAsciiHex(h.uri);
-	const content = _hotaTlv('8A', host) + _hotaTlv('8B', agent) + _hotaTlv('8C', uri);
-	return '89' + _hotaBerLen(content.length / 2) + content;
+	// '89' is 1-n per Table 4-8/9/10: only non-empty parameters are emitted
+	let content = '';
+	if (_hotaAsciiHex(h.host)) content += _hotaTlv('8A', _hotaAsciiHex(h.host));
+	if (_hotaAsciiHex(h.agent)) content += _hotaTlv('8B', _hotaAsciiHex(h.agent));
+	if (_hotaAsciiHex(h.uri)) content += _hotaTlv('8C', _hotaAsciiHex(h.uri));
+	return content ? '89' + _hotaBerLen(content.length / 2) + content : '';
 }
 function hotaBuildTrigger(conn, sec, retry, httpPost, expanded) {
-	let content = conn;
-	if (sec) content += sec;
-	if (retry) content += retry;
-	if (httpPost) content += httpPost;
-	const sd = '83' + _hotaBerLen(content.length / 2) + content;
-	const trig = '81' + _hotaBerLen(sd.length / 2) + sd;
+	const content = (conn || '') + (sec || '') + (retry || '') + (httpPost || '');
+	// '81' is mandatory but 0-n; '83' is 1-n, so an empty '83' is not emitted
+	let trig = '8100';
+	if (content) {
+		const sd = '83' + _hotaBerLen(content.length / 2) + content;
+		trig = '81' + _hotaBerLen(sd.length / 2) + sd;
+	}
 	if (expanded) return 'AA' + _hotaBerLen(trig.length / 2) + trig;
 	return trig;
 }
 function hotaBuildStore(conn, sec, retry, httpPost, storeTag) {
-	const inner = _hotaTlv(storeTag, conn + (sec || '') + (retry || '') + (httpPost || ''));
-	return '80E29000' + _hotaBerLen(inner.length / 2) + inner;
+	const content = (conn || '') + (sec || '') + (retry || '') + (httpPost || '');
+	if (!content) return '';
+	const inner = _hotaTlv(storeTag, content);
+	const bytes = inner.length / 2;
+	if (bytes <= 127) return '80E29000' + _hotaBerLen(bytes) + inner;
+	// Parameters longer than a short APDU are chained as several STORE DATA
+	// commands: P1 b8=0 for all but the last block, P2 = block number,
+	// P1 b5-b4=10 (BER-TLV) throughout (GP Card Spec 11.11).
+	const chunks = [];
+	for (let i = 0; i < inner.length; i += 127 * 2) chunks.push(inner.slice(i, i + 127 * 2));
+	return chunks.map((c, i) => {
+		const last = i === chunks.length - 1;
+		const p2 = i.toString(16).padStart(2, '0').toUpperCase();
+		return '80E2' + (last ? '90' : '10') + p2 + _hotaBerLen(c.length / 2) + c;
+	}).join('');
 }
 function hotaBuild(mode, conn, sec, retry, httpPost, storeTag, expanded) {
 	return mode === 'store'
@@ -1433,9 +1455,10 @@ function hotaAddPreset(name) {
 	const row = document.createElement('div');
 	row.className = 'flex gap-1 items-center mb-1';
 	const presets = {
-		devid: ['02', '8182'],
-		alpha: ['80', ''],
-		bearer: ['01', '014001'],
+		devid: ['82', '8182'],
+		alpha: ['05', ''],
+		cmddet: ['81', '014001'],
+		bearer: ['35', '03'],
 	};
 	const [tag, value] = presets[name] || ['', ''];
 	row.innerHTML =
@@ -11346,11 +11369,12 @@ const LANG_RU = {
 	'+ TLV': '+ TLV',
 	'+ Device Identities': '+ Device Identities',
 	'+ Alpha (empty)': '+ Alpha (пустой)',
-	'+ Bearer (GPRS)': '+ Bearer (GPRS)',
+	'+ Command details': '+ Command details',
+	'+ Bearer (default)': '+ Bearer (по умолчанию)',
 	"Security parameters ('85')": "Параметры безопасности ('85')",
 	'PSK Identity (text)': 'PSK Identity (текст)',
 	"Retry policy ('86')": "Политика повтора ('86')",
-	'Retry counter (B0,00=unlimited)': 'Счётчик повторов (B0,00=бесконечно)',
+	'Retry counter (2 bytes, hex)': 'Счётчик повторов (2 байта, hex)',
 	'Hours': 'Часы',
 	'Minutes': 'Минуты',
 	'Seconds': 'Секунды',

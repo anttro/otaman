@@ -51,7 +51,9 @@ continuation GET STATUS (P2=02 with the last AID as search criterion).
 - `80CA008500` (GET DATA HTTP administration parameters) **works** and returns
   the SD's stored OTA configuration: `8A 09 "localhost"`, `8B 14 <agent id>`,
   `8C 01 "/"` (stored URI), `85 14 <PSK identity>`, `86 07 00 01 25 03 00 10 00`
-  (retry counter 1, timer **10 minutes**), `02 40 01` (KVN/KID), APN-ish
+  (retry counter 1, timer **1 minute** — the `25 03` h:m:s fields are TP-SCTS
+  semi-octets, TS 23.040 §9.1.2.3: low nibble = most significant digit, so
+  `10` = `01` min), `02 40 01` (KVN/KID), APN-ish
   `C7 04 03 47 50 42`, destination `BE 05 21 5B D5 05 02` = 91.213.5.2.
 - `80F28002/80F24002/80F21002 ...4F0000` return `6985` through the reader when
   the ISD is not the current DF; the reference platform sends
@@ -64,7 +66,8 @@ continuation GET STATUS (P2=02 with the last AID as search criterion).
   `0A` channel status.
 - A Location status event re-triggers the OTA session only while the last
   session is incomplete; after a clean session end the card waits for a push.
-- The SD stores a 10-minute retry timer (`25 03 00 10 00`).
+- The SD stores a 1-minute retry timer (`25 03 00 10 00`; timer fields are
+  TP-SCTS semi-octets per TS 102 223 §8.38 / TS 23.040 §9.1.2.3).
 
 ## Confirmed rules (with evidence)
 
