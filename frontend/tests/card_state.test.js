@@ -23,29 +23,52 @@ function extractFunc(src, name) {
 
 let code = 'var _pysimCardStateKey = null;\nvar _pysimCardSession = null;\n'
 	+ 'var _pysimServerAvailable = null;\nvar _pysimCardEquipped = false;\n'
-	+ 'var _pysimProactiveSeq = null;\nvar _pysimStkSig = null;\n';
+	+ 'var _pysimProactiveSeq = null;\nvar _pysimStkSig = null;\nvar _pysimAdmVerified = null;\n';
 code += extractFunc(html, 'pysimCardStateUpdate') + '\n';
 code += extractFunc(html, 'pysimAvailabilityState') + '\n';
 code += extractFunc(html, 'pysimControlDisabled') + '\n';
 code += extractFunc(html, 'pysimProactiveSeqChanged') + '\n';
 code += extractFunc(html, 'pysimStkStatusChanged') + '\n';
+code += extractFunc(html, 'pysimUpdateAdmIndicator') + '\n';
+code += extractFunc(html, 'pysimSetServerAvailable') + '\n';
 code += '\nglobalThis.esc = s => s;\n';
 code += 'globalThis.t = s => s;\n';
 eval(code);
 
+function fakeIndicator() {
+	const classes = new Set();
+	const el = {
+		classes, textContent: '', title: null,
+		classList: {
+			add: (...c) => c.forEach(x => classes.add(x)),
+			remove: (...c) => c.forEach(x => classes.delete(x)),
+			contains: c => classes.has(c),
+		},
+		setAttribute: (k, v) => { if (k === 'title') el.title = v; },
+		removeAttribute: (k) => { if (k === 'title') el.title = null; },
+	};
+	return el;
+}
+
 function setup() {
 	const el = { textContent: 'status line', innerHTML: '' };
+	const adm = fakeIndicator();
 	const calls = { connected: [], resets: [], refreshStatus: [], proactive: 0 };
 	_pysimCardStateKey = null;
 	_pysimCardSession = null;
 	_pysimProactiveSeq = null;
-	globalThis.document = { getElementById: () => el, querySelectorAll: () => [] };
+	_pysimAdmVerified = null;
+	_pysimServerAvailable = null;
+	globalThis.document = {
+		getElementById: id => id === 'state-indicator-adm' ? adm : el,
+		querySelectorAll: () => [],
+	};
 	globalThis.pysimSetConnected = v => calls.connected.push(v);
 	globalThis.pysimResetCardData = refresh => calls.resets.push(refresh);
 	globalThis.pysimApplyAvailability = () => {};
 	globalThis.isViewVisible = () => true;
 	globalThis.pysimProactiveLogRender = () => { calls.proactive++; };
-	return { el, calls };
+	return { el, adm, calls };
 }
 
 function status(extra) {
@@ -167,4 +190,38 @@ test('pysimStkStatusChanged detects menu state transitions', () => {
 	assert.ok(!pysimStkStatusChanged({ active: true, pending: true, pending_type: 'select_item' }));
 	assert.ok(pysimStkStatusChanged({ active: true, pending: false }));
 	assert.ok(!pysimStkStatusChanged(null));
+});
+
+test('the header ADM badge shows verified / not verified / hidden', () => {
+	const { adm, calls } = setup();
+	pysimCardStateUpdate(status({ connected: true, adm_verified: true }));
+	assert.ok(!adm.classes.has('hidden'));
+	assert.strictEqual(adm.textContent, 'ADM ✓');
+	assert.ok(adm.classes.has('text-emerald-600'));
+	assert.ok(adm.classes.has('dark:text-emerald-400'));
+	assert.strictEqual(adm.title, 'ADM verified');
+	// an unchanged state must not rewrite the badge
+	adm.textContent = '';
+	pysimCardStateUpdate(status({ connected: true, adm_verified: true }));
+	assert.strictEqual(adm.textContent, '', 'unchanged ADM state rewrote the badge');
+	// verification lost (e.g. card reset)
+	pysimCardStateUpdate(status({ connected: true, adm_verified: false }));
+	assert.strictEqual(adm.textContent, 'ADM ✗');
+	assert.ok(adm.classes.has('text-red-500'));
+	assert.ok(!adm.classes.has('text-emerald-600'));
+	assert.strictEqual(adm.title, 'ADM not verified');
+	// no card session hides it
+	pysimCardStateUpdate(status({ connected: false }));
+	assert.ok(adm.classes.has('hidden'));
+	assert.strictEqual(adm.title, null);
+	// the ADM update must not disturb the connect/reset flow
+	assert.deepStrictEqual(calls.connected, [true, false]);
+});
+
+test('losing the server hides the ADM badge', () => {
+	const { adm } = setup();
+	pysimCardStateUpdate(status({ connected: true, adm_verified: true }));
+	assert.ok(!adm.classes.has('hidden'));
+	pysimSetServerAvailable(false);
+	assert.ok(adm.classes.has('hidden'));
 });

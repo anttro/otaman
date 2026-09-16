@@ -18,11 +18,12 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.0</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.1</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
 				<img id="state-indicator-img" class="hidden dark:invert" style="width:30px;height:30px" alt="" src="nosim.svg">
+				<span id="state-indicator-adm" class="hidden ml-0.5 text-xs font-mono" title=""></span>
 			</span>
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
 			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
@@ -824,15 +825,19 @@
 
 		<div id="pysim-sub-files">
 			<div class="flex gap-2">
-				<div class="w-1/3 border border-gray-300 dark:border-slate-600 rounded p-2 text-xs font-mono overflow-y-auto bg-gray-50 dark:bg-slate-800" style="max-height:420px">
-					<div class="flex items-center gap-1 mb-1 text-gray-500 dark:text-slate-400">
-						<span data-l10n="Sort:">Sort:</span>
-						<span class="pysim-fs-sort-pill px-2 py-0.5 rounded cursor-pointer bg-blue-600 text-white" data-fs-sort="fid" onclick="pysimFsSetSort('fid')">FID</span>
-						<span class="pysim-fs-sort-pill px-2 py-0.5 rounded cursor-pointer bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300" data-fs-sort="name" onclick="pysimFsSetSort('name')" data-l10n="Name">Name</span>
+				<div class="w-1/3 flex flex-col">
+					<div class="shrink-0 text-xs font-mono">
+						<div class="flex items-center gap-1 mb-1 text-gray-500 dark:text-slate-400">
+							<span data-l10n="Sort:">Sort:</span>
+							<span class="pysim-fs-sort-pill px-2 py-0.5 rounded cursor-pointer bg-blue-600 text-white" data-fs-sort="fid" onclick="pysimFsSetSort('fid')">FID</span>
+							<span class="pysim-fs-sort-pill px-2 py-0.5 rounded cursor-pointer bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300" data-fs-sort="name" onclick="pysimFsSetSort('name')" data-l10n="Name">Name</span>
+						</div>
+						<button id="pysim-fs-probe-btn" data-needs="card" onclick="pysimFsProbeAll()" class="w-full mb-1 px-2 py-0.5 rounded bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Probe all files">Probe all files</button>
+						<div id="pysim-fs-probe-status" class="hidden mb-1 text-gray-500 dark:text-slate-400"></div>
 					</div>
-					<button id="pysim-fs-probe-btn" data-needs="card" onclick="pysimFsProbeAll()" class="w-full mb-1 px-2 py-0.5 rounded bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Probe all files">Probe all files</button>
-					<div id="pysim-fs-probe-status" class="hidden mb-1 text-gray-500 dark:text-slate-400"></div>
-					<div id="pysim-fs-tree"></div>
+					<div class="border border-gray-300 dark:border-slate-600 rounded p-2 text-xs font-mono overflow-y-auto bg-gray-50 dark:bg-slate-800" style="max-height:65vh">
+						<div id="pysim-fs-tree"></div>
+					</div>
 				</div>
 				<div class="flex-1">
 					<div id="pysim-fs-detail" class="hidden">
@@ -939,6 +944,7 @@
 						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Mode">Mode</label>
 						<select id="scp81-mode" onchange="scp81ModeChanged()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
 							<option value="tls" data-l10n="PSK TLS server" selected>PSK TLS server</option>
+							<option value="passthru" data-l10n="Pass-through (external server)">Pass-through (external server)</option>
 							<option value="dump" data-l10n="Capture (dump)">Capture (dump)</option>
 						</select>
 					</div>
@@ -959,7 +965,8 @@
 					<button id="scp81-restart-btn" data-needs="server" onclick="scp81RestartScript()" class="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Restart script">Restart script</button>
 				</div>
 				<div id="scp81-msg" class="text-xs mt-2 hidden"></div>
-				<div class="mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.">PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.</div>
+				<div id="scp81-psk-note" class="mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.">PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.</div>
+				<div id="scp81-passthru-note" class="hidden mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Pass-through: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, the card's requested address is only logged.">Pass-through: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, the card's requested address is only logged.</div>
 			</div>
 			<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
 				<div class="flex justify-between items-center mb-2">
@@ -4585,6 +4592,7 @@ async function pysimFetch(path, body) {
 let _pysimServerAvailable = null;  // null until probed
 let _pysimCardEquipped = false;
 let _pysimEquipping = false;
+let _pysimAdmVerified = null;      // null = no card session
 let _pysimAvailabilityTimer = null;
 
 function pysimAvailabilityState() {
@@ -4638,9 +4646,33 @@ function pysimApplyAvailability() {
 	pysimUpdateStateIndicator();
 }
 
+// Compact ADM state next to the header's card indicator: "ADM ✓" when the
+// administrator PIN was verified (pySim rs.adm_verified), "ADM ✗" otherwise.
+// Hidden without a card session; only rewrites the DOM when the state changes
+// (the 2s /api/status poll calls this on every update).
+function pysimUpdateAdmIndicator(status) {
+	const el = document.getElementById('state-indicator-adm');
+	if (!el) return;
+	const verified = (status && status.connected) ? !!status.adm_verified : null;
+	if (verified === _pysimAdmVerified) return;
+	_pysimAdmVerified = verified;
+	el.classList.remove('text-emerald-600', 'dark:text-emerald-400', 'text-red-500');
+	if (verified === null) {
+		el.classList.add('hidden');
+		el.removeAttribute('title');
+		return;
+	}
+	el.textContent = verified ? 'ADM ✓' : 'ADM ✗';
+	el.classList.remove('hidden');
+	el.classList.add(verified ? 'text-emerald-600' : 'text-red-500');
+	if (verified) el.classList.add('dark:text-emerald-400');
+	el.setAttribute('title', t(verified ? 'ADM verified' : 'ADM not verified'));
+}
+
 function pysimSetServerAvailable(available) {
 	if (_pysimServerAvailable === available) return;
 	_pysimServerAvailable = available;
+	if (available !== true) pysimUpdateAdmIndicator(null);
 	pysimApplyAvailability();
 }
 
@@ -6851,15 +6883,18 @@ const EVENT_FORMS = {
 const PLI_QUALIFIERS = [
 	{code:'00',name:'Location Info (MCC, MNC, LAC/TAC, Cell ID)'},{code:'01',name:'IMEI'},
 	{code:'02',name:'Network Measurement results'},{code:'03',name:'Date, time and time zone'},
-	{code:'04',name:'Language setting'},{code:'05',name:'Timing Advance'},
-	{code:'06',name:'Access Technology (single)'},{code:'08',name:'IMEISV'},
+	{code:'04',name:'Language setting'},{code:'05',name:'Reserved for GSM (Timing Advance)'},
+	{code:'06',name:'Access Technology (single)'},{code:'07',name:'ESN of the terminal'},
+	{code:'08',name:'IMEISV'},
 	{code:'09',name:'Search Mode'},{code:'0A',name:'Battery charge state'},
+	{code:'0B',name:'MEID of the terminal'},
 	{code:'0C',name:'Current WSID'},{code:'0D',name:'Broadcast Network info'},
 	{code:'0E',name:'Multiple Access Technologies'},{code:'0F',name:'Location Info (multi-RAT)'},
 	{code:'10',name:'NMR (multi-RAT)'},{code:'11',name:'CSG ID list + HNB name'},
 	{code:'12',name:'H(e)NB IP address'},{code:'13',name:'H(e)NB surrounding macrocells'},
 	{code:'14',name:'Current WLAN identifier'},{code:'15',name:'Slices information'},
 	{code:'16',name:'CAG information list'},{code:'17',name:'Rejected slices information'},
+	{code:'1A',name:'Supported Radio Access Technologies'},
 ];
 
 async function pysimEventsRender() {
@@ -7085,6 +7120,7 @@ function pysimCardStateUpdate(status) {
 	_pysimServerAvailable = true;
 	_pysimCardEquipped = !!status.connected;
 	_pysimEquipping = !!status.equipping;
+	pysimUpdateAdmIndicator(status);
 	pysimApplyAvailability();
 	if (pysimProactiveSeqChanged(status.proactive_seq)
 		&& isViewVisible('tab-phone') && isViewVisible('phone-sub-phone')) {
@@ -7180,11 +7216,12 @@ const CMD_QUALIFIER_SHORT = {
     '23': {0x00:'Digits+Echo', 0x01:'Alpha+Echo', 0x04:'NoEcho'},
     '24': {0x00:'Normal', 0x02:'Help', 0x04:'DefaultItem', 0x80:'Nav'},
     '25': {0x00:'Normal', 0x04:'Help', 0x80:'Nav'},
-    '26': {0x00:'Loc', 0x01:'IMEI', 0x02:'NMR', 0x03:'Time', 0x04:'Lang', 0x05:'TA',
-           0x06:'AccTech', 0x08:'IMEISV', 0x09:'Search', 0x0A:'Batt', 0x0C:'WSID',
+    '26': {0x00:'Loc', 0x01:'IMEI', 0x02:'NMR', 0x03:'Time', 0x04:'Lang', 0x05:'TA (GSM)',
+           0x06:'AccTech', 0x07:'ESN', 0x08:'IMEISV', 0x09:'Search', 0x0A:'Batt',
+           0x0B:'MEID', 0x0C:'WSID',
            0x0D:'BCInfo', 0x0E:'MultiAT', 0x0F:'MultiLoc', 0x10:'MultiNMR',
            0x11:'CSG', 0x12:'HNB-IP', 0x13:'HNB-Macro', 0x14:'WLAN', 0x15:'Slices',
-           0x16:'CAG', 0x17:'RejSlice'},
+           0x16:'CAG', 0x17:'RejSlice', 0x1A:'SupRAT'},
     '27': {0x00:'Start', 0x01:'Deactivate', 0x02:'Get'},
 };
 
@@ -7293,6 +7330,10 @@ function scp81ModeChanged() {
 	const mode = document.getElementById('scp81-mode').value;
 	const row = document.getElementById('scp81-script-row');
 	if (row) row.style.display = (mode === 'tls') ? '' : 'none';
+	const pskNote = document.getElementById('scp81-psk-note');
+	if (pskNote) pskNote.classList.toggle('hidden', mode !== 'tls');
+	const directNote = document.getElementById('scp81-passthru-note');
+	if (directNote) directNote.classList.toggle('hidden', mode !== 'passthru');
 }
 
 function scp81SwitchSubtab(name) {
@@ -7666,10 +7707,16 @@ async function scp81LogRefresh() {
 
 async function scp81Start() {
 	const mode = document.getElementById('scp81-mode').value;
+	const hostVal = document.getElementById('scp81-host').value.trim();
+	const portVal = document.getElementById('scp81-port').value.trim();
+	if (mode === 'passthru' && (!hostVal || !portVal)) {
+		scp81Msg(t('Pass-through requires the target host and port'), 'text-red-500');
+		return;
+	}
 	const body = {
 		action: 'start', mode: mode,
-		host: document.getElementById('scp81-host').value.trim() || '127.0.0.1',
-		port: parseInt(document.getElementById('scp81-port').value.trim() || '8443', 10),
+		host: hostVal || '127.0.0.1',
+		port: parseInt(portVal || '8443', 10),
 	};
 	if (mode === 'tls') {
 		const map = cardsPskMap();
@@ -10734,6 +10781,11 @@ const LANG_RU = {
 	'LOAD blocks': 'Блоки LOAD',
 	'clamped from': 'ограничено с',
 	'auto-fit': 'авто',
+	'Pass-through (external server)': 'Проброс (внешний сервер)',
+	'Pass-through: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, the card\'s requested address is only logged.': 'Проброс: каждый открываемый картой BIP-канал подключается к этому Host:Port (внешняя платформа HTTP OTA); TLS завершается там, запрошенный картой адрес только журналируется.',
+	'Pass-through requires the target host and port': 'Для режима проброса нужны host и port внешнего сервера',
+	'ADM verified': 'ADM подтверждён',
+	'ADM not verified': 'ADM не подтверждён',
 };
 let currentLang = 'en';
 

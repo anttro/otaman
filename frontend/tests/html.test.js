@@ -25,6 +25,23 @@ test('cards list shows the SCP81 PSK column with blue/red row buttons', () => {
     assert.match(fn[0], /cardsRemove\(' \+ i \+ '\)" class="[^"]*bg-red-600 text-white/);
 });
 
+test('PLI qualifier tables cover all standard qualifiers', () => {
+    // ESN (07), MEID (0B) and Supported RATs (1A) must at least be named, in
+    // both the TR Config dictionary and the proactive-log short labels.
+    const pli = /const PLI_QUALIFIERS = \[([\s\S]*?)\];/.exec(html);
+    assert.ok(pli, 'PLI_QUALIFIERS not found');
+    for (const code of ['07', '0B', '1A']) {
+        assert.ok(pli[1].includes("{code:'" + code + "'"), 'PLI_QUALIFIERS missing ' + code);
+    }
+    const block = /const CMD_QUALIFIER_SHORT = \{([\s\S]*?)\n\};/.exec(html);
+    assert.ok(block, 'CMD_QUALIFIER_SHORT not found');
+    const short = /'26': \{([^}]*)\}/.exec(block[1]);
+    assert.ok(short, "CMD_QUALIFIER_SHORT['26'] not found");
+    for (const key of ['0x07', '0x0B', '0x1A']) {
+        assert.ok(short[1].includes(key + ':'), 'CMD_QUALIFIER_SHORT 26 missing ' + key);
+    }
+});
+
 test('profile rows have a Clone action', () => {
     assert.match(html, /onclick="profilerClone\(' \+ i \+ '\)"/);
     assert.match(html, /t\('Clone'\)/);
@@ -62,10 +79,22 @@ test('header state indicator and profiler custom-files tab', () => {
     assert.ok(!html.includes('data-pysim-sub="custom"'));
 });
 
+test('header status indicator has a compact ADM badge', () => {
+    assert.ok(html.includes('id="state-indicator-adm"'));
+});
+
 test('file manager has FID / Name sort pills', () => {
     assert.match(html, /data-fs-sort="fid" onclick="pysimFsSetSort\('fid'\)"/);
     assert.match(html, /data-fs-sort="name" onclick="pysimFsSetSort\('name'\)"/);
     assert.ok(html.includes('pysim-fs-sort-pill'));
+});
+
+test('file manager keeps sort/probe controls above the scrolling tree', () => {
+    // The sort pills and the Probe all files button/status must sit outside
+    // the scrolling tree container so they stay visible while it scrolls.
+    assert.ok(html.indexOf('id="pysim-fs-probe-btn"') < html.indexOf('id="pysim-fs-tree"'));
+    assert.ok(html.indexOf('pysim-fs-sort-pill') < html.indexOf('id="pysim-fs-tree"'));
+    assert.match(html, /style="max-height:65vh"[^>]*>\s*<div id="pysim-fs-tree">/);
 });
 
 test('custom files form has add/save and cancel controls', () => {

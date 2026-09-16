@@ -277,6 +277,17 @@ class TestProactiveDecode(unittest.TestCase):
         srv._PROACTIVE_SESSION_START = 1234.0
         srv._PLI_DATA[0x00] = '93055210011000'
 
+    @staticmethod
+    def _cmd_raw(cmd_type, qualifier, extras=b''):
+        """A D0-wrapped proactive command (header TLVs + extras)."""
+        body = (bytes([0x81, 0x03, 0x01, cmd_type, qualifier])
+                + bytes([0x82, 0x02, 0x83, 0x81]) + extras)
+        return bytes([0xD0, len(body)]) + body
+
+    @staticmethod
+    def _decoded(cmd_type, raw, qualifier=None):
+        return {d['label']: d['value'] for d in _decode_cmd(cmd_type, raw, qualifier)}
+
     def test_decode_cmd_poll_interval(self):
         r = _decode_cmd(0x03, bytes.fromhex('d00d8103010300820283818402011e'), None)
         self.assertEqual(r, [{'label': 'Interval', 'value': '30 s'}])
@@ -286,12 +297,67 @@ class TestProactiveDecode(unittest.TestCase):
         self.assertEqual(r, [{'label': 'Events', 'value': 'Call connected'}])
 
     def test_decode_cmd_send_short_message(self):
-        r = _decode_cmd(0x13, bytes.fromhex('d0158103011300820283818b0b916106152670f900a35f020101'), None)
-        self.assertEqual(r, [{'label': 'SMS TPDU', 'value': '916106152670f900a35f02'}])
+        # SEND SHORT MESSAGE with an SMS-SUBMIT TPDU carrying GSM-7 text.
+        tpdu = bytes.fromhex('010006912143F5000005E8329BFD06')
+        raw = self._cmd_raw(0x13, 0, bytes([0x8B, len(tpdu)]) + tpdu)
+        r = self._decoded(0x13, raw)
+        self.assertEqual(r['Type'], 'SMS-SUBMIT')
+        self.assertEqual(r['TP-MR'], '0')
+        self.assertEqual(r['TP-DA'], '12345')
+        self.assertEqual(r['TP-PID'], '0x00')
+        self.assertEqual(r['TP-DCS'], '0x00')
+        self.assertEqual(r['TP-UDL'], '5')
+        self.assertEqual(r['Text'], 'hello')
+        self.assertEqual(r['SMS TPDU'], tpdu.hex().upper())
+
+    def test_decode_cmd_send_short_message_udh_8bit(self):
+        # UDHI + concatenation IE (16-bit ref) + 8-bit text data.
+        udh = bytes.fromhex('0608040001020341 42'.replace(' ', ''))
+        tpdu = (bytes.fromhex('4100' '06912143F5' '00' '04' '09') + udh)
+        raw = self._cmd_raw(0x13, 0, bytes([0x8B, len(tpdu)]) + tpdu)
+        r = self._decoded(0x13, raw)
+        self.assertEqual(r['Concat (16-bit ref)'], '1, part 2/3')
+        self.assertEqual(r['Text'], 'AB')
+
+    def test_decode_cmd_send_short_message_ucs2(self):
+        text = 'Тест'.encode('utf-16-be')
+        tpdu = (bytes.fromhex('0100' '06912143F5' '00' '08' '%02X' % len(text))
+                + text)
+        raw = self._cmd_raw(0x13, 0, bytes([0x8B, len(tpdu)]) + tpdu)
+        r = self._decoded(0x13, raw)
+        self.assertEqual(r['TP-DCS'], '0x08')
+        self.assertEqual(r['Text'], 'Тест')
+
+    def test_decode_cmd_send_short_message_secured_packet(self):
+        # PID 0x7F = SIM data download: the UD is a secured packet (TS 31.115).
+        tpdu = bytes.fromhex('0100' '06912143F5' '7F' 'F6' '03' 'AABBCC')
+        raw = self._cmd_raw(0x13, 0, bytes([0x8B, len(tpdu)]) + tpdu)
+        r = self._decoded(0x13, raw)
+        self.assertEqual(r['TP-PID'], '0x7F (SIM data download)')
+        self.assertEqual(r['Secured packet (TS 31.115)'], '3 bytes: AABBCC')
+
+    def test_decode_cmd_send_short_message_malformed_falls_back(self):
+        # A malformed/garbage TPDU must not raise: the raw hex line remains.
+        raw = bytes.fromhex('d0158103011300820283818b0b916106152670f900a35f020101')
+        r = self._decoded(0x13, raw)
+        self.assertEqual(r['SMS TPDU'], '916106152670F900A35F02')
 
     def test_decode_cmd_pli_qualifier_name(self):
         r = _decode_cmd(0x26, b'\xd0', 0x00)
         self.assertTrue(r[0]['value'].startswith('Location Information (MCC, MNC, LAC/TAC, Cell ID)'))
+
+    def test_decode_cmd_pli_all_standard_qualifiers_named(self):
+        # TS 102 223 V18.3.0 (PLI qualifier coding): names must exist even
+        # without a special data decoder, e.g. ESN (07) and MEID (0B).
+        cases = {
+            0x07: 'ESN',
+            0x0B: 'MEID',
+            0x1A: 'Supported Radio Access Technologies',
+            0x05: 'Reserved for GSM',
+        }
+        for qualifier, name in cases.items():
+            r = _decode_cmd(0x26, b'\xd0', qualifier)
+            self.assertIn(name, r[0]['value'], 'qualifier 0x%02X' % qualifier)
 
     def test_decode_cmd_timer_management_start(self):
         # TS 102 223 6.6.21/8.37/8.38: start timer 3 for 14:07:32

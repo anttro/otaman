@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.2.0'
+VERSION = '2.2.1'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -825,11 +825,13 @@ PLI_QUALIFIER_NAMES = {
     0x02: 'Network Measurement results',
     0x03: 'Date, time and time zone',
     0x04: 'Language setting',
-    0x05: 'Timing Advance',
+    0x05: 'Reserved for GSM (Timing Advance, TS 51 111)',
     0x06: 'Access Technology (single)',
+    0x07: 'ESN of the terminal',
     0x08: 'IMEISV',
     0x09: 'Search Mode',
     0x0A: 'Battery charge state',
+    0x0B: 'MEID of the terminal',
     0x0C: 'Current WSID',
     0x0D: 'Broadcast Network information',
     0x0E: 'Multiple Access Technologies',
@@ -842,12 +844,18 @@ PLI_QUALIFIER_NAMES = {
     0x15: 'Slices information',
     0x16: 'CAG information list',
     0x17: 'Rejected slices information',
+    0x1A: 'Supported Radio Access Technologies',
 }
 
 _PLI_DATA = {q: '' for q in PLI_QUALIFIER_NAMES}
 
 _BIP = httpota.BipTerminal()
 _SCP81_LISTENER = None
+# Active listener mode and target: ('dump'|'tls'|'passthru', host, port).
+# passthru has no listener object - the BIP channels connect straight to the
+# external platform - so the mode/target are tracked here for the status API.
+_SCP81_MODE = None
+_SCP81_TARGET = None
 # PSK table of the TLS listener: identity -> key (memory only, never logged or
 # persisted; the PWA sends it from the card presets at listener start).
 # _SCP81_PSK_LEGACY keeps a single-key start (psk_hex [+ psk_identity]) so an
@@ -1060,6 +1068,140 @@ def _hms_bcd(seconds):
 
 _TIMER_ACTIONS = {0x00: 'Start', 0x01: 'Deactivate', 0x02: 'Get current value'}
 
+# SMS TPDU type (TS 23.040 TP-MTI, bits 1-2 of the first octet).
+_SMS_MTI = {0: 'SMS-DELIVER', 1: 'SMS-SUBMIT', 2: 'SMS-COMMAND', 3: 'Reserved'}
+
+
+def _unpack_septets(data, count):
+    """Unpack `count` 7-bit septets from the packed GSM default alphabet
+    (TS 23.038): septet n lives in bits 7n..7n+6 of the octet string."""
+    out = bytearray()
+    acc, bits = 0, 0
+    for b in data:
+        acc |= b << bits
+        bits += 8
+        while bits >= 7 and len(out) < count:
+            out.append(acc & 0x7F)
+            acc >>= 7
+            bits -= 7
+    return bytes(out)
+
+
+def _parse_udh(ud):
+    """Parse an SMS user-data header (TS 23.040 9.2.3.24).
+
+    Returns (fields, octets, septets): the decoded IEs, the UDH length in
+    octets and the number of septets it occupies in a 7-bit packed UD."""
+    if len(ud) < 2:
+        return [], 0, 0
+    udhl = ud[0]
+    if udhl < 1 or 1 + udhl > len(ud):
+        return [], 0, 0
+    out = []
+    off = 1
+    while off + 2 <= 1 + udhl:
+        iei, ielen = ud[off], ud[off + 1]
+        val = ud[off + 2: off + 2 + ielen]
+        if iei == 0x00 and ielen == 3:
+            out.append({'label': 'Concat (8-bit ref)',
+                        'value': '%d, part %d/%d' % (val[0], val[1], val[2])})
+        elif iei == 0x08 and ielen == 4:
+            out.append({'label': 'Concat (16-bit ref)',
+                        'value': '%d, part %d/%d' % (int.from_bytes(val[:2], 'big'),
+                                                     val[2], val[3])})
+        else:
+            out.append({'label': 'UDH IE 0x%02X' % iei, 'value': val.hex().upper()})
+        off += 2 + ielen
+    octets = 1 + udhl
+    return out, octets, (octets * 8 + 6) // 7
+
+
+def _decode_sms_ud(pid, dcs, ud, udhi, udl):
+    """Decode the TP-UD of an SMS TPDU: the UDH, a secured packet (PID 0x7F,
+    TS 31.115) or the text message body for a text DCS (TS 23.038)."""
+    out = []
+    header_octets, header_septets = 0, 0
+    if udhi:
+        fields, header_octets, header_septets = _parse_udh(ud)
+        out.extend(fields)
+    data = ud[header_octets:]
+    if pid == 0x7F:
+        # SIM data download: the user data is a secured packet (TS 31.115).
+        out.append({'label': 'Secured packet (TS 31.115)',
+                    'value': '%d bytes: %s' % (len(data), data.hex().upper())})
+        return out
+    cls = dcs & 0x0C
+    try:
+        if cls == 0x00:
+            # GSM 7-bit default alphabet, packed septets; the UDH (if any)
+            # occupies whole septets at the start of the packed data.
+            n = udl if udl else (len(ud) * 8) // 7
+            septets = _unpack_septets(ud[: (n * 7 + 7) // 8], n)[header_septets:]
+            text = codecs.decode(septets, 'gsm03.38')
+        elif cls == 0x08:
+            text = codecs.decode(data, 'utf_16_be')
+        elif cls == 0x04:
+            text = data.decode('latin-1', errors='replace')
+        else:
+            out.append({'label': 'User data',
+                        'value': '%d bytes: %s' % (len(data), data.hex().upper())})
+            return out
+        out.append({'label': 'Text', 'value': text})
+    except Exception:
+        out.append({'label': 'User data',
+                    'value': '%d bytes: %s' % (len(data), data.hex().upper())})
+    return out
+
+
+def _decode_send_sm(raw):
+    """Decode a SEND SHORT MESSAGE command (TS 102 223 6.4.10): alpha
+    identifier, address and the 3GPP-SMS TPDU with its user data."""
+    out = []
+    tlvs = httpota.proactive_tlvs(raw)
+    alpha = _cmd_tlv(tlvs, 0x05)
+    if alpha:
+        try:
+            out.append({'label': 'Alpha', 'value': _STK_DECODE._decode(alpha, {}, 'stk')})
+        except Exception:
+            pass
+    addr = _cmd_tlv(tlvs, 0x06)
+    if addr:
+        try:
+            from pySim.cat import Address
+            a = Address().from_bytes(addr)
+            num = str(a.get('call_number') or '').rstrip('fF')
+            ton = (a.get('ton_npi') or {}).get('type_of_number')
+            out.append({'label': 'Address',
+                        'value': num + (' (%s)' % ton if ton else '')})
+        except Exception:
+            out.append({'label': 'Address', 'value': addr.hex().upper()})
+    tpdu = _cmd_tlv(tlvs, 0x0B)
+    if not tpdu:
+        return out
+    out.append({'label': 'SMS TPDU', 'value': tpdu.hex().upper()})
+    try:
+        mti = tpdu[0] & 0x03
+        out.append({'label': 'Type', 'value': _SMS_MTI.get(mti, 'Reserved')})
+        if mti == 1:
+            from pySim.sms import SMS_SUBMIT
+            s = SMS_SUBMIT.from_bytes(tpdu)
+            out.append({'label': 'TP-MR', 'value': str(s.tp_mr)})
+            if s.tp_da is not None:
+                num = str(getattr(s.tp_da, 'digits', '')).rstrip('fF')
+                out.append({'label': 'TP-DA', 'value': num})
+            out.append({'label': 'TP-PID', 'value': '0x%02X%s' % (
+                s.tp_pid, ' (SIM data download)' if s.tp_pid == 0x7F else '')})
+            out.append({'label': 'TP-DCS', 'value': '0x%02X' % s.tp_dcs})
+            if s.tp_vp is not None:
+                out.append({'label': 'TP-VP', 'value': bytes(s.tp_vp).hex().upper()})
+            out.append({'label': 'TP-UDL', 'value': str(s.tp_udl)})
+            out.extend(_decode_sms_ud(s.tp_pid, s.tp_dcs, bytes(s.tp_ud),
+                                      bool(s.tp_udhi), s.tp_udl))
+    except Exception:
+        # Malformed TPDU: keep the raw hex line above, never break the log.
+        pass
+    return out
+
 
 def _decode_cmd(cmd_type, raw, qualifier):
     """Decode a fetched proactive command into [{label, value}] pairs."""
@@ -1079,11 +1221,7 @@ def _decode_cmd(cmd_type, raw, qualifier):
                 return [{'label': 'Events', 'value': ', '.join(names)}]
         return []
     if cmd_type == 0x13:
-        idx = raw.find(b'\x8b')
-        if idx >= 0 and idx + 1 < len(raw):
-            tlen = raw[idx + 1]
-            return [{'label': 'SMS TPDU', 'value': raw[idx + 2: idx + 2 + tlen].hex()}]
-        return []
+        return _decode_send_sm(raw)
     if cmd_type == 0x21:
         text = _parse_display_text(raw)
         return [{'label': 'Text', 'value': text}] if text else []
@@ -1323,6 +1461,10 @@ def _handle_bip_command(scc, cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst)
 
 def _scp81_listener_status():
     if not _SCP81_LISTENER:
+        if _SCP81_MODE == 'passthru' and _SCP81_TARGET:
+            return {'mode': 'passthru', 'host': _SCP81_TARGET[0],
+                    'port': _SCP81_TARGET[1],
+                    'target': '%s:%d' % _SCP81_TARGET}
         return None
     if isinstance(_SCP81_LISTENER, scp81.PskTlsServer):
         return {'mode': 'tls', 'host': _SCP81_LISTENER.host, 'port': _SCP81_LISTENER.port,
@@ -1846,6 +1988,7 @@ def _scp81_gen_install(body):
 
 def _scp81_bip_control(body):
     global _SCP81_LISTENER, _SCP81_PSKS, _SCP81_PSK_LEGACY
+    global _SCP81_MODE, _SCP81_TARGET
     global _SCP81_SCRIPT_TEMPLATE, _SCP81_SCRIPT_CR_TAG, _SCP81_NEXT_URI
     global _SCP81_LINK_EVENTS, _SCP81_TARGETED_APP, _SCP81_APACHE_HEADERS
     global _SCP81_CHUNKED
@@ -1855,6 +1998,8 @@ def _scp81_bip_control(body):
         if _SCP81_LISTENER:
             _SCP81_LISTENER.stop()
             _SCP81_LISTENER = None
+        _SCP81_MODE = None
+        _SCP81_TARGET = None
         _BIP.disable()
         return {'ok': True, 'bip': _BIP.status(), 'listener': None}
     host = body.get('host') or '127.0.0.1'
@@ -1865,6 +2010,20 @@ def _scp81_bip_control(body):
         _SCP81_LISTENER.stop()
         _SCP81_LISTENER = None
     _BIP.disable()
+    if mode == 'passthru':
+        # No local listener: the card's BIP channels connect straight to the
+        # external platform (e.g. a production HTTP OTA server), which
+        # terminates TLS and runs the administration dialog. The target is a
+        # configured address, never the address the card requests.
+        if not body.get('host') or body.get('port') in (None, ''):
+            return {'ok': False,
+                    'error': 'passthru mode requires the target host and port'}
+        _SCP81_MODE = 'passthru'
+        _SCP81_TARGET = (host, port)
+        _BIP.on_data = _bip_data_available
+        _BIP.enable(host, port)
+        return {'ok': True, 'bip': _BIP.status(),
+                'listener': _scp81_listener_status()}
     if mode == 'tls':
         raw_map = body.get('psk_map')
         table, err = _parse_psk_map(raw_map)
@@ -1941,6 +2100,8 @@ def _scp81_bip_control(body):
             on_log=lambda kind, **fields: _BIP.log(kind, **fields))
         _SCP81_PSKS = dict(_SCP81_LISTENER.psk_map)
         _SCP81_PSK_LEGACY = None if table else (psk, identity)
+        _SCP81_MODE = 'tls'
+        _SCP81_TARGET = (_SCP81_LISTENER.host, _SCP81_LISTENER.port)
         _BIP.on_data = _bip_data_available
         _BIP.enable(host, _SCP81_LISTENER.port)
         return {'ok': True, 'bip': _BIP.status(), 'listener': _scp81_listener_status(),
@@ -1958,6 +2119,8 @@ def _scp81_bip_control(body):
         host, port,
         on_rx=lambda peer, data: _BIP.log('dump-rx', peer=peer, bytes=len(data), hex=data.hex().upper()[:2000]),
         on_log=lambda kind, **fields: _BIP.log(kind, **fields))
+    _SCP81_MODE = 'dump'
+    _SCP81_TARGET = (_SCP81_LISTENER.host, _SCP81_LISTENER.port)
     _BIP.enable(host, _SCP81_LISTENER.port)
     return {'ok': True, 'bip': _BIP.status(), 'listener': _scp81_listener_status()}
 

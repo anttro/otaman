@@ -473,11 +473,21 @@ Returns the updated dictionary.
 
 Starts or stops the local target the card's BIP channel is redirected to.
 
-Dump mode (default) captures whatever the card sends (e.g. its TLS
-ClientHello) without answering:
+Dump mode captures whatever the card sends (e.g. its TLS ClientHello)
+without answering:
 
 ```json
 {"action": "start", "mode": "dump", "host": "127.0.0.1", "port": 8443}
+```
+
+Pass-through mode (`mode: "passthru"`) starts **no local listener**: every BIP
+channel the card opens is connected to the configured external platform
+(`host`/`port` are required — no defaults), which terminates TLS and runs the
+administration dialog; the address the card requests is only logged. The
+status API reports `mode: "passthru"` with the target while it runs.
+
+```json
+{"action": "start", "mode": "passthru", "host": "203.0.113.10", "port": 10174}
 ```
 
 TLS mode runs the Phase B PSK TLS server (GPC v2.2 Amendment B): the PSK
@@ -513,6 +523,11 @@ Stop either mode with `{"action": "stop"}` (also disables the BIP terminal).
               "psk_identities": ["89012345678901234567"], "psk_wildcard": false,
               "identity_seen": "89012345678901234567", "identity_matched": true}}
 ```
+
+Listener modes: `tls` (local PSK TLS server), `dump` (capture-only TCP
+listener) and `passthru` (no local listener; the BIP channels go straight to
+`host:port`, e.g. an external HTTP OTA platform — reported as
+`{"mode": "passthru", "host": ..., "port": ..., "target": "host:port"}`).
 
 `psk_identities` lists the identities the listener accepts (keys are never
 exposed); `psk_wildcard` marks the legacy single-key mode. `identity_seen` /

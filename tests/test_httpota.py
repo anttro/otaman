@@ -152,6 +152,32 @@ class BipTerminalTest(unittest.TestCase):
         self.assertIn('close', kinds)
         peer.stop()
 
+    def test_passthru_mode_roundtrip_via_bip_control(self):
+        # SCP81 passthru: the control API enables BIP with the external
+        # platform as the target and starts no local listener; the card's
+        # channel talks straight to that platform.
+        peer = PeerServer(greeting=b'PLATFORM')
+        peer.start()
+        try:
+            resp = server._scp81_bip_control({'action': 'start', 'mode': 'passthru',
+                                              'host': '127.0.0.1', 'port': peer.port})
+            self.assertTrue(resp['ok'], resp)
+            self.assertEqual(resp['listener']['mode'], 'passthru')
+            self.assertEqual(server._BIP.target, ('127.0.0.1', peer.port))
+            cid, err = server._BIP.open('10.9.9.9', 10174, 512)
+            self.assertIsNone(err)
+            self.assertTrue(server._BIP.send(cid, b'CARDHELLO'))
+            data = b''
+            for _ in range(20):
+                data = server._BIP.receive(cid, 100)
+                if data:
+                    break
+                time.sleep(0.05)
+            self.assertEqual(data, b'PLATFORM')
+        finally:
+            server._scp81_bip_control({'action': 'stop'})
+            peer.stop()
+
     def test_disabled_terminal_refuses_open(self):
         bip = httpota.BipTerminal()
         cid, err = bip.open('127.0.0.1', 1, 512)
