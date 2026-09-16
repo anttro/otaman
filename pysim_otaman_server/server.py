@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.13'
+VERSION = '2.1.14'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1611,9 +1611,15 @@ def _scp81_script_responder(method, target, headers, body):
         next_uri = template % _SCP81_SCRIPT_SENT if '%d' in template else template
         if next_uri:
             headers['X-Admin-Next-URI'] = next_uri
-        body_out = _scp81_command_body(
-            apdu, definite=(_SCP81_SCRIPT_TEMPLATE == 'definite'),
-            cr_tag=_SCP81_SCRIPT_CR_TAG)
+        u = apdu.upper()
+        if u.startswith('AA') or u.startswith('AE80'):
+            # Already a Command Scripting template (expanded format): send it
+            # verbatim instead of wrapping it again.
+            body_out = bytes.fromhex(u)
+        else:
+            body_out = _scp81_command_body(
+                apdu, definite=(_SCP81_SCRIPT_TEMPLATE == 'definite'),
+                cr_tag=_SCP81_SCRIPT_CR_TAG)
         if _SCP81_APACHE_HEADERS:
             if _SCP81_CHUNKED:
                 headers['Transfer-Encoding'] = 'chunked'
@@ -3566,6 +3572,25 @@ class PysimHandler(BaseHTTPRequestHandler):
                 resp = _scp81_bip_control(body)
             except Exception as e:
                 resp = {'ok': False, 'error': str(e)}
+            self._send_json(resp)
+            self._log_resp(resp)
+        elif self.path == '/api/scp81/queue':
+            body = self._read_body()
+            self._log_req(body)
+            apdus = body.get('apdus') or ([body.get('apdu')] if body.get('apdu') else [])
+            apdus = [a for a in apdus if a]
+            if not apdus:
+                resp = {'ok': False, 'error': 'no apdus given'}
+            elif _SCP81_LISTENER is None:
+                resp = {'ok': False, 'error': 'SCP81 listener is not running'}
+            else:
+                queued = _scp81_queue_script(
+                    apdus, kind=body.get('kind') or 'custom',
+                    force=bool(body.get('force', False)))
+                resp = dict(queued, ok=bool(queued.get('queued')))
+                if queued.get('queued'):
+                    resp['note'] = ('queued as the SCP81 command script; '
+                                    'runs on the card next POST (push/trigger)')
             self._send_json(resp)
             self._log_resp(resp)
         elif self.path == '/api/scp81/ram-install':

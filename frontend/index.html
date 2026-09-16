@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.13</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.14</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -140,6 +140,17 @@
 			<button onclick="chainAddRow('chain-ram','get-response')" class="text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700">+ GET RESPONSE</button>
 		</div>
 		<textarea id="chain-ram-preview" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800" placeholder="Chain preview — add commands above"></textarea>
+		<div class="flex items-center gap-2 mb-2">
+			<label class="text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Expanded format">Expanded format</label>
+			<select id="chain-ram-expand-fmt" onchange="ramBuildExpanded()" class="border border-gray-300 dark:border-slate-600 text-xs rounded px-2 py-1 dark:bg-slate-800">
+				<option value="AE80">AE80 (indefinite)</option>
+				<option value="AA">AA (definite)</option>
+			</select>
+			<button onclick="ramBuildExpanded()" class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" data-l10n="To expanded">To expanded</button>
+			<button data-needs="server" onclick="ramQueueScp81()" class="text-xs px-2 py-1 bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Queue in SCP81">Queue in SCP81</button>
+			<span id="chain-ram-queue-msg" class="text-xs"></span>
+		</div>
+		<textarea id="chain-ram-expanded" rows="3" readonly class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 bg-gray-100 dark:bg-slate-800 mb-2" placeholder="Expanded script forms (AA / AE80)"></textarea>
 		<button onclick="packToSp('chain-ram-preview')" id="chain-ram-pack-btn" disabled class="mb-3 px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="Pack into Secured packet">Pack into Secured packet</button>
 	</div>
 	<div id="c-apdu-sub-parse" class="hidden">
@@ -2521,6 +2532,52 @@ function genConvert() {
 }
 
 // ===== Secured Packet UI =====
+function chainRamApduList() {
+	// One hex APDU per chain row (the same rows the preview concatenates).
+	const list = [];
+	chainInit('chain-ram');
+	const rows = _chains['chain-ram'].rows;
+	for (let i = 0; i < rows.length; i++) {
+		const h = chainBuildRowHex('chain-ram', i);
+		if (h) list.push(h);
+	}
+	return list;
+}
+
+function ramBuildExpanded() {
+	// Show each built command in the TS 102 226 Command Scripting (expanded)
+	// form: AA <len> 22 <len> <apdu>  or  AE80 22 <len> <apdu> 0000.
+	const fmt = (document.getElementById('chain-ram-expand-fmt').value || 'AE80');
+	const out = chainRamApduList().map(apdu => {
+		if (fmt === 'AA') {
+			const tlv = '22' + berLenStr(apdu.length / 2) + apdu;
+			return 'AA' + berLenStr(tlv.length / 2) + tlv;
+		}
+		return 'AE8022' + berLenStr(apdu.length / 2) + apdu + '0000';
+	});
+	document.getElementById('chain-ram-expanded').value = out.join('\n');
+}
+
+async function ramQueueScp81() {
+	const msg = document.getElementById('chain-ram-queue-msg');
+	const apdus = chainRamApduList();
+	if (!apdus.length) { msg.textContent = t('No commands'); msg.className = 'text-xs text-red-500'; return; }
+	msg.textContent = '';
+	try {
+		const resp = await pysimFetch('/api/scp81/queue', { apdus: apdus, kind: 'custom' });
+		if (resp.ok) {
+			msg.textContent = t('Queued') + ': ' + resp.apdus + ' ' + t('APDUs') + ' - ' + t('send a push to run it');
+			msg.className = 'text-xs text-emerald-600 dark:text-emerald-400';
+		} else {
+			msg.textContent = resp.error || t('Error');
+			msg.className = 'text-xs text-red-500';
+		}
+	} catch (err) {
+		msg.textContent = String(err.message || err);
+		msg.className = 'text-xs text-red-500';
+	}
+}
+
 function packToSp(sourceId) {
 	const val = document.getElementById(sourceId).value;
 	if (!val) return;
@@ -9907,6 +9964,10 @@ const LANG_RU = {
 	'Make selectable': 'Сделать выбираемым',
 	'Queue CAP install': 'Поставить установку CAP в очередь',
 	'Queued': 'В очереди',
+	'Expanded format': 'Развёрнутый формат',
+	'To expanded': 'В развёрнутый',
+	'Queue in SCP81': 'В очередь SCP81',
+	'No commands': 'Нет команд',
 	'APDUs': 'APDU',
 	'INSTALL / LOAD / INSTALL': 'INSTALL / LOAD / INSTALL',
 	'send a push to run it': 'отправьте push для запуска',

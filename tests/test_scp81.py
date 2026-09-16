@@ -813,3 +813,32 @@ class ScriptBodyLengthTest(unittest.TestCase):
         body = _scp81_command_body(apdu, definite=True)
         # AA 81 85 22 81 82 <130 bytes>  (outer 1+2+130 = 133 = 0x85)
         self.assertEqual(body[:6].hex().upper(), 'AA8185228182')
+
+
+class VerbatimScriptTest(unittest.TestCase):
+    def test_expanded_templates_sent_verbatim(self):
+        server._SCP81_SCRIPT = ['AA0B2208 80CAFF2100'.replace(' ', '')]
+        server._SCP81_SCRIPT_SENT = 0
+        server._SCP81_SCRIPT_RESULTS = []
+        server._SCP81_SCRIPT_INSERTED = []
+        server._SCP81_PAGES = 0
+        try:
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/api/scp81', {}, b'')
+            self.assertEqual(status, 200)
+            # Sent as-is (no AE80/22 wrapper added)
+            self.assertEqual(body.hex().upper(), 'AA0B220880CAFF2100')
+        finally:
+            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
+            server._SCP81_SCRIPT_SENT = 0
+
+    def test_plain_apdu_still_wrapped(self):
+        server._SCP81_SCRIPT = ['80CAFF2100']
+        server._SCP81_SCRIPT_SENT = 0
+        try:
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/api/scp81', {}, b'')
+            self.assertEqual(body.hex().upper(), 'AE80220580CAFF21000000')
+        finally:
+            server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
+            server._SCP81_SCRIPT_SENT = 0

@@ -496,6 +496,15 @@ Returns the BIP/TLS event log (open/close, SEND/RECEIVE DATA hex, TLS
 handshake and HTTP request/response records). `?after=<seq>` returns only
 newer entries; `seq` echoes the latest sequence number.
 
+### `POST /api/scp81/queue`
+
+Queue explicit commands as the SCP81 script (used by the Remote APDU tab's
+RAM chain "Queue in SCP81"). Body `{"apdus": ["80E60C002E...", ...]}` (or a
+single `apdu`), optional `kind` and `force`. Entries that already are
+Command Scripting templates (`AA...`/`AE80...`, the expanded format) are
+sent verbatim instead of being wrapped again. Refused while a script is
+mid-run unless forced.
+
 ### `POST /api/scp81/ram-install`
 
 Queue a RAM (GP) install as the SCP81 command script. The `.cap` is parsed
