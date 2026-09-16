@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.9</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.1.10</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -7128,6 +7128,110 @@ function scp81DecodeGetStatus(hex) {
 	return out;
 }
 
+function scp81CmdLabel(apdu) {
+	const a = (apdu || '').toUpperCase();
+	if (a.startsWith('80CAFF21')) return 'GET DATA FF21 (extended card resources)';
+	if (a.startsWith('80CA0085')) return 'GET DATA 0085 (HTTP administration parameters)';
+	if (a.startsWith('80F280')) return 'GET STATUS P1=80 (Issuer Security Domain)';
+	if (a.startsWith('80F240')) return 'GET STATUS P1=40 (executable load files)';
+	if (a.startsWith('80F210')) return 'GET STATUS P1=10 (applications)';
+	if (a.startsWith('80E6')) return 'INSTALL';
+	if (a.startsWith('80E8')) return 'LOAD';
+	if (a.startsWith('80CA')) return 'GET DATA ' + a.slice(4, 8);
+	return '';
+}
+
+function scp81Ascii(hex) {
+	let out = '';
+	for (let i = 0; i + 1 < hex.length; i += 2) {
+		const c = parseInt(hex.substr(i, 2), 16);
+		out += (c >= 0x20 && c < 0x7f) ? String.fromCharCode(c) : '.';
+	}
+	return out;
+}
+
+function scp81Bcd(hex) {
+	// Semi-octet BCD time (h:m:s as in GP retry policy / TS 123 040 TP-SCT)
+	let out = '';
+	for (let i = 0; i < hex.length; i++) out += (i && i % 2 === 0 ? ':' : '') + hex[i];
+	return out;
+}
+
+function scp81DecodeAdminParams(hex) {
+	// GET DATA 0085 answer (TS 102 226 / GP admin session parameters):
+	// '85' wrapping 84 connection / 85 security / 86 retry / 89 HTTP TLVs.
+	const clean = (hex || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+	const bytes = [];
+	for (let i = 0; i + 1 < clean.length; i += 2) bytes.push(parseInt(clean.substr(i, 2), 16));
+	const toHex = v => v.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+	const out = [];
+	const walk = (arr, inConnection) => {
+		let i = 0;
+		while (i + 2 <= arr.length) {
+			const tag = arr[i], ln = arr[i + 1];
+			if (i + 2 + ln > arr.length) break;
+			const val = arr.slice(i + 2, i + 2 + ln);
+			const vhex = toHex(val);
+			if (tag === 0x84) {
+				out.push('connection:');
+			} else if (inConnection) {
+				if (tag === 0xC7 && val.length >= 2) {
+					out.push('  apn=' + scp81Ascii(toHex(val.slice(1))));
+				} else if (tag === 0xBE && val.length >= 5 && val[0] === 0x21) {
+					out.push('  dest=' + val.slice(1, 5).join('.'));
+				} else {
+					out.push('  ' + tag.toString(16).toUpperCase().padStart(2, '0') + '=' + vhex);
+				}
+			} else if (tag === 0x85 && val.length >= 20) {
+				// Security parameters: an unframed [14] tag, the PSK identity
+				// (20 bytes, ASCII) and the [02] KVN/KID pair - exactly like
+				// the trigger's 85 TLV (see the reference '85 18' sample).
+				let raw = val;
+				if (raw[0] === 0x14 || raw[0] === 0x15) raw = raw.slice(1);
+				const ident = scp81Ascii(toHex(raw.slice(0, 20)));
+				const rest = raw.slice(20);
+				const keyset = (rest[0] === 0x02 && rest.length >= 3)
+					? toHex(rest.slice(1, 3)) : null;
+				out.push('PSK id=' + ident + '  KVN/KID=' +
+					(keyset ? keyset.slice(0, 2) + '/' + keyset.slice(2) : '?'));
+			} else if (tag === 0x86) {
+				const cntr = val.length >= 2 ? val[0] * 256 + val[1] : 0;
+				let timer = null, j = 2;
+				while (j + 2 <= val.length) {
+					if (val[j] === 0x25 && val[j + 1] === 3 && j + 5 <= val.length) {
+						timer = scp81Bcd(toHex(val.slice(j + 2, j + 5)));
+					}
+					j += 2 + val[j + 1];
+				}
+				out.push('retry counter=' + cntr + (timer ? '  timer=' + timer : ''));
+			} else if (tag === 0x89) {
+				let j = 0;
+				while (j + 2 <= val.length) {
+					const t2 = val[j], l2 = val[j + 1];
+					if (j + 2 + l2 > val.length) break;
+					const v2 = toHex(val.slice(j + 2, j + 2 + l2));
+					if (t2 === 0x8A) out.push('host=' + scp81Ascii(v2));
+					else if (t2 === 0x8B) out.push('agent=' + scp81Ascii(v2));
+					else if (t2 === 0x8C) out.push('uri=' + scp81Ascii(v2));
+					else out.push('http tlv ' + t2.toString(16).toUpperCase() + '=' + v2);
+					j += 2 + l2;
+				}
+			} else if (tag === 0xC7 && val.length >= 2) {
+				out.push('apn=' + scp81Ascii(toHex(val.slice(1))));
+			} else if (tag === 0xBE && val.length >= 5 && val[0] === 0x21) {
+				out.push('dest=' + val.slice(1, 5).join('.'));
+			} else {
+				out.push('tlv ' + tag.toString(16).toUpperCase().padStart(2, '0') + '=' + vhex);
+			}
+			if (tag === 0x84) walk(val, true);
+			i += 2 + ln;
+		}
+	};
+	if (bytes[0] === 0x85 && bytes.length > 2) walk(bytes.slice(2, 2 + bytes[1]), false);
+	else walk(bytes, false);
+	return out;
+}
+
 function scp81GroupResults(script) {
 	// Group R-APDU results by their originating command (first three bytes):
 	// auto-continued SW CAFE pages end up under the same command.
@@ -7164,10 +7268,20 @@ function scp81ResultLines(group) {
 				lines.push(hex.slice(0, 64) + (r.sw && r.sw !== '9000' ? '  SW ' + r.sw : ''));
 			}
 		});
+	} else if (first.startsWith('80CA0085')) {
+		const lines2 = [];
+		scp81DecodeAdminParams((group.results[0] || {}).rapdu || '').forEach(l => lines2.push(l));
+		return lines2.length ? lines2 : ['(no parameters decoded)'];
 	} else if (first.startsWith('80F2')) {
 		const entries = [];
+		const seen = {};
 		group.results.forEach(r => entries.push.apply(entries, scp81DecodeGetStatus(r.rapdu || '')));
-		entries.forEach(e => {
+		const unique = entries.filter(e => {
+			if (seen[e.aid]) return false;
+			seen[e.aid] = true;
+			return true;
+		});
+		unique.forEach(e => {
 			const priv = (typeof decodePrivileges === 'function' && e.privileges) ? decodePrivileges(e.privileges) : (e.privileges || '');
 			lines.push(e.aid + (e.lifecycle ? '  life=' + e.lifecycle : '') + (priv ? '  [' + priv + ']' : '') +
 				(e.modules.length ? '  module=' + e.modules.join(',') : ''));
@@ -7175,7 +7289,7 @@ function scp81ResultLines(group) {
 		const bad = group.results.filter(r => r.sw && r.sw !== '9000' && r.sw !== 'CAFE');
 		bad.forEach(r => lines.push('SW ' + r.sw));
 	} else {
-		group.results.forEach(r => lines.push((r.rapdu || '').slice(0, 64) + (r.sw ? '  SW ' + r.sw : '')));
+		group.results.forEach(r => lines.push((r.rapdu || '') + (r.sw ? '  SW ' + r.sw : '')));
 	}
 	return lines;
 }
@@ -7192,7 +7306,9 @@ async function scp81ResultsRefresh() {
 		}
 		el.innerHTML = groups.map(g => {
 			const lines = scp81ResultLines(g);
-			const head = g.apdu + (g.results.length > 1 ? '  (' + g.results.length + ' pages)' : '');
+			const label = scp81CmdLabel(g.apdu);
+			const head = g.apdu + (label ? '  ' + label : '') +
+				(g.results.length > 1 ? '  (' + g.results.length + ' pages)' : '');
 			return '<div class="py-1 border-b border-gray-100 dark:border-slate-700/50">' +
 				'<div class="text-gray-500 dark:text-slate-500">' + esc(head) + '</div>' +
 				lines.map(l => '<div class="break-all">' + esc(l) + '</div>').join('') + '</div>';

@@ -104,3 +104,27 @@ test('scp81ResultLines decodes GET STATUS entries', () => {
 		delete global.decodePrivileges;
 	}
 });
+
+eval(extractFunc(html, 'scp81Ascii'));
+eval(extractFunc(html, 'scp81Bcd'));
+eval(extractFunc(html, 'scp81DecodeAdminParams'));
+eval(extractFunc(html, 'scp81CmdLabel'));
+
+test('scp81DecodeAdminParams decodes the stored 0085 answer', () => {
+	const hex = '856F84248103014003820281828500B50103B902058EC70403475042BC03020582BE05215BD50502851814383937303178787878787878787878787878787802400186070001250300100089248A096C6F63616C686F73748B1438393730317878787878787878787878787878788C012F';
+	const lines = scp81DecodeAdminParams(hex);
+	assert.ok(lines.includes('PSK id=89701xxxxxxxxxxxxxxx  KVN/KID=40/01'));
+	assert.ok(lines.includes('retry counter=1  timer=00:10:00'));
+	assert.ok(lines.includes('host=localhost'));
+	assert.ok(lines.includes('agent=89701xxxxxxxxxxxxxxx'));
+	assert.ok(lines.includes('uri=/'));
+	assert.ok(lines.includes('  apn=GPB'));
+	assert.ok(lines.includes('  dest=91.213.5.2'));
+});
+
+test('scp81CmdLabel names the explore commands', () => {
+	assert.strictEqual(scp81CmdLabel('80CAFF2100'), 'GET DATA FF21 (extended card resources)');
+	assert.strictEqual(scp81CmdLabel('80F24002024F0000'), 'GET STATUS P1=40 (executable load files)');
+	assert.strictEqual(scp81CmdLabel('80F21002024F0000'), 'GET STATUS P1=10 (applications)');
+	assert.strictEqual(scp81CmdLabel('80E8800000'), 'LOAD');
+});
