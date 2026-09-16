@@ -679,7 +679,7 @@ class TargetedAppTest(unittest.TestCase):
     def test_continuation_builds_next_occurrence_apdu(self):
         page = bytes.fromhex('E3114F08A0000000030000009F70010FC50100')
         self.assertEqual(server._scp81_continuation('80F24002024F0000', page),
-                         '80F240020A4F08A00000000300000000')
+                         '80F240030A4F08A00000000300000000')
         self.assertIsNone(server._scp81_continuation('80CAFF2100', page))
 
     def test_cafe_page_auto_continuation(self):
@@ -698,9 +698,9 @@ class TargetedAppTest(unittest.TestCase):
                 'POST', '/api/scp81?req=1', {'x-admin-script-status': 'ok'}, body)
             # The continuation was appended and sent as the next command.
             self.assertEqual(server._SCP81_SCRIPT[1],
-                             '80F24002094F07A000000151535000')
+                             '80F24003094F07A000000151535000')
             self.assertEqual(status, 200)
-            self.assertIn(bytes.fromhex('80F24002094F07A000000151535000'), out)
+            self.assertIn(bytes.fromhex('80F24003094F07A000000151535000'), out)
         finally:
             server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
             server._SCP81_SCRIPT_SENT = 0
@@ -712,7 +712,7 @@ class TargetedAppTest(unittest.TestCase):
         server._SCP81_SCRIPT = ['80F24002024F0000']
         server._SCP81_SCRIPT_SENT = 1
         server._SCP81_SCRIPT_RESULTS = []
-        server._SCP81_SCRIPT_INSERTED = ['80F240020A4F08A00000000300000000']
+        server._SCP81_SCRIPT_INSERTED = ['80F240030A4F08A00000000300000000']
         server._SCP81_PAGES = 1
         try:
             page = bytes.fromhex('E3114F08A0000000030000009F70010FC50100')

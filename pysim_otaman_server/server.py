@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.14'
+VERSION = '2.1.15'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1548,7 +1548,11 @@ def _scp81_continuation(apdu, rapdu):
     if not aid:
         return None
     lc = 2 + len(aid)
-    return '80F2%s02%02X4F%02X%s00' % (u[4:6], lc, len(aid), aid.hex().upper())
+    # P2=03 = "get next occurrence(s)" (Table 11-34); P2=02 ("first or all")
+    # made the card return the first listing again, so every continuation
+    # page repeated its search criterion and the scan stopped early - the
+    # newly installed package never appeared in the registry.
+    return '80F2%s03%02X4F%02X%s00' % (u[4:6], lc, len(aid), aid.hex().upper())
 
 
 def _scp81_script_responder(method, target, headers, body):

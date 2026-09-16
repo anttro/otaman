@@ -245,6 +245,20 @@ was SW 6A80 (incorrect parameters in data field).
 Working INSTALL [for install] example (compact):
 `80E60C002E07AA1902BC22580108AA1902BC2258010108AA1902BC22580101010010C900EA0C800A00000F010000000000000000`
 
+## RESOLVED 2026-09-16f: SW CAFE pagination used the wrong P2 (02 instead of 03)
+
+**Root cause:** the continuation GET STATUS used `P2=02`, which Table 11-34
+(GP Card Spec 2.3.1) defines as "**Get first or all occurrence(s)**" - the
+card returned the first listing again (with the search criterion's single
+match), so every listing appeared to end after one extra page and newly
+installed/registered entries were invisible (the installed package
+`AA1902BC225801` was missing from the ELF registry). The correct value is
+`P2=03` = "**Get next occurrence(s)**".
+
+**Fix:** `_scp81_continuation` emits `80F2 <P1> 03 <Lc> 4F <len> <lastAID> 00`
+and the earlier duplicate entry per page is gone (the criterion entry is no
+longer re-returned).
+
 ## Next tests / work
 
 1. **UI:** group the per-page R-APDUs under their logical command in the
