@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.1.16'
+VERSION = '2.1.17'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1479,10 +1479,16 @@ def _scp81_parse_response(body):
         content = body
     count, out = 0, []
     off = 0
-    while off + 1 < len(content):
-        tag, tlen = content[off], content[off + 1]
-        val = content[off + 2:off + 2 + tlen]
-        off += 2 + tlen
+    while off < len(content):
+        tag = content[off]
+        # BER lengths: an R-APDU TLV above 127 bytes is `23 81 FC ...`; a raw
+        # byte >0x7F used as a length silently truncated every listing page
+        # to 127 bytes (live 2026-09-16), hiding later registry entries.
+        tlen, voff = httpota.ber_len_read(content, off + 1)
+        val = content[voff:voff + tlen]
+        if len(val) < tlen:
+            break
+        off = voff + tlen
         if tag == 0x80:
             count = int.from_bytes(val, 'big') if val else 0
         elif tag == 0x23 and len(val) >= 2:

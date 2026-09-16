@@ -855,3 +855,22 @@ class VerbatimScriptTest(unittest.TestCase):
         finally:
             server._SCP81_SCRIPT = list(server._SCP81_SCRIPTS['explore'])
             server._SCP81_SCRIPT_SENT = 0
+
+
+class ResponseTlvLengthTest(unittest.TestCase):
+    def test_long_form_r_apdu_length(self):
+        # A page bigger than 127 bytes: `AF 80 23 81 FC <252 bytes> 00 00`
+        page = bytes.fromhex('E3284F08D276000005AAFFCAFE00019F700101CC08A000000003000000' * 9)[:250]
+        rapdu = page + b'\x63\x10'
+        body = b'\xAF\x80\x23' + bytes([0x81, len(rapdu)]) + rapdu + b'\x00\x00'
+        count, rapdus = server._scp81_parse_response(body)
+        self.assertEqual(len(rapdus), 1)
+        data, sw = rapdus[0]
+        self.assertEqual(sw, '6310')
+        self.assertEqual(len(data), 250)
+
+    def test_short_form_still_works(self):
+        page = bytes.fromhex('E3114F08A0000000030000009F70010FC50100')
+        body = b'\xAF\x80\x23' + bytes([len(page) + 2]) + page + b'\xCA\xFE' + b'\x00\x00'
+        count, rapdus = server._scp81_parse_response(body)
+        self.assertEqual(rapdus, [(page, 'CAFE')])

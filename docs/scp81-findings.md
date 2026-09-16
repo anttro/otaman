@@ -271,6 +271,21 @@ invisible. Labels/decoder updated; the remote APDU script builder's P1 map
 (0x02 load / 0x0C install / 0x08 make-selectable / 0x40 reg-update / 0x10
 extradition) was already correct.
 
+## RESOLVED 2026-09-16g: response R-APDU TLV length also needs BER long form
+
+**Root cause:** `_scp81_parse_response` read the `23` (R-APDU) TLV length as a
+raw byte. A listing page above 127 bytes arrives as `AF 80 23 81 FC <252
+bytes> 00 00`; the parser took `0x81` as the length, so every page was
+silently cut to 127 bytes with a bogus status word (the data's last two
+bytes, e.g. `CAFE`/`0001`/`9F70` instead of the real `63 10`). The bogus SW
+also stopped the pagination, so later registry entries - including the
+installed package `AA1902BC225801` - never appeared.
+
+**Fix:** the response template TLVs use `httpota.ber_len_read` (BER length,
+same class of bug as the channel data TLV and the command script template
+earlier the same day). Regression tests cover a 250-byte page with
+`23 81 FC` and the short-form case.
+
 ## Next tests / work
 
 1. **UI:** group the per-page R-APDUs under their logical command in the
