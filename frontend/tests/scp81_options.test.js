@@ -22,16 +22,18 @@ function extractFunc(src, name) {
 }
 
 let code = html.match(/const SCP81_OPT_DEFAULTS = \{[\s\S]*?\n\};/)[0].replace('const ', 'var ') + '\n';
-for (const fn of ['scp81OptionsLoad', 'scp81OptionsFromForm', 'scp81OptionsPersist', 'scp81OptionsReset']) {
+for (const fn of ['scp81OptionsState', 'scp81OptionsFromForm', 'scp81OptionsSyncDisabled',
+	'scp81OptionsBadge', 'scp81OptionsLoad', 'scp81OptionsPersist', 'scp81OptionsReset',
+	'scp81NextUriToggle', 'scp81TargetedAppToggle']) {
 	code += extractFunc(html, fn) + '\n';
 }
+code += 'globalThis.t = s => s;\n';
 eval(code);
 
 function setup(opts) {
 	const spec = Object.assign({
 		'opt-chunked': true,
 		'opt-chunk-size': 0,
-		'opt-keep-alive': true,
 		'opt-conn-header': 'none',
 		'opt-compact': false,
 		'opt-next-uri': true,
@@ -39,11 +41,20 @@ function setup(opts) {
 		'opt-link-events': true,
 		'opt-script-template': 'indefinite',
 		'opt-cr-tag': false,
-		'opt-targeted-app': ''
+		'opt-targeted-app-on': false,
+		'opt-targeted-app': '',
+		'scp81-opts-badge': ''
 	}, opts || {});
 	const els = {};
 	for (const [id, v] of Object.entries(spec)) {
-		els[id] = typeof v === 'boolean' ? { checked: v, value: '' } : { checked: true, value: String(v) };
+		const checkbox = typeof v === 'boolean';
+		els[id] = {
+			checked: checkbox ? v : true,
+			value: checkbox ? '' : String(v),
+			disabled: false,
+			textContent: '',
+			classList: { toggle() {} },
+		};
 	}
 	globalThis.document = { getElementById: id => els[id] || null };
 	return els;
@@ -65,7 +76,6 @@ test('scp81OptionsFromForm maps the reference defaults', () => {
 	assert.deepStrictEqual(scp81OptionsFromForm(), {
 		chunked: true,
 		chunk_size: 0,
-		keep_alive: true,
 		conn_header: 'none',
 		compact_headers: false,
 		next_uri: '/api/scp81?req=%d',
@@ -80,20 +90,19 @@ test('scp81OptionsFromForm reflects a changed setup', () => {
 	setup({
 		'opt-chunked': false,
 		'opt-chunk-size': '100',
-		'opt-keep-alive': false,
-		'opt-conn-header': 'close',
+		'opt-conn-header': 'keep-alive',
 		'opt-compact': true,
 		'opt-next-uri-value': '/adminserver?apdu_id=%d',
 		'opt-link-events': false,
 		'opt-script-template': 'definite',
 		'opt-cr-tag': true,
+		'opt-targeted-app-on': true,
 		'opt-targeted-app': ' //aid/A000000151000000 '
 	});
 	assert.deepStrictEqual(scp81OptionsFromForm(), {
 		chunked: false,
 		chunk_size: 100,
-		keep_alive: false,
-		conn_header: 'close',
+		conn_header: 'keep-alive',
 		compact_headers: true,
 		next_uri: '/adminserver?apdu_id=%d',
 		link_events: false,
@@ -110,51 +119,95 @@ test('unchecked Next-URI omits the header; empty text falls back to the template
 	assert.strictEqual(scp81OptionsFromForm().next_uri, '/api/scp81?req=%d');
 });
 
+test('X-Admin-Targeted-Application is only sent when its checkbox is ticked', () => {
+	// text left in the box with the checkbox off must never leak out
+	setup({ 'opt-targeted-app-on': false, 'opt-targeted-app': '//aid/A000000151000000' });
+	assert.strictEqual(scp81OptionsFromForm().targeted_app, '');
+	setup({ 'opt-targeted-app-on': true, 'opt-targeted-app': ' //aid/A000000151000000 ' });
+	assert.strictEqual(scp81OptionsFromForm().targeted_app, '//aid/A000000151000000');
+});
+
+test('the dependent fields are disabled while their checkbox is off', () => {
+	const els = setup({ 'opt-next-uri': false, 'opt-targeted-app-on': false });
+	scp81OptionsSyncDisabled();
+	assert.strictEqual(els['opt-next-uri-value'].disabled, true);
+	assert.strictEqual(els['opt-targeted-app'].disabled, true);
+	els['opt-next-uri'].checked = true;
+	els['opt-targeted-app-on'].checked = true;
+	scp81OptionsSyncDisabled();
+	assert.strictEqual(els['opt-next-uri-value'].disabled, false);
+	assert.strictEqual(els['opt-targeted-app'].disabled, false);
+});
+
+test('the custom badge flags anything that differs from the defaults', () => {
+	const els = setup();
+	scp81OptionsBadge();
+	assert.strictEqual(els['scp81-opts-badge'].textContent, '');
+	setup({ 'opt-compact': true, 'scp81-opts-badge': '' });
+	scp81OptionsBadge();
+	assert.strictEqual(globalThis.document.getElementById('scp81-opts-badge').textContent, 'custom');
+	// an empty Next-URI text is not a change (the default template applies)
+	setup({ 'opt-next-uri-value': '', 'scp81-opts-badge': '' });
+	scp81OptionsBadge();
+	assert.strictEqual(globalThis.document.getElementById('scp81-opts-badge').textContent, '');
+});
+
 test('load/persist/reset round-trip through localStorage', () => {
 	const store = fakeStorage();
 	setup({
 		'opt-chunked': false,
 		'opt-chunk-size': 100,
-		'opt-keep-alive': false,
-		'opt-conn-header': 'close',
+		'opt-conn-header': 'keep-alive',
 		'opt-compact': true,
 		'opt-next-uri': false,
 		'opt-link-events': false,
 		'opt-script-template': 'definite',
 		'opt-cr-tag': true,
+		'opt-targeted-app-on': true,
 		'opt-targeted-app': '//aid/A000000151000000'
 	});
 	scp81OptionsPersist();
 	assert.ok(store['otaman_scp81_opts'].includes('"chunkSize":100'));
+	assert.ok(store['otaman_scp81_opts'].includes('"targetedAppOn":true'));
+	assert.ok(!store['otaman_scp81_opts'].includes('keepAlive'));
 	// a reload restores the saved setup
 	setup({});
 	scp81OptionsLoad();
-	assert.strictEqual(globalThis.document.getElementById('opt-chunked').checked, false);
-	assert.strictEqual(globalThis.document.getElementById('opt-chunk-size').value, 100);
-	assert.strictEqual(globalThis.document.getElementById('opt-conn-header').value, 'close');
-	assert.strictEqual(globalThis.document.getElementById('opt-next-uri').checked, false);
-	assert.strictEqual(globalThis.document.getElementById('opt-script-template').value, 'definite');
-	assert.strictEqual(globalThis.document.getElementById('opt-cr-tag').checked, true);
-	assert.strictEqual(globalThis.document.getElementById('opt-targeted-app').value, '//aid/A000000151000000');
+	const get = id => globalThis.document.getElementById(id);
+	assert.strictEqual(get('opt-chunked').checked, false);
+	assert.strictEqual(get('opt-chunk-size').value, 100);
+	assert.strictEqual(get('opt-conn-header').value, 'keep-alive');
+	assert.strictEqual(get('opt-next-uri').checked, false);
+	assert.strictEqual(get('opt-script-template').value, 'definite');
+	assert.strictEqual(get('opt-cr-tag').checked, true);
+	assert.strictEqual(get('opt-targeted-app-on').checked, true);
+	assert.strictEqual(get('opt-targeted-app').value, '//aid/A000000151000000');
 	// reset clears the saved entry and restores the defaults
 	scp81OptionsReset();
 	assert.ok(!('otaman_scp81_opts' in store));
 	scp81OptionsLoad();
-	assert.strictEqual(globalThis.document.getElementById('opt-chunked').checked, true);
-	assert.strictEqual(globalThis.document.getElementById('opt-next-uri').checked, true);
-	assert.strictEqual(globalThis.document.getElementById('opt-conn-header').value, 'none');
+	assert.strictEqual(get('opt-chunked').checked, true);
+	assert.strictEqual(get('opt-next-uri').checked, true);
+	assert.strictEqual(get('opt-conn-header').value, 'none');
+	assert.strictEqual(get('opt-targeted-app-on').checked, false);
 });
 
 test('the Listener UI wires the framing options into Start', () => {
-	for (const id of ['scp81-opts-http', 'scp81-opts-script', 'opt-chunked',
-		'opt-chunk-size', 'opt-keep-alive', 'opt-conn-header', 'opt-compact',
+	for (const id of ['scp81-opts', 'scp81-opts-badge', 'scp81-opts-http', 'scp81-opts-script',
+		'opt-chunked', 'opt-chunk-size', 'opt-conn-header', 'opt-compact',
 		'opt-next-uri', 'opt-next-uri-value', 'opt-script-template', 'opt-cr-tag',
-		'opt-targeted-app', 'opt-link-events']) {
+		'opt-targeted-app-on', 'opt-targeted-app', 'opt-link-events']) {
 		assert.ok(html.includes('id="' + id + '"'), id);
 	}
-	assert.ok(html.includes('body.link_events = opts.link_events;'));
+	// collapsed by default: a <details> without the open attribute
+	assert.match(html, /<details id="scp81-opts" class="[^"]*">/);
+	assert.ok(!/<details id="scp81-opts"[^>]*\sopen/.test(html));
+	// the removed switch must not come back
+	assert.ok(!html.includes('opt-keep-alive'));
+	// the options travel in the start body
 	assert.ok(html.includes('body.chunk_size = opts.chunk_size;'));
 	assert.ok(html.includes('body.next_uri = opts.next_uri;'));
+	assert.ok(html.includes('body.targeted_app = opts.targeted_app || null;'));
 	assert.ok(html.includes('body.script_template = opts.script_template;'));
 	assert.ok(html.includes("httpOpts.classList.toggle('hidden', mode !== 'tls')"));
 	assert.ok(html.includes("scriptOpts.classList.toggle('hidden', mode !== 'tls')"));

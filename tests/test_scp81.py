@@ -189,8 +189,7 @@ class PskTlsServerTest(unittest.TestCase):
         server._SCP81_SCRIPT_NEXT = 0
         server._SCP81_SCRIPT_RESULTS = []
         srv = scp81.PskTlsServer('127.0.0.1', 0, PSK,
-                                 responder=server._scp81_script_responder,
-                                 keep_alive=True)
+                                 responder=server._scp81_script_responder)
         try:
             tls = self._connect(srv)
             tls.sendall(b'POST /api/scp81 HTTP/1.1\r\nHost: 127.0.0.1\r\n'
@@ -216,51 +215,46 @@ class PskTlsServerTest(unittest.TestCase):
             server._SCP81_SCRIPT_RESULTS = []
             srv.stop()
 
-    def test_response_closes_connection_without_keep_alive(self):
-        # Default (keep_alive=False): the card's HTTP client seems to delimit
-        # the response at connection close, so the server closes after each
-        # response and the card starts a fresh session for its next POST.
+    def test_200_keeps_the_connection_for_the_next_post(self):
+        # The card is the HTTP client and may reuse the connection for its
+        # next POST (GP Am. B 4.3.1: connection management is the SD's job);
+        # the server never closes between requests.
         def responder(method, target, headers, body):
             return 200, {'X-Admin-Protocol': scp81.GP_PROTOCOL}, b'\x80\x01\x00'
 
         srv = scp81.PskTlsServer('127.0.0.1', 0, PSK, responder=responder)
         try:
             tls = self._connect(srv)
-            tls.sendall(b'POST /api/scp81 HTTP/1.1\r\n\r\n')
+            tls.sendall(b'POST /api/scp81?req=1 HTTP/1.1\r\n\r\n')
             reply = self._read_http(tls)
             self.assertTrue(reply.startswith(b'HTTP/1.1 200 OK'))
-            self.assertEqual(self._recv(tls), b'')   # server closed
+            # same TLS session, second request
+            tls.sendall(b'POST /api/scp81?req=2 HTTP/1.1\r\n\r\n')
+            reply = self._read_http(tls)
+            self.assertTrue(reply.startswith(b'HTTP/1.1 200 OK'))
             tls.close()
         finally:
             srv.stop()
 
-    def test_close_waits_for_drain_callback(self):
-        # With keep_alive=False and a body, the listener calls on_before_close
-        # (the server waits for the card to drain the BIP buffer) before
-        # closing the connection.
-        seen = []
-
+    def test_session_end_closes_with_close_notify(self):
+        # Only the 204 ends the dialog; the server shuts the TLS session down
+        # cleanly (close_notify while the response is still buffered) and
+        # then closes the socket.
         def responder(method, target, headers, body):
-            return 200, {'X-Admin-Protocol': scp81.GP_PROTOCOL}, b'\x80\x01\x00'
+            return 204, {'X-Admin-Protocol': scp81.GP_PROTOCOL}, b''
 
-        srv = scp81.PskTlsServer('127.0.0.1', 0, PSK, responder=responder,
-                                 on_before_close=lambda peer: seen.append(peer))
+        srv = scp81.PskTlsServer('127.0.0.1', 0, PSK, responder=responder)
         try:
             tls = self._connect(srv)
-            client_port = tls.getsockname()[1]
             tls.sendall(b'POST /api/scp81 HTTP/1.1\r\n\r\n')
             reply = self._read_http(tls)
-            self.assertTrue(reply.startswith(b'HTTP/1.1 200 OK'))
-            self.assertIn(b'Connection: close', reply)
-            # The server must send close_notify (clean TLS shutdown) before
-            # closing: unwrap() succeeds only when the peer's close_notify
-            # has been received.
+            self.assertIn(b'HTTP/1.1 204 No Content', reply)
+            # answer the server's close_notify: a mutual clean shutdown means
+            # unwrap() completes instead of timing out
             tls.settimeout(3.0)
             plain = tls.unwrap()
-            # The close comes after the drain callback: EOF proves it ran.
-            self.assertEqual(plain.recv(1), b'')
-            self.assertEqual(len(seen), 1)
-            self.assertEqual(seen[0][1], client_port)
+            plain.settimeout(3.0)
+            self.assertEqual(plain.recv(64), b'')
             plain.close()
         finally:
             srv.stop()
@@ -379,8 +373,7 @@ class PskTlsServerTest(unittest.TestCase):
                               'Content-Type': scp81.GP_CT_COMMAND}, b'\x80\x01\x00')
             return 204, {'X-Admin-Protocol': scp81.GP_PROTOCOL}, b''
 
-        srv = scp81.PskTlsServer('127.0.0.1', 0, PSK, responder=responder,
-                                 keep_alive=True)
+        srv = scp81.PskTlsServer('127.0.0.1', 0, PSK, responder=responder)
         try:
             tls = self._connect(srv)
             tls.sendall(b'POST /server/adminagent?cmd=1 HTTP/1.1\r\n\r\n')
@@ -655,7 +648,7 @@ class BipControlTest(unittest.TestCase):
             resp = server._scp81_bip_control({
                 'action': 'start', 'mode': 'tls', 'host': '127.0.0.1', 'port': 0,
                 'psk_hex': '00112233', 'psk_identity': 'id-1',
-                'chunked': False, 'chunk_size': 100, 'keep_alive': False,
+                'chunked': False, 'chunk_size': 100,
                 'compact_headers': True, 'conn_header': 'close', 'next_uri': '',
                 'script_template': 'definite', 'cr_tag': True,
                 'targeted_app': '//aid/A000000151000000', 'link_events': False,
@@ -667,8 +660,8 @@ class BipControlTest(unittest.TestCase):
             self.assertIn('version_seen', listener)
             self.assertIn('cipher_seen', listener)
             self.assertEqual((listener['chunked'], listener['chunk_size'],
-                              listener['keep_alive'], listener['compact_headers']),
-                             (False, 100, False, True))
+                              listener['compact_headers']),
+                             (False, 100, True))
             self.assertEqual(server._SCP81_SCRIPT_TEMPLATE, 'definite')
             self.assertTrue(server._SCP81_SCRIPT_CR_TAG)
             self.assertEqual(server._SCP81_TARGETED_APP, '//aid/A000000151000000')
@@ -946,42 +939,6 @@ class DataAvailableTest(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()
 
-class WaitDrainedTest(unittest.TestCase):
-    def test_wait_drained_matches_channel_by_port(self):
-        ch = types.SimpleNamespace(rx=bytearray(), sock=types.SimpleNamespace(
-            getsockname=lambda: ('127.0.0.1', 40001)))
-        old = server._BIP
-        server._BIP = types.SimpleNamespace(channels={1: ch})
-        try:
-            # unknown port / gone channel -> immediate
-            self.assertIsNone(server._scp81_wait_drained(('127.0.0.1', 40002)))
-        finally:
-            server._BIP = old
-
-class WaitDrainedSlowTest(unittest.TestCase):
-    def test_wait_drained_waits_for_card_fetch(self):
-        import threading, time as _time
-        ch = types.SimpleNamespace(rx=bytearray(), sock=types.SimpleNamespace(
-            getsockname=lambda: ('127.0.0.1', 40003)))
-
-        def feed():
-            _time.sleep(0.15)
-            ch.rx.extend(b'response-bytes')      # pump picks up the response
-            _time.sleep(0.25)
-            ch.rx.clear()                        # card fetches everything
-
-        old = server._BIP
-        server._BIP = types.SimpleNamespace(channels={1: ch})
-        th = threading.Thread(target=feed)
-        th.start()
-        t0 = _time.time()
-        try:
-            server._scp81_wait_drained(('127.0.0.1', 40003))
-        finally:
-            server._BIP = old
-            th.join()
-        self.assertGreater(_time.time() - t0, 0.3)
-
 class KeylogTest(unittest.TestCase):
     def test_keylog_filename_set(self):
         import tempfile, os
@@ -1001,7 +958,7 @@ class ConnHeaderTest(unittest.TestCase):
         def responder(method, target, headers, body):
             return 204, {}, b''
         srv = scp81.PskTlsServer('127.0.0.1', 0, PSK, responder=responder,
-                                 keep_alive=True, conn_header='none')
+                                 conn_header='none')
         try:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ctx.check_hostname = False

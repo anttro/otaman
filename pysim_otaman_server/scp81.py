@@ -132,8 +132,8 @@ class PskTlsServer:
 
     def __init__(self, host, port, psk=None, identity=None, on_log=None,
                  responder=None, timeout=10.0, chunked=False, chunk_size=0,
-                 keep_alive=False, compact_headers=False, tls_version='auto',
-                 cipher=None, on_before_close=None, keylog=None,
+                 compact_headers=False, tls_version='auto',
+                 cipher=None, keylog=None,
                  conn_header=None, half_close=False, answer_delay=0.0,
                  psk_map=None):
         # PSK lookup table: identity -> key. With an explicit psk_map a
@@ -159,7 +159,6 @@ class PskTlsServer:
         self.chunked = chunked
         # chunk_size 0 = one record for the whole response
         self.chunk_size = int(chunk_size)
-        self.keep_alive = keep_alive
         self.compact_headers = compact_headers
         # TLS is permissive by default: 'auto' accepts TLS 1.0-1.2 and lets
         # OpenSSL pick the highest the card offers. The '1.0'/'1.1'/'1.2'
@@ -170,17 +169,13 @@ class PskTlsServer:
         # Pin one cipher suite (e.g. PSK-AES128-CBC-SHA) if the card's SD only
         # maps a specific suite to a usable SCP81 security level.
         self.cipher = cipher or None
-        # Called with the peer address just before closing a non-keep-alive
-        # connection: the server waits until the card has drained the BIP
-        # buffer, otherwise the EOF truncates the response fetch.
-        self.on_before_close = on_before_close
         # Debug aid: write the TLS traffic secrets to this file
         # (SSLKEYLOGFILE format), so captures of the PSK dialog can be
         # decrypted (tshark etc). Contains key material - use a temp path.
         self.keylog = keylog or None
-        # Connection header value: None = auto ('keep-alive'/'close' per the
-        # keep_alive flag), 'none' = omit the header (implicit HTTP/1.1
-        # keep-alive).
+        # Connection header value: None/'none' = omit the header (implicit
+        # HTTP/1.1 keep-alive); 'keep-alive' adds it explicitly. The server
+        # never closes mid-session - only the 204 ends the dialog.
         self.conn_header = conn_header or None
         # TLS half-close after a script body. NOTE (live 2026-09-16):
         # CPython's SSLSocket.unwrap() poisons the session when the peer does
@@ -367,11 +362,7 @@ class PskTlsServer:
                 status, resp_headers, resp_body = self.responder(
                     method, target, headers, body)
                 reason = {200: 'OK', 204: 'No Content'}.get(status, 'Status')
-                conn_hdr = self.conn_header
-                if conn_hdr == 'none':
-                    conn_hdr = None
-                elif conn_hdr is None:
-                    conn_hdr = 'keep-alive' if self.keep_alive else 'close'
+                conn_hdr = None if self.conn_header in (None, 'none') else self.conn_header
                 response = build_http_response(
                     status, reason, resp_headers, resp_body,
                     chunked=self.chunked, compact=self.compact_headers,
@@ -393,38 +384,23 @@ class PskTlsServer:
                          bytes=len(resp_body), chunked=self.chunked,
                          response_hex=response.hex().upper()[:600],
                          body_hex=resp_body.hex().upper()[:2000] or None)
-                # 204 always ends the dialog. Without keep-alive every response
-                # ends it: the card's HTTP client appears to delimit the
-                # response at connection close (live 2026-09-15) and then
-                # starts a fresh session for its next POST.
-                if status == 204 or not resp_body or not self.keep_alive:
-                    peer_name = None
-                    if resp_body and self.on_before_close:
-                        try:
-                            peer_name = tls.getpeername()
-                        except Exception:
-                            peer_name = None
+                # Only the end of the dialog closes the connection: 204 (or
+                # an empty body) ends the session; every other response
+                # leaves the TLS connection open for the card's next POST.
+                # Reusing it - or dialing a fresh one - is the card's call
+                # (GP Am. B 4.3.1: the SD manages connection establishment).
+                if status == 204 or not resp_body:
+                    # Clean TLS shutdown with the response still in the BIP
+                    # buffer: the card fetches the 204 and the close_notify
+                    # together, then the FIN. A bare close here makes the
+                    # card abort the session with a fatal alert.
                     plain = None
-                    if not self.keep_alive:
-                        # Clean TLS shutdown BEFORE the card drains the
-                        # buffer: a bare TCP close leaves the card's TLS stack
-                        # with a truncated session (it then neither processes
-                        # the script nor posts the response), and a
-                        # close_notify sent only after the drain is never
-                        # fetched. Send it while the response still waits, so
-                        # the card reads both, then wait for the buffer to
-                        # drain and only then send the FIN.
-                        try:
-                            tls.settimeout(2.0)
-                            plain = tls.unwrap()
-                            tls = None
-                        except Exception:
-                            plain = None
-                    if peer_name and self.on_before_close:
-                        try:
-                            self.on_before_close(peer_name)
-                        except Exception:
-                            pass
+                    try:
+                        tls.settimeout(2.0)
+                        plain = tls.unwrap()
+                        tls = None
+                    except Exception:
+                        plain = None
                     if plain is not None:
                         try:
                             plain.close()

@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.2.14'
+VERSION = '2.2.15'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1484,39 +1484,10 @@ def _scp81_listener_status():
                 'cipher_seen': _SCP81_LISTENER.cipher_seen,
                 'chunked': _SCP81_LISTENER.chunked,
                 'chunk_size': _SCP81_LISTENER.chunk_size,
-                'keep_alive': _SCP81_LISTENER.keep_alive,
                 'compact_headers': _SCP81_LISTENER.compact_headers,
                 'tls_version': _SCP81_LISTENER.tls_version,
                 'cipher': _SCP81_LISTENER.cipher}
     return {'mode': 'dump', 'host': _SCP81_LISTENER.host, 'port': _SCP81_LISTENER.port}
-
-
-def _scp81_wait_drained(peer):
-    """Wait until the BIP channel for this TLS connection has delivered its
-    buffered bytes to the card (matched by the terminal's ephemeral port), so
-    a connection close does not truncate the response fetch."""
-    if not peer or len(peer) < 2:
-        return
-    port = peer[1]
-    deadline = time.time() + 5.0
-    seen_data = False
-    while time.time() < deadline:
-        ch = None
-        for c in list(_BIP.channels.values()):
-            try:
-                if c.sock.getsockname()[1] == port:
-                    ch = c
-                    break
-            except OSError:
-                continue
-        if ch is None:
-            return
-        if ch.rx:
-            # Channel pump has picked up the response; wait for the card.
-            seen_data = True
-        elif seen_data:
-            return
-        time.sleep(0.05)
 
 
 def _bip_data_available(ch):
@@ -2094,11 +2065,9 @@ def _scp81_bip_control(body):
             responder=_scp81_script_responder,
             chunked=bool(body.get('chunked', True)),
             chunk_size=chunk_size,
-            keep_alive=bool(body.get('keep_alive', True)),
             compact_headers=bool(body.get('compact_headers', False)),
             tls_version=str(body.get('tls_version') or 'auto'),
             cipher=(body.get('cipher') or None),
-            on_before_close=_scp81_wait_drained,
             keylog=(body.get('keylog') or None),
             conn_header=(body.get('conn_header') or 'none'),
             answer_delay=(body.get('answer_delay') or 0),

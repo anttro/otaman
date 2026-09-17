@@ -672,16 +672,20 @@ record, as in the decrypted reference session; a positive value writes the
 head and each body piece as its own record). Both are echoed by
 `GET /api/scp81/status`.
 
-`keep_alive` (default `true`, matching the reference session: the card sends
-all its POSTs on one connection until the 204) ends the TLS connection after
-each response
-(after the card drained the BIP buffer, with `close_notify`, so the card
-processes the script and opens a new connection for its next POST);
-`compact_headers` (default `false`) drops the space after each header colon,
-`conn_header` (default `'none'` = omit the header) declares the connection
-fate, `tls_version` (default `'auto'` — accept TLS 1.0-1.2 and let OpenSSL
-pick the highest the card offers; `'1.0'`/`'1.1'`/`'1.2'` pin a version for
-debugging) selects the protocol window, `cipher` pins one suite, `next_uri`
+The connection stays open between POSTs for the whole dialog (the card is the
+HTTP client and may reuse it or dial a new one at will — GP Am. B 4.3.1 leaves
+connection management to the SD); only the 204 ends the session, and the server
+then shuts the TLS session down cleanly (`close_notify` while the response is
+still buffered, then FIN). There is no option to close after every response.
+
+`compact_headers` (default `false`) omits the optional space after each header
+colon — legal per RFC 7230 3.2 (OWS), though a single SP is preferred, and it
+saves one byte per header (useful to keep a response within one card-sized TLS
+record); `conn_header` (default `'none'` = omit the header; `'keep-alive'` adds
+it) declares the connection fate, `tls_version` (default `'auto'` — accept TLS
+1.0-1.2 and let OpenSSL pick the highest the card offers; `'1.0'`/`'1.1'`/`'1.2'`
+pin a version for debugging) selects the protocol window, `cipher` pins one
+suite, `next_uri`
 overrides the per-command `X-Admin-Next-URI` (`%d` = command id; empty string
 omits the header), `link_events` (default `true`, all modes) controls the
 automatic Channel status events, `answer_delay` waits before answering a
@@ -702,8 +706,9 @@ reasons (no shared cipher, unsupported protocol version, card alert) is logged
 as `tls-handshake-failed` with the OpenSSL reason, separately from
 post-handshake record errors (`tls-error`).
 
-The PWA's Listener **Options** block exposes `chunked`, `chunk_size`,
-`keep_alive`, `conn_header`, `compact_headers`, `next_uri`,
-`script_template`, `cr_tag`, `targeted_app` and `link_events`
-(applied at Start, persisted in `localStorage`); `tls_version`, `cipher`,
-`keylog` and `answer_delay` stay API-only.
+The PWA's Listener **Options** block (collapsed by default; a `custom` marker
+appears when anything differs from the reference defaults) exposes `chunked`,
+`chunk_size`, `conn_header`, `compact_headers`, `next_uri` (checkbox + template),
+`script_template`, `cr_tag`, `targeted_app` (checkbox + `//aid/...` field) and
+`link_events` (applied at Start, persisted in `localStorage`); `tls_version`,
+`cipher`, `keylog` and `answer_delay` stay API-only.
