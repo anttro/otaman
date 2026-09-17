@@ -1,9 +1,11 @@
 """HTTP OTA (SCP81 / GP RAM over HTTP) emulation.
 
 Phase A: terminal-side BIP emulation (OPEN/SEND/RECEIVE/CLOSE CHANNEL) plus a
-raw TCP capture listener. The card's BIP channel is always redirected to the
-locally configured target (the future PSK TLS platform); the address the card
-requested is only logged.
+raw TCP capture listener. In the default redirect mode the card's BIP channel
+is always redirected to the locally configured target (the future PSK TLS
+platform) and the address the card requested is only logged; in passthru mode
+the channel dials the destination the card requests in OPEN CHANNEL (TCP,
+UICC in client mode, remote connection).
 
 Reference behavior (TS 102 223 8.52-8.56, GP v2.2 Amendment B) is taken from
 the captured real-terminal traces in samples/HTTP_OTA/traces:
@@ -154,6 +156,7 @@ class BipTerminal:
 
     def __init__(self):
         self.enabled = False
+        self.mode = 'redirect'
         self.target = None
         self.channels = {}
         self.next_id = 1
@@ -213,10 +216,17 @@ class BipTerminal:
                                              name='bip-monitor', daemon=True)
             self._monitor.start()
 
-    def enable(self, host, port):
-        self.target = (host, int(port))
+    def enable(self, host=None, port=None, mode='redirect'):
+        """Enable the BIP terminal.
+
+        'redirect' (default) pins one target: every channel goes there whatever
+        address the card requests. 'passthru' has no target at all: every
+        channel dials the destination the card requested in OPEN CHANNEL."""
+        self.mode = mode if mode in ('redirect', 'passthru') else 'redirect'
+        self.target = (host, int(port)) if host and port not in (None, '') else None
         self.enabled = True
-        self.log('enabled', target='%s:%d' % self.target)
+        self.log('enabled', mode=self.mode,
+                 target='%s:%d' % self.target if self.target else None)
         self._start_monitor()
 
     def disable(self):
@@ -271,12 +281,40 @@ class BipTerminal:
                 return cid
         return None
 
-    def open(self, requested_host, requested_port, buffer_size):
-        """Open a channel to the redirect target. Returns (channel_id, error)."""
-        if not self.enabled or not self.target:
+    def open(self, requested_host, requested_port, buffer_size, proto=None):
+        """Open a channel.
+
+        Redirect modes connect to the pinned target; passthru dials the
+        destination the card sent in OPEN CHANNEL (Other address + Transport
+        level port). Returns (channel_id, error)."""
+        if not self.enabled:
             return None, 'bip disabled'
-        target = self.target
         requested = '%s:%s' % (requested_host, requested_port)
+        if self.mode == 'passthru':
+            # Use the card's request as-is: TCP, UICC in client mode, remote
+            # connection (TS 102 223 6.4.27.2 / 8.59). The specs define no
+            # default port, so an incomplete or non-TCP request fails.
+            host = (requested_host or '').strip()
+            try:
+                port = int(requested_port)
+            except (TypeError, ValueError):
+                port = 0
+            if proto != 0x02:
+                reason = 'card did not request TCP client transport (passthru)'
+            elif not host or host == '-':
+                reason = 'card did not request a destination address (passthru)'
+            elif not 0 < port <= 0xFFFF:
+                reason = 'card did not request a valid port (passthru)'
+            else:
+                reason = None
+            if reason:
+                self.log('open-fail', requested=requested, reason=reason)
+                return None, reason
+            target = (host, port)
+        else:
+            if not self.target:
+                return None, 'bip disabled'
+            target = self.target
         cid = self._alloc_id()
         if cid is None:
             self.log('open-fail', requested=requested, reason='no free channel')
@@ -363,6 +401,7 @@ class BipTerminal:
             })
         return {
             'enabled': self.enabled,
+            'mode': self.mode,
             'target': '%s:%d' % self.target if self.target else None,
             'channels': channels,
             'seq': self.seq,

@@ -590,10 +590,11 @@ Values persist on the server until restart. Apply → hex updates; Save → POST
 
 The **SCP81** tab drives HTTP OTA (GP RAM over HTTP, GPC v2.2 Amendment B) and has two pills: **Listener** and **Scripts**.
 
-The **Listener** starts/stops the target the card's BIP channel is redirected to, in one of three modes:
+The **Listener** starts/stops the target the card's BIP channel is redirected to, in one of four modes:
 
 - **PSK TLS server** (default) — a PSK TLS listener on **Host:Port** that answers with the TLS 1.2 PSK cipher suites of the spec and speaks the GP HTTP administration dialog (`X-Admin-*` headers, `200` with a command string or `204 No Content`). PSK keys come from the card presets (**Cards** tab): the key is picked by the identity the card sends in the handshake, and Start is refused when no preset has both parts. Keys are never stored or logged; an unrecognised identity is logged as `tls-psk-unknown`.
-- **Pass-through (external server)** — no local listener: every BIP channel is connected to the configured external platform (Host and Port required), which terminates TLS and runs the administration dialog; the address the card requests is only logged.
+- **Redirect to external server** — no local listener: every BIP channel is connected to the configured target (Host and Port required), which terminates TLS and runs the administration dialog; the address the card requests is only logged.
+- **Pass-through (card destination)** — no listener and no target: the terminal connects each BIP channel to the destination the card requests in OPEN CHANNEL (`Other address` + transport port, TCP client remote only; no spec default port, so an incomplete request fails the channel). TLS is terminated by that platform, so the server's network is used (lab only).
 - **Capture (dump)** — accepts the card's TCP channel and logs whatever it sends (e.g. the TLS ClientHello) without answering.
 
 **Script** selects the command list served over the session: **None** (leave the server's configured script) or one of the scripts created in the **Scripts** pill; **Restart script** re-queues the selected script with `force`, starting over from the first APDU.

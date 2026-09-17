@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.2.12'
+VERSION = '2.2.13'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -851,9 +851,12 @@ _PLI_DATA = {q: '' for q in PLI_QUALIFIER_NAMES}
 
 _BIP = httpota.BipTerminal()
 _SCP81_LISTENER = None
-# Active listener mode and target: ('dump'|'tls'|'passthru', host, port).
-# passthru has no listener object - the BIP channels connect straight to the
-# external platform - so the mode/target are tracked here for the status API.
+# Active listener mode: 'dump' | 'tls' | 'redirect' | 'passthru'.
+# 'redirect' pins one target and has no listener object - the BIP channels
+# connect straight to the configured external platform (TLS terminated
+# there). 'passthru' has neither listener nor target: each channel dials the
+# destination the card requests in OPEN CHANNEL. Mode/target are tracked here
+# for the status API.
 _SCP81_MODE = None
 _SCP81_TARGET = None
 # PSK table of the TLS listener: identity -> key (memory only, never logged or
@@ -1409,7 +1412,7 @@ def _handle_bip_command(scc, cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst)
             # destination TLVs - see the AGENTS.md HTTP OTA notes).
             _BIP.log('open-relaxed', address=addr, port=port,
                      note='destination/transport not fully specified')
-        cid, err = _BIP.open(addr or '-', port or 0, buffer_size)
+        cid, err = _BIP.open(addr or '-', port or 0, buffer_size, proto=proto)
         if cid is None:
             return _bip_tr(cmd_num, cmd_type, cmd_qual, dev_src, dev_dst, 0x3A, 0x00, extra)
         if cmd_qual and (cmd_qual & 0x04):
@@ -1461,10 +1464,15 @@ def _handle_bip_command(scc, cmd_num, cmd_type, cmd_qual, raw, dev_src, dev_dst)
 
 def _scp81_listener_status():
     if not _SCP81_LISTENER:
-        if _SCP81_MODE == 'passthru' and _SCP81_TARGET:
-            return {'mode': 'passthru', 'host': _SCP81_TARGET[0],
+        if _SCP81_MODE == 'redirect' and _SCP81_TARGET:
+            return {'mode': 'redirect', 'host': _SCP81_TARGET[0],
                     'port': _SCP81_TARGET[1],
                     'target': '%s:%d' % _SCP81_TARGET}
+        if _SCP81_MODE == 'passthru':
+            # No listener and no pinned target: every channel dials the
+            # destination the card requests (per-channel targets in the
+            # BIP status).
+            return {'mode': 'passthru'}
         return None
     if isinstance(_SCP81_LISTENER, scp81.PskTlsServer):
         return {'mode': 'tls', 'host': _SCP81_LISTENER.host, 'port': _SCP81_LISTENER.port,
@@ -2010,18 +2018,28 @@ def _scp81_bip_control(body):
         _SCP81_LISTENER.stop()
         _SCP81_LISTENER = None
     _BIP.disable()
-    if mode == 'passthru':
-        # No local listener: the card's BIP channels connect straight to the
-        # external platform (e.g. a production HTTP OTA server), which
-        # terminates TLS and runs the administration dialog. The target is a
-        # configured address, never the address the card requests.
+    if mode == 'redirect':
+        # No local listener: the card's BIP channels are redirected straight
+        # to the configured target (e.g. a production HTTP OTA server), which
+        # terminates TLS and runs the administration dialog. The address the
+        # card requests is only logged.
         if not body.get('host') or body.get('port') in (None, ''):
             return {'ok': False,
-                    'error': 'passthru mode requires the target host and port'}
-        _SCP81_MODE = 'passthru'
+                    'error': 'redirect mode requires the target host and port'}
+        _SCP81_MODE = 'redirect'
         _SCP81_TARGET = (host, port)
         _BIP.on_data = _bip_data_available
-        _BIP.enable(host, port)
+        _BIP.enable(host, port, mode='redirect')
+        return {'ok': True, 'bip': _BIP.status(),
+                'listener': _scp81_listener_status()}
+    if mode == 'passthru':
+        # No local listener and no pinned target: every BIP channel dials the
+        # destination the card requests in OPEN CHANNEL (Other address +
+        # Transport level port, TCP client only). Host and port are unused.
+        _SCP81_MODE = 'passthru'
+        _SCP81_TARGET = None
+        _BIP.on_data = _bip_data_available
+        _BIP.enable(mode='passthru')
         return {'ok': True, 'bip': _BIP.status(),
                 'listener': _scp81_listener_status()}
     if mode == 'tls':
@@ -2103,7 +2121,7 @@ def _scp81_bip_control(body):
         _SCP81_MODE = 'tls'
         _SCP81_TARGET = (_SCP81_LISTENER.host, _SCP81_LISTENER.port)
         _BIP.on_data = _bip_data_available
-        _BIP.enable(host, _SCP81_LISTENER.port)
+        _BIP.enable(host, _SCP81_LISTENER.port, mode='redirect')
         return {'ok': True, 'bip': _BIP.status(), 'listener': _scp81_listener_status(),
                 'script': list(_SCP81_SCRIPT_BASE),
                 'script_kind': _SCP81_SCRIPT_KIND,
@@ -2121,7 +2139,7 @@ def _scp81_bip_control(body):
         on_log=lambda kind, **fields: _BIP.log(kind, **fields))
     _SCP81_MODE = 'dump'
     _SCP81_TARGET = (_SCP81_LISTENER.host, _SCP81_LISTENER.port)
-    _BIP.enable(host, _SCP81_LISTENER.port)
+    _BIP.enable(host, _SCP81_LISTENER.port, mode='redirect')
     return {'ok': True, 'bip': _BIP.status(), 'listener': _scp81_listener_status()}
 
 

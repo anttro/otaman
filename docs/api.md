@@ -507,14 +507,29 @@ without answering:
 {"action": "start", "mode": "dump", "host": "127.0.0.1", "port": 8443}
 ```
 
-Pass-through mode (`mode: "passthru"`) starts **no local listener**: every BIP
-channel the card opens is connected to the configured external platform
-(`host`/`port` are required — no defaults), which terminates TLS and runs the
-administration dialog; the address the card requests is only logged. The
-status API reports `mode: "passthru"` with the target while it runs.
+Redirect mode (`mode: "redirect"`) starts **no local listener**: every BIP
+channel the card opens is connected to the configured target (`host`/`port`
+are required — no defaults), which terminates TLS and runs the administration
+dialog; the address the card requests is only logged. The status API reports
+`mode: "redirect"` with the target while it runs. (This is the behavior that
+was called `passthru` before 2.2.13 — the name is now taken by the mode
+below.)
 
 ```json
-{"action": "start", "mode": "passthru", "host": "203.0.113.10", "port": 10174}
+{"action": "start", "mode": "redirect", "host": "203.0.113.10", "port": 10174}
+```
+
+Pass-through mode (`mode: "passthru"`) starts **no listener and has no
+target**: every BIP channel dials the destination the card requests in OPEN
+CHANNEL — the `Other address` (`3E`/`BE`) plus the `Transport level`
+(`3C`/`BC`) port, TCP client remote (`02`) only. The specs define no default
+port, so an incomplete or non-TCP request fails the channel with result `3A`
+and an `open-fail` log reason; `host`/`port` in the request are ignored. The
+status API reports `{"mode": "passthru"}` and the per-channel targets appear
+in `bip.channels`.
+
+```json
+{"action": "start", "mode": "passthru"}
 ```
 
 TLS mode runs the Phase B PSK TLS server (GPC v2.2 Amendment B): the PSK
@@ -545,16 +560,19 @@ Stop either mode with `{"action": "stop"}` (also disables the BIP terminal).
 ### `GET /api/scp81/status`
 
 ```json
-{"bip": {"enabled": true, "target": "127.0.0.1:8443", "channels": [], "seq": 12},
+{"bip": {"enabled": true, "mode": "redirect", "target": "127.0.0.1:8443", "channels": [], "seq": 12},
  "listener": {"mode": "tls", "host": "127.0.0.1", "port": 8443,
               "psk_identities": ["89012345678901234567"], "psk_wildcard": false,
               "identity_seen": "89012345678901234567", "identity_matched": true}}
 ```
 
 Listener modes: `tls` (local PSK TLS server), `dump` (capture-only TCP
-listener) and `passthru` (no local listener; the BIP channels go straight to
-`host:port`, e.g. an external HTTP OTA platform — reported as
-`{"mode": "passthru", "host": ..., "port": ..., "target": "host:port"}`).
+listener), `redirect` (no local listener; the BIP channels go straight to the
+configured `host:port`, e.g. an external HTTP OTA platform — reported as
+`{"mode": "redirect", "host": ..., "port": ..., "target": "host:port"}`) and
+`passthru` (no listener and no target; each channel dials the destination the
+card requests in OPEN CHANNEL — reported as `{"mode": "passthru"}`, with the
+actual peer in `bip.channels[].target`).
 
 `psk_identities` lists the identities the listener accepts (keys are never
 exposed); `psk_wildcard` marks the legacy single-key mode. `identity_seen` /

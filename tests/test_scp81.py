@@ -682,36 +682,52 @@ class BipControlTest(unittest.TestCase):
         self.assertFalse(resp['ok'])
         self.assertIn('unsupported mode', resp['error'])
 
-    def test_passthru_mode_targets_the_external_server(self):
-        resp = server._scp81_bip_control({'action': 'start', 'mode': 'passthru',
+    def test_redirect_mode_targets_the_external_server(self):
+        resp = server._scp81_bip_control({'action': 'start', 'mode': 'redirect',
                                           'host': '10.11.12.13', 'port': 10174})
         self.assertTrue(resp['ok'], resp)
         self.assertIsNone(server._SCP81_LISTENER)       # no local listener
-        self.assertEqual(resp['listener']['mode'], 'passthru')
+        self.assertEqual(resp['listener']['mode'], 'redirect')
         self.assertEqual(resp['listener']['host'], '10.11.12.13')
         self.assertEqual(resp['listener']['port'], 10174)
         self.assertEqual(resp['listener']['target'], '10.11.12.13:10174')
         self.assertTrue(resp['bip']['enabled'])
         self.assertEqual(server._BIP.target, ('10.11.12.13', 10174))
-        # the status endpoint sees the passthru mode while it runs ...
-        self.assertEqual(server._scp81_listener_status()['mode'], 'passthru')
+        # the status endpoint sees the redirect mode while it runs ...
+        self.assertEqual(server._scp81_listener_status()['mode'], 'redirect')
         # ... and stopping clears it (no stale listener in the status)
         server._scp81_bip_control({'action': 'stop'})
         self.assertIsNone(server._scp81_listener_status())
         self.assertFalse(server._BIP.enabled)
 
-    def test_passthru_mode_requires_an_explicit_target(self):
+    def test_redirect_mode_requires_an_explicit_target(self):
         # No defaults for a remote platform: the target must be configured.
-        resp = server._scp81_bip_control({'action': 'start', 'mode': 'passthru'})
+        resp = server._scp81_bip_control({'action': 'start', 'mode': 'redirect'})
         self.assertFalse(resp['ok'])
         self.assertIn('host and port', resp['error'])
-        resp = server._scp81_bip_control({'action': 'start', 'mode': 'passthru',
+        resp = server._scp81_bip_control({'action': 'start', 'mode': 'redirect',
                                           'host': '10.0.0.1'})
         self.assertFalse(resp['ok'])
-        resp = server._scp81_bip_control({'action': 'start', 'mode': 'passthru',
+        resp = server._scp81_bip_control({'action': 'start', 'mode': 'redirect',
                                           'port': 1234})
         self.assertFalse(resp['ok'])
         self.assertIsNone(server._SCP81_LISTENER)
+        self.assertFalse(server._BIP.enabled)
+
+    def test_passthru_mode_needs_no_target(self):
+        # Passthru: no listener and no pinned target - every BIP channel dials
+        # the destination the card requests in OPEN CHANNEL.
+        resp = server._scp81_bip_control({'action': 'start', 'mode': 'passthru'})
+        self.assertTrue(resp['ok'], resp)
+        self.assertIsNone(server._SCP81_LISTENER)
+        self.assertEqual(resp['listener'], {'mode': 'passthru'})
+        self.assertEqual(server._BIP.mode, 'passthru')
+        self.assertIsNone(server._BIP.target)
+        self.assertTrue(resp['bip']['enabled'])
+        self.assertEqual(resp['bip']['mode'], 'passthru')
+        self.assertEqual(server._scp81_listener_status(), {'mode': 'passthru'})
+        server._scp81_bip_control({'action': 'stop'})
+        self.assertIsNone(server._scp81_listener_status())
         self.assertFalse(server._BIP.enabled)
 
     def test_start_accepts_explicit_script_list(self):

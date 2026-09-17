@@ -152,17 +152,17 @@ class BipTerminalTest(unittest.TestCase):
         self.assertIn('close', kinds)
         peer.stop()
 
-    def test_passthru_mode_roundtrip_via_bip_control(self):
-        # SCP81 passthru: the control API enables BIP with the external
+    def test_redirect_mode_roundtrip_via_bip_control(self):
+        # SCP81 redirect: the control API enables BIP with the external
         # platform as the target and starts no local listener; the card's
         # channel talks straight to that platform.
         peer = PeerServer(greeting=b'PLATFORM')
         peer.start()
         try:
-            resp = server._scp81_bip_control({'action': 'start', 'mode': 'passthru',
+            resp = server._scp81_bip_control({'action': 'start', 'mode': 'redirect',
                                               'host': '127.0.0.1', 'port': peer.port})
             self.assertTrue(resp['ok'], resp)
-            self.assertEqual(resp['listener']['mode'], 'passthru')
+            self.assertEqual(resp['listener']['mode'], 'redirect')
             self.assertEqual(server._BIP.target, ('127.0.0.1', peer.port))
             cid, err = server._BIP.open('10.9.9.9', 10174, 512)
             self.assertIsNone(err)
@@ -183,6 +183,51 @@ class BipTerminalTest(unittest.TestCase):
         cid, err = bip.open('127.0.0.1', 1, 512)
         self.assertIsNone(cid)
         self.assertIn('disabled', err)
+
+    def test_passthru_dials_the_requested_destination(self):
+        # passthru has no pinned target: the socket goes to the destination
+        # the card requested in OPEN CHANNEL (TCP client, remote).
+        peer = PeerServer(greeting=b'PLATFORM')
+        peer.start()
+        try:
+            bip = httpota.BipTerminal()
+            bip.enable(mode='passthru')
+            self.assertIsNone(bip.target)
+            self.assertEqual(bip.status()['mode'], 'passthru')
+            cid, err = bip.open('127.0.0.1', peer.port, 512, proto=0x02)
+            self.assertIsNone(err)
+            self.assertEqual(bip.channels[cid].target, ('127.0.0.1', peer.port))
+            self.assertTrue(bip.send(cid, b'CARDHELLO'))
+            data = b''
+            for _ in range(20):
+                data = bip.receive(cid, 100)
+                if data:
+                    break
+                time.sleep(0.05)
+            self.assertEqual(data, b'PLATFORM')
+            self.assertTrue(bip.close(cid))
+        finally:
+            peer.stop()
+
+    def test_passthru_rejects_incomplete_or_non_tcp_requests(self):
+        # The specs define no default port (TS 102 223 8.59): anything but a
+        # complete TCP-client remote request fails the channel (result 3A
+        # upstream) with a visible log reason.
+        srv = socket.socket()
+        srv.bind(('127.0.0.1', 0))
+        dead_port = srv.getsockname()[1]
+        srv.close()
+        bip = httpota.BipTerminal()
+        bip.enable(mode='passthru')
+        self.assertIsNone(bip.open('-', 0, 512, proto=0x02)[0])              # no address
+        self.assertIsNone(bip.open('127.0.0.1', 0, 512, proto=0x02)[0])      # no port
+        self.assertIsNone(bip.open('127.0.0.1', 1234, 512, proto=0x03)[0])   # TCP server mode
+        self.assertIsNone(bip.open('127.0.0.1', dead_port, 512, proto=0x02)[0])  # refused
+        reasons = [e.get('reason', '') for e in bip.entries_after(0)
+                   if e['kind'] == 'open-fail']
+        self.assertTrue(any('TCP client' in r for r in reasons), reasons)
+        self.assertTrue(any('valid port' in r for r in reasons), reasons)
+        self.assertTrue(any('address' in r for r in reasons), reasons)
 
     def test_peer_close_queues_channel_status_event(self):
         # TS 102 223 7.5.11: a link lost outside a proactive command must be

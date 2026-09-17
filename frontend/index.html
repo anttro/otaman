@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.12</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.13</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -969,7 +969,8 @@
 						<label class="block mb-1 text-xs font-medium text-gray-600 dark:text-slate-400" data-l10n="Mode">Mode</label>
 						<select id="scp81-mode" onchange="scp81ModeChanged()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800">
 							<option value="tls" data-l10n="PSK TLS server" selected>PSK TLS server</option>
-							<option value="passthru" data-l10n="Pass-through (external server)">Pass-through (external server)</option>
+							<option value="redirect" data-l10n="Redirect to external server">Redirect to external server</option>
+							<option value="passthru" data-l10n="Pass-through (card destination)">Pass-through (card destination)</option>
 							<option value="dump" data-l10n="Capture (dump)">Capture (dump)</option>
 						</select>
 					</div>
@@ -991,7 +992,8 @@
 				</div>
 				<div id="scp81-msg" class="text-xs mt-2 hidden"></div>
 				<div id="scp81-psk-note" class="mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.">PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.</div>
-				<div id="scp81-passthru-note" class="hidden mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Pass-through: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, the card's requested address is only logged.">Pass-through: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, the card's requested address is only logged.</div>
+				<div id="scp81-redirect-note" class="hidden mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Redirect: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, and the address the card requests is only logged.">Redirect: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, and the address the card requests is only logged.</div>
+				<div id="scp81-passthru-note" class="hidden mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Pass-through: the terminal connects each BIP channel to the destination the card requests in OPEN CHANNEL (Other address + transport port, TCP client only); Host and Port above are not used, TLS is terminated by that platform, and the server's network is used (lab only).">Pass-through: the terminal connects each BIP channel to the destination the card requests in OPEN CHANNEL (Other address + transport port, TCP client only); Host and Port above are not used, TLS is terminated by that platform, and the server's network is used (lab only).</div>
 			</div>
 			<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
 				<div class="flex justify-between items-center mb-2">
@@ -7764,7 +7766,7 @@ async function pysimProactiveLogRender() {
     }
 }
 
-// ===== SCP81: HTTP OTA listener (dump capture / PSK TLS server) =====
+// ===== SCP81: HTTP OTA listener (PSK TLS / redirect / passthru / capture) =====
 let _scp81Timer = null;
 let _scp81LastStatus = null;
 
@@ -7774,8 +7776,18 @@ function scp81ModeChanged() {
 	if (row) row.style.display = (mode === 'tls') ? '' : 'none';
 	const pskNote = document.getElementById('scp81-psk-note');
 	if (pskNote) pskNote.classList.toggle('hidden', mode !== 'tls');
-	const directNote = document.getElementById('scp81-passthru-note');
-	if (directNote) directNote.classList.toggle('hidden', mode !== 'passthru');
+	const redirectNote = document.getElementById('scp81-redirect-note');
+	if (redirectNote) redirectNote.classList.toggle('hidden', mode !== 'redirect');
+	const passthruNote = document.getElementById('scp81-passthru-note');
+	if (passthruNote) passthruNote.classList.toggle('hidden', mode !== 'passthru');
+	// passthru dials the destination from the card's OPEN CHANNEL: the
+	// configured target fields do not apply.
+	for (const id of ['scp81-host', 'scp81-port']) {
+		const el = document.getElementById(id);
+		if (!el) continue;
+		el.disabled = (mode === 'passthru');
+		el.classList.toggle('opacity-40', mode === 'passthru');
+	}
 }
 
 function scp81SwitchSubtab(name) {
@@ -8109,7 +8121,7 @@ async function scp81StatusRefresh() {
 			el.textContent = t('not running');
 			return st;
 		}
-		let s = l.mode + ' ' + l.host + ':' + l.port;
+		let s = l.mode + (l.host && l.port ? ' ' + l.host + ':' + l.port : '');
 		if (l.mode === 'tls') {
 			const ids = l.psk_identities || [];
 			s += ' | PSK: ' + ids.length;
@@ -8121,7 +8133,7 @@ async function scp81StatusRefresh() {
 						: t('unknown identity')) + ']';
 			}
 		}
-		const ch = (bip.channels || []).map(c => 'ch' + c.id + ' in:' + c.bytes_in + ' out:' + c.bytes_out).join(', ');
+		const ch = (bip.channels || []).map(c => 'ch' + c.id + (c.target ? ' → ' + c.target : '') + ' in:' + c.bytes_in + ' out:' + c.bytes_out).join(', ');
 		if (ch) s += ' | ' + ch;
 		el.textContent = s;
 		return st;
@@ -8152,15 +8164,15 @@ async function scp81Start() {
 	const mode = document.getElementById('scp81-mode').value;
 	const hostVal = document.getElementById('scp81-host').value.trim();
 	const portVal = document.getElementById('scp81-port').value.trim();
-	if (mode === 'passthru' && (!hostVal || !portVal)) {
-		scp81Msg(t('Pass-through requires the target host and port'), 'text-red-500');
+	if (mode === 'redirect' && (!hostVal || !portVal)) {
+		scp81Msg(t('Redirect requires the target host and port'), 'text-red-500');
 		return;
 	}
-	const body = {
-		action: 'start', mode: mode,
-		host: hostVal || '127.0.0.1',
-		port: parseInt(portVal || '8443', 10),
-	};
+	const body = { action: 'start', mode: mode };
+	if (mode !== 'passthru') {
+		body.host = hostVal || '127.0.0.1';
+		body.port = parseInt(portVal || '8443', 10);
+	}
 	if (mode === 'tls') {
 		const map = cardsPskMap();
 		if (!map.length) {
@@ -11433,9 +11445,11 @@ const LANG_RU = {
 	'LOAD blocks': 'Блоки LOAD',
 	'clamped from': 'ограничено с',
 	'auto-fit': 'авто',
-	'Pass-through (external server)': 'Проброс (внешний сервер)',
-	'Pass-through: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, the card\'s requested address is only logged.': 'Проброс: каждый открываемый картой BIP-канал подключается к этому Host:Port (внешняя платформа HTTP OTA); TLS завершается там, запрошенный картой адрес только журналируется.',
-	'Pass-through requires the target host and port': 'Для режима проброса нужны host и port внешнего сервера',
+	'Redirect to external server': 'Перенаправление на внешний сервер',
+	'Pass-through (card destination)': 'Проброс (адрес карты)',
+	'Redirect: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, and the address the card requests is only logged.': 'Перенаправление: каждый открываемый картой BIP-канал подключается к этому Host:Port (внешняя платформа HTTP OTA); TLS завершается там, а запрошенный картой адрес только журналируется.',
+	'Pass-through: the terminal connects each BIP channel to the destination the card requests in OPEN CHANNEL (Other address + transport port, TCP client only); Host and Port above are not used, TLS is terminated by that platform, and the server\'s network is used (lab only).': 'Проброс: терминал подключает каждый BIP-канал к адресу, который карта запрашивает в OPEN CHANNEL (Other address + порт Transport level, только TCP-клиент); поля Host и Port выше не используются, TLS завершается на той платформе, и используется сеть сервера (только для лаборатории).',
+	'Redirect requires the target host and port': 'Для перенаправления нужны host и port внешнего сервера',
 	'ADM verified': 'ADM подтверждён',
 	'ADM not verified': 'ADM не подтверждён',
 	'TERMINAL PROFILE': 'TERMINAL PROFILE',

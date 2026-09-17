@@ -168,3 +168,14 @@ test('every help anchor used by the UI exists in help.html', () => {
     assert.ok(html.includes("'scp81-listener' : 'scp81-scripts'"));
     assert.ok(html.includes("? 'scp81-scripts' : 'scp81-listener'"));
 });
+
+test('SCP81 listener exposes its four modes with the matching notes', () => {
+    for (const v of ['tls', 'redirect', 'passthru', 'dump']) {
+        assert.ok(html.includes('value="' + v + '"'), v);
+    }
+    assert.ok(html.includes('id="scp81-redirect-note"'));
+    assert.ok(html.includes('id="scp81-passthru-note"'));
+    // redirect needs the configured target; passthru uses the card's one
+    assert.ok(html.includes("mode === 'redirect' && (!hostVal || !portVal)"));
+    assert.ok(html.includes("el.disabled = (mode === 'passthru')"));
+});
