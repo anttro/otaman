@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.13</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.14</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -994,6 +994,44 @@
 				<div id="scp81-psk-note" class="mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.">PSK keys come from the card presets (Cards tab): the listener picks the key by the identity the card sends in the TLS handshake.</div>
 				<div id="scp81-redirect-note" class="hidden mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Redirect: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, and the address the card requests is only logged.">Redirect: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, and the address the card requests is only logged.</div>
 				<div id="scp81-passthru-note" class="hidden mt-2 text-xs text-gray-500 dark:text-slate-400" data-l10n="Pass-through: the terminal connects each BIP channel to the destination the card requests in OPEN CHANNEL (Other address + transport port, TCP client only); Host and Port above are not used, TLS is terminated by that platform, and the server's network is used (lab only).">Pass-through: the terminal connects each BIP channel to the destination the card requests in OPEN CHANNEL (Other address + transport port, TCP client only); Host and Port above are not used, TLS is terminated by that platform, and the server's network is used (lab only).</div>
+			</div>
+			<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
+				<div class="flex flex-wrap items-center gap-2 mb-2">
+					<span class="text-sm text-gray-500 dark:text-slate-400" data-l10n="Options (applied at Start)">Options (applied at Start)</span>
+					<button onclick="scp81OptionsReset()" class="ml-auto px-2 py-0.5 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300" data-l10n="Reset to defaults">Reset to defaults</button>
+				</div>
+				<div id="scp81-opts-http" class="space-y-2">
+					<div class="text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="HTTP framing">HTTP framing</div>
+					<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300 cursor-pointer"><input type="checkbox" id="opt-chunked" onchange="scp81OptionsPersist()" class="rounded"> <span data-l10n="Chunked body (Transfer-Encoding: chunked)">Chunked body (Transfer-Encoding: chunked)</span></label>
+					<div class="flex flex-wrap items-center gap-2">
+						<label class="text-xs text-gray-600 dark:text-slate-400" data-l10n="Chunk size (bytes, 0 = one TLS record)">Chunk size (bytes, 0 = one TLS record)</label>
+						<input id="opt-chunk-size" type="number" min="0" max="4096" onchange="scp81OptionsPersist()" class="w-24 font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1 dark:bg-slate-800">
+					</div>
+					<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300 cursor-pointer"><input type="checkbox" id="opt-keep-alive" onchange="scp81OptionsPersist()" class="rounded"> <span data-l10n="Keep-alive (one connection until the session ends)">Keep-alive (one connection until the session ends)</span></label>
+					<div class="flex flex-wrap items-center gap-2">
+						<label class="text-xs text-gray-600 dark:text-slate-400" data-l10n="Connection header">Connection header</label>
+						<select id="opt-conn-header" onchange="scp81OptionsPersist()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1 dark:bg-slate-800">
+							<option value="none" data-l10n="omit (implicit keep-alive)">omit (implicit keep-alive)</option>
+							<option value="close">close</option>
+							<option value="keep-alive">keep-alive</option>
+						</select>
+					</div>
+					<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300 cursor-pointer"><input type="checkbox" id="opt-compact" onchange="scp81OptionsPersist()" class="rounded"> <span data-l10n="Compact headers (no space after ':')">Compact headers (no space after ':')</span></label>
+					<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300 cursor-pointer"><input type="checkbox" id="opt-next-uri" onchange="scp81OptionsPersist()" class="rounded"> <span data-l10n="Next-URI (unchecked = omit the header)">Next-URI (unchecked = omit the header)</span></label>
+					<input id="opt-next-uri-value" onchange="scp81OptionsPersist()" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1 dark:bg-slate-800" placeholder="/api/scp81?req=%d">
+				</div>
+				<div id="scp81-opts-script" class="space-y-2 mt-3">
+					<div class="text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="Script framing">Script framing</div>
+					<div class="flex flex-wrap items-center gap-2">
+						<select id="opt-script-template" onchange="scp81OptionsPersist()" class="border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1 dark:bg-slate-800">
+							<option value="indefinite" data-l10n="Indefinite (AE 80 … 00 00)">Indefinite (AE 80 … 00 00)</option>
+							<option value="definite" data-l10n="Definite (AA)">Definite (AA)</option>
+						</select>
+						<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300 cursor-pointer"><input type="checkbox" id="opt-cr-tag" onchange="scp81OptionsPersist()" class="rounded"> <span data-l10n="Comprehension-required tags">Comprehension-required tags</span></label>
+					</div>
+					<input id="opt-targeted-app" onchange="scp81OptionsPersist()" class="w-full font-mono border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1 dark:bg-slate-800" placeholder="X-Admin-Targeted-Application, e.g. //aid/A000000151000000">
+				</div>
+				<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300 cursor-pointer mt-3"><input type="checkbox" id="opt-link-events" onchange="scp81OptionsPersist()" class="rounded"> <span data-l10n="Link events (Channel status ENVELOPEs, TS 102 223 7.5.11)">Link events (Channel status ENVELOPEs, TS 102 223 7.5.11)</span></label>
 			</div>
 			<div class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
 				<div class="flex justify-between items-center mb-2">
@@ -7770,6 +7808,67 @@ async function pysimProactiveLogRender() {
 let _scp81Timer = null;
 let _scp81LastStatus = null;
 
+// ===== SCP81 listener options (HTTP framing / script framing / link events) =====
+// The API takes these at listener start; they are kept in localStorage so a
+// test setup survives reloads. TLS itself has no settings: the listener
+// accepts everything it can and reports the negotiated version/cipher.
+const SCP81_OPT_DEFAULTS = {
+	chunked: true, chunkSize: 0, keepAlive: true, connHeader: 'none',
+	compact: false, nextUri: '/api/scp81?req=%d', linkEvents: true,
+	scriptTemplate: 'indefinite', crTag: false, targetedApp: ''
+};
+
+function scp81OptionsLoad() {
+	let saved = {};
+	try { saved = JSON.parse(localStorage.getItem('otaman_scp81_opts') || '{}') || {}; } catch (e) { saved = {}; }
+	const opt = Object.assign({}, SCP81_OPT_DEFAULTS, saved);
+	const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+	const chk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+	chk('opt-chunked', opt.chunked);
+	set('opt-chunk-size', opt.chunkSize);
+	chk('opt-keep-alive', opt.keepAlive);
+	set('opt-conn-header', opt.connHeader);
+	chk('opt-compact', opt.compact);
+	chk('opt-next-uri', opt.nextUri !== '');
+	set('opt-next-uri-value', opt.nextUri || SCP81_OPT_DEFAULTS.nextUri);
+	chk('opt-link-events', opt.linkEvents);
+	set('opt-script-template', opt.scriptTemplate === 'definite' ? 'definite' : 'indefinite');
+	chk('opt-cr-tag', opt.crTag);
+	set('opt-targeted-app', opt.targetedApp);
+}
+
+function scp81OptionsFromForm() {
+	const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+	const on = id => { const el = document.getElementById(id); return !!(el && el.checked); };
+	return {
+		chunked: on('opt-chunked'),
+		chunk_size: Math.max(0, parseInt(val('opt-chunk-size'), 10) || 0),
+		keep_alive: on('opt-keep-alive'),
+		conn_header: val('opt-conn-header') || 'none',
+		compact_headers: on('opt-compact'),
+		next_uri: on('opt-next-uri') ? (val('opt-next-uri-value').trim() || SCP81_OPT_DEFAULTS.nextUri) : '',
+		link_events: on('opt-link-events'),
+		script_template: val('opt-script-template') === 'definite' ? 'definite' : 'indefinite',
+		cr_tag: on('opt-cr-tag'),
+		targeted_app: val('opt-targeted-app').trim()
+	};
+}
+
+function scp81OptionsPersist() {
+	const o = scp81OptionsFromForm();
+	localStorage.setItem('otaman_scp81_opts', JSON.stringify({
+		chunked: o.chunked, chunkSize: o.chunk_size, keepAlive: o.keep_alive,
+		connHeader: o.conn_header, compact: o.compact_headers, nextUri: o.next_uri,
+		linkEvents: o.link_events, scriptTemplate: o.script_template,
+		crTag: o.cr_tag, targetedApp: o.targeted_app
+	}));
+}
+
+function scp81OptionsReset() {
+	localStorage.removeItem('otaman_scp81_opts');
+	scp81OptionsLoad();
+}
+
 function scp81ModeChanged() {
 	const mode = document.getElementById('scp81-mode').value;
 	const row = document.getElementById('scp81-script-row');
@@ -7780,6 +7879,11 @@ function scp81ModeChanged() {
 	if (redirectNote) redirectNote.classList.toggle('hidden', mode !== 'redirect');
 	const passthruNote = document.getElementById('scp81-passthru-note');
 	if (passthruNote) passthruNote.classList.toggle('hidden', mode !== 'passthru');
+	// HTTP and script framing are properties of our TLS listener
+	const httpOpts = document.getElementById('scp81-opts-http');
+	if (httpOpts) httpOpts.classList.toggle('hidden', mode !== 'tls');
+	const scriptOpts = document.getElementById('scp81-opts-script');
+	if (scriptOpts) scriptOpts.classList.toggle('hidden', mode !== 'tls');
 	// passthru dials the destination from the card's OPEN CHANNEL: the
 	// configured target fields do not apply.
 	for (const id of ['scp81-host', 'scp81-port']) {
@@ -8132,6 +8236,13 @@ async function scp81StatusRefresh() {
 						? t('matched') + (name ? ': ' + name : '')
 						: t('unknown identity')) + ']';
 			}
+			if (l.version_seen) {
+				s += ' | TLS ' + l.version_seen + (l.cipher_seen ? ' ' + l.cipher_seen : '');
+			}
+			s += ' | ' + (l.chunked
+				? ('chunked' + (l.chunk_size ? ' ' + l.chunk_size : ''))
+				: 'content-length');
+			if (l.keep_alive) s += ' | keep-alive';
 		}
 		const ch = (bip.channels || []).map(c => 'ch' + c.id + (c.target ? ' → ' + c.target : '') + ' in:' + c.bytes_in + ' out:' + c.bytes_out).join(', ');
 		if (ch) s += ' | ' + ch;
@@ -8173,6 +8284,20 @@ async function scp81Start() {
 		body.host = hostVal || '127.0.0.1';
 		body.port = parseInt(portVal || '8443', 10);
 	}
+	const opts = scp81OptionsFromForm();
+	body.link_events = opts.link_events;
+	if (mode === 'tls') {
+		body.chunked = opts.chunked;
+		body.chunk_size = opts.chunk_size;
+		body.keep_alive = opts.keep_alive;
+		body.conn_header = opts.conn_header;
+		body.compact_headers = opts.compact_headers;
+		body.next_uri = opts.next_uri;
+		body.script_template = opts.script_template;
+		body.cr_tag = opts.cr_tag;
+		body.targeted_app = opts.targeted_app || null;
+	}
+	scp81OptionsPersist();
 	if (mode === 'tls') {
 		const map = cardsPskMap();
 		if (!map.length) {
@@ -10997,6 +11122,7 @@ function profilerRenderReport(results, labels) {
 
 profilerLoad();
 snapshotsLoad();
+scp81OptionsLoad();
 
 // Init sub-tab pills
 document.querySelectorAll('.pysim-subtab').forEach(btn => {
@@ -11450,6 +11576,21 @@ const LANG_RU = {
 	'Redirect: every BIP channel the card opens is connected to this Host:Port (the external HTTP OTA platform); TLS is terminated there, and the address the card requests is only logged.': 'Перенаправление: каждый открываемый картой BIP-канал подключается к этому Host:Port (внешняя платформа HTTP OTA); TLS завершается там, а запрошенный картой адрес только журналируется.',
 	'Pass-through: the terminal connects each BIP channel to the destination the card requests in OPEN CHANNEL (Other address + transport port, TCP client only); Host and Port above are not used, TLS is terminated by that platform, and the server\'s network is used (lab only).': 'Проброс: терминал подключает каждый BIP-канал к адресу, который карта запрашивает в OPEN CHANNEL (Other address + порт Transport level, только TCP-клиент); поля Host и Port выше не используются, TLS завершается на той платформе, и используется сеть сервера (только для лаборатории).',
 	'Redirect requires the target host and port': 'Для перенаправления нужны host и port внешнего сервера',
+	'Options (applied at Start)': 'Настройки (применяются при запуске)',
+	'Reset to defaults': 'Сбросить к умолчаниям',
+	'HTTP framing': 'HTTP-фрейминг',
+	'Chunked body (Transfer-Encoding: chunked)': 'Chunked-тело (Transfer-Encoding: chunked)',
+	'Chunk size (bytes, 0 = one TLS record)': 'Размер чанка (байт, 0 = одна TLS-запись)',
+	'Keep-alive (one connection until the session ends)': 'Keep-alive (одно соединение до конца сессии)',
+	'Connection header': 'Заголовок Connection',
+	'omit (implicit keep-alive)': 'не отправлять (неявный keep-alive)',
+	"Compact headers (no space after ':')": 'Компактные заголовки (без пробела после «:»)',
+	'Next-URI (unchecked = omit the header)': 'Next-URI (снято — заголовок не отправляется)',
+	'Script framing': 'Фрейминг скрипта',
+	'Indefinite (AE 80 … 00 00)': 'Неопределённая длина (AE 80 … 00 00)',
+	'Definite (AA)': 'Определённая длина (AA)',
+	'Comprehension-required tags': 'Теги с обязательным пониманием (CR)',
+	'Link events (Channel status ENVELOPEs, TS 102 223 7.5.11)': 'События канала (ENVELOPE Channel status, TS 102 223 7.5.11)',
 	'ADM verified': 'ADM подтверждён',
 	'ADM not verified': 'ADM не подтверждён',
 	'TERMINAL PROFILE': 'TERMINAL PROFILE',

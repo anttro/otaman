@@ -563,7 +563,8 @@ Stop either mode with `{"action": "stop"}` (also disables the BIP terminal).
 {"bip": {"enabled": true, "mode": "redirect", "target": "127.0.0.1:8443", "channels": [], "seq": 12},
  "listener": {"mode": "tls", "host": "127.0.0.1", "port": 8443,
               "psk_identities": ["89012345678901234567"], "psk_wildcard": false,
-              "identity_seen": "89012345678901234567", "identity_matched": true}}
+              "identity_seen": "89012345678901234567", "identity_matched": true,
+              "version_seen": "TLSv1.2", "cipher_seen": "PSK-AES128-CBC-SHA256"}}
 ```
 
 Listener modes: `tls` (local PSK TLS server), `dump` (capture-only TCP
@@ -677,13 +678,32 @@ each response
 (after the card drained the BIP buffer, with `close_notify`, so the card
 processes the script and opens a new connection for its next POST);
 `compact_headers` (default `false`) drops the space after each header colon,
-`apache_headers` (default `true`) adds Date/Server/X-Powered-By like the
-reference servers and puts Transfer-Encoding before Content-Type,
-`conn_header` (default `'none'` = omit the header, like the reference)
-declares the connection fate, `tls_version` pins `1.1`/`1.0` for cards that
-only speak the older record layer, `cipher` pins one suite, `next_uri`
+`conn_header` (default `'none'` = omit the header) declares the connection
+fate, `tls_version` (default `'auto'` — accept TLS 1.0-1.2 and let OpenSSL
+pick the highest the card offers; `'1.0'`/`'1.1'`/`'1.2'` pin a version for
+debugging) selects the protocol window, `cipher` pins one suite, `next_uri`
 overrides the per-command `X-Admin-Next-URI` (`%d` = command id; empty string
-omits the header), `link_events` (default `true`) controls the automatic
-Channel status events, `answer_delay` waits before answering a request. `keylog` writes the TLS traffic secrets to
+omits the header), `link_events` (default `true`, all modes) controls the
+automatic Channel status events, `answer_delay` waits before answering a
+request. `keylog` writes the TLS traffic secrets to
 the given file (SSLKEYLOGFILE format) for debugging captures — it contains key
 material, use a temporary path.
+
+The response headers are minimal: `X-Admin-Protocol`, the optional
+`X-Admin-Next-URI`/`X-Admin-Targeted-Application`, `Content-Type` on 200s and
+`Transfer-Encoding`/`Content-Length` per `chunked`. The Date/Server/X-Powered-By
+mimicry (`apache_headers`) was removed in 2.2.14 — the reference server's extra
+headers were an unnecessary copy (the real blocker was the BIP TERMINAL
+RESPONSE BER length) and the card accepts the minimal set.
+
+`GET /api/scp81/status` echoes the negotiated handshake as `version_seen` /
+`cipher_seen` (plus `identity_seen`); a handshake that fails for TLS/cipher
+reasons (no shared cipher, unsupported protocol version, card alert) is logged
+as `tls-handshake-failed` with the OpenSSL reason, separately from
+post-handshake record errors (`tls-error`).
+
+The PWA's Listener **Options** block exposes `chunked`, `chunk_size`,
+`keep_alive`, `conn_header`, `compact_headers`, `next_uri`,
+`script_template`, `cr_tag`, `targeted_app` and `link_events`
+(applied at Start, persisted in `localStorage`); `tls_version`, `cipher`,
+`keylog` and `answer_delay` stay API-only.

@@ -174,9 +174,10 @@ All script attempts used the `explore` list, except #8-#17 which used only
 failures were caused by the BIP TLV length bug, not by the HTTP/TLS details;
 resume mode was a symptom (the working session even started as a resume). The
 key working recipe (also now the server default): one keep-alive connection,
-Apache-style headers, `Transfer-Encoding: chunked` body with the script in
+`Transfer-Encoding: chunked` body with the script in
 one TLS record, no Connection header, `X-Admin-Next-URI` with a query whose
-command id increments.
+command id increments. (2.2.14: the reference server's Date/Server/X-Powered-By
+headers were dropped — they were mimicry, the blocker was the BIP length bug.)
 
 **Also confirmed:** a TLS half-close (close_notify then keep reading for the
 card's POST which RFC 5246 leaves open in practice) cannot be done with

@@ -132,7 +132,7 @@ class PskTlsServer:
 
     def __init__(self, host, port, psk=None, identity=None, on_log=None,
                  responder=None, timeout=10.0, chunked=False, chunk_size=0,
-                 keep_alive=False, compact_headers=False, tls_version='1.2',
+                 keep_alive=False, compact_headers=False, tls_version='auto',
                  cipher=None, on_before_close=None, keylog=None,
                  conn_header=None, half_close=False, answer_delay=0.0,
                  psk_map=None):
@@ -161,9 +161,12 @@ class PskTlsServer:
         self.chunk_size = int(chunk_size)
         self.keep_alive = keep_alive
         self.compact_headers = compact_headers
-        # The reference traces negotiated TLS 1.0 with PSK-AES128-CBC-SHA;
-        # some cards only speak the older record layer correctly.
-        self.tls_version = tls_version if tls_version in TLS_VERSIONS else '1.2'
+        # TLS is permissive by default: 'auto' accepts TLS 1.0-1.2 and lets
+        # OpenSSL pick the highest the card offers. The '1.0'/'1.1'/'1.2'
+        # pins are debugging aids for a card that offers 1.2 but mishandles
+        # it; no setting is needed for normal use.
+        self.tls_version = (tls_version if tls_version == 'auto'
+                            or tls_version in TLS_VERSIONS else 'auto')
         # Pin one cipher suite (e.g. PSK-AES128-CBC-SHA) if the card's SD only
         # maps a specific suite to a usable SCP81 security level.
         self.cipher = cipher or None
@@ -176,8 +179,8 @@ class PskTlsServer:
         # decrypted (tshark etc). Contains key material - use a temp path.
         self.keylog = keylog or None
         # Connection header value: None = auto ('keep-alive'/'close' per the
-        # keep_alive flag), 'none' = omit the header (Apache-style implicit
-        # HTTP/1.1 keep-alive, as in the working reference trace).
+        # keep_alive flag), 'none' = omit the header (implicit HTTP/1.1
+        # keep-alive).
         self.conn_header = conn_header or None
         # TLS half-close after a script body. NOTE (live 2026-09-16):
         # CPython's SSLSocket.unwrap() poisons the session when the peer does
@@ -186,12 +189,14 @@ class PskTlsServer:
         # option surface and for cards that answer promptly (the exception
         # path leaves the session unusable, so it is off by default).
         self.half_close = half_close
-        # Wait before answering a request (the reference Apache/PHP servers
-        # answer ~1 s after the card's POST; the card may need its BIP
-        # SEND-DATA conversation to settle before it accepts the response).
+        # Wait before answering a request (cards may need their BIP SEND DATA
+        # conversation to settle before they accept the response; 0 = answer
+        # immediately).
         self.answer_delay = float(answer_delay or 0)
         self.identity_seen = None
         self.identity_matched = None
+        self.version_seen = None
+        self.cipher_seen = None
         self.stopped = False
         self.conns = []
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -231,11 +236,17 @@ class PskTlsServer:
 
     def _make_context(self):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ver = TLS_VERSIONS[self.tls_version]
-        ctx.minimum_version = ver
-        ctx.maximum_version = ver
+        if self.tls_version == 'auto':
+            # Accept everything the cards speak; OpenSSL negotiates the
+            # highest common version.
+            ctx.minimum_version = ssl.TLSVersion.TLSv1
+            ctx.maximum_version = ssl.TLSVersion.TLSv1_2
+        else:
+            ver = TLS_VERSIONS[self.tls_version]
+            ctx.minimum_version = ver
+            ctx.maximum_version = ver
         ciphers = self.cipher or PSK_CIPHERS
-        if self.tls_version in ('1.0', '1.1'):
+        if self.tls_version in ('auto', '1.0', '1.1'):
             # OpenSSL 3.x disables the legacy protocol versions by default.
             ciphers += ':@SECLEVEL=0'
         ctx.set_ciphers(ciphers)
@@ -329,10 +340,14 @@ class PskTlsServer:
 
     def _conn_loop(self, conn, peer):
         tls = None
+        handshake_done = False
         try:
             tls = self.ctx.wrap_socket(conn, server_side=True)
-            self.log('tls-handshake', peer=peer, cipher=tls.cipher()[0],
-                     version=tls.version(), identity=self.identity_seen,
+            handshake_done = True
+            self.version_seen = tls.version()
+            self.cipher_seen = (tls.cipher() or (None,))[0]
+            self.log('tls-handshake', peer=peer, cipher=self.cipher_seen,
+                     version=self.version_seen, identity=self.identity_seen,
                      psk_match=self.identity_matched)
             while not self.stopped:
                 req = self._read_request(tls)
@@ -417,7 +432,13 @@ class PskTlsServer:
                             pass
                     break
         except ssl.SSLError as e:
-            self.log('tls-error', peer=peer, error=str(e))
+            if handshake_done:
+                self.log('tls-error', peer=peer, error=str(e))
+            else:
+                # No shared cipher / unsupported protocol version / card
+                # alert: keep the handshake reason distinguishable from
+                # post-handshake record errors.
+                self.log('tls-handshake-failed', peer=peer, error=str(e))
         except (OSError, ValueError) as e:
             self.log('tls-error', peer=peer, error=str(e))
         finally:

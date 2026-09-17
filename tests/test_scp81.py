@@ -99,6 +99,26 @@ class PskTlsServerTest(unittest.TestCase):
             sock.close()
             raise
 
+    def test_tls_version_auto_is_permissive(self):
+        # TLS is automatic by default: accept TLS 1.0-1.2, OpenSSL picks the
+        # highest the card offers.
+        srv = scp81.PskTlsServer('127.0.0.1', 0, psk_map={IDENT: PSK})
+        try:
+            self.assertEqual(srv.tls_version, 'auto')
+            self.assertEqual(srv.ctx.minimum_version, ssl.TLSVersion.TLSv1)
+            self.assertEqual(srv.ctx.maximum_version, ssl.TLSVersion.TLSv1_2)
+        finally:
+            srv.stop()
+
+    def test_tls_version_pin_remains_available(self):
+        srv = scp81.PskTlsServer('127.0.0.1', 0, psk_map={IDENT: PSK},
+                                 tls_version='1.0')
+        try:
+            self.assertEqual(srv.ctx.minimum_version, ssl.TLSVersion.TLSv1)
+            self.assertEqual(srv.ctx.maximum_version, ssl.TLSVersion.TLSv1)
+        finally:
+            srv.stop()
+
     def test_handshake_and_204_session(self):
         logs = []
         srv = scp81.PskTlsServer('127.0.0.1', 0, PSK, identity=IDENT,
@@ -630,6 +650,77 @@ class BipControlTest(unittest.TestCase):
         # the key never leaves the server
         self.assertNotIn('psk_hex', listener)
 
+    def test_tls_defaults_and_framing_options(self):
+        try:
+            resp = server._scp81_bip_control({
+                'action': 'start', 'mode': 'tls', 'host': '127.0.0.1', 'port': 0,
+                'psk_hex': '00112233', 'psk_identity': 'id-1',
+                'chunked': False, 'chunk_size': 100, 'keep_alive': False,
+                'compact_headers': True, 'conn_header': 'close', 'next_uri': '',
+                'script_template': 'definite', 'cr_tag': True,
+                'targeted_app': '//aid/A000000151000000', 'link_events': False,
+            })
+            self.assertTrue(resp['ok'], resp)
+            listener = resp['listener']
+            # TLS is automatic (no version/cipher setting in the PWA)
+            self.assertEqual(listener['tls_version'], 'auto')
+            self.assertIn('version_seen', listener)
+            self.assertIn('cipher_seen', listener)
+            self.assertEqual((listener['chunked'], listener['chunk_size'],
+                              listener['keep_alive'], listener['compact_headers']),
+                             (False, 100, False, True))
+            self.assertEqual(server._SCP81_SCRIPT_TEMPLATE, 'definite')
+            self.assertTrue(server._SCP81_SCRIPT_CR_TAG)
+            self.assertEqual(server._SCP81_TARGETED_APP, '//aid/A000000151000000')
+            self.assertEqual(server._SCP81_NEXT_URI, '')
+            self.assertFalse(server._SCP81_LINK_EVENTS)
+            self.assertEqual(resp['script_template'], 'definite')
+            self.assertTrue(resp['cr_tag'])
+            self.assertFalse(resp['link_events'])
+            self.assertNotIn('apache_headers', resp)
+        finally:
+            server._SCP81_SCRIPT_TEMPLATE = 'indefinite'
+            server._SCP81_SCRIPT_CR_TAG = False
+            server._SCP81_TARGETED_APP = None
+            server._SCP81_NEXT_URI = None
+            server._SCP81_LINK_EVENTS = True
+
+    def test_link_events_apply_to_every_mode(self):
+        # TS 102 223 7.5.11 events are a BIP-layer feature, not a TLS option.
+        resp = server._scp81_bip_control({'action': 'start', 'mode': 'redirect',
+                                          'host': '10.11.12.13', 'port': 10174,
+                                          'link_events': False})
+        self.assertTrue(resp['ok'], resp)
+        self.assertFalse(server._SCP81_LINK_EVENTS)
+        resp = server._scp81_bip_control({'action': 'start', 'mode': 'passthru',
+                                          'link_events': True})
+        self.assertTrue(resp['ok'], resp)
+        self.assertTrue(server._SCP81_LINK_EVENTS)
+
+    def test_tls_handshake_failure_is_logged(self):
+        resp = server._scp81_bip_control({'action': 'start', 'mode': 'tls',
+                                          'host': '127.0.0.1', 'port': 0,
+                                          'psk_hex': '00112233', 'psk_identity': 'id-1'})
+        self.assertTrue(resp['ok'], resp)
+        port = resp['listener']['port']
+        sock = socket.create_connection(('127.0.0.1', port), timeout=2)
+        try:
+            sock.sendall(b'this is not a tls hello')
+            sock.settimeout(2)
+            try:
+                sock.recv(64)
+            except OSError:
+                pass
+        finally:
+            sock.close()
+        kinds = []
+        for _ in range(40):
+            kinds = [e['kind'] for e in server._BIP.entries_after(0)]
+            if 'tls-handshake-failed' in kinds:
+                break
+            time.sleep(0.05)
+        self.assertIn('tls-handshake-failed', kinds)
+
     def test_psk_map_start_and_update(self):
         server._SCP81_PSKS = {}
         server._SCP81_PSK_LEGACY = None
@@ -944,46 +1035,56 @@ class TargetedAppTest(unittest.TestCase):
             reset_script()
             server._SCP81_SCRIPT_NEXT = 0
 
-    def test_apache_headers(self):
+    def test_response_headers_are_minimal(self):
+        # No Date/Server/X-Powered-By mimicry (dropped 2.2.14 - the reference
+        # server's extra headers earned nothing); only the dialog headers.
         reset_script(['80CAFF2100'])
         server._SCP81_SCRIPT_NEXT = 0
-        server._SCP81_APACHE_HEADERS = True
         server._SCP81_CHUNKED = False
         try:
             status, headers, body = server._scp81_script_responder(
                 'POST', '/api/scp81', {}, b'')
-            self.assertEqual(list(headers)[:4],
-                             ['Date', 'Server', 'X-Powered-By', 'X-Admin-Protocol'])
-            self.assertEqual(headers['Content-Length'], str(len(body)))
+            self.assertEqual(list(headers),
+                             ['X-Admin-Protocol', 'X-Admin-Next-URI', 'Content-Type'])
+            self.assertTrue(headers['X-Admin-Next-URI'].startswith('/api/scp81?req='))
             out = scp81.build_http_response(status, 'OK', headers, body)
-            self.assertLess(out.index(b'Content-Length'),
-                            out.index(b'Content-Type'))
+            self.assertIn(b'Content-Length', out)
+            for gone in (b'Date:', b'Server:', b'X-Powered-By'):
+                self.assertNotIn(gone, out)
         finally:
-            server._SCP81_APACHE_HEADERS = False
             server._SCP81_CHUNKED = False
             reset_script()
             server._SCP81_SCRIPT_NEXT = 0
 
-    def test_chunked_apache_has_no_content_length(self):
-        # The reference (RAM/HTTPOTA_test5.pcap, decryptable) sends chunked
-        # without Content-Length, Transfer-Encoding before Content-Type.
+    def test_session_end_204_has_only_the_admin_header(self):
+        reset_script([])
+        server._SCP81_SCRIPT_NEXT = 0
+        try:
+            status, headers, body = server._scp81_script_responder(
+                'POST', '/api/scp81', {}, b'')
+            self.assertEqual(status, 204)
+            self.assertEqual(list(headers), ['X-Admin-Protocol'])
+            self.assertEqual(body, b'')
+        finally:
+            reset_script()
+            server._SCP81_SCRIPT_NEXT = 0
+
+    def test_chunked_response_has_no_content_length(self):
+        # A chunked response must not carry Content-Length (invalid HTTP - and
+        # the card rejects it); the Transfer-Encoding header is emitted by the
+        # HTTP builder, exactly once.
         reset_script(['80CAFF2100'])
         server._SCP81_SCRIPT_NEXT = 0
-        server._SCP81_APACHE_HEADERS = True
         server._SCP81_CHUNKED = True
         try:
             status, headers, body = server._scp81_script_responder(
                 'POST', '/api/scp81', {}, b'')
             self.assertNotIn('Content-Length', headers)
-            self.assertEqual(headers['Transfer-Encoding'], 'chunked')
-            self.assertLess(list(headers).index('Transfer-Encoding'),
-                            list(headers).index('Content-Type'))
             out = scp81.build_http_response(status, 'OK', headers, body,
                                             chunked=True, connection=None)
             self.assertNotIn(b'Content-Length', out)
-            self.assertEqual(out.count(b'Transfer-Encoding'), 1)
+            self.assertEqual(out.count(b'Transfer-Encoding: chunked'), 1)
         finally:
-            server._SCP81_APACHE_HEADERS = False
             server._SCP81_CHUNKED = False
             reset_script()
             server._SCP81_SCRIPT_NEXT = 0

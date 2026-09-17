@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.2.13'
+VERSION = '2.2.14'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -1480,6 +1480,8 @@ def _scp81_listener_status():
                 'psk_wildcard': _SCP81_LISTENER.wildcard_psk is not None,
                 'identity_seen': _SCP81_LISTENER.identity_seen,
                 'identity_matched': _SCP81_LISTENER.identity_matched,
+                'version_seen': _SCP81_LISTENER.version_seen,
+                'cipher_seen': _SCP81_LISTENER.cipher_seen,
                 'chunked': _SCP81_LISTENER.chunked,
                 'chunk_size': _SCP81_LISTENER.chunk_size,
                 'keep_alive': _SCP81_LISTENER.keep_alive,
@@ -1631,12 +1633,9 @@ _SCP81_NEXT_URI = None
 # When it names an application that does not exist on the card, the SD answers
 # with X-Admin-Script-Status: unknown-application instead of executing.
 _SCP81_TARGETED_APP = None
-# Emit Apache-style responses (Date/Server/X-Powered-By, Content-Length before
-# Content-Type) exactly like the reference admin servers.
-_SCP81_APACHE_HEADERS = False
-# The listener's chunked flag (mirrored here for the response headers: a
-# chunked response must not carry Content-Length - invalid HTTP, and the
-# reference sends Transfer-Encoding before Content-Type).
+# The listener's chunked flag (mirrored here: a chunked response must not
+# carry Content-Length - invalid HTTP; the Transfer-Encoding header itself is
+# emitted by build_http_response).
 _SCP81_CHUNKED = False
 # Send automatic Channel status (link dropped) events to the card. Suppress
 # while testing flows where the terminal closes the connection on purpose:
@@ -1873,32 +1872,18 @@ def _scp81_script_responder(method, target, headers, body):
             body_out = _scp81_command_body(
                 apdu, definite=(_SCP81_SCRIPT_TEMPLATE == 'definite'),
                 cr_tag=_SCP81_SCRIPT_CR_TAG)
-        if _SCP81_APACHE_HEADERS:
-            if _SCP81_CHUNKED:
-                headers['Transfer-Encoding'] = 'chunked'
-            else:
-                headers['Content-Length'] = str(len(body_out))
+        # Transfer-Encoding / Content-Length are emitted by the HTTP builder
+        # (chunked never carries a Content-Length).
         headers['Content-Type'] = scp81.GP_CT_COMMAND
         return 200, headers, body_out
     _BIP.log('script-done', sent=_SCP81_SCRIPT_SENT_NO,
              results=len(_SCP81_SCRIPT_RESULTS))
-    headers = _scp81_response_headers()
-    if _SCP81_APACHE_HEADERS:
-        headers['Content-Type'] = 'text/html; charset=UTF-8'
-    return 204, headers, b''
+    return 204, _scp81_response_headers(), b''
 
 
 def _scp81_response_headers():
-    """Base response headers, in the reference servers' order (Apache adds
-    Date/Server/X-Powered-By before the admin headers)."""
-    headers = {}
-    if _SCP81_APACHE_HEADERS:
-        import email.utils
-        headers['Date'] = email.utils.formatdate(usegmt=True)
-        headers['Server'] = 'Apache'
-        headers['X-Powered-By'] = 'PHP/7.0.33'
-    headers['X-Admin-Protocol'] = scp81.GP_PROTOCOL
-    return headers
+    """Base response headers: only what the administration dialog needs."""
+    return {'X-Admin-Protocol': scp81.GP_PROTOCOL}
 
 
 def _parse_psk_map(raw):
@@ -1998,7 +1983,7 @@ def _scp81_bip_control(body):
     global _SCP81_LISTENER, _SCP81_PSKS, _SCP81_PSK_LEGACY
     global _SCP81_MODE, _SCP81_TARGET
     global _SCP81_SCRIPT_TEMPLATE, _SCP81_SCRIPT_CR_TAG, _SCP81_NEXT_URI
-    global _SCP81_LINK_EVENTS, _SCP81_TARGETED_APP, _SCP81_APACHE_HEADERS
+    global _SCP81_LINK_EVENTS, _SCP81_TARGETED_APP
     global _SCP81_CHUNKED
     body = body or {}
     action = body.get('action', 'start')
@@ -2018,6 +2003,9 @@ def _scp81_bip_control(body):
         _SCP81_LISTENER.stop()
         _SCP81_LISTENER = None
     _BIP.disable()
+    # Channel status events (TS 102 223 7.5.11) apply to every mode: the
+    # terminal reports BIP link changes it detects outside proactive commands.
+    _SCP81_LINK_EVENTS = bool(body.get('link_events', True))
     if mode == 'redirect':
         # No local listener: the card's BIP channels are redirected straight
         # to the configured target (e.g. a production HTTP OTA server), which
@@ -2091,14 +2079,13 @@ def _scp81_bip_control(body):
         _SCP81_SCRIPT_CR_TAG = bool(body.get('cr_tag', False))
         if 'next_uri' in body:
             _SCP81_NEXT_URI = body.get('next_uri') or ''
-        _SCP81_LINK_EVENTS = bool(body.get('link_events', True))
         _SCP81_TARGETED_APP = (body.get('targeted_app') or None)
         # Defaults reproduce the working reference session (decrypted from
         # samples/HTTP_OTA: RAM/HTTPOTA_test5.pcap): one keep-alive connection,
-        # Apache-style response headers, a chunked body whose script sits in
-        # one TLS record, no Connection header, and an X-Admin-Next-URI with a
-        # query whose command id increments. Overrides remain available.
-        _SCP81_APACHE_HEADERS = bool(body.get('apache_headers', True))
+        # a chunked body whose script sits in one TLS record, no Connection
+        # header, and an X-Admin-Next-URI with a query whose command id
+        # increments. Overrides remain available; TLS is automatic (all
+        # versions/ciphers the server can speak, negotiated per card).
         _SCP81_CHUNKED = bool(body.get('chunked', True))
         cs = body.get('chunk_size')
         chunk_size = int(cs) if cs not in (None, '') else 0
@@ -2109,7 +2096,7 @@ def _scp81_bip_control(body):
             chunk_size=chunk_size,
             keep_alive=bool(body.get('keep_alive', True)),
             compact_headers=bool(body.get('compact_headers', False)),
-            tls_version=str(body.get('tls_version') or '1.2'),
+            tls_version=str(body.get('tls_version') or 'auto'),
             cipher=(body.get('cipher') or None),
             on_before_close=_scp81_wait_drained,
             keylog=(body.get('keylog') or None),
@@ -2128,7 +2115,6 @@ def _scp81_bip_control(body):
                 'script_template': _SCP81_SCRIPT_TEMPLATE,
                 'cr_tag': _SCP81_SCRIPT_CR_TAG, 'link_events': _SCP81_LINK_EVENTS,
                 'targeted_app': _SCP81_TARGETED_APP,
-                'apache_headers': _SCP81_APACHE_HEADERS,
                 'chunked': _SCP81_CHUNKED}
     if mode != 'dump':
         return {'ok': False, 'error': 'unsupported mode: %s' % mode}
