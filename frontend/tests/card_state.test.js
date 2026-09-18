@@ -23,7 +23,8 @@ function extractFunc(src, name) {
 
 let code = 'var _pysimCardStateKey = null;\nvar _pysimCardSession = null;\n'
 	+ 'var _pysimServerAvailable = null;\nvar _pysimCardEquipped = false;\n'
-	+ 'var _pysimProactiveSeq = null;\nvar _pysimStkSig = null;\nvar _pysimAdmVerified = null;\n';
+	+ 'var _pysimProactiveSeq = null;\nvar _pysimStkSig = null;\nvar _pysimAdmVerified = null;\n'
+	+ 'var _cardsAutoIccid = null;\n';
 code += extractFunc(html, 'pysimCardStateUpdate') + '\n';
 code += extractFunc(html, 'pysimAvailabilityState') + '\n';
 code += extractFunc(html, 'pysimControlDisabled') + '\n';
@@ -53,12 +54,13 @@ function fakeIndicator() {
 function setup() {
 	const el = { textContent: 'status line', innerHTML: '' };
 	const adm = fakeIndicator();
-	const calls = { connected: [], resets: [], refreshStatus: [], proactive: 0 };
+	const calls = { connected: [], resets: [], refreshStatus: [], proactive: 0, autoIccid: [] };
 	_pysimCardStateKey = null;
 	_pysimCardSession = null;
 	_pysimProactiveSeq = null;
 	_pysimAdmVerified = null;
 	_pysimServerAvailable = null;
+	_cardsAutoIccid = null;
 	globalThis.document = {
 		getElementById: id => id === 'state-indicator-adm' ? adm : el,
 		querySelectorAll: () => [],
@@ -68,6 +70,7 @@ function setup() {
 	globalThis.pysimApplyAvailability = () => {};
 	globalThis.isViewVisible = () => true;
 	globalThis.pysimProactiveLogRender = () => { calls.proactive++; };
+	globalThis.cardsAutoSelectByIccid = iccid => { calls.autoIccid.push(iccid); return -1; };
 	return { el, adm, calls };
 }
 
@@ -106,9 +109,17 @@ test('unchanged state key does not touch the UI again', () => {
 
 test('connected restores the UI and reloads card data', () => {
 	const { calls } = setup();
-	pysimCardStateUpdate(status({ connected: true, card_present: true, card_session: 2 }));
+	pysimCardStateUpdate(status({ connected: true, card_present: true, card_session: 2, iccid: '8970119000004600098' }));
 	assert.deepStrictEqual(calls.connected, [true]);
 	assert.deepStrictEqual(calls.resets, [true]);
+	assert.deepStrictEqual(calls.autoIccid, ['8970119000004600098']);
+});
+
+test('a disconnect clears the ICCID auto-selection guard', () => {
+	setup();
+	_cardsAutoIccid = '8970119000004600098';
+	pysimCardStateUpdate(status({ connected: false, card_present: false, card_session: 5 }));
+	assert.strictEqual(_cardsAutoIccid, null);
 });
 
 test('card session change triggers a data reset', () => {

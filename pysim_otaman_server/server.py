@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.2.15'
+VERSION = '2.2.16'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -353,6 +353,41 @@ def _select_path(lchan, path, app):
     if not parts:
         raise RuntimeError('Empty path')
     return _select_with_parent(lchan, parts[-1], None, app, parent_path=parts[:-1], allow_probe=True)
+
+
+def _decode_iccid(data_hex):
+    """Decode EF.ICCID content: nibble-swapped E.118 digits with an optional
+    trailing 'F' pad (TS 102 221 13.2 / TS 151 011 10.2). Returns the digit
+    string, or None when the bytes are not a plausible ICCID."""
+    h = re.sub(r'[^0-9a-fA-F]', '', data_hex or '').upper()
+    if len(h) < 2 or len(h) % 2:
+        return None
+    digits = ''.join(h[i + 1] + h[i] for i in range(0, len(h), 2))
+    digits = re.sub(r'F+$', '', digits)
+    if not digits or not digits.isdigit():
+        return None
+    return digits
+
+
+def _read_iccid(app):
+    """Best-effort EF.ICCID (MF/2FE2) read: the E.118 digit string or None.
+
+    EF.ICCID is a mandatory transparent EF, but a card may protect it or the
+    generic profile may lack it, so the read is optional and never raises.
+    The previous selection is restored by the _select_path cleanup."""
+    if not app or not getattr(app, 'rs', None):
+        return None
+    lchan = app.rs.lchan[0]
+    cleanup = None
+    try:
+        _, cleanup = _select_path(lchan, 'MF/2FE2', app)
+        data, _sw = lchan.read_binary()
+        return _decode_iccid(data)
+    except Exception:
+        return None
+    finally:
+        if cleanup:
+            cleanup()
 
 
 def _parse_tree_output(output):
@@ -2213,6 +2248,7 @@ def _handle_card_disconnect():
         _server_ref.menu_active = False
         _server_ref.event_list = None
         _server_ref.sim_menu = None
+        _server_ref.iccid = None
         _server_ref.equipping = False
         _server_ref.card_session = getattr(_server_ref, 'card_session', 0) + 1
     _reset_proactive_log()
@@ -2234,6 +2270,14 @@ def _apply_equipped_card(server):
     _CARD_CONNECTED = True
     server.card_present = True
     server.card_session = getattr(server, 'card_session', 0) + 1
+    server.iccid = None
+    # Read the ICCID before the TERMINAL PROFILE starts a CAT session: the
+    # PWA auto-selects the matching card preset (SCP80 views) from it.
+    server.iccid = _read_iccid(server.app)
+    if server.iccid:
+        _tlog('equip: ICCID %s' % server.iccid)
+    else:
+        _tlog('equip: ICCID not readable')
     _poll_enable()
     sm, el = _send_terminal_profile(server.scc, server.terminal_profile)
     server.sim_menu = sm
@@ -3073,6 +3117,7 @@ class PysimHandler(BaseHTTPRequestHandler):
                 'auto_equip': bool(_AUTO_EQUIP),
                 'card': card.name if card else None,
                 'profile': str(rs.profile) if rs and rs.profile else None,
+                'iccid': getattr(self.server, 'iccid', None) if connected else None,
                 'app_ready': app is not None,
                 'adm_verified': rs.adm_verified if rs else False,
                 'atr': rs.identity.get('ATR') if rs and rs.identity else None,

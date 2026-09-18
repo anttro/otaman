@@ -12,7 +12,7 @@ from pySim.cards import UiccCardBase
 
 from .shell import load_pysim_app
 from . import fastinit
-from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog, _set_menu_timeout, start_card_monitor, set_auto_equip
+from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog, _set_menu_timeout, start_card_monitor, set_auto_equip, _read_iccid
 
 
 _server_start = 0
@@ -128,10 +128,16 @@ def main():
     _tlog('pysim_app: %.0fms' % ((time.time() - t_phase) * 1000))
     if app is not None and opts.fast_init:
         fastinit.install(app)
+    iccid = None
     if scc and card is not None and hasattr(scc, '_tp'):
         scc._tp.apdu_tracer = _LoggingApduTracer()
         try:
             _init_proactive_session()
+            # Read EF.ICCID before the TERMINAL PROFILE starts the CAT session
+            # (the PWA auto-selects the matching card preset from it).
+            iccid = _read_iccid(app)
+            if iccid:
+                sys.stderr.write('INIT: ICCID %s\n' % iccid)
             t_phase = time.time()
             sys.stderr.write('INIT: sending TERMINAL PROFILE %s (CLA=%s)\n' % (opts.terminal_profile, scc.cat_cla))
             sm, el = _send_terminal_profile(scc, opts.terminal_profile)
@@ -187,6 +193,7 @@ def main():
     server.stk_pending = None
     server.card_present = card is not None
     server.card_session = 1 if card is not None else 0
+    server.iccid = iccid
     server.equipping = False
     # Set server reference for polling timer and mark the card session state
     import pysim_otaman_server.server

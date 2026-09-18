@@ -70,7 +70,18 @@ Returns server version for compatibility checking.
 
 ### `GET /api/status`
 
-Card reader, card type, current selection, and card state.
+Card reader, card type, current selection, and card state. Reported fields:
+`reader`, `connected`, `card_present`, `card_session` (increments on every
+equip/disconnect), `proactive_seq`, `equipping`, `auto_equip`, `card`,
+`profile`, `iccid`, `app_ready`, `adm_verified`, `atr`, `cla_byte`,
+`sel_ctrl`, `current_selection`, `channels`.
+
+`iccid` is the E.118 digit string read from EF.ICCID (MF/2FE2) when the card is
+equipped, or `null` when it is not connected / the card does not let the
+terminal read it. The equip path reads it **before** the TERMINAL PROFILE, so
+no CAT session is active yet; the read is best-effort and never fails an equip
+(and a card removal clears it). The PWA uses it to auto-select the card preset
+with the same ICCID in both SCP80 views (Secured Packet and RAM).
 
 ### `GET /api/commands`
 

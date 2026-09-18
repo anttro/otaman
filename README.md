@@ -349,7 +349,7 @@ Decodes a raw command response: pick the command that was sent, enter the SW (e.
 
 ## SCP80 tab
 
-The **SCP80** top-level tab groups SCP80-related views, switched by two pills: **Secured Packet** and **RAM**. Assembles secured packets per ETSI TS 102 225.
+The **SCP80** top-level tab groups SCP80-related views, switched by two pills: **Secured Packet** and **RAM**. Assembles secured packets per ETSI TS 102 225. When a card is equipped the server reads its EF.ICCID (2FE2); if a preset carries the same number (digits, or the raw EF hex), it is selected automatically in both views.
 
 ### Secured Packet
 
@@ -433,7 +433,7 @@ Delivery PoR (SPI2 `01`) is simpler — the card returns the PoR directly in the
 
 ### Cards
 
-Stores saved card configurations (presets) in `localStorage`. A preset holds the cryptographic keys, SPI settings, TAR and replay counter for SCP80 operations, plus the **PSK identity / PSK key** pair used by the SCP81 HTTP OTA listener. Cards is a **top-level tab**.
+Stores saved card configurations (presets) in `localStorage`. A preset holds the cryptographic keys, SPI settings, TAR and replay counter for SCP80 operations, plus the **PSK identity / PSK key** pair used by the SCP81 HTTP OTA listener. Cards is a **top-level tab**. When the card is equipped its EF.ICCID is read and the preset with the same ICCID is selected automatically in both SCP80 views.
 
 | Field | Description |
 |---|---|

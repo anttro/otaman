@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.15</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.16</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -4859,6 +4859,7 @@ async function pysimRefresh() {
 			(data.sel_ctrl ? ' | SEL: <b>' + esc(data.sel_ctrl) + '</b>' : '') +
 			' | Channels: <b>' + (data.channels && data.channels.length ? data.channels.join(', ') : 'none') + '</b><br>' +
 			'ADM: <b>' + (data.adm_verified ? 'verified' : 'not verified') + '</b>' +
+			(data.iccid ? ' | ICCID: <b>' + esc(data.iccid) + '</b>' : '') +
 			' | Selection: <b>' + (data.current_selection
 				? (data.current_selection.name || data.current_selection.fid || '?')
 				: 'none') + '</b>' +
@@ -6112,6 +6113,44 @@ function cardsRebuildSelect() {
 	}
 	sel.innerHTML = html;
 	if (prev !== '' && cards[parseInt(prev, 10)]) sel.value = prev;
+}
+
+// ===== ICCID-based preset auto-selection =====
+// After every equip /api/status carries the card's EF.ICCID (2FE2); when a
+// preset holds the same number it is selected in both SCP80 views (Secured
+// packet + RAM). Users may store the ICCID as digits or as the raw EF hex,
+// so both forms are normalized to plain digits.
+function cardsNormIccid(v) {
+	let s = String(v == null ? '' : v).trim().toUpperCase().replace(/[\s-]/g, '');
+	if (!s) return '';
+	if (/[A-F]/.test(s)) s = decIccid(s);   // raw EF content (nibble-swapped)
+	return String(s || '').replace(/\D/g, '').replace(/^0+/, '');
+}
+
+function cardsFindByIccid(iccid) {
+	const norm = cardsNormIccid(iccid);
+	if (!norm) return -1;
+	return cards.findIndex(c => cardsNormIccid(c.iccid) === norm);
+}
+
+let _cardsAutoIccid = null;
+
+function cardsAutoSelectByIccid(iccid) {
+	// Act only when the equip reports a *new* ICCID: a manual preset choice
+	// for the same card must not be overridden by later status updates.
+	const norm = cardsNormIccid(iccid);
+	if (!norm) { _cardsAutoIccid = null; return -1; }
+	if (norm === _cardsAutoIccid) return -1;
+	_cardsAutoIccid = norm;
+	const idx = cardsFindByIccid(norm);
+	if (idx < 0) return -1;
+	const sp = document.getElementById('sp-card-sel');
+	if (sp) sp.value = String(idx);
+	const ram = document.getElementById('ram-card-sel');
+	if (ram) ram.value = String(idx);
+	_ramCardIdx = idx;
+	cardsApply(String(idx));
+	return idx;
 }
 
 function cardsApply(idx) {
@@ -7622,9 +7661,11 @@ function pysimCardStateUpdate(status) {
 	if (status.connected) {
 		pysimSetConnected(true);
 		pysimResetCardData(true);
+		cardsAutoSelectByIccid(status.iccid);
 		return;
 	}
 	pysimSetConnected(false);
+	_cardsAutoIccid = null;
 	const statusEl = document.getElementById('pysim-status');
 	if (statusEl && statusEl.textContent.trim() !== '') {
 		if (status.equipping || (status.card_present && status.auto_equip)) {
