@@ -25,6 +25,21 @@ test('cards list shows the SCP81 PSK column with blue/red row buttons', () => {
     assert.match(fn[0], /cardsRemove\(' \+ i \+ '\)" class="[^"]*bg-red-600 text-white/);
 });
 
+test('the card form groups the SCP80 and SCP81 fields into labelled fieldsets', () => {
+    const fieldsets = [...html.matchAll(/<fieldset[\s\S]*?<\/fieldset>/g)].map(m => m[0]);
+    assert.strictEqual(fieldsets.length, 2);
+    assert.match(fieldsets[0], /<legend[^>]*data-l10n="SCP80 \(GSM 03\.48, ETSI TS 102 225\)"/);
+    assert.match(fieldsets[0], /id="cards-kic"/);
+    assert.match(fieldsets[0], /id="cards-kid-key"/);
+    assert.match(fieldsets[1], /<legend[^>]*data-l10n="SCP81 \(HTTP OTA\)"/);
+    assert.match(fieldsets[1], /id="cards-psk-id"/);
+    assert.match(fieldsets[1], /id="cards-psk-key"/);
+    // the PSK explanation lives inside the SCP81 group, not outside it
+    assert.match(fieldsets[1], /data-l10n="SCP81 HTTP OTA: the listener picks the key/);
+    // the ICCID field is not in either group
+    assert.ok(!fieldsets.some(f => f.includes('id="cards-iccid"')));
+});
+
 test('PLI qualifier tables cover all standard qualifiers', () => {
     // ESN (07), MEID (0B) and Supported RATs (1A) must at least be named, in
     // both the TR Config dictionary and the proactive-log short labels.

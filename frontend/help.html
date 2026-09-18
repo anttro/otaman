@@ -298,7 +298,7 @@
 
 <section class="mb-10">
 	<h2 id="cards" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">4. Cards tab</h2>
-	<p class="mb-2">Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet view can auto-fill keys and parameters, and so the SCP81 HTTP OTA listener can look up PSK keys. Cards is a top-level tab. When the card is equipped its EF.ICCID is read and the preset with the same ICCID is selected automatically in both SCP80 views.</p>
+	<p class="mb-2">Stores card presets locally in the browser (<code class="font-mono text-sm">localStorage</code>) so the Secured Packet view can auto-fill keys and parameters, and so the SCP81 HTTP OTA listener can look up PSK keys. Cards is a top-level tab. When the card is equipped its EF.ICCID is read and the preset with the same ICCID is selected automatically in both SCP80 views. The form groups the fields into two bordered blocks: <strong>SCP80 (GSM 03.48, ETSI TS 102 225)</strong> (KIc/KID, SPI1/SPI2, TAR, counter and keys) and <strong>SCP81 (HTTP OTA)</strong> (the PSK identity/key pair with the key-selection note).</p>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Field</th><th class="text-left py-1 px-2">Description</th></tr></thead>
 		<tbody>

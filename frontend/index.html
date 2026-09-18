@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.18</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.19</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -1141,23 +1141,29 @@
 			<button id="cards-add-btn" onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
 			<button id="cards-cancel-btn" onclick="cardsCancelEdit()" class="hidden px-4 py-2.5 bg-gray-500 text-white text-sm font-medium rounded hover:bg-gray-600 whitespace-nowrap" data-l10n="Cancel">Cancel</button>
 		</div>
-		<div class="flex gap-2 mb-3 flex-wrap">
-			<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
-			<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
-			<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
-			<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
-			<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="ISD TAR" maxlength="6">
-			<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
-		</div>
-		<div class="flex gap-2 mb-3">
-			<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
-			<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
-		</div>
-		<div class="flex gap-2 mb-3">
-			<input id="cards-psk-id" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="PSK identity, SCP81 HTTP OTA (e.g. 89012345678901234567)">
-			<input id="cards-psk-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="PSK key (hex, 32 chars), SCP81 HTTP OTA">
-		</div>
-		<p class="text-xs text-gray-500 dark:text-slate-400 mb-3" data-l10n="SCP81 HTTP OTA: the listener picks the key by the PSK identity the card sends in the TLS handshake. Cards without a PSK are ignored by the listener.">SCP81 HTTP OTA: the listener picks the key by the PSK identity the card sends in the TLS handshake. Cards without a PSK are ignored by the listener.</p>
+		<fieldset class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
+			<legend class="px-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="SCP80 (GSM 03.48, ETSI TS 102 225)">SCP80 (GSM 03.48, ETSI TS 102 225)</legend>
+			<div class="flex gap-2 mb-2 flex-wrap">
+				<input id="cards-kic" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KIc" maxlength="2">
+				<input id="cards-kid" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="KID" maxlength="2">
+				<input id="cards-spi1" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI1" maxlength="2">
+				<input id="cards-spi2" class="w-12 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono text-center" placeholder="SPI2" maxlength="2">
+				<input id="cards-tar" class="w-20 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="ISD TAR" maxlength="6">
+				<input id="cards-cntr" class="w-24 border border-gray-300 dark:border-slate-600 text-sm rounded px-2 py-1.5 dark:bg-slate-800 font-mono" placeholder="Counter" maxlength="10">
+			</div>
+			<div class="flex gap-2">
+				<input id="cards-kic-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KIc key (32 hex chars)">
+				<input id="cards-kid-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="KID key (32 hex chars)">
+			</div>
+		</fieldset>
+		<fieldset class="border border-gray-200 dark:border-slate-700 rounded p-3 mb-3">
+			<legend class="px-1 text-xs font-medium text-gray-500 dark:text-slate-400" data-l10n="SCP81 (HTTP OTA)">SCP81 (HTTP OTA)</legend>
+			<div class="flex gap-2 mb-2">
+				<input id="cards-psk-id" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="PSK identity, SCP81 HTTP OTA (e.g. 89012345678901234567)">
+				<input id="cards-psk-key" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="PSK key (hex, 32 chars), SCP81 HTTP OTA">
+			</div>
+			<p class="text-xs text-gray-500 dark:text-slate-400" data-l10n="SCP81 HTTP OTA: the listener picks the key by the PSK identity the card sends in the TLS handshake. Cards without a PSK are ignored by the listener.">SCP81 HTTP OTA: the listener picks the key by the PSK identity the card sends in the TLS handshake. Cards without a PSK are ignored by the listener.</p>
+		</fieldset>
 		<div id="cards-list" class="overflow-x-auto">
 			<table class="w-full text-sm">
 				<thead><tr>
@@ -11666,6 +11672,27 @@ const LANG_RU = {
 	'pending': 'ожидает',
 	'Name is required': 'Укажите имя',
 	'From card': 'С карты',
+	'SCP80 (GSM 03.48, ETSI TS 102 225)': 'SCP80 (GSM 03.48, ETSI TS 102 225)',
+	'SCP81 (HTTP OTA)': 'SCP81 (HTTP OTA)',
+	'Start': 'Запустить',
+	'Clear': 'Очистить',
+	'Loading...': 'Загрузка...',
+	'Working...': 'Выполняется...',
+	'APDU hex': 'APDU (hex)',
+	'CAP file (max 48 kB)': 'CAP-файл (не более 48 кБ)',
+	'Install from .cap': 'Установить из .cap',
+	'RAM': 'RAM',
+	'SCP81': 'SCP81',
+	'Secured packet': 'Secured packet',
+	'Card reader server is not connected': 'Сервер картридера не подключён',
+	'KIc and KID are required': 'Укажите KIc и KID',
+	'KIc key and KID key are required': 'Укажите ключ KIc и ключ KID',
+	'Memory (GET DATA FF21)': 'Память (GET DATA FF21)',
+	'No secured packet to send. Generate a secure packet first.': 'Нет защищённого пакета для отправки. Сначала соберите пакет.',
+	'No secured packet to verify. Generate a secure packet first.': 'Нет защищённого пакета для проверки. Сначала соберите пакет.',
+	'Select': 'Выборка',
+	'event notification to the card?': 'уведомление о событии на карту?',
+	'SCP81 HTTP OTA: the listener picks the key by the PSK identity the card sends in the TLS handshake. Cards without a PSK are ignored by the listener.': 'SCP81 HTTP OTA: слушатель выбирает ключ по PSK identity, которую карта присылает в TLS-рукопожатии. Карты без PSK слушателем игнорируются.',
 	'Card with this ICCID already exists': 'Карта с таким ICCID уже есть в списке',
 	'Card equipped but its ICCID is not readable': 'Карта подключена, но её ICCID не читается',
 	'Saved.': 'Сохранено.',
