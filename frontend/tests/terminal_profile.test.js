@@ -39,48 +39,55 @@ test('tpNorm / tpValid normalize and validate profile hex', () => {
 	assert.ok(!tpValid('F'));
 });
 
-test('tpGetBit / tpSetBit address bits MSB-first per byte', () => {
-	const hex = '80' + '01';       // byte 1 b8 set, byte 2 b1 set
-	assert.strictEqual(tpGetBit(hex, 0), true);    // byte 1 b8
-	assert.strictEqual(tpGetBit(hex, 7), false);   // byte 1 b1
-	assert.strictEqual(tpGetBit(hex, 8), false);   // byte 2 b8
-	assert.strictEqual(tpGetBit(hex, 15), true);   // byte 2 b1
+test('tpGetBit / tpSetBit address bits LSB-first (spec b1..b8 order)', () => {
+	// TS 102 223 5.2 tables list b1 (LSB) first: index 0 = byte 1 b1 = 0x01
+	const hex = '01' + '80';       // byte 1 b1 set, byte 2 b8 set
+	assert.strictEqual(tpGetBit(hex, 0), true);    // byte 1 b1
+	assert.strictEqual(tpGetBit(hex, 7), false);   // byte 1 b8
+	assert.strictEqual(tpGetBit(hex, 8), false);   // byte 2 b1
+	assert.strictEqual(tpGetBit(hex, 15), true);   // byte 2 b8
 	assert.strictEqual(tpGetBit(hex, 16), null);   // beyond the profile
 	// toggling keeps the other bits untouched
-	assert.strictEqual(tpSetBit('00', 0, true), '80');
-	assert.strictEqual(tpSetBit('80', 0, false), '00');
-	assert.strictEqual(tpSetBit('FF', 7, false), 'FE');
+	assert.strictEqual(tpSetBit('00', 0, true), '01');
+	assert.strictEqual(tpSetBit('01', 0, false), '00');
+	assert.strictEqual(tpSetBit('FF', 7, false), '7F');
 	// a bit beyond the current length grows the profile with zero bytes
-	assert.strictEqual(tpSetBit('FF', 24, true), 'FF000080');
+	assert.strictEqual(tpSetBit('FF', 24, true), 'FF000001');
+	// the project default really is BIP-capable under this mapping
+	const mi = 'FFFFFFFF7F9F00DFFF03021FE2000000C3FB000704117800710100000038428003';
+	assert.strictEqual(tpGetBit(mi, 88), true);    // byte 12 b1 = OPEN CHANNEL
+	assert.strictEqual(tpGetBit(mi, 91), true);    // byte 12 b4 = SEND DATA
+	assert.strictEqual(tpGetBit(mi, 134), true);   // byte 17 b7 = E-UTRAN
+	assert.strictEqual(tpGetBit(mi, 135), true);   // byte 17 b8 = HSDPA
 });
 
 test('TERMINAL PROFILE bit table matches the spec spot checks', () => {
 	assert.ok(TP_BITS.length >= 312, 'expected the full byte 1..39 table');
 	assert.strictEqual(TP_BITS.length % 8, 0);
-	assert.strictEqual(TP_BITS[0], 'Profile download');                       // byte 1 b8
-	assert.strictEqual(TP_BITS[16], 'Proactive UICC: DISPLAY TEXT');          // byte 3 b8
-	assert.strictEqual(TP_BITS[32], 'Proactive UICC: SET UP EVENT LIST');     // byte 5 b8
+	assert.strictEqual(TP_BITS[0], 'Profile download');                       // byte 1 b1
+	assert.strictEqual(TP_BITS[16], 'Proactive UICC: DISPLAY TEXT');          // byte 3 b1
+	assert.strictEqual(TP_BITS[32], 'Proactive UICC: SET UP EVENT LIST');     // byte 5 b1
 	assert.strictEqual(TP_BITS[42], 'Event: Data available');                 // byte 6 b3
-	assert.strictEqual(TP_BITS[50], 'Proactive UICC: PERFORM CARD APDU');     // byte 7 b6 (pySim said RESET)
-	assert.strictEqual(TP_BITS[88], 'Proactive UICC: OPEN CHANNEL');          // byte 12 b8
-	assert.strictEqual(TP_BITS[140], 'Proactive UICC: PROVIDE LOCAL INFORMATION (ESN)');   // byte 18 b4
-	assert.strictEqual(TP_BITS[181], 'Proactive UICC: PROVIDE LOCAL INFORMATION (MEID)');  // byte 23 b3
-	assert.strictEqual(TP_BITS[260], 'Proactive UICC: PROVIDE LOCAL INFORMATION (Supported Radio Access Technologies)');
-	assert.strictEqual(TP_BITS[280], 'Data Connection Status Change Event support – PDU Connection'); // byte 36 b8
+	assert.strictEqual(TP_BITS[50], 'Proactive UICC: PERFORM CARD APDU');     // byte 7 b3 (pySim said RESET)
+	assert.strictEqual(TP_BITS[88], 'Proactive UICC: OPEN CHANNEL');          // byte 12 b1
+	assert.strictEqual(TP_BITS[140], 'Proactive UICC: PROVIDE LOCAL INFORMATION (ESN)');   // byte 18 b5
+	assert.strictEqual(TP_BITS[181], 'Proactive UICC: PROVIDE LOCAL INFORMATION (MEID)');  // byte 23 b6
+	assert.strictEqual(TP_BITS[260], 'Proactive UICC: PROVIDE LOCAL INFORMATION (Supported Radio Access Technologies)');  // byte 33 b5
+	assert.strictEqual(TP_BITS[280], 'Data Connection Status Change Event support – PDU Connection'); // byte 36 b1
 	assert.strictEqual(tpBitLabel(0), 'Profile download');
-	assert.match(tpBitLabel(400), /^RFU \(byte 51 b/);                        // beyond the table
+	assert.match(tpBitLabel(400), /^RFU \(byte 51 b1\)/);                     // beyond the table
 });
 
 test('3GPP-defined bits use the TS 31.111 names, not placeholders', () => {
 	assert.ok(!TP_BITS.some(l => /reserved by 3gpp/i.test(l)), 'no "reserved by 3GPP" labels');
 	assert.ok(!TP_BITS.some(l => /reserved by etsi/i.test(l)));
-	// a few audited 3GPP bits (TS 31.111 5.2)
+	// a few audited 3GPP bits (TS 31.111 5.2); byteLabels[0] is b1
 	const byteLabels = b => TP_BITS.slice((b - 1) * 8, b * 8);
-	assert.strictEqual(byteLabels(17)[6], 'E-UTRAN');                  // byte 17 b2
-	assert.strictEqual(byteLabels(17)[7], 'HSDPA');                    // byte 17 b1
-	assert.strictEqual(byteLabels(18)[5], 'CALL CONTROL on GPRS');     // byte 18 b3
-	assert.strictEqual(byteLabels(25)[4], 'Event: Network Rejection for GERAN/UTRAN');
-	assert.strictEqual(byteLabels(32)[0], 'IMS support');              // byte 32 b8
+	assert.strictEqual(byteLabels(17)[6], 'E-UTRAN');                  // byte 17 b7
+	assert.strictEqual(byteLabels(17)[7], 'HSDPA');                    // byte 17 b8
+	assert.strictEqual(byteLabels(18)[5], 'CALL CONTROL on GPRS');     // byte 18 b6
+	assert.strictEqual(byteLabels(25)[4], 'Event: Network Rejection for GERAN/UTRAN');   // byte 25 b5
+	assert.strictEqual(byteLabels(32)[0], 'IMS support');              // byte 32 b1
 	assert.strictEqual(byteLabels(34)[0], 'URI support for SEND SHORT MESSAGE');
 	assert.match(byteLabels(39)[0], /NG-RAN\/Satellite NG-RAN Timing Advance/);
 });

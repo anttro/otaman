@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.19</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.20</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -7170,15 +7170,11 @@ const PLI_QUALIFIERS = [
 	{code:'1A',name:'Supported Radio Access Technologies'},
 ];
 
-// TERMINAL PROFILE bit allocation (TS 102 223 V18.3.0 5.2 + 3GPP
-// annex bits; bytes 1..33). Index 0 = bit 1 = first byte b8; bit n is
-// byte floor(n/8)+1, mask 0x80 >> (n%8). Bytes beyond 33 fall back to
-// generic labels in the UI.
 // TERMINAL PROFILE bit allocation: bytes 1..39 per ETSI TS 102 223
 // V18.3.0 5.2, 3GPP-defined bits named per ETSI TS 131 111 V18.12.0 5.2
-// (no "reserved by 3GPP" placeholders). Index 0 = bit 1 = first byte b8;
-// bit n is byte floor(n/8)+1, mask 0x80 >> (n%8). Bytes beyond the
-// table fall back to generic labels in the UI.
+// (no "reserved by 3GPP" placeholders). Index 0 = the first spec table row
+// = byte 1 b1 (the LSB); bit n is byte floor(n/8)+1, mask 1 << (n%8).
+// Bytes beyond the table fall back to generic labels in the UI.
 const TP_BITS = [
   'Profile download', 'SMS-PP data download', 'Cell Broadcast data download', 'Menu selection',
   'SMS-PP data download', 'Timer expiration', 'USSD string data object support in Call Control by USIM', 'Call Control by NAA',
@@ -7278,11 +7274,15 @@ function tpNorm(hex) { return (hex || '').toUpperCase().replace(/[^0-9A-F]/g, ''
 
 function tpValid(hex) { return hex.length > 0 && hex.length % 2 === 0 && hex.length <= 510; }
 
+// Bit numbering follows TS 102 223 5.2 exactly: within a byte the spec tables
+// list b1 (the least significant bit) first, so TP_BITS[n] is bit b((n % 8)+1)
+// of byte (n >> 3)+1. tpGetBit/tpSetBit therefore use the LSB-first mask
+// (cross-checked against Wireshark's packet-gsm_sim.c: "Profile download"=0x01).
 function tpGetBit(hex, n) {
 	const byteIdx = n >> 3;
 	if (byteIdx * 2 + 2 > hex.length) return null;
 	const b = parseInt(hex.substr(byteIdx * 2, 2), 16);
-	return !!(b & (0x80 >> (n & 7)));
+	return !!(b & (1 << (n & 7)));
 }
 
 function tpSetBit(hex, n, on) {
@@ -7290,7 +7290,7 @@ function tpSetBit(hex, n, on) {
 	const byteIdx = n >> 3;
 	while (bytes.length <= byteIdx) bytes.push('00');
 	let b = parseInt(bytes[byteIdx], 16);
-	const mask = 0x80 >> (n & 7);
+	const mask = 1 << (n & 7);
 	b = on ? (b | mask) : (b & ~mask);
 	bytes[byteIdx] = b.toString(16).padStart(2, '0').toUpperCase();
 	return bytes.join('');
@@ -7298,7 +7298,7 @@ function tpSetBit(hex, n, on) {
 
 function tpBitLabel(n) {
 	if (n < TP_BITS.length) return TP_BITS[n];
-	return 'RFU (byte ' + ((n >> 3) + 1) + ' b' + (8 - (n & 7)) + ')';
+	return 'RFU (byte ' + ((n >> 3) + 1) + ' b' + ((n & 7) + 1) + ')';
 }
 
 // Fixed byte-block layout: [firstByte, lastByte, columns] with 1-based
@@ -7340,7 +7340,7 @@ function tpRenderForm() {
 			html += '<div class="text-gray-500 dark:text-slate-400 mb-0.5">' + esc(t('Byte')) + ' ' + (bi + 1) + '</div>';
 			for (let k = 0; k < 8; k++) {
 				const n = bi * 8 + k;
-				const mask = 'b' + (8 - k);
+				const mask = 'b' + (k + 1);   // b1 first, matching the spec tables
 				const label = tpBitLabel(n);
 				html += '<label class="flex items-start gap-1 mb-0.5">' +
 					'<input type="checkbox" class="mt-0.5 shrink-0" ' +
