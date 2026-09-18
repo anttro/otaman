@@ -17,7 +17,7 @@ cd otaman
 ./start.sh     # or start.bat — starts the server (it serves the PWA too)
 ```
 
-Then open http://127.0.0.1:8080 — the UI and API share one origin, so no CORS or browser-permission setup is needed.
+Then open http://127.0.0.1:8080 — the UI and API share one origin, so no CORS or browser-permission setup is needed. The server starts fine with an empty reader (no card is a normal state): insert a card and it is initialized automatically (auto-equip), or press **Equip card** in the UI.
 
 ## Build
 

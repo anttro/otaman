@@ -7,12 +7,13 @@ import traceback
 from http.server import HTTPServer
 from pySim.card_handler import CardHandler
 from pySim.commands import SimCardCommands
+from pySim.exceptions import NoCardError
 from pySim.log import PySimLogger
 from pySim.cards import UiccCardBase
 
 from .shell import load_pysim_app
 from . import fastinit
-from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog, _set_menu_timeout, start_card_monitor, set_auto_equip, _read_iccid
+from .server import PysimHandler, StderrApduTracer, _LoggingApduTracer, VERSION, _send_terminal_profile, _DefaultProactiveHandler, _handle_proactive_chain, _send_status, _init_proactive_session, _timing_on, _tlog, _set_menu_timeout, start_card_monitor, set_auto_equip, _read_iccid, _LineFilter
 
 
 _server_start = 0
@@ -105,22 +106,49 @@ def main():
         if opts.fast_init:
             try:
                 rs, card = fastinit.init_card_fast(sl, opts.skip_card_init, wait=True)
+            except NoCardError:
+                # Normal cardless start: there was no card in the reader (the
+                # 3s wait timed out). The presence monitor auto-equips once a
+                # card appears; nothing to recover, no traceback.
+                sys.stderr.write('INIT: no card in the reader — server ready; insert a card or press Equip\n')
             except Exception:
                 print("Warning: fast card initialization failed, falling back to pysim init:", file=sys.stderr)
                 traceback.print_exc()
-                rs, card = mod.init_card(sl, opts.skip_card_init)
+                try:
+                    rs, card = mod.init_card(sl, opts.skip_card_init)
+                except NoCardError:
+                    # The fallback retried the cardless wait; still a normal
+                    # cardless start, not an initialization failure.
+                    sys.stderr.write('INIT: no card in the reader — server ready; insert a card or press Equip\n')
         else:
-            sl.wait_for_card(3)
-            rs, card = mod.init_card(sl, opts.skip_card_init)
+            try:
+                sl.wait_for_card(3)
+                rs, card = mod.init_card(sl, opts.skip_card_init)
+            except NoCardError:
+                sys.stderr.write('INIT: no card in the reader — server ready; insert a card or press Equip\n')
         _tlog('card_init: %.0fms' % ((time.time() - t_phase) * 1000))
-        scc.cat_cla = '80' if isinstance(card, UiccCardBase) else 'a0'
+        if card is not None:
+            scc.cat_cla = '80' if isinstance(card, UiccCardBase) else 'a0'
     except Exception:
         print("Warning: reader/card initialization failed:", file=sys.stderr)
         traceback.print_exc()
     ch = CardHandler(sl) if sl else None
     t_phase = time.time()
     try:
-        app = mod.PysimApp(verbose=opts.verbose, card=card, rs=rs, sl=sl, ch=ch)
+        if card is not None:
+            app = mod.PysimApp(verbose=opts.verbose, card=card, rs=rs, sl=sl, ch=ch)
+        else:
+            # Cardless start: pySim logs 'Waiting for card...' (its own retry
+            # path) and pySim-shell prints 'pySim-shell not equipped!'; we
+            # report both cases with our own single line above. A PysimApp
+            # without a card would also retry the cardless wait, so install
+            # the filter before constructing it and drop the two internals.
+            saved_stdout = sys.stdout
+            sys.stdout = _LineFilter(saved_stdout, ('Waiting for card...', 'pySim-shell not equipped!'))
+            try:
+                app = mod.PysimApp(verbose=opts.verbose, card=None, rs=None, sl=sl, ch=ch)
+            finally:
+                sys.stdout = saved_stdout
     except Exception:
         print("Warning: PysimApp creation failed:", file=sys.stderr)
         traceback.print_exc()
@@ -153,8 +181,6 @@ def main():
             _tlog('terminal_profile_drain: %.0fms' % ((time.time() - t_phase) * 1000))
         except Exception:
             traceback.print_exc(file=sys.stderr)
-    elif scc is not None:
-        sys.stderr.write('INIT: card not initialized — use Equip once the card is readable\n')
     if app is not None and opts.apdu_trace:
         # PysimApp.__init__ routes PySimLogger through app.poutput() (app.stdout)
         # and drops the root level to INFO. Re-route pysim's own APDU trace logging

@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.2.16'
+VERSION = '2.2.17'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 
@@ -57,6 +57,51 @@ def _tlog(msg):
     if not _TIMING:
         return
     sys.stderr.write('TIMING [+%7.3fs] %s\n' % (time.time() - _T0, msg))
+
+
+class _LineFilter:
+    """Text stream that drops whole lines matching any of the given substrings
+    and forwards everything else to the wrapped stream. Used to mute pySim/
+    pySim-shell internals we report ourselves (e.g. 'Waiting for card...' or
+    'pySim-shell not equipped!'). Lines arrive through write(); the dropped
+    lines are written as one call each by pySim's print/logger and by cmd2's
+    Rich console, so a substring check per line is reliable here."""
+
+    def __init__(self, stream, patterns):
+        self._stream = stream
+        self._patterns = list(patterns)
+        self._pending = ''
+
+    def write(self, text):
+        text = self._pending + text
+        self._pending = ''
+        if not text:
+            return
+        if not text.endswith('\n'):
+            # Keep a trailing partial line so a match is not missed when the
+            # line is completed by the next write().
+            nl = text.rfind('\n')
+            if nl < 0:
+                self._pending = text
+                return
+            self._pending = text[nl + 1:]
+            text = text[:nl + 1]
+        for line in text.splitlines(True):
+            if not any(p in line for p in self._patterns):
+                self._stream.write(line)
+        self._stream.flush()
+
+    def flush(self):
+        if self._pending:
+            line, self._pending = self._pending, ''
+            if not any(p in line for p in self._patterns):
+                self._stream.write(line)
+        self._stream.flush()
+
+    def __getattr__(self, name):
+        # encoding/isatty/fileno: the Rich console probes these on the stream
+        # (cmd2's self.stdout), so they must keep working.
+        return getattr(self._stream, name)
 
 
 _APDU_TIMES = []
