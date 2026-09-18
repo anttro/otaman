@@ -303,7 +303,7 @@
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">Поле</th><th class="text-left py-1 px-2">Описание</th></tr></thead>
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">Name</td><td class="py-1 px-2">Понятная метка (обязательна)</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Опциональный идентификатор карты</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">ICCID</td><td class="py-1 px-2">Опциональный идентификатор карты. Кнопка <strong>С карты</strong> подставляет EF.ICCID подключённой карты (активна, только когда ICCID читается); при сохранении ICCID, уже присутствующий в списке, отклоняется (сравнение без пробелов и с учётом сырой hex-формы, конфликтующий пресет называется)</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">KIc / KID</td><td class="py-1 px-2">Индикаторы ключа и алгоритма (например, 15 = индекс 1, 3DES-CBC2; x2 = AES); задаются вместе с ключами</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">SPI1 / SPI2</td><td class="py-1 px-2">Security Parameter Indicators</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2">TAR</td><td class="py-1 px-2">Toolkit Application Reference</td></tr>

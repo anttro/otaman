@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.17</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.18</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -1137,6 +1137,7 @@
 		<div class="flex gap-2 mb-3">
 			<input id="cards-name" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800" placeholder="Name (e.g. Foobar SIM)">
 			<input id="cards-iccid" class="flex-1 border border-gray-300 dark:border-slate-600 text-sm rounded px-3 py-1.5 dark:bg-slate-800 font-mono" placeholder="ICCID (optional)">
+			<button id="cards-iccid-from-card" data-needs="card-iccid" onclick="cardsIccidFromCard()" class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed" data-l10n="From card">From card</button>
 			<button id="cards-add-btn" onclick="cardsAdd()" class="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 whitespace-nowrap" data-l10n="Add">Add</button>
 			<button id="cards-cancel-btn" onclick="cardsCancelEdit()" class="hidden px-4 py-2.5 bg-gray-500 text-white text-sm font-medium rounded hover:bg-gray-600 whitespace-nowrap" data-l10n="Cancel">Cancel</button>
 		</div>
@@ -4711,6 +4712,7 @@ let _pysimServerAvailable = null;  // null until probed
 let _pysimCardEquipped = false;
 let _pysimEquipping = false;
 let _pysimAdmVerified = null;      // null = no card session
+let _pysimCardIccid = null;        // EF.ICCID digits of the equipped card (null = unknown)
 let _pysimAvailabilityTimer = null;
 
 function pysimAvailabilityState() {
@@ -4725,7 +4727,9 @@ function pysimControlDisabled(needs, state) {
 }
 
 function pysimNeedsHint(needs, state) {
-	return state === 'server-down' ? t('Connect to server') : t('Insert and equip a card');
+	if (state === 'server-down') return t('Connect to server');
+	if (needs === 'card-iccid' && state === 'card') return t('Card equipped but its ICCID is not readable');
+	return t('Insert and equip a card');
 }
 
 function pysimUpdateStateIndicator() {
@@ -4756,7 +4760,11 @@ function pysimApplyAvailability() {
 	const state = pysimAvailabilityState();
 	document.querySelectorAll('[data-needs]').forEach(el => {
 		const needs = el.getAttribute('data-needs');
-		const disabled = pysimControlDisabled(needs, state);
+		let disabled = pysimControlDisabled(needs, state);
+		if (needs === 'card-iccid') {
+			// From-card buttons need a readable ICCID, not just a session.
+			disabled = pysimControlDisabled('card', state) || !_pysimCardIccid;
+		}
 		el.disabled = disabled;
 		if (disabled) el.setAttribute('title', pysimNeedsHint(needs, state));
 		else el.removeAttribute('title');
@@ -6015,8 +6023,10 @@ function cardsAdd() {
 		alert(t('PSK key must be 32 hex characters'));
 		return;
 	}
-	if (v.iccid && cards.some((c, i) => c.iccid === v.iccid && i !== _cardsEditIdx)) {
-		alert('Card with this ICCID already exists'); return;
+	const dupIdx = cardsFindDuplicateIccid(v.iccid, _cardsEditIdx);
+	if (dupIdx >= 0) {
+		alert(t('Card with this ICCID already exists') + ': ' + (cards[dupIdx].name || ('Card ' + dupIdx)));
+		return;
 	}
 	if (_cardsEditIdx !== null && cards[_cardsEditIdx]) {
 		cards[_cardsEditIdx] = Object.assign({}, cards[_cardsEditIdx], v);
@@ -6131,6 +6141,23 @@ function cardsFindByIccid(iccid) {
 	const norm = cardsNormIccid(iccid);
 	if (!norm) return -1;
 	return cards.findIndex(c => cardsNormIccid(c.iccid) === norm);
+}
+
+function cardsFindDuplicateIccid(iccid, skipIdx) {
+	// Duplicate detection ignores the edited row and compares normalized
+	// values (digits, spaced digits or raw EF hex all mean the same card).
+	const norm = cardsNormIccid(iccid);
+	if (!norm) return -1;
+	return cards.findIndex((c, i) => i !== skipIdx && cardsNormIccid(c.iccid) === norm);
+}
+
+function cardsIccidFromCard() {
+	// Fill the form's ICCID from the equipped card (status.iccid). The button
+	// is only enabled while a readable ICCID is known; alert just in case the
+	// state changed between the last poll and the click.
+	const iccid = _pysimCardIccid;
+	if (!iccid) { alert(t('Card equipped but its ICCID is not readable')); return; }
+	document.getElementById('cards-iccid').value = iccid;
 }
 
 let _cardsAutoIccid = null;
@@ -7646,6 +7673,7 @@ function pysimCardStateUpdate(status) {
 	_pysimServerAvailable = true;
 	_pysimCardEquipped = !!status.connected;
 	_pysimEquipping = !!status.equipping;
+	_pysimCardIccid = status.connected ? (status.iccid || null) : null;
 	pysimUpdateAdmIndicator(status);
 	pysimApplyAvailability();
 	if (pysimProactiveSeqChanged(status.proactive_seq)
@@ -11637,6 +11665,9 @@ const LANG_RU = {
 	'executed': 'выполнено',
 	'pending': 'ожидает',
 	'Name is required': 'Укажите имя',
+	'From card': 'С карты',
+	'Card with this ICCID already exists': 'Карта с таким ICCID уже есть в списке',
+	'Card equipped but its ICCID is not readable': 'Карта подключена, но её ICCID не читается',
 	'Saved.': 'Сохранено.',
 	'Invalid APDU': 'Некорректный APDU',
 	'Add at least one APDU': 'Добавьте хотя бы один APDU',

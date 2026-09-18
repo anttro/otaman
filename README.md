@@ -449,7 +449,7 @@ Stores saved card configurations (presets) in `localStorage`. A preset holds the
 
 The **SCP81** column shows whether the preset supplies a usable PSK pair: **✓** (identity and key), **⚠** (only one of the two — the listener ignores such a preset), **—** (no PSK). Identity and key must be set together.
 
-**Add a card:** fill in the name, ICCID (optional), SPI1/SPI2, KIc/KID keys and indices, TAR, the SCP81 PSK pair (optional) and click **Add**. The card appears in the list and becomes available in the RAM tab's **Card preset** dropdown.
+**Add a card:** fill in the name, ICCID (optional — **From card** fills it from the equipped card's EF.ICCID), SPI1/SPI2, KIc/KID keys and indices, TAR, the SCP81 PSK pair (optional) and click **Add**. A duplicate ICCID (compared ignoring spaces and the raw-hex form) is refused, naming the conflicting preset. The card appears in the list and becomes available in the RAM tab's **Card preset** dropdown.
 
 **Edit / remove:** **Edit** loads a preset into the form (the Add button becomes **Save**; **Cancel** clears the form); **Remove** deletes the row from `localStorage`. A successful SCP80 send advances and stores the replay counter, and edits are pushed into a running SCP81 listener automatically.
 

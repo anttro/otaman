@@ -23,7 +23,8 @@ function extractFunc(src, name) {
 
 let code = '';
 for (const fn of ['swapNibbles', 'encIccid', 'decIccid',
-	'cardsNormIccid', 'cardsFindByIccid', 'cardsAutoSelectByIccid']) {
+	'cardsNormIccid', 'cardsFindByIccid', 'cardsFindDuplicateIccid',
+	'cardsIccidFromCard', 'cardsAutoSelectByIccid']) {
 	code += extractFunc(html, fn) + '\n';
 }
 eval(code);
@@ -33,9 +34,16 @@ const RAW_HEX = '980711090000640090F8';
 const DIGITS = '8970119000004600098';
 
 function fakeDoc() {
-	const els = { 'sp-card-sel': { value: '' }, 'ram-card-sel': { value: '' } };
+	const els = { 'sp-card-sel': { value: '' }, 'ram-card-sel': { value: '' }, 'cards-iccid': { value: '' } };
 	globalThis.document = { getElementById: id => els[id] || null };
 	return els;
+}
+
+function fakeAlert() {
+	const seen = [];
+	globalThis.alert = msg => seen.push(msg);
+	globalThis.t = s => s;
+	return seen;
 }
 
 test('cardsNormIccid accepts digits, separators and raw EF hex', () => {
@@ -102,6 +110,53 @@ test('cardsAutoSelectByIccid reacts to a card swap and to unreadable ICCIDs', ()
 	assert.strictEqual(globalThis._cardsAutoIccid, null);
 	assert.strictEqual(cardsAutoSelectByIccid(DIGITS), 0);
 	assert.strictEqual(cardsAutoSelectByIccid('1234567890123456789'), -1);
+});
+
+test('cardsFindDuplicateIccid catches duplicates across stored formats', () => {
+	globalThis.cards = [
+		{ name: 'A', iccid: '1111111111111111111' },
+		{ name: 'B', iccid: RAW_HEX },
+		{ name: 'C', iccid: '' },
+	];
+	assert.strictEqual(cardsFindDuplicateIccid(DIGITS), 1);
+	assert.strictEqual(cardsFindDuplicateIccid('89 70 1190-0000 4600 098'), 1);
+	assert.strictEqual(cardsFindDuplicateIccid('1111111111111111111'), 0);
+	assert.strictEqual(cardsFindDuplicateIccid('2222222222222222222'), -1);
+	// empty ICCID is never a duplicate (the field is optional)
+	assert.strictEqual(cardsFindDuplicateIccid(''), -1);
+	assert.strictEqual(cardsFindDuplicateIccid('   '), -1);
+});
+
+test('cardsFindDuplicateIccid skips the row being edited', () => {
+	globalThis.cards = [{ name: 'A', iccid: DIGITS }, { name: 'B', iccid: '' }];
+	assert.strictEqual(cardsFindDuplicateIccid(DIGITS, 0), -1);
+	assert.strictEqual(cardsFindDuplicateIccid(RAW_HEX, 0), -1);
+	assert.strictEqual(cardsFindDuplicateIccid(RAW_HEX, 1), 0);
+});
+
+test('cardsIccidFromCard fills the field from the equipped card', () => {
+	const els = fakeDoc();
+	const seen = fakeAlert();
+	globalThis._pysimCardIccid = DIGITS;
+	cardsIccidFromCard();
+	assert.strictEqual(els['cards-iccid'].value, DIGITS);
+	assert.deepStrictEqual(seen, []);
+	// no readable ICCID (state raced the click): alert, leave the field alone
+	els['cards-iccid'].value = 'keep-me';
+	globalThis._pysimCardIccid = null;
+	cardsIccidFromCard();
+	assert.strictEqual(els['cards-iccid'].value, 'keep-me');
+	assert.deepStrictEqual(seen, ['Card equipped but its ICCID is not readable']);
+});
+
+test('the From card button and the duplicate refusal are wired into the form', () => {
+	assert.match(html, /<button id="cards-iccid-from-card" data-needs="card-iccid" onclick="cardsIccidFromCard\(\)"/);
+	assert.ok(html.includes('data-l10n="From card"'));
+	// normalized duplicate check with the conflicting preset named
+	assert.ok(html.includes('cardsFindDuplicateIccid(v.iccid, _cardsEditIdx)'));
+	assert.ok(html.includes("t('Card with this ICCID already exists') + ': ' + (cards[dupIdx].name"));
+	assert.ok(html.includes("'From card': 'С карты'"));
+	assert.ok(html.includes("'Card with this ICCID already exists': 'Карта с таким ICCID уже есть в списке'"));
 });
 
 test('the card-state update wires the ICCID into the preset selection', () => {

@@ -21,8 +21,11 @@ function extractFunc(src, name) {
 	return src.slice(m.index, i + 1);
 }
 
-let code = 'var _pysimServerAvailable = null;\nvar _pysimCardEquipped = false;\nvar _pysimEquipping = false;\n';
+let code = 'var _pysimServerAvailable = null;\nvar _pysimCardEquipped = false;\nvar _pysimEquipping = false;\nvar _pysimCardIccid = null;\n';
 code += extractFunc(html, 'pysimAvailabilityState') + '\n';
+code += extractFunc(html, 'pysimControlDisabled') + '\n';
+code += extractFunc(html, 'pysimNeedsHint') + '\n';
+code += extractFunc(html, 'pysimApplyAvailability') + '\n';
 code += extractFunc(html, 'pysimUpdateStateIndicator') + '\n';
 code += 'globalThis.t = s => s;\n';
 eval(code);
@@ -38,6 +41,7 @@ function fakeEl() {
 			contains: c => classes.has(c),
 		},
 		setAttribute(k, v) { this.attrs[k] = v; },
+		getAttribute(k) { return this.attrs[k]; },
 		removeAttribute(k) { delete this.attrs[k]; },
 	};
 }
@@ -49,10 +53,11 @@ function setup() {
 		'state-indicator-img': fakeEl(),
 	};
 	els['state-indicator-img'].src = '';
-	globalThis.document = { getElementById: id => els[id] || null };
+	globalThis.document = { getElementById: id => els[id] || null, querySelectorAll: () => [] };
 	_pysimServerAvailable = null;
 	_pysimCardEquipped = false;
 	_pysimEquipping = false;
+	_pysimCardIccid = null;
 	return els;
 }
 
@@ -125,6 +130,34 @@ test('dot color transitions do not accumulate', () => {
 test('indicator markup carries the dot and image elements', () => {
 	assert.match(html, /id="state-indicator-dot"/);
 	assert.match(html, /id="state-indicator-img"[^>]*src="nosim\.svg"/);
+});
+
+test('card-iccid controls need an equipped card with a readable ICCID', () => {
+	const check = (state, iccid) => {
+		const el = fakeEl();
+		el.setAttribute('data-needs', 'card-iccid');
+		globalThis.document = { querySelectorAll: () => [el], getElementById: () => null };
+		_pysimServerAvailable = state !== 'server-down';
+		_pysimCardEquipped = state === 'card';
+		_pysimCardIccid = iccid;
+		pysimApplyAvailability();
+		return el;
+	};
+	// no card -> disabled
+	let el = check('no-card', null);
+	assert.strictEqual(el.disabled, true);
+	assert.strictEqual(el.attrs.title, 'Insert and equip a card');
+	// equipped but unreadable ICCID -> disabled with its own hint
+	el = check('card', null);
+	assert.strictEqual(el.disabled, true);
+	assert.strictEqual(el.attrs.title, 'Card equipped but its ICCID is not readable');
+	// equipped with an ICCID -> enabled
+	el = check('card', '8970119000004600098');
+	assert.strictEqual(el.disabled, false);
+	assert.strictEqual(el.attrs.title, undefined);
+	// server down -> disabled
+	el = check('server-down', '8970119000004600098');
+	assert.strictEqual(el.disabled, true);
 });
 
 test('indicator image stays within the 32px header row budget', () => {

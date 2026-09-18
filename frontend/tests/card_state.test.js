@@ -24,7 +24,7 @@ function extractFunc(src, name) {
 let code = 'var _pysimCardStateKey = null;\nvar _pysimCardSession = null;\n'
 	+ 'var _pysimServerAvailable = null;\nvar _pysimCardEquipped = false;\n'
 	+ 'var _pysimProactiveSeq = null;\nvar _pysimStkSig = null;\nvar _pysimAdmVerified = null;\n'
-	+ 'var _cardsAutoIccid = null;\n';
+	+ 'var _cardsAutoIccid = null;\nvar _pysimCardIccid = null;\n';
 code += extractFunc(html, 'pysimCardStateUpdate') + '\n';
 code += extractFunc(html, 'pysimAvailabilityState') + '\n';
 code += extractFunc(html, 'pysimControlDisabled') + '\n';
@@ -61,6 +61,7 @@ function setup() {
 	_pysimAdmVerified = null;
 	_pysimServerAvailable = null;
 	_cardsAutoIccid = null;
+	_pysimCardIccid = null;
 	globalThis.document = {
 		getElementById: id => id === 'state-indicator-adm' ? adm : el,
 		querySelectorAll: () => [],
@@ -120,6 +121,19 @@ test('a disconnect clears the ICCID auto-selection guard', () => {
 	_cardsAutoIccid = '8970119000004600098';
 	pysimCardStateUpdate(status({ connected: false, card_present: false, card_session: 5 }));
 	assert.strictEqual(_cardsAutoIccid, null);
+});
+
+test('the last status ICCID is kept for the From card button', () => {
+	setup();
+	pysimCardStateUpdate(status({ connected: true, card_present: true, card_session: 2, iccid: '8970119000004600098' }));
+	assert.strictEqual(_pysimCardIccid, '8970119000004600098');
+	// equipped but unreadable -> null (button disabled)
+	pysimCardStateUpdate(status({ connected: true, card_present: true, card_session: 2, iccid: null }));
+	assert.strictEqual(_pysimCardIccid, null);
+	// disconnect clears it as well
+	pysimCardStateUpdate(status({ connected: true, card_present: true, card_session: 2, iccid: '8970119000004600098' }));
+	pysimCardStateUpdate(status({ connected: false, card_present: false, card_session: 6 }));
+	assert.strictEqual(_pysimCardIccid, null);
 });
 
 test('card session change triggers a data reset', () => {
