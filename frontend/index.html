@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.20</span></h1>
+		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.21</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -7196,23 +7196,23 @@ const TP_BITS = [
   'Proactive UICC: PROVIDE LOCAL INFORMATION (Timing Advance)', 'Proactive UICC: LANGUAGE NOTIFICATION', 'Proactive UICC: LAUNCH BROWSER', 'Proactive UICC: PROVIDE LOCAL INFORMATION (Access Technology)',
   'Soft keys support for SELECT ITEM', 'Soft keys support for SET UP MENU ITEM', 'RFU', 'RFU',
   'RFU', 'RFU', 'RFU', 'RFU',
-  'RFU', 'RFU', 'RFU', 'RFU',
-  'RFU', 'RFU', 'RFU', 'RFU',
+  'Maximum number of soft keys (value b1..b8; FF reserved)', 'Maximum number of soft keys (value b1..b8; FF reserved)', 'Maximum number of soft keys (value b1..b8; FF reserved)', 'Maximum number of soft keys (value b1..b8; FF reserved)',
+  'Maximum number of soft keys (value b1..b8; FF reserved)', 'Maximum number of soft keys (value b1..b8; FF reserved)', 'Maximum number of soft keys (value b1..b8; FF reserved)', 'Maximum number of soft keys (value b1..b8; FF reserved)',
   'Proactive UICC: OPEN CHANNEL', 'Proactive UICC: CLOSE CHANNEL', 'Proactive UICC: RECEIVE DATA', 'Proactive UICC: SEND DATA',
   'Proactive UICC: GET CHANNEL STATUS', 'Proactive UICC: SERVICE SEARCH', 'Proactive UICC: GET SERVICE INFORMATION', 'Proactive UICC: DECLARE SERVICE',
   'BIP supported Bearer: CSD', 'BIP supported Bearer: GPRS', 'BIP supported Bearer: Bluetooth', 'BIP supported Bearer: IrDA',
-  'BIP supported Bearer: RS232', 'RFU', 'RFU', 'RFU',
-  'RFU', 'RFU', 'RFU', 'RFU',
-  'RFU', 'RFU', 'RFU', 'RFU',
-  'RFU', 'RFU', 'RFU', 'RFU',
-  'RFU', 'RFU', 'RFU', 'RFU',
-  'RFU', 'RFU', 'RFU', 'RFU',
-  'RFU', 'RFU', 'RFU', 'RFU',
+  'BIP supported Bearer: RS232', 'Number of BIP channels supported (value b6..b8)', 'Number of BIP channels supported (value b6..b8)', 'Number of BIP channels supported (value b6..b8)',
+  'Screen height in characters (value b1..b5)', 'Screen height in characters (value b1..b5)', 'Screen height in characters (value b1..b5)', 'Screen height in characters (value b1..b5)',
+  'Screen height in characters (value b1..b5)', 'No display capability (class ND)', 'No keypad available (class NK)', 'Screen Sizing Parameters supported',
+  'Screen width in characters (value b1..b7)', 'Screen width in characters (value b1..b7)', 'Screen width in characters (value b1..b7)', 'Screen width in characters (value b1..b7)',
+  'Screen width in characters (value b1..b7)', 'Screen width in characters (value b1..b7)', 'Screen width in characters (value b1..b7)', 'Variable size fonts',
+  'Display can be resized', 'Text Wrapping supported', 'Text Scrolling supported', 'Text Attributes supported',
+  'RFU', 'Width reduction when in a menu (value b6..b8)', 'Width reduction when in a menu (value b6..b8)', 'Width reduction when in a menu (value b6..b8)',
   'BIP: TCP, UICC in client mode, remote connection', 'BIP: UDP, UICC in client mode, remote connection', 'BIP: TCP, UICC in server mode', 'BIP: TCP, UICC in client mode, local connection',
   'BIP: UDP, UICC in client mode, local connection', 'BIP: direct communication channel', 'E-UTRAN', 'HSDPA',
   'Proactive UICC: DISPLAY TEXT (variable timeout)', 'Proactive UICC: GET INKEY (help while waiting for immediate response or variable timeout)', 'USB (BIP supported bearer)', 'Proactive UICC: GET INKEY (variable timeout)',
   'Proactive UICC: PROVIDE LOCAL INFORMATION (ESN)', 'CALL CONTROL on GPRS', 'Proactive UICC: PROVIDE LOCAL INFORMATION (IMEISV)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (Search mode change)',
-  'Protocol version support (TIA/EIA-136-270)', 'RFU', 'RFU', 'RFU',
+  'TIA/EIA-136-270 protocol version (value b1..b4)', 'TIA/EIA-136-270 protocol version (value b1..b4)', 'TIA/EIA-136-270 protocol version (value b1..b4)', 'TIA/EIA-136-270 protocol version (value b1..b4)',
   'RFU', 'RFU', 'RFU', 'RFU',
   'Reserved for CCAT', 'Reserved for CCAT', 'Reserved for CCAT', 'Reserved for CCAT',
   'Reserved for CCAT', 'Reserved for CCAT', 'Reserved for CCAT', 'Reserved for CCAT',
@@ -7222,7 +7222,7 @@ const TP_BITS = [
   'Toolkit-initiated GBA', 'Proactive UICC: RETRIEVE MULTIMEDIA MESSAGE', 'Proactive UICC: SUBMIT MULTIMEDIA MESSAGE', 'Proactive UICC: DISPLAY MULTIMEDIA MESSAGE',
   'Proactive UICC: SET FRAMES', 'Proactive UICC: GET FRAMES STATUS', 'MMS notification download', 'Alpha identifier in REFRESH',
   'Geographical Location Reporting', 'Proactive UICC: PROVIDE LOCAL INFORMATION (MEID)', 'Proactive UICC: PROVIDE LOCAL INFORMATION (NMR (UTRAN/E-UTRAN/Satellite E-UTRAN/NG-RAN/Satellite NG-RAN))', 'USSD Data download and application mode',
-  'Maximum number of frames supported (value field)', 'RFU', 'RFU', 'RFU',
+  'Maximum number of frames supported (value b1..b4)', 'Maximum number of frames supported (value b1..b4)', 'Maximum number of frames supported (value b1..b4)', 'Maximum number of frames supported (value b1..b4)',
   'RFU', 'RFU', 'RFU', 'RFU',
   'Event: Browsing status', 'Event: MMS transfer status', 'Event: Frame information changed', 'Event: I-WLAN Access status',
   'Event: Network Rejection for GERAN/UTRAN', 'Event: HCI connectivity', 'Event: Network Rejection for E-UTRAN/Satellite E-UTRAN', 'Multiple access technologies supported (Event Access Technology Change / PLI)',
@@ -7255,6 +7255,49 @@ const TP_BITS = [
   'Proactive UICC: PROVIDE LOCAL INFORMATION (NG-RAN/Satellite NG-RAN Timing Advance Information)', 'Reserved for future use', 'Reserved for future use', 'Reserved for future use',
   'Reserved for future use', 'Reserved for future use', 'Reserved for future use', 'Reserved for future use',
 ];
+
+// Value fields: spec table rows that carry a number instead of a flag.
+// Bit ranges are 1-based within the byte, b_from = LSB of the value
+// (TS 102 223 5.2: e.g. byte 13 b6..b8 = number of BIP channels,
+// byte 14 b1..b5 = characters down). The Configure dialog renders these
+// as number inputs instead of per-bit checkboxes. `hint` is shown in the UI.
+const TP_VALUE_FIELDS = [
+	{ byte: 11, from: 1, to: 8, label: 'Maximum number of soft keys', hint: "'FF' is reserved for future use" },
+	{ byte: 13, from: 6, to: 8, label: 'Number of BIP channels supported' },
+	{ byte: 14, from: 1, to: 5, label: 'Screen height (characters down)' },
+	{ byte: 15, from: 1, to: 7, label: 'Screen width (characters across)' },
+	{ byte: 16, from: 6, to: 8, label: 'Width reduction when in a menu' },
+	{ byte: 19, from: 1, to: 4, label: 'TIA/EIA-136-270 protocol version' },
+	{ byte: 24, from: 1, to: 4, label: 'Maximum number of frames supported' },
+];
+
+function tpValueFieldFor(byteNr) {
+	return TP_VALUE_FIELDS.find(f => f.byte === byteNr) || null;
+}
+
+function tpValueWidth(f) { return f.to - f.from + 1; }
+
+function tpGetValue(hex, f) {
+	const byteIdx = f.byte - 1;
+	if (byteIdx * 2 + 2 > hex.length) return null;
+	const b = parseInt(hex.substr(byteIdx * 2, 2), 16);
+	return (b >> (f.from - 1)) & ((1 << tpValueWidth(f)) - 1);
+}
+
+function tpSetValue(hex, f, value) {
+	const bytes = hex.match(/../g) || [];
+	const byteIdx = f.byte - 1;
+	while (bytes.length <= byteIdx) bytes.push('00');
+	let b = parseInt(bytes[byteIdx], 16);
+	const width = tpValueWidth(f);
+	const mask = ((1 << width) - 1) << (f.from - 1);
+	let v = parseInt(value, 10);
+	if (!isFinite(v)) v = 0;
+	v = Math.max(0, Math.min((1 << width) - 1, v));
+	b = (b & ~mask) | ((v << (f.from - 1)) & mask);
+	bytes[byteIdx] = b.toString(16).padStart(2, '0').toUpperCase();
+	return bytes.join('');
+}
 
 // TERMINAL PROFILE presets (device/model -> profile hex). Add new entries
 // here; the Configure dialog lists them by name.
@@ -7340,7 +7383,28 @@ function tpRenderForm() {
 			html += '<div class="text-gray-500 dark:text-slate-400 mb-0.5">' + esc(t('Byte')) + ' ' + (bi + 1) + '</div>';
 			for (let k = 0; k < 8; k++) {
 				const n = bi * 8 + k;
-				const mask = 'b' + (k + 1);   // b1 first, matching the spec tables
+				const bitNr = k + 1;
+				const vf = tpValueFieldFor(bi + 1);
+				if (vf && bitNr >= vf.from && bitNr <= vf.to) {
+					// One number input for the whole value field, placed at
+					// the field's first (least significant) bit.
+					if (bitNr === vf.from) {
+						const val = tpGetValue(hex, vf);
+						const max = (1 << tpValueWidth(vf)) - 1;
+						const range = 'b' + vf.from + (vf.to > vf.from ? '..b' + vf.to : '');
+						const title = range + ' ' + vf.label + (vf.hint ? ' — ' + vf.hint : '');
+						html += '<label class="flex items-start gap-1 mb-0.5">' +
+							'<span class="shrink-0" title="' + escHtml(title) + '">' + esc(range) + '</span>' +
+							'<input type="number" min="0" max="' + max + '" value="' + (val === null ? '' : val) + '" ' +
+							'class="w-16 font-mono text-xs border border-gray-300 dark:border-slate-600 rounded px-1 py-0.5 dark:bg-slate-800" ' +
+							'onchange="tpValueInput(' + vf.byte + ', ' + vf.from + ', ' + vf.to + ', this)"> ' +
+							'<span title="' + escHtml(vf.label) + '">' + esc(vf.label) +
+							(vf.hint ? ' <span class="text-gray-400 dark:text-slate-500">(' + esc(vf.hint) + ')</span>' : '') +
+							'</span></label>';
+					}
+					continue;
+				}
+				const mask = 'b' + bitNr;   // b1 first, matching the spec tables
 				const label = tpBitLabel(n);
 				html += '<label class="flex items-start gap-1 mb-0.5">' +
 					'<input type="checkbox" class="mt-0.5 shrink-0" ' +
@@ -7359,6 +7423,16 @@ function tpToggle(n, on) {
 	const hex = tpNorm(document.getElementById('tp-hex').value);
 	if (!tpValid(hex)) return;
 	document.getElementById('tp-hex').value = tpSetBit(hex, n, on);
+	tpSyncPreset();
+}
+
+function tpValueInput(byteNr, from, to, el) {
+	const hex = tpNorm(document.getElementById('tp-hex').value);
+	if (!tpValid(hex)) return;
+	const f = { byte: byteNr, from: from, to: to };
+	const next = tpSetValue(hex, f, el.value);
+	document.getElementById('tp-hex').value = next;
+	el.value = tpGetValue(next, f);   // show the clamped value
 	tpSyncPreset();
 }
 

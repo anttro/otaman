@@ -22,12 +22,14 @@ function extractFunc(src, name) {
 }
 
 let code = '';
-for (const f of ['tpNorm', 'tpValid', 'tpGetBit', 'tpSetBit', 'tpBitLabel', 'tpLayoutGroups']) {
+for (const f of ['tpNorm', 'tpValid', 'tpGetBit', 'tpSetBit', 'tpBitLabel', 'tpLayoutGroups',
+	'tpValueFieldFor', 'tpValueWidth', 'tpGetValue', 'tpSetValue']) {
 	code += extractFunc(html, f) + '\n';
 }
 code += html.match(/const TP_BITS = \[[\s\S]*?\n\];/)[0].replace('const ', 'var ') + '\n';
 code += html.match(/const TP_LAYOUT = \[[\s\S]*?\n\];/)[0].replace('const ', 'var ') + '\n';
 code += html.match(/const TP_PRESETS = \[[\s\S]*?\n\];/)[0].replace('const ', 'var ') + '\n';
+code += html.match(/const TP_VALUE_FIELDS = \[[\s\S]*?\n\];/)[0].replace('const ', 'var ') + '\n';
 eval(code);
 
 test('tpNorm / tpValid normalize and validate profile hex', () => {
@@ -76,6 +78,100 @@ test('TERMINAL PROFILE bit table matches the spec spot checks', () => {
 	assert.strictEqual(TP_BITS[280], 'Data Connection Status Change Event support – PDU Connection'); // byte 36 b1
 	assert.strictEqual(tpBitLabel(0), 'Profile download');
 	assert.match(tpBitLabel(400), /^RFU \(byte 51 b1\)/);                     // beyond the table
+});
+
+test('value-field rows carry the spec labels (soft keys, channels, screen, ND/NK, frames)', () => {
+	const byteLabels = b => TP_BITS.slice((b - 1) * 8, b * 8);
+	// byte 11: soft keys value (0xFF reserved)
+	assert.match(byteLabels(11)[0], /Maximum number of soft keys/);
+	assert.match(byteLabels(11)[0], /FF reserved/);
+	assert.strictEqual(byteLabels(11)[7], byteLabels(11)[0]);
+	// byte 13 b6..b8: BIP channel count
+	assert.strictEqual(byteLabels(13)[5], 'Number of BIP channels supported (value b6..b8)');
+	assert.strictEqual(byteLabels(13)[7], byteLabels(13)[5]);
+	// byte 14: height b1..b5, ND b6, NK b7, sizing b8
+	assert.match(byteLabels(14)[0], /Screen height/);
+	assert.strictEqual(byteLabels(14)[5], 'No display capability (class ND)');
+	assert.strictEqual(byteLabels(14)[6], 'No keypad available (class NK)');
+	assert.strictEqual(byteLabels(14)[7], 'Screen Sizing Parameters supported');
+	// byte 15: width b1..b7, variable fonts b8
+	assert.match(byteLabels(15)[0], /Screen width/);
+	assert.strictEqual(byteLabels(15)[7], 'Variable size fonts');
+	// byte 16: four effect flags, RFU b5, width reduction b6..b8
+	assert.strictEqual(byteLabels(16)[0], 'Display can be resized');
+	assert.strictEqual(byteLabels(16)[1], 'Text Wrapping supported');
+	assert.strictEqual(byteLabels(16)[2], 'Text Scrolling supported');
+	assert.strictEqual(byteLabels(16)[3], 'Text Attributes supported');
+	assert.strictEqual(byteLabels(16)[4], 'RFU');
+	assert.match(byteLabels(16)[5], /Width reduction when in a menu/);
+	// byte 19 b1..b4: TIA/EIA-136-270 protocol version
+	assert.match(byteLabels(19)[0], /TIA\/EIA-136-270 protocol version/);
+	assert.strictEqual(byteLabels(19)[3], byteLabels(19)[0]);
+	// byte 24 b1..b4: max frames
+	assert.match(byteLabels(24)[0], /Maximum number of frames supported/);
+	assert.strictEqual(byteLabels(24)[3], byteLabels(24)[0]);
+	// every value field matches the TP_VALUE_FIELDS table (no overlap with flags)
+	for (const f of TP_VALUE_FIELDS) {
+		for (let b = f.from; b <= f.to; b++) {
+			assert.match(byteLabels(f.byte)[b - 1], /value|soft keys|Screen|Width|TIA|frames/i,
+				'byte ' + f.byte + ' b' + b);
+		}
+	}
+});
+
+test('TP_VALUE_FIELDS decode little-endian bit ranges and round-trip', () => {
+	const f = (byte, from, to) => ({ byte: byte, from: from, to: to });
+	// byte 13 b6..b8: 0xE0 = 7 channels (project default)
+	const mi = 'FFFFFFFF7F9F00DFFF03021FE2000000C3FB000704117800710100000038428003';
+	const ch = tpValueFieldFor(13);
+	assert.deepStrictEqual({ byte: ch.byte, from: ch.from, to: ch.to }, f(13, 6, 8));
+	assert.strictEqual(tpValueWidth(ch), 3);
+	assert.strictEqual(tpGetValue(mi, ch), 7);            // byte 13 = 0xE2
+	assert.strictEqual(tpGetValue(mi, tpValueFieldFor(11)), 0x02);  // soft keys = 2
+	assert.strictEqual(tpGetValue(mi, tpValueFieldFor(14)), 0x00);  // height
+	assert.strictEqual(tpGetValue(mi, tpValueFieldFor(15)), 0x00);  // width
+	assert.strictEqual(tpGetValue(mi, tpValueFieldFor(16)), 0x00);  // width reduction
+	assert.strictEqual(tpGetValue(mi, tpValueFieldFor(19)), 0x00);
+	assert.strictEqual(tpGetValue(mi, tpValueFieldFor(24)), 0x00);
+	// soft keys 0xFE is the largest documented value (byte 11; 'FF' reserved)
+	const sk = tpValueFieldFor(11);
+	const blank11 = '00'.repeat(11);
+	assert.strictEqual(tpGetValue(blank11, sk), 0x00);
+	assert.strictEqual(tpGetValue(tpSetValue(blank11, sk, 0xFE), sk), 0xFE);
+	assert.strictEqual(tpGetValue(tpSetValue(blank11, sk, 0xFF), sk), 0xFF);
+	assert.strictEqual(tpGetValue('FE', sk), null);   // byte 11 missing from a short profile
+	// set: byte 13 b6..b8 = 5 keeps the bearer bits, clamps to 3 bits
+	const base13 = '00'.repeat(12) + 'E2';
+	assert.strictEqual(tpSetValue(base13, ch, 5), '00'.repeat(12) + 'A2');  // 0xE2 & 0x1F | (5<<5)
+	assert.strictEqual(tpSetValue(base13, ch, 8), base13);                  // clamped to 7
+	assert.strictEqual(tpSetValue('00'.repeat(13), ch, 3), '00'.repeat(12) + '60');
+	// a profile shorter than the field's byte grows with zero bytes (like tpSetBit)
+	assert.strictEqual(tpSetValue('', ch, 3), '00'.repeat(12) + '60');
+	// round-trip every field through get/set
+	for (const vf of TP_VALUE_FIELDS) {
+		const max = (1 << tpValueWidth(vf)) - 1;
+		const lo = tpSetValue('0000000000000000000000000000000000000000000000000000000000000000', vf, 1);
+		assert.strictEqual(tpGetValue(lo, vf), 1, 'field byte ' + vf.byte);
+		const hi = tpSetValue(lo, vf, max);
+		assert.strictEqual(tpGetValue(hi, vf), max, 'field byte ' + vf.byte);
+		assert.strictEqual(tpSetValue(hi, vf, 0), '0000000000000000000000000000000000000000000000000000000000000000',
+			'field byte ' + vf.byte + ' clears');
+	}
+	// out-of-range values clamp, garbage reads as 0
+	assert.strictEqual(tpGetValue('', tpValueFieldFor(11)), null);   // byte missing
+	assert.strictEqual(tpGetValue('FF', tpValueFieldFor(13)), null);
+});
+
+test('the Configure dialog renders number inputs for value fields', () => {
+	const fn = extractFunc(html, 'tpRenderForm');
+	assert.match(fn, /tpValueFieldFor\(bi \+ 1\)/);
+	assert.match(fn, /type="number"/);
+	assert.match(fn, /tpValueInput\(/);
+	// the soft-keys hint stays visible in the UI
+	assert.match(html, /FF' is reserved for future use/);
+	const handler = extractFunc(html, 'tpValueInput');
+	assert.match(handler, /tpSetValue/);
+	assert.match(handler, /tpSyncPreset/);
 });
 
 test('3GPP-defined bits use the TS 31.111 names, not placeholders', () => {
