@@ -438,28 +438,6 @@ Delivery PoR (SPI2 `01`) is simpler — the card returns the PoR directly in the
 - ISO 9797-1: MAC algorithms
 - NIST SP 800-38B: CMAC
 
-### Cards
-
-Stores saved card configurations (presets) in `localStorage`. A preset holds the cryptographic keys, SPI settings, TAR and replay counter for SCP80 operations, plus the **PSK identity / PSK key** pair used by the SCP81 HTTP OTA listener. Cards is a **top-level tab**. When the card is equipped its EF.ICCID is read and the preset with the same ICCID is selected automatically in both SCP80 views.
-
-| Field | Description |
-|---|---|
-| Name | Human-readable label (required) |
-| ICCID | Optional card identifier |
-| SPI1 / SPI2 | Security level and PoR settings |
-| KIc / KID index | Key version number (required together with the keys) |
-| KIc / KID key | Encryption and MAC key hex |
-| TAR | Toolkit Application Reference (3 bytes) |
-| Counter (CNTR) | 10-digit hex replay counter, auto-incremented after each successful SCP80 send |
-| PSK identity | SCP81 HTTP OTA: the identity the card sends in the TLS handshake |
-| PSK key | SCP81 HTTP OTA: 32 hex chars (16 bytes); the listener picks it by the identity the card presents |
-
-The **SCP81** column shows whether the preset supplies a usable PSK pair: **✓** (identity and key), **⚠** (only one of the two — the listener ignores such a preset), **—** (no PSK). Identity and key must be set together.
-
-**Add a card:** fill in the name, ICCID (optional — **From card** fills it from the equipped card's EF.ICCID), SPI1/SPI2, KIc/KID keys and indices, TAR, the SCP81 PSK pair (optional) and click **Add**. A duplicate ICCID (compared ignoring spaces and the raw-hex form) is refused, naming the conflicting preset. The card appears in the list and becomes available in the RAM tab's **Card preset** dropdown.
-
-**Edit / remove:** **Edit** loads a preset into the form (the Add button becomes **Save**; **Cancel** clears the form); **Remove** deletes the row from `localStorage`. A successful SCP80 send advances and stores the replay counter, and edits are pushed into a running SCP81 listener automatically.
-
 ### RAM
 
 All RAM operations are delivered as SCP80 secured packets (ETSI TS 102 225) via SMS-PP-DOWNLOAD ENVELOPE. The card must support SCP03 (AES or 3DES) for secure transport.
@@ -482,6 +460,30 @@ After "Explore Card" runs, the explorer view displays:
 - **Executable Load Files** — AID, lifecycle, version, module AIDs. Each has **Delete** (ELF only) and **Delete All** (cascade: ELF + modules + installed Applications, P2=0x80) buttons.
 
 Delete confirms via a browser prompt before sending the GP `DELETE` command via SCP80. The explorer auto-refreshes after a successful deletion.
+
+---
+
+## Cards
+
+Stores saved card configurations (presets) in `localStorage`. A preset holds the cryptographic keys, SPI settings, TAR and replay counter for SCP80 operations, plus the **PSK identity / PSK key** pair used by the SCP81 HTTP OTA listener. Cards is a **top-level tab**. When the card is equipped its EF.ICCID is read and the preset with the same ICCID is selected automatically in both SCP80 views.
+
+| Field | Description |
+|---|---|
+| Name | Human-readable label (required) |
+| ICCID | Optional card identifier |
+| SPI1 / SPI2 | Security level and PoR settings |
+| KIc / KID index | Key version number (required together with the keys) |
+| KIc / KID key | Encryption and MAC key hex |
+| TAR | Toolkit Application Reference (3 bytes) |
+| Counter (CNTR) | 10-digit hex replay counter, auto-incremented after each successful SCP80 send |
+| PSK identity | SCP81 HTTP OTA: the identity the card sends in the TLS handshake |
+| PSK key | SCP81 HTTP OTA: 32 hex chars (16 bytes); the listener picks it by the identity the card presents |
+
+The **SCP81** column shows whether the preset supplies a usable PSK pair: **✓** (identity and key), **⚠** (only one of the two — the listener ignores such a preset), **—** (no PSK). Identity and key must be set together.
+
+**Add a card:** fill in the name, ICCID (optional — **From card** fills it from the equipped card's EF.ICCID), SPI1/SPI2, KIc/KID keys and indices, TAR, the SCP81 PSK pair (optional) and click **Add**. A duplicate ICCID (compared ignoring spaces and the raw-hex form) is refused, naming the conflicting preset. The card appears in the list and becomes available in the RAM tab's **Card preset** dropdown.
+
+**Edit / remove:** **Edit** loads a preset into the form (the Add button becomes **Save**; **Cancel** clears the form); **Remove** deletes the row from `localStorage`. A successful SCP80 send advances and stores the replay counter, and edits are pushed into a running SCP81 listener automatically.
 
 ---
 
@@ -696,20 +698,12 @@ pysim-simple-server --http-port 8080
 
 See [docs/api.md](docs/api.md) for the full endpoint reference.
 
-## Theme
-
-Dark theme is supported. The app follows the OS preference on first visit, and a manual toggle button (🌙/☀️) at the top-right corner persists the choice in `localStorage`.
-
-## Localisation
-
-The UI is in English with Russian language support. Language is detected from the browser's `navigator.language` preference. A manual toggle button (EN/RU) in the header persists the choice in `localStorage`.
-
 ## Version compatibility
 
 | PWA (SIMple) | Server | Status |
 |-------------|--------|--------|
-| 1.x.x | 1.x.x | ✅ Compatible |
-| 1.x.x | 0.x.x | ❌ Outdated — update server |
-| 1.x.x | 2.x.x+ | ⚠️ Server newer — update PWA |
+| any | same major | ✅ Compatible |
+| any | older major | ❌ Outdated — update server |
+| any | newer major | ⚠️ Server newer — update PWA |
 
-The PWA checks the server version on connect via `GET /api/version` and warns if versions are incompatible.
+The PWA checks the server version on connect via `GET /api/version` and compares the major version (e.g. a 2.x PWA with a 2.x server; a 1.x server is flagged as outdated).

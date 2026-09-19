@@ -1,7 +1,7 @@
 {
   "name": "SIMple",
   "short_name": "SIMple",
-  "description": "Offline APDU helper for SIM/USIM/RAM commands",
+  "description": "UICC/SIM workbench: APDU toolkit, SIM OTA (SCP80/SCP81), STK/CAT simulator, card profiler",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#fafafa",

@@ -19,7 +19,7 @@
 	<h1 class="text-2xl font-bold text-heading mb-6">SIMple <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">Документация</span></h1>
 <section class="mb-10">
 	<h2 id="overview" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">1. Обзор</h2>
-	<p class="mb-3">SIMple — Progressive Web App (PWA) для построения APDU-команд, сборки защищённых пакетов SCP80, просмотра меню SIM Toolkit (STK) и симуляции реальной сетевой среды для тестирования SIM/USIM/UICC-карт через PC/SC-ридер.</p>
+	<p class="mb-3">SIMple — инструментарий для специалистов по UICC/SIM-картам: автономный Progressive Web App (PWA), закрывающий весь цикл лабораторной работы &mdash; <strong>APDU-верстак</strong> (конструкторы SIM/USIM RFM и Expanded Script, команды GlobalPlatform RAM, парсер C-APDU/R-APDU и декодер ответов), <strong>OTA-лаборатория</strong> (защищённые пакеты SCP80 и установка Java Card RAM, а также терминальная сторона HTTP OTA &mdash; SCP81: эмуляция BIP-каналов, PSK-TLS-сервер администрирования и выполнение скриптов APDU), <strong>симулятор телефона</strong> (меню SIM Toolkit, proactive-команды и события, редактирование TERMINAL PROFILE, журнал C-AT-диалога) и <strong>профайлер карты</strong> (профили и неизменяемые снимки с таймингами, точное сравнение снимков, декодер FCP/FCI).</p>
 	<p class="mb-3">Приложение — один статический файл <code class="font-mono text-sm">index.html</code>. Все вычисления выполняются в браузере; доступ к карте — через локальный HTTP-сервер (<code class="font-mono text-sm">pysim-simple-server</code>), оборачивающий библиотеку <a href="https://osmocom.org/projects/pysim" class="text-blue-600 dark:text-blue-400 hover:underline">pySim</a>.</p>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">Браузер (SIMple PWA) &rarr; HTTP :8080 &rarr; pysim-simple-server &rarr; pySim &rarr; PC/SC &rarr; ридер &rarr; UICC/SIM</pre>
 	<p class="mb-3">Стандарты, на которые опирается приложение:</p>
@@ -542,12 +542,12 @@ pysim-simple-server --http-port 8080</pre>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (SIMple)</th><th class="text-left py-1 px-2">Сервер</th><th class="text-left py-1 px-2">Статус</th></tr></thead>
 		<tbody>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2">&#9989; Совместимы</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">0.x.x</td><td class="py-1 px-2">&#10060; Устарел &mdash; обновите сервер</td></tr>
-			<tr><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">2.x.x+</td><td class="py-1 px-2">&#9888;&#65039; Сервер новее &mdash; обновите PWA</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">любая</td><td class="py-1 px-2 font-mono">та же мажорная</td><td class="py-1 px-2">&#9989; Совместимы</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">любая</td><td class="py-1 px-2 font-mono">старее мажорная</td><td class="py-1 px-2">&#10060; Устарел &mdash; обновите сервер</td></tr>
+			<tr><td class="py-1 px-2 font-mono">любая</td><td class="py-1 px-2 font-mono">новее мажорная</td><td class="py-1 px-2">&#9888;&#65039; Сервер новее &mdash; обновите PWA</td></tr>
 		</tbody>
 	</table>
-	<p class="text-sm">PWA проверяет версию сервера при подключении через <code class="font-mono text-sm">GET /api/version</code> и предупреждает о несовместимости.</p>
+	<p class="text-sm">PWA проверяет версию сервера при подключении через <code class="font-mono text-sm">GET /api/version</code> и сравнивает мажорную версию (например, PWA 2.x с сервером 2.x; сервер 1.x помечается как устаревший).</p>
 
 
 </main>

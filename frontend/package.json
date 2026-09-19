@@ -1,7 +1,7 @@
 {
   "name": "simple",
   "version": "1.0.0",
-  "description": "Standalone offline HTML/JS tool for building APDU commands for SIM, USIM, and GlobalPlatform RAM, plus encoding conversions.",
+  "description": "SIMple — a UICC workbench: APDU toolkit, SCP80/SCP81 OTA lab, STK/CAT (phone) simulator and card profiler.",
   "main": "index.js",
   "scripts": {
     "build": "npx tailwindcss -i src/style.css -o style.css --config tailwind.config.js && cat src/contrast.css >> style.css",

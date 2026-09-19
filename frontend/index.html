@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">SIMple <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.3.0</span></h1>
+		<h1 class="text-2xl font-bold text-heading">SIMple <span id="app-version" class="text-xs text-gray-400 dark:text-slate-500 ml-1"></span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -1302,6 +1302,12 @@
 	</div>
 
 <script>
+// ===== Version =====
+// Single source of truth for the PWA version: shown in the header and used
+// by the server version check in pysimConnect().
+const SIMPLE_VERSION = '2.3.1';
+document.getElementById('app-version').textContent = 'v' + SIMPLE_VERSION;
+
 // ===== Tab switching =====
 function switchTab(name) {
 	if (_scp81Timer && name !== 'scp81') { clearInterval(_scp81Timer); _scp81Timer = null; }
@@ -4912,13 +4918,14 @@ async function pysimConnect() {
 		if (!ver.version) throw new Error('No version');
 		_pysimServerAvailable = true;
 		const sv = (ver.version || '').split('.').map(Number);
-		if (sv[0] < 1 || (sv[0] === 1 && sv[1] < 0)) {
+		const pv = SIMPLE_VERSION.split('.').map(Number);
+		if (sv[0] < pv[0]) {
 			msgEl.innerHTML = '<span class="text-red-500">Server version ' + esc(ver.version) + ' is outdated. Please update pysim-simple-server.</span>';
 			btn.textContent = t('Connect');
 			btn.disabled = false;
 			return;
 		}
-		if (sv[0] > 1) {
+		if (sv[0] > pv[0]) {
 			msgEl.innerHTML = '<span class="text-yellow-500">Warning: server version ' + esc(ver.version) + ' is newer than expected. Update SIMple for full compatibility.</span>';
 		}
 		const status = await pysimFetch('/api/status');
@@ -11400,7 +11407,6 @@ const LANG_RU = {
 	'Response data (hex)': 'Данные ответа (hex)',
 	'— Select command —': '— Выберите команду —',
 	'— select preset —': '— выберите предустановленный —',
-	'SIM OTA with a Human Face': 'SIM OTA с человеческим лицом',
 	'Error: specify SELECT parameters': 'Ошибка: укажите параметры SELECT',
 	'Error: unknown command': 'Ошибка: неизвестная команда',
 	'Error: specify data': 'Ошибка: укажите данные',
@@ -11890,8 +11896,6 @@ function translatePage() {
 		const key = el.getAttribute('data-l10n');
 		el.textContent = t(key);
 	});
-	const slogan = document.getElementById('slogan');
-	if (slogan) slogan.textContent = t('SIM OTA with a Human Face');
 }
 
 function isViewVisible(id) {

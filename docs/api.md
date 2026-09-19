@@ -8,12 +8,13 @@ on the preflight), so the API is reachable from a separately-hosted PWA.
 
 | Server | PWA (SIMple) | Status |
 |--------|-------------|--------|
-| 1.x.x | 1.x.x | ✅ Compatible |
-| 0.x.x | 1.x.x | ❌ Outdated — update server |
-| 2.x.x+ | 1.x.x | ⚠️ Server newer — update PWA |
+| same major | any | ✅ Compatible |
+| older major | any | ❌ Outdated — update server |
+| newer major | any | ⚠️ Server newer — update PWA |
 
 The server reports its version via `GET /api/version`. The PWA checks this on
-connect and warns if versions are incompatible.
+connect and compares the major version (a 1.x server is flagged as outdated by
+a 2.x PWA).
 
 ## Endpoints
 
@@ -23,6 +24,7 @@ connect and warns if versions are incompatible.
 | `/api/status` | GET | Card reader + card info + current selection |
 | `/api/command` | POST | pySim command (equip, status, tree, etc.) |
 | `/api/commands` | GET | List available pySim commands |
+| `/api/cardinfo` | GET | pySim `cardinfo` output |
 | `/api/tree` | POST | File tree browser for given FID/name |
 | `/api/select` | POST | Select a file by name or FID |
 | `/api/read` | POST | Read file content |
@@ -86,6 +88,12 @@ with the same ICCID in both SCP80 views (Secured Packet and RAM).
 ### `GET /api/commands`
 
 List all available shell commands for the current card profile.
+
+### `GET /api/cardinfo`
+
+Runs pySim's `cardinfo` command and returns its output as `{"output": "..."}`
+(card type, ATR, ICCID and other information pySim reports for the equipped
+card). A shortcut for `POST /api/command` with `{"cmd": "cardinfo"}`.
 
 ### `POST /api/command`
 

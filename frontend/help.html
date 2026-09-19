@@ -19,7 +19,7 @@
 	<h1 class="text-2xl font-bold text-heading mb-6">SIMple <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">Documentation</span></h1>
 <section class="mb-10">
 	<h2 id="overview" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">1. Overview</h2>
-	<p class="mb-3">SIMple is a Progressive Web App (PWA) for building APDU commands, assembling SCP80 secured packets, browsing the SIM Toolkit (STK) menu, and simulating a real network environment against a SIM/USIM/UICC card via a PC/SC reader.</p>
+	<p class="mb-3">SIMple is a workbench for UICC/SIM card specialists: an offline Progressive Web App (PWA) covering the full lab cycle &mdash; an <strong>APDU workbench</strong> (SIM/USIM RFM and Expanded Script builders, GlobalPlatform RAM commands, a C-APDU/R-APDU parser and a response decoder), an <strong>OTA lab</strong> (SCP80 secured packets and Java Card RAM installation, plus the terminal side of HTTP OTA &mdash; SCP81: BIP channel emulation, a PSK TLS administration server and APDU script execution), a <strong>phone/CAT simulator</strong> (SIM Toolkit menu, proactive commands and events, TERMINAL PROFILE editing, the C-AT dialogue log) and a <strong>card profiler</strong> (profiles and immutable snapshots with timings, exact snapshot comparison, FCP/FCI decoding).</p>
 	<p class="mb-3">The application is a single static <code class="font-mono text-sm">index.html</code> file. All computation runs in the browser; the card is accessed through a local HTTP server (<code class="font-mono text-sm">pysim-simple-server</code>) that wraps the <a href="https://osmocom.org/projects/pysim" class="text-blue-600 dark:text-blue-400 hover:underline">pySim</a> library.</p>
 	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">Browser (SIMple PWA) &rarr; HTTP :8080 &rarr; pysim-simple-server &rarr; pySim &rarr; PC/SC &rarr; card reader &rarr; UICC/SIM</pre>
 	<p class="mb-3">Standards referenced across the application:</p>
@@ -542,12 +542,12 @@ pysim-simple-server --http-port 8080</pre>
 	<table class="w-full text-sm mb-3 border-collapse">
 		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (SIMple)</th><th class="text-left py-1 px-2">Server</th><th class="text-left py-1 px-2">Status</th></tr></thead>
 		<tbody>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2">&#9989; Compatible</td></tr>
-			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">0.x.x</td><td class="py-1 px-2">&#10060; Outdated &mdash; update server</td></tr>
-			<tr><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">2.x.x+</td><td class="py-1 px-2">&#9888;&#65039; Server newer &mdash; update PWA</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">any</td><td class="py-1 px-2 font-mono">same major</td><td class="py-1 px-2">&#9989; Compatible</td></tr>
+			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">any</td><td class="py-1 px-2 font-mono">older major</td><td class="py-1 px-2">&#10060; Outdated &mdash; update server</td></tr>
+			<tr><td class="py-1 px-2 font-mono">any</td><td class="py-1 px-2 font-mono">newer major</td><td class="py-1 px-2">&#9888;&#65039; Server newer &mdash; update PWA</td></tr>
 		</tbody>
 	</table>
-	<p class="text-sm">The PWA checks the server version on connect via <code class="font-mono text-sm">GET /api/version</code> and warns if versions are incompatible.</p>
+	<p class="text-sm">The PWA checks the server version on connect via <code class="font-mono text-sm">GET /api/version</code> and compares the major version (e.g. 2.x PWA with a 2.x server; a 1.x server is flagged as outdated).</p>
 
 
 </main>
