@@ -11,7 +11,7 @@ PY_SIM = PROJECTS / 'pysim'
 if str(PY_SIM) not in sys.path:
     sys.path.insert(0, str(PY_SIM))
 
-import pysim_otaman_server.server as S
+import pysim_simple_server.server as S
 
 
 class TestPollInterval(unittest.TestCase):

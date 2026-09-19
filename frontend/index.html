@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OTAMan</title>
+<title>SIMple</title>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" href="sim.png" sizes="462x462">
@@ -18,7 +18,7 @@
 <div class="max-w-7xl mx-auto px-6 py-2">
 
 	<div class="flex items-center justify-between mb-3">
-		<h1 class="text-2xl font-bold text-heading">OTAMan <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.2.21</span></h1>
+		<h1 class="text-2xl font-bold text-heading">SIMple <span id="slogan" class="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2" data-l10n="SIM OTA with a Human Face">SIM OTA with a Human Face</span> <span class="text-xs text-gray-400 dark:text-slate-500 ml-1">v2.3.0</span></h1>
 		<div class="flex items-center gap-4">
 			<span id="state-indicator" class="flex items-center select-none" style="cursor:default" title="Connecting...">
 				<span id="state-indicator-dot" class="text-xs text-gray-400" title="Connecting...">●</span>
@@ -26,7 +26,7 @@
 				<span id="state-indicator-adm" class="hidden ml-0.5 text-xs font-mono" title=""></span>
 			</span>
 			<button id="install-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700" style="display:none">INSTALL PWA [for offline use]</button>
-			<a href="https://github.com/anttro/otaman" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
+			<a href="https://github.com/anttro/simple" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">github</a>
 			<a id="help-link" href="help.html" target="_blank" rel="noopener" class="text-xs text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300" data-l10n="help">help</a>
 			<button onclick="toggleLang()" id="lang-btn" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700">EN</button>
 			<button onclick="toggleTheme()" id="theme-btn" class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-700">🌙</button>
@@ -815,8 +815,8 @@
 			</div>
 		</div>
 		<div id="pysim-connect-info" class="mb-3 text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
-			<p data-l10n="To access local card reader, you need pysim-otaman-server running locally.">To access local card reader, you need pysim-otaman-server running locally.</p>
-			<p><span data-l10n="To connect, install">To connect, install</span> <a href="https://github.com/anttro/otaman" target="_blank" class="text-blue-600 dark:text-blue-400 underline">pysim-otaman-server</a>: <code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">git clone https://github.com/anttro/otaman.git</code> <span data-l10n="and start it.">and start it.</span><br><span data-l10n="Refer to pysim-otaman-server README files for details.">Refer to pysim-otaman-server README files for details.</span> <span data-l10n="Click">Click</span> <b data-l10n="Connect">Connect</b> <span data-l10n="when pysim-otaman-server is ready">when pysim-otaman-server is ready</span></p>
+			<p data-l10n="To access local card reader, you need pysim-simple-server running locally.">To access local card reader, you need pysim-simple-server running locally.</p>
+			<p><span data-l10n="To connect, install">To connect, install</span> <a href="https://github.com/anttro/simple" target="_blank" class="text-blue-600 dark:text-blue-400 underline">pysim-simple-server</a>: <code class="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">git clone https://github.com/anttro/simple.git</code> <span data-l10n="and start it.">and start it.</span><br><span data-l10n="Refer to pysim-simple-server README files for details.">Refer to pysim-simple-server README files for details.</span> <span data-l10n="Click">Click</span> <b data-l10n="Connect">Connect</b> <span data-l10n="when pysim-simple-server is ready">when pysim-simple-server is ready</span></p>
 			<div id="pysim-connect-msg" class="text-xs"></div>
 		</div>
 		<div id="pysim-connected-row" class="mb-3 hidden">
@@ -4679,7 +4679,7 @@ function decodeResponse() {
 
 // ===== pysim integration =====
 // Default to a local server on 127.0.0.1:8080. If this PWA is served by
-// pysim-otaman-server itself (same origin), detect the co-located API once
+// pysim-simple-server itself (same origin), detect the co-located API once
 // and switch to a relative base; otherwise keep the default and wait for the
 // user to point at a server.
 let pysimBase = 'http://127.0.0.1:8080';
@@ -4913,13 +4913,13 @@ async function pysimConnect() {
 		_pysimServerAvailable = true;
 		const sv = (ver.version || '').split('.').map(Number);
 		if (sv[0] < 1 || (sv[0] === 1 && sv[1] < 0)) {
-			msgEl.innerHTML = '<span class="text-red-500">Server version ' + esc(ver.version) + ' is outdated. Please update pysim-otaman-server.</span>';
+			msgEl.innerHTML = '<span class="text-red-500">Server version ' + esc(ver.version) + ' is outdated. Please update pysim-simple-server.</span>';
 			btn.textContent = t('Connect');
 			btn.disabled = false;
 			return;
 		}
 		if (sv[0] > 1) {
-			msgEl.innerHTML = '<span class="text-yellow-500">Warning: server version ' + esc(ver.version) + ' is newer than expected. Update OTAMan for full compatibility.</span>';
+			msgEl.innerHTML = '<span class="text-yellow-500">Warning: server version ' + esc(ver.version) + ' is newer than expected. Update SIMple for full compatibility.</span>';
 		}
 		const status = await pysimFetch('/api/status');
 		if (!status.app_ready) {
@@ -5947,7 +5947,7 @@ let _cardsEditIdx = null;
 
 function cardsLoad() {
 	try {
-		const d = localStorage.getItem('otaman_cards');
+		const d = localStorage.getItem('simple_cards');
 		cards = d ? JSON.parse(d) : [];
 	} catch (e) { cards = []; }
 	cardsRebuildSelect();
@@ -5955,7 +5955,7 @@ function cardsLoad() {
 }
 
 function cardsSave() {
-	localStorage.setItem('otaman_cards', JSON.stringify(cards));
+	localStorage.setItem('simple_cards', JSON.stringify(cards));
 	cardsRebuildSelect();
 	cardsRender();
 	scp81PushPskMap();
@@ -6225,7 +6225,7 @@ function downloadJson(name, obj) {
 }
 
 function cardsExportFile() {
-	downloadJson('otaman-cards.json', cards);
+	downloadJson('simple-cards.json', cards);
 }
 
 async function cardsImport(text) {
@@ -6511,7 +6511,7 @@ function pysimCustomRefreshTree() {
 	pysimFsRenderTree();
 }
 
-let pysimFsSort = localStorage.getItem('otaman_fs_sort') === 'name' ? 'name' : 'fid';
+let pysimFsSort = localStorage.getItem('simple_fs_sort') === 'name' ? 'name' : 'fid';
 
 function pysimFsSortChildren(children, mode) {
 	return (children || []).slice().sort((a, b) => {
@@ -6536,7 +6536,7 @@ function pysimFsSortChildren(children, mode) {
 
 function pysimFsSetSort(mode) {
 	pysimFsSort = mode === 'name' ? 'name' : 'fid';
-	localStorage.setItem('otaman_fs_sort', pysimFsSort);
+	localStorage.setItem('simple_fs_sort', pysimFsSort);
 	document.querySelectorAll('.pysim-fs-sort-pill').forEach(p => {
 		const active = p.dataset.fsSort === pysimFsSort;
 		p.classList.toggle('bg-blue-600', active);
@@ -8036,7 +8036,7 @@ function scp81OptionsBadge() {
 
 function scp81OptionsLoad() {
 	let saved = {};
-	try { saved = JSON.parse(localStorage.getItem('otaman_scp81_opts') || '{}') || {}; } catch (e) { saved = {}; }
+	try { saved = JSON.parse(localStorage.getItem('simple_scp81_opts') || '{}') || {}; } catch (e) { saved = {}; }
 	const opt = Object.assign({}, SCP81_OPT_DEFAULTS, saved);
 	if (saved.nextUriOn === undefined) opt.nextUriOn = (opt.nextUri || '') !== '';
 	const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
@@ -8057,13 +8057,13 @@ function scp81OptionsLoad() {
 }
 
 function scp81OptionsPersist() {
-	localStorage.setItem('otaman_scp81_opts', JSON.stringify(scp81OptionsState()));
+	localStorage.setItem('simple_scp81_opts', JSON.stringify(scp81OptionsState()));
 	scp81OptionsSyncDisabled();
 	scp81OptionsBadge();
 }
 
 function scp81OptionsReset() {
-	localStorage.removeItem('otaman_scp81_opts');
+	localStorage.removeItem('simple_scp81_opts');
 	scp81OptionsLoad();
 }
 
@@ -8602,14 +8602,14 @@ let _scriptsNewKind = 'empty';
 
 function scriptsLoad() {
 	try {
-		const d = localStorage.getItem('otaman_scripts');
+		const d = localStorage.getItem('simple_scripts');
 		scripts = d ? JSON.parse(d) : [];
 	} catch (e) { scripts = []; }
 	scriptsRebuildSelect();
 }
 
 function scriptsPersist() {
-	localStorage.setItem('otaman_scripts', JSON.stringify(scripts));
+	localStorage.setItem('simple_scripts', JSON.stringify(scripts));
 	scriptsRebuildSelect();
 	scriptsRender();
 }
@@ -9444,7 +9444,7 @@ function pysimCustomExport() {
 }
 
 function pysimCustomExportFile() {
-	downloadJson('otaman-custom-files.json', pysimCustomFiles);
+	downloadJson('simple-custom-files.json', pysimCustomFiles);
 }
 
 async function pysimCustomImport(text) {
@@ -9529,25 +9529,25 @@ const PROFILER_MASK_PREFIX4_FIDS = {
 
 function profilerLoad() {
 	try {
-		const d = localStorage.getItem('otaman_profiles');
+		const d = localStorage.getItem('simple_profiles');
 		profiles = d ? JSON.parse(d) : [];
 	} catch (e) { profiles = []; }
 }
 
 function profilerSave() {
-	localStorage.setItem('otaman_profiles', JSON.stringify(profiles));
+	localStorage.setItem('simple_profiles', JSON.stringify(profiles));
 }
 
 function snapshotsLoad() {
 	try {
-		const d = localStorage.getItem('otaman_snapshots');
+		const d = localStorage.getItem('simple_snapshots');
 		snapshots = d ? JSON.parse(d) : [];
 	} catch (e) { snapshots = []; }
 }
 
 function snapshotsSave() {
 	try {
-		localStorage.setItem('otaman_snapshots', JSON.stringify(snapshots));
+		localStorage.setItem('simple_snapshots', JSON.stringify(snapshots));
 	} catch (e) {
 		alert('Snapshot save failed: ' + e.message);
 	}
@@ -11499,12 +11499,12 @@ const LANG_RU = {
 	'Install Package (.cap file)': 'Установка пакета (.cap файл)',
 	'Server URL': 'URL сервера',
 	'Connect': 'Подключиться',
-	'To access local card reader, you need pysim-otaman-server running locally.': 'Для доступа к локальному картридеру необходим запущенный pysim-otaman-server.',
+	'To access local card reader, you need pysim-simple-server running locally.': 'Для доступа к локальному картридеру необходим запущенный pysim-simple-server.',
 	'To connect, install': 'Для подключения установите',
 	'and start it.': 'и запустите его.',
-	'Refer to pysim-otaman-server README files for details.': 'Подробности — в README файлах pysim-otaman-server.',
+	'Refer to pysim-simple-server README files for details.': 'Подробности — в README файлах pysim-simple-server.',
 	'Click': 'Нажмите кнопку',
-	'when pysim-otaman-server is ready': 'когда pysim-otaman-server будет готов',
+	'when pysim-simple-server is ready': 'когда pysim-simple-server будет готов',
 	'Equip card': 'Подключить карту',
 	'Check status': 'Проверить статус',
 	'Reset card': 'Сброс карты',
@@ -11532,8 +11532,8 @@ const LANG_RU = {
 	'Checking card...': 'Проверка карты...',
 	'Connected': 'Подключено',
 	'Connection failed:': 'Ошибка подключения:',
-	'pysim-blocked-hint': 'Браузер, вероятно, заблокировал доступ к локальному серверу карт. Разрешите доступ к локальной сети для этого сайта (Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → Разрешить). Также проверьте, что pysim-otaman-server запущен по адресу {url}.',
-	'pysim-unreachable-hint': 'Не удалось подключиться к серверу карт. Проверьте, что pysim-otaman-server запущен и адрес указан верно ({url}). Если эта страница открыта по HTTPS, также разрешите доступ к локальной сети в браузере (Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → Разрешить).',
+	'pysim-blocked-hint': 'Браузер, вероятно, заблокировал доступ к локальному серверу карт. Разрешите доступ к локальной сети для этого сайта (Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → Разрешить). Также проверьте, что pysim-simple-server запущен по адресу {url}.',
+	'pysim-unreachable-hint': 'Не удалось подключиться к серверу карт. Проверьте, что pysim-simple-server запущен и адрес указан верно ({url}). Если эта страница открыта по HTTPS, также разрешите доступ к локальной сети в браузере (Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → Разрешить).',
 	'No card detected. Insert card and click Equip card button': 'Карта не обнаружена. Вставьте карту и нажмите Подключить карту',
 	'Card inserted — press Equip': 'Карта вставлена — нажмите «Подключить карту»',
 	'Card inserted — initializing...': 'Карта вставлена — инициализация...',

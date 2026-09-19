@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for the OTA helper functions in pysim_otaman_server.server.
+"""Unit tests for the OTA helper functions in pysim_simple_server.server.
 
 Reference vectors are key-free: synthetic dummy keys plus the already-public
 sysmocom sample-key vectors that ship in pySim's own tests/unittests/test_ota.py.
@@ -19,7 +19,7 @@ PY_SIM = PROJECTS / 'pysim'
 if str(PY_SIM) not in sys.path:
     sys.path.insert(0, str(PY_SIM))
 
-from pysim_otaman_server.server import (
+from pysim_simple_server.server import (
     _build_sms_tpdu,
     _build_tr,
     _decode_cmd,
@@ -106,7 +106,7 @@ class TestBuildSmsTpdu(unittest.TestCase):
     SCTS = bytes.fromhex('24051215173000')
 
     def _build(self, *args, **kwargs):
-        with mock.patch('pysim_otaman_server.server._encode_scts', return_value=self.SCTS):
+        with mock.patch('pysim_simple_server.server._encode_scts', return_value=self.SCTS):
             return _build_sms_tpdu(*args, **kwargs)
 
     def test_single_message_with_cpi(self):
@@ -273,7 +273,7 @@ class TestProactiveDecode(unittest.TestCase):
     """Server-side proactive command/TR decode helpers (v1.8.0 log feature)."""
 
     def setUp(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         srv._PROACTIVE_SESSION_START = 1234.0
         srv._PLI_DATA[0x00] = '93055210011000'
 
@@ -397,14 +397,14 @@ class TestProactiveDecode(unittest.TestCase):
         self.assertEqual(r[1], {'label': 'Data bytes', 'value': '3'})
 
     def test_parse_proactive_header_plain_tags(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         raw = bytes.fromhex('d00c010301270102028182240103')
         self.assertEqual(srv._parse_proactive_header(raw), (1, 0x27, 0x81, 0x82, 0x01))
 
     def test_default_handler_logs_timer_management(self):
         # pySim's auto-handler path: the parsed command object (not the empty
         # collection) is re-encoded for the log and used for the response.
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         from pySim.cat import ProactiveCommand
         from pySim.utils import h2b
         srv._PROACTIVE_LOG.clear()
@@ -420,7 +420,7 @@ class TestProactiveDecode(unittest.TestCase):
         self.assertEqual(entry['tr_result'], '00')
 
     def test_default_handler_pli_includes_dict_data(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         from pySim.cat import ProactiveCommand
         from pySim.utils import h2b
         srv._PROACTIVE_LOG.clear()
@@ -529,7 +529,7 @@ class TestEventDownload(unittest.TestCase):
     """ENVELOPE (EVENT DOWNLOAD) assembly, TS 102 223 7.5.11."""
 
     def _send(self, event_type, event_data):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         calls = []
 
         class Tp:
@@ -565,30 +565,30 @@ class TestTimerManagement(unittest.TestCase):
     START = bytes.fromhex('d011810301270082028182a40101a503001000')
 
     def tearDown(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         srv._timer_cancel()
 
     def test_hms_bcd_roundtrip(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         self.assertEqual(srv._hms_bcd(60).hex(), '001000')
         self.assertEqual(srv._hms_bcd(3723).hex(), '102030')
         self.assertEqual([srv._bcd_swap(b) for b in srv._hms_bcd(3723)], [1, 2, 3])
 
     def test_start_returns_result_only_and_arms_timer(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         tr = srv._handle_timer_command(1, 0x27, 0x00, self.START, 0x81, 0x82)
         self.assertEqual(tr.hex(), '810301270082028281030100')
         remaining = srv._timer_remaining(1)
         self.assertTrue(55 <= remaining <= 60, remaining)
 
     def test_get_returns_remaining_value(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         srv._handle_timer_command(1, 0x27, 0x00, self.START, 0x81, 0x82)
         tr = srv._handle_timer_command(1, 0x27, 0x02, self.START, 0x81, 0x82)
         self.assertEqual(tr.hex(), '810301270282028281a40101a503001000030100')
 
     def test_deactivate_stops_and_reports_value(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         srv._handle_timer_command(1, 0x27, 0x00, self.START, 0x81, 0x82)
         tr = srv._handle_timer_command(1, 0x27, 0x01, self.START, 0x81, 0x82)
         self.assertTrue(tr.hex().startswith('8103012701'), tr.hex())
@@ -596,12 +596,12 @@ class TestTimerManagement(unittest.TestCase):
         self.assertIsNone(srv._timer_remaining(1))
 
     def test_get_on_stopped_timer_is_contradiction(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         tr = srv._handle_timer_command(1, 0x27, 0x02, self.START, 0x81, 0x82)
         self.assertEqual(tr.hex(), '810301270282028281030124')
 
     def test_timer_expiration_envelope(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         calls = []
 
         class Tp:
@@ -618,7 +618,7 @@ class TestTimerManagement(unittest.TestCase):
         self.assertEqual(calls, ['80c200000ed70c82028281a40101a503001000'])
 
     def test_cancelled_timer_does_not_report(self):
-        import pysim_otaman_server.server as srv
+        import pysim_simple_server.server as srv
         calls = []
 
         class Tp:
@@ -704,7 +704,7 @@ class TestSmsConcat(unittest.TestCase):
 
     def test_no_udh_sms_submit(self):
         """SMS-SUBMIT without TP-UDHI: entire UD is payload."""
-        from pysim_otaman_server.server import _parse_sms_concat
+        from pysim_simple_server.server import _parse_sms_concat
         # First octet 0x01: MTI=01 (SUBMIT), no UDH, no VP
         # MR=00, DA_len=05, DA_type=90, DA=2143F5, PID=00, DCS=04, UDL=03, UD=AABBCC
         tpdu = bytes.fromhex('0100'  # first octet + MR
@@ -722,7 +722,7 @@ class TestSmsConcat(unittest.TestCase):
 
     def test_8bit_concat_iei_0x00(self):
         """SMS-SUBMIT with IEI 0x00 (8-bit reference concatenation)."""
-        from pysim_otaman_server.server import _parse_sms_concat
+        from pysim_simple_server.server import _parse_sms_concat
         # First octet 0x41: MTI=01 (SUBMIT), TP-UDHI=1, no VP
         # MR=00, DA_len=05, DA_type=90, DA=2143F5, PID=00, DCS=04
         # UDL=09, UDHL=05, UDH: 00 03 04 04 01 (concat IE), payload=AABBCC
@@ -746,7 +746,7 @@ class TestSmsConcat(unittest.TestCase):
 
     def test_16bit_concat_iei_0x08(self):
         """SMS-SUBMIT with IEI 0x08 (16-bit reference concatenation)."""
-        from pysim_otaman_server.server import _parse_sms_concat
+        from pysim_simple_server.server import _parse_sms_concat
         # First octet 0x41: MTI=01, TP-UDHI=1
         # UDH: 06 (UDHL) 08 04 01 02 03 04 (16-bit concat: ref=0x0102, total=3, num=4)
         # payload=FF
@@ -770,7 +770,7 @@ class TestSmsConcat(unittest.TestCase):
 
     def test_udh_with_cpi(self):
         """UDH with concatenation IE + CPI IE (0x70)."""
-        from pysim_otaman_server.server import _parse_sms_concat
+        from pysim_simple_server.server import _parse_sms_concat
         # First octet 0x41: MTI=01, TP-UDHI=1
         # UDHL=07, UDH: 00 03 04 04 01 (concat) + 70 00 (CPI)
         tpdu = bytes.fromhex('4100'
@@ -794,7 +794,7 @@ class TestSmsConcat(unittest.TestCase):
 
     def test_empty_payload(self):
         """Segment with empty payload after UDH."""
-        from pysim_otaman_server.server import _parse_sms_concat
+        from pysim_simple_server.server import _parse_sms_concat
         # First octet 0x41: MTI=01, TP-UDHI=1
         tpdu = bytes.fromhex('4100'
                              '05'
@@ -815,7 +815,7 @@ class TestSmsConcat(unittest.TestCase):
 
     def test_short_tpdu(self):
         """Truncated TPDU returns gracefully."""
-        from pysim_otaman_server.server import _parse_sms_concat
+        from pysim_simple_server.server import _parse_sms_concat
         ref, total, num, payload = _parse_sms_concat(b'\x01')
         self.assertIsNone(ref)
         self.assertIsNone(total)
@@ -823,7 +823,7 @@ class TestSmsConcat(unittest.TestCase):
 
     def test_none_input(self):
         """None input returns empty payload."""
-        from pysim_otaman_server.server import _parse_sms_concat
+        from pysim_simple_server.server import _parse_sms_concat
         ref, total, num, payload = _parse_sms_concat(None)
         self.assertIsNone(ref)
         self.assertIsNone(total)
@@ -832,7 +832,7 @@ class TestSmsConcat(unittest.TestCase):
 
     def test_short_tpdu(self):
         """Truncated TPDU returns gracefully."""
-        from pysim_otaman_server.server import _parse_sms_concat
+        from pysim_simple_server.server import _parse_sms_concat
         ref, total, num, payload = _parse_sms_concat(b'\x44')
         self.assertIsNone(ref)
         self.assertIsNone(total)
@@ -840,7 +840,7 @@ class TestSmsConcat(unittest.TestCase):
 
     def test_none_input(self):
         """None input returns empty payload."""
-        from pysim_otaman_server.server import _parse_sms_concat
+        from pysim_simple_server.server import _parse_sms_concat
         ref, total, num, payload = _parse_sms_concat(None)
         self.assertIsNone(ref)
         self.assertIsNone(total)
@@ -853,7 +853,7 @@ class TestSmsReassembly(unittest.TestCase):
 
     def test_single_segment_no_concat(self):
         """Single segment without UDH → submit_tpdu_hex is set directly."""
-        from pysim_otaman_server.server import PoRSubmitHandler, _find_sms_tpdu, _parse_sms_concat
+        from pysim_simple_server.server import PoRSubmitHandler, _find_sms_tpdu, _parse_sms_concat
         handler = PoRSubmitHandler()
         # Build a simple D0 with tag 8B containing an SMS-SUBMIT without UDH
         sms_tpdu = bytes.fromhex('040005902143F50004'  # SMS-SUBMIT header
@@ -874,7 +874,7 @@ class TestSmsReassembly(unittest.TestCase):
 
     def test_multi_segment_reassembly(self):
         """3 segments with IEI 0x00 in random order → assembled in correct order."""
-        from pysim_otaman_server.server import PoRSubmitHandler
+        from pysim_simple_server.server import PoRSubmitHandler
         handler = PoRSubmitHandler()
 
         # Segment payloads (after UDH)
@@ -897,7 +897,7 @@ class TestSmsReassembly(unittest.TestCase):
 
     def test_independent_references(self):
         """Two different reference numbers are independent."""
-        from pysim_otaman_server.server import PoRSubmitHandler
+        from pysim_simple_server.server import PoRSubmitHandler
         handler = PoRSubmitHandler()
 
         # Ref 0x01: 2 segments
@@ -947,7 +947,7 @@ class CapApduSequenceTest(unittest.TestCase):
         return buf.getvalue().hex().upper()
 
     def test_cap_parse(self):
-        from pysim_otaman_server.server import _cap_parse
+        from pysim_simple_server.server import _cap_parse
         loadfile_aid, module_aid, data = _cap_parse(self._mini_cap())
         self.assertEqual(loadfile_aid, 'A00000010001')
         self.assertEqual(module_aid, 'A000000100')
@@ -956,7 +956,7 @@ class CapApduSequenceTest(unittest.TestCase):
         self.assertIn('03000A01', data)
 
     def test_sequence_install_load_install(self):
-        from pysim_otaman_server.server import _cap_apdu_sequence
+        from pysim_simple_server.server import _cap_apdu_sequence
         seq = _cap_apdu_sequence('A00000010001', 'A000000100', 'AABBCCDD')
         # INSTALL [for load]: lv(pkg aid) + lv(ISD) + 000000
         self.assertEqual(seq[0],
@@ -969,7 +969,7 @@ class CapApduSequenceTest(unittest.TestCase):
         self.assertIn('06A00000010001' + '05A000000100' + '05A000000100' + '0100', seq[2])
 
     def test_load_blocks_split_and_counter(self):
-        from pysim_otaman_server.server import _cap_apdu_sequence, _ber_len as _ber_len_lower
+        from pysim_simple_server.server import _cap_apdu_sequence, _ber_len as _ber_len_lower
         data = ''.join('%02X' % (i % 256) for i in range(700))
         seq = _cap_apdu_sequence('A00000010001', 'A000000100', data)
         self.assertEqual(len(seq), 5)          # INSTALL + 3 LOAD + INSTALL
@@ -991,7 +991,7 @@ class CapApduSequenceTest(unittest.TestCase):
         # A smaller block size (SCP80: fit one SMS) slices the load file TLV
         # into consecutive chunks of that size, the last block marked P1=0x80
         # with the block counter in P2.
-        from pysim_otaman_server.server import _cap_apdu_sequence
+        from pysim_simple_server.server import _cap_apdu_sequence
         data = ''.join('%02X' % (i % 256) for i in range(700))   # TLV = 704 bytes
         seq = _cap_apdu_sequence('A00000010001', 'A000000100', data, block_size=100)
         self.assertEqual(len(seq), 10)                 # INSTALL + 8 LOAD + INSTALL
@@ -1011,7 +1011,7 @@ class CapApduSequenceTest(unittest.TestCase):
     def test_gen_install_returns_the_apdu_list(self):
         # /api/scp81/gen-install: build the INSTALL/LOAD/INSTALL list for a
         # .cap without touching any listener or script state.
-        from pysim_otaman_server.server import _scp81_gen_install
+        from pysim_simple_server.server import _scp81_gen_install
         resp = _scp81_gen_install({'cap_hex': self._mini_cap(), 'privileges': '01'})
         self.assertTrue(resp['ok'], resp)
         self.assertEqual(resp['load_file_aid'], 'A00000010001')
@@ -1023,7 +1023,7 @@ class CapApduSequenceTest(unittest.TestCase):
         self.assertNotIn('queued', resp)   # generation only, no queueing
 
     def test_gen_install_rejects_bad_input(self):
-        from pysim_otaman_server.server import _scp81_gen_install
+        from pysim_simple_server.server import _scp81_gen_install
         self.assertFalse(_scp81_gen_install({})['ok'])
         resp = _scp81_gen_install({'cap_hex': '00'})
         self.assertFalse(resp['ok'])
@@ -1034,7 +1034,7 @@ class TerminalProfileTest(unittest.TestCase):
     """Runtime TERMINAL PROFILE: hex validation and re-send."""
 
     def test_validate_tp_hex(self):
-        from pysim_otaman_server.server import _validate_tp_hex
+        from pysim_simple_server.server import _validate_tp_hex
         self.assertEqual(_validate_tp_hex('ff 00 80'), ('FF0080', None))
         self.assertEqual(_validate_tp_hex('80FF'), ('80FF', None))
         for bad in ('', '   ', 'F', 'XYZ', 'FF0', 'FF' * 256):
@@ -1044,7 +1044,7 @@ class TerminalProfileTest(unittest.TestCase):
 
     def test_resend_terminal_profile_resets_state_and_sends(self):
         import types
-        from pysim_otaman_server import server as srv
+        from pysim_simple_server import server as srv
         server_obj = types.SimpleNamespace(
             terminal_profile='FF00', stk_pending={'type': 'display_text'},
             menu_active=True, event_list=[0x03], sim_menu='old')

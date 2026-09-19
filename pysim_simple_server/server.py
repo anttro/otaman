@@ -11,8 +11,8 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from io import StringIO
 from pySim.transport import ApduTracer, ProactiveHandler
 from pySim.cards import UiccCardBase
-from pysim_otaman_server import httpota
-from pysim_otaman_server import scp81
+from pysim_simple_server import httpota
+from pysim_simple_server import scp81
 from smartcard.CardMonitoring import CardMonitor, CardObserver
 
 import gsm0338  # registers 'gsm03.38' codec
@@ -21,7 +21,7 @@ from osmocom.construct import GsmOrUcs2Adapter
 from osmocom.tlv import BER_TLV_IE
 
 
-VERSION = '2.2.21'
+VERSION = '2.3.0'
 
 MAX_ENVELOPE_SEGMENTS = 5  # max SMS segments for outgoing C-APDU in ENVELOPE
 

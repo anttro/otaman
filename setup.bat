@@ -1,12 +1,12 @@
 @echo off
-REM pysim-otaman-server setup script for Windows
+REM pysim-simple-server setup script for Windows
 REM Creates a venv and installs pysim and its dependencies.
 
 setlocal enabledelayedexpansion
 
 set VENV_DIR=%~dp0.venv
 
-echo === pysim-otaman-server setup ===
+echo === pysim-simple-server setup ===
 echo.
 
 REM Check Python
@@ -71,11 +71,11 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-REM Install pysim-otaman-server
-echo === Installing pysim-otaman-server ===
+REM Install pysim-simple-server
+echo === Installing pysim-simple-server ===
 pip install -e "%~dp0."
 if %errorlevel% neq 0 (
-    echo Error: Failed to install pysim-otaman-server.
+    echo Error: Failed to install pysim-simple-server.
     pause
     exit /b 1
 )

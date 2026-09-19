@@ -1,6 +1,6 @@
 {
-  "name": "OTAMan",
-  "short_name": "OTAMan",
+  "name": "SIMple",
+  "short_name": "SIMple",
   "description": "Offline APDU helper for SIM/USIM/RAM commands",
   "start_url": "index.html",
   "display": "standalone",

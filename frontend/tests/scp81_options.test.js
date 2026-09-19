@@ -167,9 +167,9 @@ test('load/persist/reset round-trip through localStorage', () => {
 		'opt-targeted-app': '//aid/A000000151000000'
 	});
 	scp81OptionsPersist();
-	assert.ok(store['otaman_scp81_opts'].includes('"chunkSize":100'));
-	assert.ok(store['otaman_scp81_opts'].includes('"targetedAppOn":true'));
-	assert.ok(!store['otaman_scp81_opts'].includes('keepAlive'));
+	assert.ok(store['simple_scp81_opts'].includes('"chunkSize":100'));
+	assert.ok(store['simple_scp81_opts'].includes('"targetedAppOn":true'));
+	assert.ok(!store['simple_scp81_opts'].includes('keepAlive'));
 	// a reload restores the saved setup
 	setup({});
 	scp81OptionsLoad();
@@ -184,7 +184,7 @@ test('load/persist/reset round-trip through localStorage', () => {
 	assert.strictEqual(get('opt-targeted-app').value, '//aid/A000000151000000');
 	// reset clears the saved entry and restores the defaults
 	scp81OptionsReset();
-	assert.ok(!('otaman_scp81_opts' in store));
+	assert.ok(!('simple_scp81_opts' in store));
 	scp81OptionsLoad();
 	assert.strictEqual(get('opt-chunked').checked, true);
 	assert.strictEqual(get('opt-next-uri').checked, true);

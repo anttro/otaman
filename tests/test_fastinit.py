@@ -15,8 +15,8 @@ if str(PY_SIM) not in sys.path:
 from pySim.exceptions import SwMatchError
 from pySim.ts_102_221 import CardProfileUICC
 
-import pysim_otaman_server.fastinit as fastinit
-from pysim_otaman_server.fastinit import (
+import pysim_simple_server.fastinit as fastinit
+from pysim_simple_server.fastinit import (
     FastRuntimeState,
     do_reset_fast,
     pick_profile_no_reset,

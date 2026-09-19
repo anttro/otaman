@@ -1,4 +1,4 @@
-# pysim-otaman-server — HTTP API reference
+# pysim-simple-server — HTTP API reference
 
 The server exposes a JSON HTTP API under `/api/*`. All responses carry
 `Access-Control-Allow-Origin: *` (plus `Access-Control-Allow-Private-Network: true`
@@ -6,7 +6,7 @@ on the preflight), so the API is reachable from a separately-hosted PWA.
 
 ## Version compatibility
 
-| Server | PWA (OTAMan) | Status |
+| Server | PWA (SIMple) | Status |
 |--------|-------------|--------|
 | 1.x.x | 1.x.x | ✅ Compatible |
 | 0.x.x | 1.x.x | ❌ Outdated — update server |

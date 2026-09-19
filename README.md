@@ -1,8 +1,8 @@
-# OTAMan — SIM OTA toolkit: PWA + local card server
+# SIMple — SIM OTA toolkit: PWA + local card server
 
-OTAMan is an offline HTML/JS PWA for building APDU commands (SIM, USIM, GlobalPlatform RAM), assembling SCP80 secured packets per ETSI TS 102 225, and constructing Expanded Remote Application data format APDU per ETSI TS 102 226. A bundled [`pysim-otaman-server`](pysim_otaman_server/) exposes a local HTTP API over pySim for live card operations: file manager, raw APDU, SIM Toolkit menu browsing, and OTA (SCP80) delivery.
+SIMple is an offline HTML/JS PWA for building APDU commands (SIM, USIM, GlobalPlatform RAM), assembling SCP80 secured packets per ETSI TS 102 225, and constructing Expanded Remote Application data format APDU per ETSI TS 102 226. A bundled [`pysim-simple-server`](pysim_simple_server/) exposes a local HTTP API over pySim for live card operations: file manager, raw APDU, SIM Toolkit menu browsing, and OTA (SCP80) delivery.
 
-**Demo:** [otaman.atroshin.ru](https://otaman.atroshin.ru) — the PWA alone, for experimenting. Install the server (below) for card-reader functions.
+**Demo:** [simple.atroshin.ru](https://simple.atroshin.ru) — the PWA alone, for experimenting. Install the server (below) for card-reader functions.
 
 ## Quick start
 
@@ -11,8 +11,8 @@ OTAMan is an offline HTML/JS PWA for building APDU commands (SIM, USIM, GlobalPl
 **Full (PWA + card server):**
 
 ```sh
-git clone https://github.com/anttro/otaman.git
-cd otaman
+git clone https://github.com/anttro/simple.git
+cd simple
 ./setup.sh     # or setup.bat on Windows — creates .venv, installs pysim + server
 ./start.sh     # or start.bat — starts the server (it serves the PWA too)
 ```
@@ -480,9 +480,9 @@ Delete confirms via a browser prompt before sending the GP `DELETE` command via 
 
 ## Card Reader (pySim integration)
 
-Connects to the bundled [`pysim-otaman-server`](pysim_otaman_server/) for live card operations.
+Connects to the bundled [`pysim-simple-server`](pysim_simple_server/) for live card operations.
 
-> **Browser restriction:** when the PWA is served from a public HTTPS host, reaching the local server (`http://127.0.0.1:8080`) requires two things: the server must send `Access-Control-Allow-Private-Network: true` (pysim-otaman-server ≥ 1.6.1 does this automatically), and the browser must be allowed to access the local network — in Chrome/Edge/Vivaldi: Site settings → Local network access → allow the site (or accept the permission prompt). Without the browser permission, the request to `127.0.0.1` is blocked before any preflight is sent.
+> **Browser restriction:** when the PWA is served from a public HTTPS host, reaching the local server (`http://127.0.0.1:8080`) requires two things: the server must send `Access-Control-Allow-Private-Network: true` (pysim-simple-server ≥ 1.6.1 does this automatically), and the browser must be allowed to access the local network — in Chrome/Edge/Vivaldi: Site settings → Local network access → allow the site (or accept the permission prompt). Without the browser permission, the request to `127.0.0.1` is blocked before any preflight is sent.
 
 ### File Browser
 
@@ -605,7 +605,7 @@ The state line shows the listener, the negotiated identity and live channels (by
 
 ### Scripts
 
-The **Scripts** pill manages named APDU lists stored in `localStorage` (`otaman_scripts`) and sent to the server when a listener starts. Each list is a sequence of hex C-APDUs, one per line (`#`/`;` comments allowed). **New** creates one from a template:
+The **Scripts** pill manages named APDU lists stored in `localStorage` (`simple_scripts`) and sent to the server when a listener starts. Each list is a sequence of hex C-APDUs, one per line (`#`/`;` comments allowed). **New** creates one from a template:
 
 | Template | What it builds |
 |---|---|
@@ -618,7 +618,7 @@ The table lists each script with kind, APDU count and creation time; **Edit** op
 
 ## PWA
 
-OTAMan is a Progressive Web App and can be installed for offline use. Use the **INSTALL PWA** button in the header, or use the browser's install prompt.
+SIMple is a Progressive Web App and can be installed for offline use. Use the **INSTALL PWA** button in the header, or use the browser's install prompt.
 
 - Service worker pre-caches all assets on first visit
 - App icons at 192×192 and 512×512
@@ -631,9 +631,9 @@ A dark theme is included. It follows the system preference and can be toggled ma
 
 The interface is in English with Russian support. The language is detected from `navigator.language`; the header toggle (EN/RU) stores the choice in `localStorage`. Switching the language also re-renders visible dynamic views (profile lists, check reports, snapshots, cards, proactive views).
 
-## Server (pysim-otaman-server)
+## Server (pysim-simple-server)
 
-The bundled Python server wraps [pySim](https://osmocom.org/projects/pysim/wiki) and serves both the OTAMan PWA (from `frontend/`) and a JSON API under `/api/*`.
+The bundled Python server wraps [pySim](https://osmocom.org/projects/pysim/wiki) and serves both the SIMple PWA (from `frontend/`) and a JSON API under `/api/*`.
 
 ### Prerequisites
 
@@ -657,7 +657,7 @@ python3 -m venv .venv
 source .venv/bin/activate          # Linux/macOS   (Windows: .venv\Scripts\activate)
 pip install git+https://github.com/osmocom/pysim.git
 pip install -e .                   # editable — serves frontend/ from the source tree
-pysim-otaman-server --http-port 8080
+pysim-simple-server --http-port 8080
 ```
 
 ### CLI options
@@ -699,7 +699,7 @@ The UI is in English with Russian language support. Language is detected from th
 
 ## Version compatibility
 
-| PWA (OTAMan) | Server | Status |
+| PWA (SIMple) | Server | Status |
 |-------------|--------|--------|
 | 1.x.x | 1.x.x | ✅ Compatible |
 | 1.x.x | 0.x.x | ❌ Outdated — update server |

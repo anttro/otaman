@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OTAMan — Справка</title>
+<title>SIMple — Справка</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-neutral-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200">
@@ -16,12 +16,12 @@
 </aside>
 
 <main class="flex-1 min-w-0 px-6 py-8">
-	<h1 class="text-2xl font-bold text-heading mb-6">OTAMan <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">Документация</span></h1>
+	<h1 class="text-2xl font-bold text-heading mb-6">SIMple <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">Документация</span></h1>
 <section class="mb-10">
 	<h2 id="overview" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">1. Обзор</h2>
-	<p class="mb-3">OTAMan — Progressive Web App (PWA) для построения APDU-команд, сборки защищённых пакетов SCP80, просмотра меню SIM Toolkit (STK) и симуляции реальной сетевой среды для тестирования SIM/USIM/UICC-карт через PC/SC-ридер.</p>
-	<p class="mb-3">Приложение — один статический файл <code class="font-mono text-sm">index.html</code>. Все вычисления выполняются в браузере; доступ к карте — через локальный HTTP-сервер (<code class="font-mono text-sm">pysim-otaman-server</code>), оборачивающий библиотеку <a href="https://osmocom.org/projects/pysim" class="text-blue-600 dark:text-blue-400 hover:underline">pySim</a>.</p>
-	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">Браузер (OTAMan PWA) &rarr; HTTP :8080 &rarr; pysim-otaman-server &rarr; pySim &rarr; PC/SC &rarr; ридер &rarr; UICC/SIM</pre>
+	<p class="mb-3">SIMple — Progressive Web App (PWA) для построения APDU-команд, сборки защищённых пакетов SCP80, просмотра меню SIM Toolkit (STK) и симуляции реальной сетевой среды для тестирования SIM/USIM/UICC-карт через PC/SC-ридер.</p>
+	<p class="mb-3">Приложение — один статический файл <code class="font-mono text-sm">index.html</code>. Все вычисления выполняются в браузере; доступ к карте — через локальный HTTP-сервер (<code class="font-mono text-sm">pysim-simple-server</code>), оборачивающий библиотеку <a href="https://osmocom.org/projects/pysim" class="text-blue-600 dark:text-blue-400 hover:underline">pySim</a>.</p>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">Браузер (SIMple PWA) &rarr; HTTP :8080 &rarr; pysim-simple-server &rarr; pySim &rarr; PC/SC &rarr; ридер &rarr; UICC/SIM</pre>
 	<p class="mb-3">Стандарты, на которые опирается приложение:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li>ETSI TS 102 221 — интерфейс UICC-терминал (CLA 00, файлы USIM)</li>
@@ -331,7 +331,7 @@
 	<p class="mb-2"><strong>Сценарий</strong> выбирает список команд, отдаваемый в сессии — <strong>Нет</strong> (оставить настроенный на сервере скрипт) или один из скриптов подвкладки <strong>&laquo;Скрипты&raquo;</strong>; выбранный список передаётся серверу при старте слушателя.</p>
 	<p class="text-sm mb-3">Строка состояния показывает слушатель, согласованный идентификатор и активные каналы (байты in/out). Панель <strong>Script results (R-APDUs)</strong> перечисляет каждый отданный C-APDU с его R-APDU/SW и прогрессом <em>done/total</em>; журнал <strong>HTTP OTA log</strong> фиксирует OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA и каждый шаг TLS/HTTP/скрипта (<code class="font-mono text-sm">tls-handshake</code>, <code class="font-mono text-sm">tls-request</code>, <code class="font-mono text-sm">script-send</code>, <code class="font-mono text-sm">script-rapdu</code>, <code class="font-mono text-sm">script-page</code>, <code class="font-mono text-sm">script-done</code>, <code class="font-mono text-sm">data-available</code>, <code class="font-mono text-sm">peer-close</code>), кнопка <strong>Clear</strong> очищает его.</p>
 	<h3 id="scp81-scripts" class="text-lg font-medium mb-2">5.2 Скрипты</h3>
-	<p class="text-sm mb-2">Именованные списки APDU хранятся локально (<code class="font-mono text-sm">otaman_scripts</code>) и передаются серверу при старте слушателя. Каждый список — последовательность hex C-APDU (по одной в строке; допускаются комментарии <code class="font-mono text-sm">#</code>/<code class="font-mono text-sm">;</code>). Кнопка <strong>Новый</strong> создаёт список из шаблона:</p>
+	<p class="text-sm mb-2">Именованные списки APDU хранятся локально (<code class="font-mono text-sm">simple_scripts</code>) и передаются серверу при старте слушателя. Каждый список — последовательность hex C-APDU (по одной в строке; допускаются комментарии <code class="font-mono text-sm">#</code>/<code class="font-mono text-sm">;</code>). Кнопка <strong>Новый</strong> создаёт список из шаблона:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Empty</strong> — начать с пустого списка.</li>
 		<li><strong>Explore</strong> — эталонная административная последовательность (<code class="font-mono text-sm">GET DATA FF21</code>, листинги GET STATUS ISD/ELF/приложений, <code class="font-mono text-sm">GET DATA 0085</code>); длинные листинги автоматически продолжаются страницами <code class="font-mono text-sm">SW 6310/CAFE</code>.</li>
@@ -343,7 +343,7 @@
 
 <section class="mb-10">
 	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Вкладка &laquo;Картридер&raquo; (pySim)</h2>
-	<p class="mb-3">Подключение к локальному <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> для работы с картой: введите URL сервера (по умолчанию <code class="font-mono text-sm">http://127.0.0.1:8080</code>) и нажмите <strong>Подключиться</strong>. Область статуса показывает состояние ридера/карты, а <strong>Подключить карту</strong> (пере)инициализирует карту после вставки. Подвкладки: <strong>Файловый менеджер</strong>, <strong>Командная строка pySim</strong> и <strong>Отправка APDU</strong>. <strong>&laquo;Профайлер&raquo;</strong> и <strong>&laquo;Симулятор телефона&raquo;</strong> — отдельные вкладки верхнего уровня.</p>
+	<p class="mb-3">Подключение к локальному <a href="https://github.com/anttro/simple" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-simple-server</a> для работы с картой: введите URL сервера (по умолчанию <code class="font-mono text-sm">http://127.0.0.1:8080</code>) и нажмите <strong>Подключиться</strong>. Область статуса показывает состояние ридера/карты, а <strong>Подключить карту</strong> (пере)инициализирует карту после вставки. Подвкладки: <strong>Файловый менеджер</strong>, <strong>Командная строка pySim</strong> и <strong>Отправка APDU</strong>. <strong>&laquo;Профайлер&raquo;</strong> и <strong>&laquo;Симулятор телефона&raquo;</strong> — отдельные вкладки верхнего уровня.</p>
 
 	<h3 id="file-manager" class="text-lg font-medium mb-2">6.1 Файловый менеджер</h3>
 	<p class="text-sm mb-2">Дерево файловой системы отображается слева; выбор файла открывает панель деталей справа. Элементы сгруппированы: DF выше EF, сортировка по <strong>FID</strong> или символьному <strong>имени</strong> (пиллы и кнопка <strong>«Проверить все файлы»</strong> закреплены над прокручиваемым деревом; выбор сохраняется в <code class="font-mono text-sm">localStorage</code>). При выборе файла над содержимым также показываются FID, тип файла, размер / структура записей и декодированный FCI.</p>
@@ -478,7 +478,7 @@
 
 <section class="mb-10">
 	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">9. Установка сервера</h2>
-	<p class="mb-3">Для работы с картой (вкладка &laquo;Картридер&raquo;, &laquo;Симулятор телефона&raquo;, доставка OTA) нужен локальный <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — встроенный в OTAMan HTTP-сервер, оборачивающий pySim, работающий с ридером через PC/SC или serial и раздающий сам PWA (откройте <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
+	<p class="mb-3">Для работы с картой (вкладка &laquo;Картридер&raquo;, &laquo;Симулятор телефона&raquo;, доставка OTA) нужен локальный <a href="https://github.com/anttro/simple" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-simple-server</a> — встроенный в SIMple HTTP-сервер, оборачивающий pySim, работающий с ридером через PC/SC или serial и раздающий сам PWA (откройте <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
 
 	<h3 id="prerequisites" class="text-lg font-medium mb-2">9.1 Требования</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
@@ -489,15 +489,15 @@
 	</ul>
 
 	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">9.2 Быстрый старт — Linux / macOS</h3>
-	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
-cd otaman
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/simple.git
+cd simple
 chmod +x setup.sh start.sh
 ./setup.sh          # создаёт .venv, устанавливает pysim + сервер (однократно)
 ./start.sh          # запускает сервер (PWA + API, автоопределение ридера)</pre>
 
 	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">9.3 Быстрый старт — Windows</h3>
-	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
-cd otaman
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/simple.git
+cd simple
 setup.bat           # создаёт .venv, устанавливает pysim + сервер (однократно)
 start.bat           # запускает сервер (PWA + API)</pre>
 
@@ -528,19 +528,19 @@ source .venv/bin/activate   # Linux/macOS
 # Установить pysim
 pip install git+https://github.com/osmocom/pysim.git
 
-# Установить pysim-otaman-server (editable — раздаёт встроенный PWA)
+# Установить pysim-simple-server (editable — раздаёт встроенный PWA)
 pip install -e .
 
 # Запустить сервер (PWA + API)
-pysim-otaman-server --http-port 8080</pre>
+pysim-simple-server --http-port 8080</pre>
 	<p class="text-sm mb-3">Подключите PC/SC-ридер с SIM-картой и откройте <code class="font-mono text-sm">http://127.0.0.1:8080</code> — PWA и API на одном origin, поэтому CORS не требуется.</p>
-	<p class="text-sm mb-3">Если PWA раздаётся с публичного HTTPS-хоста (например, <code class="font-mono text-sm">https://otaman.example.com</code>), для доступа к локальному серверу карт нужны два условия: (1) сервер отвечает на preflight заголовком <code class="font-mono text-sm">Access-Control-Allow-Private-Network: true</code> (pysim-otaman-server &ge; 1.6.1 делает это автоматически), и (2) браузеру должно быть разрешено обращаться к локальной сети &mdash; в Chrome/Edge/Vivaldi: Настройки сайта &rarr; Доступ к локальной сети &rarr; разрешить сайт (или подтвердить запрос). Без разрешения браузера запрос к <code class="font-mono text-sm">127.0.0.1</code> блокируется ещё до отправки preflight.</p>
+	<p class="text-sm mb-3">Если PWA раздаётся с публичного HTTPS-хоста (например, <code class="font-mono text-sm">https://simple.example.com</code>), для доступа к локальному серверу карт нужны два условия: (1) сервер отвечает на preflight заголовком <code class="font-mono text-sm">Access-Control-Allow-Private-Network: true</code> (pysim-simple-server &ge; 1.6.1 делает это автоматически), и (2) браузеру должно быть разрешено обращаться к локальной сети &mdash; в Chrome/Edge/Vivaldi: Настройки сайта &rarr; Доступ к локальной сети &rarr; разрешить сайт (или подтвердить запрос). Без разрешения браузера запрос к <code class="font-mono text-sm">127.0.0.1</code> блокируется ещё до отправки preflight.</p>
 
 
 <section class="mb-10">
 	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">10. Совместимость версий</h2>
 	<table class="w-full text-sm mb-3 border-collapse">
-		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (OTAMan)</th><th class="text-left py-1 px-2">Сервер</th><th class="text-left py-1 px-2">Статус</th></tr></thead>
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (SIMple)</th><th class="text-left py-1 px-2">Сервер</th><th class="text-left py-1 px-2">Статус</th></tr></thead>
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2">&#9989; Совместимы</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">0.x.x</td><td class="py-1 px-2">&#10060; Устарел &mdash; обновите сервер</td></tr>

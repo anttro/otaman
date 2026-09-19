@@ -20,8 +20,8 @@ PY_SIM = PROJECTS / 'pysim'
 if str(PY_SIM) not in sys.path:
     sys.path.insert(0, str(PY_SIM))
 
-from pysim_otaman_server import httpota
-import pysim_otaman_server.server as server
+from pysim_simple_server import httpota
+import pysim_simple_server.server as server
 
 
 OPEN_LOCALHOST = bytes.fromhex(
@@ -480,7 +480,7 @@ if __name__ == '__main__':
         # A >127-byte channel data TLV must use the BER long form (0x81 len),
         # as the reference terminal traces do (`36 81 ed` for 237 bytes).
         import types
-        server = __import__('pysim_otaman_server.server', fromlist=['x'])
+        server = __import__('pysim_simple_server.server', fromlist=['x'])
         big = bytes(range(256)) * 1  # 256 bytes; take a slice below
         ch = types.SimpleNamespace(rx=bytearray(b'\xAA' * 237))
         class FakeBip:

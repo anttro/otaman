@@ -1,8 +1,8 @@
-# OTAMan — SIM OTA toolkit: PWA + локальный сервер карт
+# SIMple — SIM OTA toolkit: PWA + локальный сервер карт
 
-OTAMan — автономный offline-PWA (HTML/JS) для создания APDU-команд (SIM, USIM, GlobalPlatform RAM), сборки защищённых пакетов SCP80 по ETSI TS 102 225 и построения Expanded Remote Application data format APDU по ETSI TS 102 226. В комплекте — [`pysim-otaman-server`](pysim_otaman_server/) — локальный HTTP-сервер поверх pySim для работы с картой: файловый менеджер, сырые APDU, меню SIM Toolkit и доставка OTA.
+SIMple — автономный offline-PWA (HTML/JS) для создания APDU-команд (SIM, USIM, GlobalPlatform RAM), сборки защищённых пакетов SCP80 по ETSI TS 102 225 и построения Expanded Remote Application data format APDU по ETSI TS 102 226. В комплекте — [`pysim-simple-server`](pysim_simple_server/) — локальный HTTP-сервер поверх pySim для работы с картой: файловый менеджер, сырые APDU, меню SIM Toolkit и доставка OTA.
 
-**Демо:** [otaman.atroshin.ru](https://otaman.atroshin.ru) — только PWA, для экспериментов. Для функций картридера установите сервер (ниже).
+**Демо:** [simple.atroshin.ru](https://simple.atroshin.ru) — только PWA, для экспериментов. Для функций картридера установите сервер (ниже).
 
 ## Быстрый старт
 
@@ -11,8 +11,8 @@ OTAMan — автономный offline-PWA (HTML/JS) для создания AP
 **Полная установка (PWA + сервер карт):**
 
 ```sh
-git clone https://github.com/anttro/otaman.git
-cd otaman
+git clone https://github.com/anttro/simple.git
+cd simple
 ./setup.sh     # или setup.bat в Windows — создаёт .venv, ставит pysim + сервер
 ./start.sh     # или start.bat — запускает сервер (он же раздаёт PWA)
 ```
@@ -454,9 +454,9 @@ Delivery PoR (SPI2 `01`) проще — карта возвращает PoR на
 
 ## Card Reader (интеграция с pySim)
 
-Подключение к встроенному [`pysim-otaman-server`](pysim_otaman_server/) для работы с картой.
+Подключение к встроенному [`pysim-simple-server`](pysim_simple_server/) для работы с картой.
 
-> **Ограничение браузера:** если PWA раздаётся с публичного HTTPS-хоста, для доступа к локальному серверу (`http://127.0.0.1:8080`) нужны два условия: сервер должен отправлять `Access-Control-Allow-Private-Network: true` (pysim-otaman-server ≥ 1.6.1 делает это автоматически), и браузеру должно быть разрешено обращаться к локальной сети — в Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → разрешить сайт (или подтвердить запрос). Без разрешения браузера запрос к `127.0.0.1` блокируется ещё до отправки preflight.
+> **Ограничение браузера:** если PWA раздаётся с публичного HTTPS-хоста, для доступа к локальному серверу (`http://127.0.0.1:8080`) нужны два условия: сервер должен отправлять `Access-Control-Allow-Private-Network: true` (pysim-simple-server ≥ 1.6.1 делает это автоматически), и браузеру должно быть разрешено обращаться к локальной сети — в Chrome/Edge/Vivaldi: Настройки сайта → Доступ к локальной сети → разрешить сайт (или подтвердить запрос). Без разрешения браузера запрос к `127.0.0.1` блокируется ещё до отправки preflight.
 
 ### Файловый менеджер
 
@@ -575,7 +575,7 @@ Delivery PoR (SPI2 `01`) проще — карта возвращает PoR на
 
 ### Скрипты
 
-Подвкладка **Scripts** управляет именованными списками APDU, которые хранятся в `localStorage` (`otaman_scripts`) и передаются серверу при старте слушателя. Каждый список — последовательность hex C-APDU, по одной в строке (допускаются комментарии `#`/`;`). Кнопка **New** создаёт список из шаблона:
+Подвкладка **Scripts** управляет именованными списками APDU, которые хранятся в `localStorage` (`simple_scripts`) и передаются серверу при старте слушателя. Каждый список — последовательность hex C-APDU, по одной в строке (допускаются комментарии `#`/`;`). Кнопка **New** создаёт список из шаблона:
 
 | Шаблон | Что строит |
 |---|---|
@@ -588,7 +588,7 @@ Delivery PoR (SPI2 `01`) проще — карта возвращает PoR на
 
 ## PWA
 
-OTAMan — Progressive Web App. Можно установить для offline-использования через кнопку **INSTALL PWA** или через браузер.
+SIMple — Progressive Web App. Можно установить для offline-использования через кнопку **INSTALL PWA** или через браузер.
 
 - Service worker кеширует все ресурсы при первом посещении
 - Иконки 192×192 и 512×512
@@ -603,7 +603,7 @@ OTAMan — Progressive Web App. Можно установить для offline-�
 
 ## Совместимость версий
 
-| PWA (OTAMan) | Сервер | Статус |
+| PWA (SIMple) | Сервер | Статус |
 |---|---|---|
 | 1.x.x | 1.x.x | ✅ Совместимы |
 | 1.x.x | 0.x.x | ❌ Сервер устарел |
@@ -613,7 +613,7 @@ PWA проверяет версию сервера при подключении
 
 ---
 
-## Сервер (pysim-otaman-server)
+## Сервер (pysim-simple-server)
 
 Встроенный Python-сервер оборачивает [pySim](https://osmocom.org/projects/pysim/wiki) и раздаёт как PWA (из `frontend/`), так и JSON API по `/api/*`.
 
@@ -639,7 +639,7 @@ python3 -m venv .venv
 source .venv/bin/activate          # Linux/macOS   (Windows: .venv\Scripts\activate)
 pip install git+https://github.com/osmocom/pysim.git
 pip install -e .                   # editable — раздаёт frontend/ из исходного дерева
-pysim-otaman-server --http-port 8080
+pysim-simple-server --http-port 8080
 ```
 
 ### Параметры CLI

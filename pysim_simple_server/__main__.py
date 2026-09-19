@@ -33,11 +33,11 @@ def main():
     _server_start = time.time()
     mod = load_pysim_app()
     parser = mod.option_parser
-    parser.description = 'pysim-otaman-server — HTTP API for pysim'
+    parser.description = 'pysim-simple-server — HTTP API for pysim'
     parser.add_argument('--http-host', default='127.0.0.1', help='Bind address (default: 127.0.0.1)')
     parser.add_argument('--http-port', type=int, default=8080, help='Bind port (default: 8080)')
     parser.add_argument('--web-dir', default=_default_web_dir(), metavar='PATH',
-                        help='Directory with the OTAMan PWA static files to serve (default: <repo>/frontend)')
+                        help='Directory with the SIMple PWA static files to serve (default: <repo>/frontend)')
     parser.add_argument('--log-requests', action='store_true', default=False, help='Log request/response payloads to stderr')
     parser.add_argument('--sms-oa', default='12345', metavar='DIGITS',
                         help='TP-Originating-Address (SMSC number) for the SMS-DELIVER TPDU (default: 12345)')
@@ -222,14 +222,14 @@ def main():
     server.iccid = iccid
     server.equipping = False
     # Set server reference for polling timer and mark the card session state
-    import pysim_otaman_server.server
-    pysim_otaman_server.server._server_ref = server
-    pysim_otaman_server.server._CARD_CONNECTED = card is not None
+    import pysim_simple_server.server
+    pysim_simple_server.server._server_ref = server
+    pysim_simple_server.server._CARD_CONNECTED = card is not None
     if opts.poll_interval is not None:
-        pysim_otaman_server.server._set_poll_interval(opts.poll_interval)
+        pysim_simple_server.server._set_poll_interval(opts.poll_interval)
     # Auto-enable polling if card initialized successfully (unless interval is 0)
     if server.scc and server.card and opts.poll_interval != 0:
-        pysim_otaman_server.server._poll_enable()
+        pysim_simple_server.server._poll_enable()
     # Start presence monitoring only after the startup init: pyscard reports an
     # already-present card as "added" on the first pass, and we must not
     # auto-equip over a session we just initialized. If startup init failed,
@@ -237,8 +237,8 @@ def main():
     if sl is not None and getattr(sl, '_reader', None) is not None:
         start_card_monitor(str(sl._reader))
     print("─" * 70)
-    print("  pysim-otaman-server v%s listening on http://%s:%s" % (VERSION, opts.http_host, opts.http_port))
-    print("  Open http://%s:%s in your browser for the OTAMan UI (served by this server)."
+    print("  pysim-simple-server v%s listening on http://%s:%s" % (VERSION, opts.http_host, opts.http_port))
+    print("  Open http://%s:%s in your browser for the SIMple UI (served by this server)."
           % (opts.http_host, opts.http_port))
     print("─" * 70)
     try:

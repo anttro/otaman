@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OTAMan — Help</title>
+<title>SIMple — Help</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-neutral-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200">
@@ -16,12 +16,12 @@
 </aside>
 
 <main class="flex-1 min-w-0 px-6 py-8">
-	<h1 class="text-2xl font-bold text-heading mb-6">OTAMan <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">Documentation</span></h1>
+	<h1 class="text-2xl font-bold text-heading mb-6">SIMple <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">Documentation</span></h1>
 <section class="mb-10">
 	<h2 id="overview" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">1. Overview</h2>
-	<p class="mb-3">OTAMan is a Progressive Web App (PWA) for building APDU commands, assembling SCP80 secured packets, browsing the SIM Toolkit (STK) menu, and simulating a real network environment against a SIM/USIM/UICC card via a PC/SC reader.</p>
-	<p class="mb-3">The application is a single static <code class="font-mono text-sm">index.html</code> file. All computation runs in the browser; the card is accessed through a local HTTP server (<code class="font-mono text-sm">pysim-otaman-server</code>) that wraps the <a href="https://osmocom.org/projects/pysim" class="text-blue-600 dark:text-blue-400 hover:underline">pySim</a> library.</p>
-	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">Browser (OTAMan PWA) &rarr; HTTP :8080 &rarr; pysim-otaman-server &rarr; pySim &rarr; PC/SC &rarr; card reader &rarr; UICC/SIM</pre>
+	<p class="mb-3">SIMple is a Progressive Web App (PWA) for building APDU commands, assembling SCP80 secured packets, browsing the SIM Toolkit (STK) menu, and simulating a real network environment against a SIM/USIM/UICC card via a PC/SC reader.</p>
+	<p class="mb-3">The application is a single static <code class="font-mono text-sm">index.html</code> file. All computation runs in the browser; the card is accessed through a local HTTP server (<code class="font-mono text-sm">pysim-simple-server</code>) that wraps the <a href="https://osmocom.org/projects/pysim" class="text-blue-600 dark:text-blue-400 hover:underline">pySim</a> library.</p>
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">Browser (SIMple PWA) &rarr; HTTP :8080 &rarr; pysim-simple-server &rarr; pySim &rarr; PC/SC &rarr; card reader &rarr; UICC/SIM</pre>
 	<p class="mb-3">Standards referenced across the application:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li>ETSI TS 102 221 — UICC-Terminal interface (CLA 00, USIM files)</li>
@@ -331,7 +331,7 @@
 	<p class="mb-2"><strong>Script</strong> selects the command list served over the session — <strong>None</strong> (leave the server's configured script) or one of the scripts from the <strong>Scripts</strong> pill; the chosen list is sent to the server when the listener starts.</p>
 	<p class="text-sm mb-3">The state line shows the listener, the negotiated identity and live channels (bytes in/out). <strong>Script results (R-APDUs)</strong> lists each served C-APDU with its R-APDU/SW and a <em>done/total</em> progress; the <strong>HTTP OTA log</strong> records OPEN/CLOSE CHANNEL, SEND/RECEIVE DATA and every TLS/HTTP/script step (<code class="font-mono text-sm">tls-handshake</code>, <code class="font-mono text-sm">tls-request</code>, <code class="font-mono text-sm">script-send</code>, <code class="font-mono text-sm">script-rapdu</code>, <code class="font-mono text-sm">script-page</code>, <code class="font-mono text-sm">script-done</code>, <code class="font-mono text-sm">data-available</code>, <code class="font-mono text-sm">peer-close</code>), with <strong>Clear</strong>.</p>
 	<h3 id="scp81-scripts" class="text-lg font-medium mb-2">5.2 Scripts</h3>
-	<p class="text-sm mb-2">Named APDU lists stored locally (<code class="font-mono text-sm">otaman_scripts</code>) and sent to the server when a listener starts. Each list is a sequence of hex C-APDUs (one per line; <code class="font-mono text-sm">#</code>/<code class="font-mono text-sm">;</code> comments allowed). <strong>New</strong> creates one from a template:</p>
+	<p class="text-sm mb-2">Named APDU lists stored locally (<code class="font-mono text-sm">simple_scripts</code>) and sent to the server when a listener starts. Each list is a sequence of hex C-APDUs (one per line; <code class="font-mono text-sm">#</code>/<code class="font-mono text-sm">;</code> comments allowed). <strong>New</strong> creates one from a template:</p>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
 		<li><strong>Empty</strong> — start from scratch.</li>
 		<li><strong>Explore</strong> — the reference administration sequence (<code class="font-mono text-sm">GET DATA FF21</code>, GET STATUS ISD/ELF/application listings, <code class="font-mono text-sm">GET DATA 0085</code>); long listings auto-continue through the <code class="font-mono text-sm">SW 6310/CAFE</code> pages.</li>
@@ -343,7 +343,7 @@
 
 <section class="mb-10">
 	<h2 id="card-reader" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">6. Card reader (pySim) tab</h2>
-	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> for live card operations: enter the server URL (default <code class="font-mono text-sm">http://127.0.0.1:8080</code>) and press <strong>Connect</strong>. The status area shows the reader/card state, and <strong>Equip card</strong> (re)initializes the card after insertion. Sub-tabs: <strong>File manager</strong>, <strong>pySim command line</strong>, and <strong>Raw APDU</strong>. The <strong>Profiler</strong> and <strong>Phone simulator</strong> are separate top-level tabs.</p>
+	<p class="mb-3">Connects to a local <a href="https://github.com/anttro/simple" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-simple-server</a> for live card operations: enter the server URL (default <code class="font-mono text-sm">http://127.0.0.1:8080</code>) and press <strong>Connect</strong>. The status area shows the reader/card state, and <strong>Equip card</strong> (re)initializes the card after insertion. Sub-tabs: <strong>File manager</strong>, <strong>pySim command line</strong>, and <strong>Raw APDU</strong>. The <strong>Profiler</strong> and <strong>Phone simulator</strong> are separate top-level tabs.</p>
 
 	<h3 id="file-manager" class="text-lg font-medium mb-2">6.1 File manager</h3>
 	<p class="text-sm mb-2">The file system tree is displayed on the left; selecting a file opens its detail pane on the right. Entries are grouped with DFs above EFs and sorted by <strong>FID</strong> or symbolic <strong>Name</strong> (pills pinned above the scrolling tree together with <strong>Probe all files</strong>; the choice is remembered in <code class="font-mono text-sm">localStorage</code>). Selecting a file also shows its FID, file type, size / record layout and the decoded FCI above the content pane.</p>
@@ -478,7 +478,7 @@
 
 <section class="mb-10">
 	<h2 id="server" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">9. Server installation</h2>
-	<p class="mb-3">Live card operations (Card reader tab, Phone simulator, OTA delivery) require the local <a href="https://github.com/anttro/otaman" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-otaman-server</a> — a small HTTP server bundled with OTAMan that wraps pySim, talks to the reader over PC/SC or serial, and also serves the PWA itself (open <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
+	<p class="mb-3">Live card operations (Card reader tab, Phone simulator, OTA delivery) require the local <a href="https://github.com/anttro/simple" class="text-blue-600 dark:text-blue-400 hover:underline">pysim-simple-server</a> — a small HTTP server bundled with SIMple that wraps pySim, talks to the reader over PC/SC or serial, and also serves the PWA itself (open <code class="font-mono text-sm">http://127.0.0.1:8080</code>).</p>
 
 	<h3 id="prerequisites" class="text-lg font-medium mb-2">9.1 Prerequisites</h3>
 	<ul class="list-disc list-inside text-sm space-y-1 mb-3">
@@ -489,15 +489,15 @@
 	</ul>
 
 	<h3 id="quickstart-linux" class="text-lg font-medium mb-2">9.2 Quick start — Linux / macOS</h3>
-	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
-cd otaman
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/simple.git
+cd simple
 chmod +x setup.sh start.sh
 ./setup.sh          # creates .venv, installs pysim + server (run once)
 ./start.sh          # starts the server (serves PWA + API, auto-detects reader)</pre>
 
 	<h3 id="quickstart-windows" class="text-lg font-medium mb-2">9.3 Quick start — Windows</h3>
-	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/otaman.git
-cd otaman
+	<pre class="font-mono text-xs bg-gray-100 dark:bg-slate-800 rounded p-3 mb-3">git clone https://github.com/anttro/simple.git
+cd simple
 setup.bat           # creates .venv, installs pysim + server (run once)
 start.bat           # starts the server (serves PWA + API)</pre>
 
@@ -528,19 +528,19 @@ source .venv/bin/activate   # Linux/macOS
 # Install pysim
 pip install git+https://github.com/osmocom/pysim.git
 
-# Install pysim-otaman-server (editable, so it serves the bundled PWA)
+# Install pysim-simple-server (editable, so it serves the bundled PWA)
 pip install -e .
 
 # Start the server (serves PWA + API)
-pysim-otaman-server --http-port 8080</pre>
+pysim-simple-server --http-port 8080</pre>
 	<p class="text-sm mb-3">Connect a PC/SC reader with a SIM card, then open <code class="font-mono text-sm">http://127.0.0.1:8080</code> — the PWA and API share one origin, so no CORS is involved.</p>
-	<p class="text-sm mb-3">If the PWA is served from a public HTTPS host (e.g. <code class="font-mono text-sm">https://otaman.example.com</code>), two things are required to reach a local card server: (1) the server must answer the preflight with <code class="font-mono text-sm">Access-Control-Allow-Private-Network: true</code> (pysim-otaman-server &ge; 1.6.1 does this automatically), and (2) the browser must be allowed to access the local network &mdash; in Chrome/Edge/Vivaldi: Site settings &rarr; Local network access &rarr; allow the site (or accept the permission prompt). Without the browser permission, the request to <code class="font-mono text-sm">127.0.0.1</code> is blocked before any preflight is sent.</p>
+	<p class="text-sm mb-3">If the PWA is served from a public HTTPS host (e.g. <code class="font-mono text-sm">https://simple.example.com</code>), two things are required to reach a local card server: (1) the server must answer the preflight with <code class="font-mono text-sm">Access-Control-Allow-Private-Network: true</code> (pysim-simple-server &ge; 1.6.1 does this automatically), and (2) the browser must be allowed to access the local network &mdash; in Chrome/Edge/Vivaldi: Site settings &rarr; Local network access &rarr; allow the site (or accept the permission prompt). Without the browser permission, the request to <code class="font-mono text-sm">127.0.0.1</code> is blocked before any preflight is sent.</p>
 
 
 <section class="mb-10">
 	<h2 id="compatibility" class="text-xl font-semibold mb-3 border-b border-gray-300 dark:border-slate-700 pb-1">10. Version compatibility</h2>
 	<table class="w-full text-sm mb-3 border-collapse">
-		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (OTAMan)</th><th class="text-left py-1 px-2">Server</th><th class="text-left py-1 px-2">Status</th></tr></thead>
+		<thead><tr class="border-b border-gray-300 dark:border-slate-700"><th class="text-left py-1 px-2">PWA (SIMple)</th><th class="text-left py-1 px-2">Server</th><th class="text-left py-1 px-2">Status</th></tr></thead>
 		<tbody>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2">&#9989; Compatible</td></tr>
 			<tr class="border-b border-gray-200 dark:border-slate-700"><td class="py-1 px-2 font-mono">1.x.x</td><td class="py-1 px-2 font-mono">0.x.x</td><td class="py-1 px-2">&#10060; Outdated &mdash; update server</td></tr>

@@ -19,8 +19,8 @@ PY_SIM = PROJECTS / 'pysim'
 if str(PY_SIM) not in sys.path:
     sys.path.insert(0, str(PY_SIM))
 
-from pysim_otaman_server import scp81
-import pysim_otaman_server.server as server
+from pysim_simple_server import scp81
+import pysim_simple_server.server as server
 
 PSK = bytes.fromhex('00112233445566778899aabbccddeeff')
 IDENT = '89012345678901234567'
@@ -194,7 +194,7 @@ class PskTlsServerTest(unittest.TestCase):
             tls = self._connect(srv)
             tls.sendall(b'POST /api/scp81 HTTP/1.1\r\nHost: 127.0.0.1\r\n'
                         b'X-Admin-Protocol: globalplatform-remote-admin/1.0\r\n'
-                        b'X-Admin-From: otaman\r\n\r\n')
+                        b'X-Admin-From: simple\r\n\r\n')
             reply = self._read_http(tls)
             self.assertIn(b'HTTP/1.1 200 OK', reply)
             self.assertIn(b'X-Admin-Next-URI: /api/scp81?req=1', reply)
@@ -1194,7 +1194,7 @@ class QueueScriptTest(unittest.TestCase):
 
 class ScriptBodyLengthTest(unittest.TestCase):
     def test_long_c_apdu_uses_ber_long_form(self):
-        from pysim_otaman_server.server import _scp81_command_body
+        from pysim_simple_server.server import _scp81_command_body
         apdu = '80E80000F0' + 'AB' * 239 + '00'      # exactly 245-byte LOAD
         body = _scp81_command_body(apdu)
         # AE 80 22 81 F5 <245 bytes> 00 00
@@ -1203,12 +1203,12 @@ class ScriptBodyLengthTest(unittest.TestCase):
         self.assertEqual(len(body), 5 + 245 + 2)
 
     def test_short_apdu_stays_short_form(self):
-        from pysim_otaman_server.server import _scp81_command_body
+        from pysim_simple_server.server import _scp81_command_body
         self.assertEqual(_scp81_command_body('80CAFF2100').hex().upper(),
                          'AE80220580CAFF21000000')
 
     def test_definite_variant_ber_lengths(self):
-        from pysim_otaman_server.server import _scp81_command_body
+        from pysim_simple_server.server import _scp81_command_body
         apdu = 'AB' * 130
         body = _scp81_command_body(apdu, definite=True)
         # AA 81 85 22 81 82 <130 bytes>  (outer 1+2+130 = 133 = 0x85)

@@ -18,8 +18,8 @@ PY_SIM = PROJECTS / 'pysim'
 if str(PY_SIM) not in sys.path:
     sys.path.insert(0, str(PY_SIM))
 
-from pysim_otaman_server import server
-from pysim_otaman_server.server import _decode_iccid, _read_iccid
+from pysim_simple_server import server
+from pysim_simple_server.server import _decode_iccid, _read_iccid
 
 
 class FakeFile:

@@ -1,4 +1,4 @@
-"""Fast card initialization for pysim-otaman-server.
+"""Fast card initialization for pysim-simple-server.
 
 pySim's ``init_card()`` performs several physical card resets: one per profile
 candidate tried by ``CardProfile.pick()`` plus one at the end of

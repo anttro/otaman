@@ -21,8 +21,8 @@ if str(PY_SIM) not in sys.path:
 
 from pySim.exceptions import NoCardError, SwMatchError
 
-from pysim_otaman_server import __main__ as srv_main
-from pysim_otaman_server.server import _LineFilter
+from pysim_simple_server import __main__ as srv_main
+from pysim_simple_server.server import _LineFilter
 
 CARDLESS_LINE = 'INIT: no card in the reader — server ready; insert a card or press Equip'
 
@@ -84,7 +84,7 @@ class StartupNoCardTest(unittest.TestCase):
             fake_fastinit.install = mock.Mock()
             fake_http.return_value.serve_forever.side_effect = KeyboardInterrupt
             try:
-                with mock.patch('sys.argv', ['pysim-otaman-server']):
+                with mock.patch('sys.argv', ['pysim-simple-server']):
                     srv_main.main()
             except (KeyboardInterrupt, SystemExit):
                 pass
@@ -135,7 +135,7 @@ class StartupNoCardTest(unittest.TestCase):
             fake_fastinit.install = mock.Mock()
             fake_http.return_value.serve_forever.side_effect = KeyboardInterrupt
             try:
-                with mock.patch('sys.argv', ['pysim-otaman-server']):
+                with mock.patch('sys.argv', ['pysim-simple-server']):
                     srv_main.main()
             except (KeyboardInterrupt, SystemExit):
                 pass

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-# pysim-otaman-server setup script
+# pysim-simple-server setup script
 # Creates a venv and installs pysim and its dependencies.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -30,9 +30,9 @@ echo ""
 echo "=== Installing pysim ==="
 $PIP install git+https://github.com/osmocom/pysim.git
 
-# Install pysim-otaman-server
+# Install pysim-simple-server
 echo ""
-echo "=== Installing pysim-otaman-server ==="
+echo "=== Installing pysim-simple-server ==="
 $PIP install -e "$SCRIPT_DIR"
 
 # Check for PC/SC

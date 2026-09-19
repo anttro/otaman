@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for the parent-scoped select helpers in pysim_otaman_server.server.
+"""Unit tests for the parent-scoped select helpers in pysim_simple_server.server.
 
 The helpers must resolve every model-known file strictly within the requested
 parent (no pySim global selectables, no probe_file model injection) and must
@@ -16,7 +16,7 @@ PY_SIM = PROJECTS / 'pysim'
 if str(PY_SIM) not in sys.path:
     sys.path.insert(0, str(PY_SIM))
 
-from pysim_otaman_server.server import (
+from pysim_simple_server.server import (
     _app_by_sel,
     _fid4,
     _file_by_sel,
