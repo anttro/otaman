@@ -1,6 +1,11 @@
-# SIMple — SIM OTA toolkit: PWA + local card server
+# SIMple — a UICC workbench: APDU · OTA · STK · profiling
 
-SIMple is an offline HTML/JS PWA for building APDU commands (SIM, USIM, GlobalPlatform RAM), assembling SCP80 secured packets per ETSI TS 102 225, and constructing Expanded Remote Application data format APDU per ETSI TS 102 226. A bundled [`pysim-simple-server`](pysim_simple_server/) exposes a local HTTP API over pySim for live card operations: file manager, raw APDU, SIM Toolkit menu browsing, and OTA (SCP80) delivery.
+SIMple is a workbench for UICC/SIM card specialists: an offline HTML/JS PWA plus a local card server ([`pysim-simple-server`](pysim_simple_server/), a pySim/PC-SC bridge that also serves the PWA). It covers the full lab cycle:
+
+- **APDU workbench** — SIM/USIM RFM and Expanded Script builders (TS 102 226), GlobalPlatform RAM commands, a C-APDU/R-APDU parser and a response decoder (ISO 7816 / TS 102 221 / GP);
+- **OTA lab** — SCP80 secured packets (TS 102 225) and Java Card RAM installation, plus the terminal side of HTTP OTA (SCP81): BIP channel emulation, a PSK TLS administration server and APDU script execution;
+- **Phone/CAT simulator** — SIM Toolkit menu browser, proactive command / event handling, TERMINAL PROFILE editing and the C-AT dialogue log;
+- **Card profiler** — filesystem capture (profiles and immutable snapshots with timings), exact snapshot comparison and FCP/FCI decoding.
 
 **Demo:** [simple.atroshin.ru](https://simple.atroshin.ru) — the PWA alone, for experimenting. Install the server (below) for card-reader functions.
 
